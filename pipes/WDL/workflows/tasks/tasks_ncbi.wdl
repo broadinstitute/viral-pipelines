@@ -17,7 +17,7 @@ task download_fasta {
     String viralngs_version = "viral-ngs_version_unknown"
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/viral-phylo"
     memory: "3 GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_x2"
@@ -52,7 +52,7 @@ task download_annotations {
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/viral-phylo"
     memory: "3 GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_x2"
@@ -88,7 +88,7 @@ task annot_transfer {
     String       viralngs_version           = "viral-ngs_version_unknown"
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/viral-phylo"
     memory: "3 GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_x2"
@@ -137,7 +137,7 @@ task prepare_genbank {
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/viral-phylo"
     memory: "3 GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_x2"

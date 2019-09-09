@@ -68,7 +68,7 @@ task deplete_taxa {
     String viralngs_version          = "viral-ngs_version_unknown"
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/viral-classify"
     memory: "14 GB"
     cpu: 8
     dx_instance_type: "mem1_ssd1_x16"
@@ -127,7 +127,7 @@ task filter_to_taxon {
     String viralngs_version       = "viral-ngs_version_unknown"
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/viral-classify"
     memory: "14 GB"
     cpu: 16
     dx_instance_type: "mem1_ssd1_x8"
@@ -150,7 +150,7 @@ task build_lastal_db {
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/viral-classify"
     memory: "7 GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_x4"
@@ -193,7 +193,7 @@ task merge_one_per_sample {
   runtime{
     memory: "7 GB"
     cpu: 4
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/viral-classify"
     dx_instance_type: "mem1_ssd2_x4"
   }
 }

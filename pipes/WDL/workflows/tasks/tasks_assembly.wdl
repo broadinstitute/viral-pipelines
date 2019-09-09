@@ -80,7 +80,7 @@ task assemble {
     }
 
     runtime {
-        docker: "quay.io/broadinstitute/viral-ngs"
+        docker: "quay.io/broadinstitute/viral-assembly"
         memory: "15 GB"
         cpu: 4
         dx_instance_type: "mem1_ssd1_x8"
@@ -164,7 +164,7 @@ task scaffold {
     }
 
     runtime {
-        docker: "quay.io/broadinstitute/viral-ngs"
+        docker: "quay.io/broadinstitute/viral-assembly"
         memory: "15 GB"
         cpu: 4
         dx_instance_type: "mem1_ssd1_x8"
@@ -221,7 +221,7 @@ task refine {
     }
 
     runtime {
-        docker: "quay.io/broadinstitute/viral-ngs"
+        docker: "quay.io/broadinstitute/viral-assembly"
         memory: "7 GB"
         cpu: 8
         dx_instance_type: "mem1_ssd1_x8"
@@ -362,7 +362,7 @@ task refine_2x_and_plot {
     }
 
     runtime {
-        docker: "quay.io/broadinstitute/viral-ngs"
+        docker: "quay.io/broadinstitute/viral-assembly"
         memory: "7 GB"
         cpu: 8
         dx_instance_type: "mem1_ssd1_x8"

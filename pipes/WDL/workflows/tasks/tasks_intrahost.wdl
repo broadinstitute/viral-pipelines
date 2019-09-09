@@ -26,7 +26,7 @@ task isnvs_per_sample {
   }
   runtime {
     memory: "7 GB"
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/viral-phylo"
   }
 }
 
@@ -83,7 +83,7 @@ task isnvs_vcf {
   }
   runtime {
     memory: "4 GB"
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/viral-phylo"
   }
 }
 

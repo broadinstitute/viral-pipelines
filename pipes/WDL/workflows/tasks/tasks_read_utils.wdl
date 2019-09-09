@@ -30,7 +30,7 @@ task downsample_bams {
     String      viralngs_version = "viral-ngs_version_unknown"
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/micro-readqc"
     memory: "3 GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_x4"

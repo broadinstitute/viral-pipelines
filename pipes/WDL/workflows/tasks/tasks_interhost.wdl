@@ -28,7 +28,7 @@ task multi_align_mafft_ref {
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/viral-phylo"
     memory: "7 GB"
     cpu: 8
     dx_instance_type: "mem1_ssd1_x8"
@@ -63,7 +63,7 @@ task multi_align_mafft {
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/viral-phylo"
     memory: "7 GB"
     cpu: 8
     dx_instance_type: "mem1_ssd1_x8"
@@ -87,7 +87,7 @@ task index_ref {
   }
   runtime {
     memory: "4 GB"
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/micro-readqc"
   }
 }
 

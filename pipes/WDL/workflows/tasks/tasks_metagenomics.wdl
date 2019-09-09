@@ -65,7 +65,7 @@ task krakenuniq {
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/viral-classify"
     memory: "200 GB"
     cpu: 32
     dx_instance_type: "mem3_ssd1_x32"
@@ -105,7 +105,7 @@ task krona {
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/viral-classify"
     memory: "4 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd2_x2"
@@ -163,7 +163,7 @@ task filter_bam_to_taxa {
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/viral-classify"
     memory: "4 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd2_x2"
@@ -230,7 +230,7 @@ task kaiju {
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/viral-classify"
     memory: "100 GB"
     cpu: 16
     dx_instance_type: "mem3_ssd1_x16"

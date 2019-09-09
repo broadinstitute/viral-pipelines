@@ -107,7 +107,7 @@ task plot_coverage {
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/viral-assemble"
     memory: "3500 MB"
     cpu: 4
     dx_instance_type: "mem1_ssd1_x8"
@@ -132,7 +132,7 @@ task coverage_report {
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/viral-assemble"
     memory: "2000 MB"
     cpu: 2
     dx_instance_type: "mem1_ssd2_x4"
@@ -158,7 +158,7 @@ task fastqc {
   runtime {
     memory: "2 GB"
     cpu: 1
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/micro-readqc"
     dx_instance_type: "mem1_ssd1_x4"
   }
 }
@@ -196,7 +196,7 @@ task spikein_report {
   runtime {
     memory: "3 GB"
     cpu: 2
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/micro-readqc"
     dx_instance_type: "mem1_ssd1_x4"
   }
 }
@@ -222,7 +222,7 @@ task spikein_summary {
   runtime {
     memory: "3 GB"
     cpu: 2
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/micro-readqc"
     dx_instance_type: "mem1_ssd1_x4"
   }
 }
@@ -253,7 +253,7 @@ task aggregate_metagenomics_reports {
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-ngs"
+    docker: "quay.io/broadinstitute/viral-classify"
     memory: "4 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd2_x2"
