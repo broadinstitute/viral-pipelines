@@ -175,7 +175,6 @@ task refine {
     File    assembly_fasta
     File    reads_unmapped_bam
 
-    File    gatk_jar
     File?   novocraft_license
 
     String? novoalign_options="-r Random -l 40 -g 40 -x 20 -t 100"
@@ -190,14 +189,6 @@ task refine {
         # find 90% memory
         mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 90`
 
-        # prep GATK
-        mkdir gatk
-        if [[ ${gatk_jar} == *.tar.bz2 ]]; then
-          tar -xjvof ${gatk_jar} -C gatk
-        else
-          ln -s ${gatk_jar} gatk/GenomeAnalysisTK.jar
-        fi
-
         ln -s ${assembly_fasta} assembly.fasta
         read_utils.py novoindex assembly.fasta --loglevel=DEBUG
 
@@ -208,7 +199,6 @@ task refine {
           --outVcf ${assembly_basename}.sites.vcf.gz \
           --min_coverage ${min_coverage} \
           --major_cutoff ${major_cutoff} \
-          --GATK_PATH gatk/ \
           --novo_params="${novoalign_options}" \
           --JVMmemory "$mem_in_mb"m \
           --loglevel=DEBUG
@@ -241,7 +231,6 @@ task refine_2x_and_plot {
     File    assembly_fasta
     File    reads_unmapped_bam
 
-    File    gatk_jar  # can alternatively be the .tar.bz2
     File?   novocraft_license
 
     String? refine1_novoalign_options="-r Random -l 30 -g 40 -x 20 -t 502"
@@ -262,14 +251,6 @@ task refine_2x_and_plot {
         # find 90% memory
         mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 90`
 
-        # prep GATK
-        mkdir gatk
-        if [[ ${gatk_jar} == *.tar.bz2 ]]; then
-          tar -xjvof ${gatk_jar} -C gatk
-        else
-          ln -s ${gatk_jar} gatk/GenomeAnalysisTK.jar
-        fi
-
         ln -s ${assembly_fasta} assembly.fasta
         read_utils.py novoindex assembly.fasta --loglevel=DEBUG
 
@@ -281,7 +262,6 @@ task refine_2x_and_plot {
           --outVcf ${sample_name}.refine1.pre_fasta.vcf.gz \
           --min_coverage ${refine1_min_coverage} \
           --major_cutoff ${refine1_major_cutoff} \
-          --GATK_PATH gatk/ \
           --novo_params="${refine1_novoalign_options}" \
           --JVMmemory "$mem_in_mb"m \
           --loglevel=DEBUG
@@ -294,7 +274,6 @@ task refine_2x_and_plot {
           --outVcf ${sample_name}.refine2.pre_fasta.vcf.gz \
           --min_coverage ${refine2_min_coverage} \
           --major_cutoff ${refine2_major_cutoff} \
-          --GATK_PATH gatk/ \
           --novo_params="${refine2_novoalign_options}" \
           --JVMmemory "$mem_in_mb"m \
           --loglevel=DEBUG
@@ -305,7 +284,6 @@ task refine_2x_and_plot {
           ${sample_name}.fasta \
           --outBamAll ${sample_name}.all.bam \
           --outBamFiltered ${sample_name}.mapped.bam \
-          --GATK_PATH gatk/ \
           --aligner_options "${plot_coverage_novoalign_options}" \
           --JVMmemory "$mem_in_mb"m \
           --loglevel=DEBUG

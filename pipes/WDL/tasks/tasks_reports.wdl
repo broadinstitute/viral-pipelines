@@ -1,12 +1,10 @@
 
 task plot_coverage {
   # TO DO: add a BWA option
-  # TO DO: make GATK indel-realigner optional
 
   File assembly_fasta
   File reads_unmapped_bam
 
-  File gatk_jar
   File? novocraft_license
 
   String? aligner="novoalign" # novoalign or bwa
@@ -22,14 +20,6 @@ task plot_coverage {
   command {
     set -ex -o pipefail
 
-    # prep GATK
-    mkdir gatk
-    if [[ ${gatk_jar} == *.tar.bz2 ]]; then
-      tar -xjvof ${gatk_jar} -C gatk
-    else
-      ln -s ${gatk_jar} gatk/GenomeAnalysisTK.jar
-    fi
-
     cp ${assembly_fasta} assembly.fasta
     read_utils.py novoindex assembly.fasta --loglevel=DEBUG
     read_utils.py index_fasta_picard assembly.fasta --loglevel=DEBUG
@@ -40,7 +30,6 @@ task plot_coverage {
       assembly.fasta \
       --outBamAll ${sample_name}.all.bam \
       --outBamFiltered ${sample_name}.mapped.bam \
-      --GATK_PATH gatk/ \
       --aligner ${aligner} \
       --aligner_options "${aligner_options}" \
       ${true='--skipMarkDupes' false="" skip_mark_dupes} \
