@@ -15,7 +15,7 @@ trap cleanup EXIT SIGINT SIGQUIT SIGTERM
 
 # ===== [ for WDL 1.0] =====
 # validate each imported library of tasks on its own
-# for tasks in pipes/WDL/workflows/tasks/*.wdl; do
+# for tasks in pipes/WDL/tasks/*.wdl; do
 #   echo "validating tasks $tasks"
 #   if $(hash -r  womtool &> /dev/null); then
 #     womtool validate $tasks
@@ -27,12 +27,12 @@ trap cleanup EXIT SIGINT SIGQUIT SIGTERM
 
 mkdir "$test_dir"
 cd "$test_dir"
-cp ../pipes/WDL/workflows/tasks/*.wdl ../pipes/WDL/workflows/*.wdl .
+cp ../pipes/WDL/tasks/*.wdl ../pipes/WDL/workflows/*.wdl .
 
 # ===== [ for WDL draft-2 under womtool 32 ] =====
 # only necessary for draft-2 WDL under womtool >30, with 1.0 task-only WDL files should validate
 # the task validation block above can be uncommented and replace this with WDL 1.0
-for workflow in ../pipes/WDL/workflows/tasks/*.wdl; do
+for workflow in ../pipes/WDL/tasks/*.wdl; do
   workflow=`basename $workflow`
   echo "validating $workflow"
   # include dummy workflow to validate under womtool 32
@@ -46,7 +46,7 @@ done
 # ================================================
 
 # copy in the original task.wdl files [remove with WDL 1.0] that lack dummy workflow
-cp ../pipes/WDL/workflows/tasks/*.wdl ../pipes/WDL/workflows/*.wdl .
+cp ../pipes/WDL/tasks/*.wdl ../pipes/WDL/workflows/*.wdl .
 # validate the workflow files
 # unfortunately, dxWDL now requires the -imports parameter and cromwell supports
 # it as well but womtool validate does not yet support it! so we have to copy
