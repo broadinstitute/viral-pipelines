@@ -87,7 +87,7 @@ task index_ref {
   }
   runtime {
     memory: "4 GB"
-    docker: "quay.io/broadinstitute/micro-readqc"
+    docker: "quay.io/broadinstitute/viral-core"
   }
 }
 

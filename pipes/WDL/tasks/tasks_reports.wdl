@@ -147,7 +147,7 @@ task fastqc {
   runtime {
     memory: "2 GB"
     cpu: 1
-    docker: "quay.io/broadinstitute/micro-readqc"
+    docker: "quay.io/broadinstitute/viral-core"
     dx_instance_type: "mem1_ssd1_x4"
   }
 }
@@ -185,7 +185,7 @@ task spikein_report {
   runtime {
     memory: "3 GB"
     cpu: 2
-    docker: "quay.io/broadinstitute/micro-readqc"
+    docker: "quay.io/broadinstitute/viral-core"
     dx_instance_type: "mem1_ssd1_x4"
   }
 }
@@ -211,7 +211,7 @@ task spikein_summary {
   runtime {
     memory: "3 GB"
     cpu: 2
-    docker: "quay.io/broadinstitute/micro-readqc"
+    docker: "quay.io/broadinstitute/viral-core"
     dx_instance_type: "mem1_ssd1_x4"
   }
 }

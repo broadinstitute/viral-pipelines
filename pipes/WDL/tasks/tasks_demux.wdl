@@ -19,7 +19,7 @@
 #    File tar_lz4=
 #  }
 #  runtime {
-#    docker: "quay.io/broadinstitute/micro-readqc"
+#    docker: "quay.io/broadinstitute/viral-core"
 #    memory: "7 GB"
 #    cpu: 4
 #    dx_instance_type: "mem1_hdd2_x8"
@@ -198,7 +198,7 @@ task illumina_demux {
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/micro-readqc"
+    docker: "quay.io/broadinstitute/viral-core"
     memory: "16 GB"
     cpu: 36
     dx_instance_type: "mem1_ssd2_x36"
@@ -235,7 +235,7 @@ task merge_and_reheader_bams {
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/micro-readqc"
+    docker: "quay.io/broadinstitute/viral-core"
     memory: "2000 MB"
     cpu: 2
     dx_instance_type: "mem1_ssd2_x4"
