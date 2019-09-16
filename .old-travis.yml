@@ -32,7 +32,6 @@ jobs:
       install:
         - travis/install-wdl.sh
       script:
-        - travis/version-wdl-runtimes.sh
         - travis/validate-wdl.sh
         - travis/build-dx.sh
 
@@ -46,7 +45,6 @@ jobs:
         - docker pull $DOCKER_TAG
         - travis/install-wdl.sh
       script:
-        - travis/version-wdl-runtimes.sh
         - travis/validate-wdl.sh
         - travis/tests-cromwell.sh
 
