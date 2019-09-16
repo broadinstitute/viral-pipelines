@@ -10,12 +10,15 @@ task deplete_taxa {
   Array[File]? bwaDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
   Int?         query_chunk_size
   Boolean?     clear_tags = false
-  String? tags_to_clear_space_separated = "XT X0 X1 XA AM SM BQ CT XN OC OP"
+  String?      tags_to_clear_space_separated = "XT X0 X1 XA AM SM BQ CT XN OC OP"
 
-  String      bam_basename = basename(raw_reads_unmapped_bam, ".bam")
+  String?      docker="quay.io/broadinstitute/viral-classify"
+
+  String       bam_basename = basename(raw_reads_unmapped_bam, ".bam")
 
   command {
     set -ex -o pipefail
+    taxon_filter.py --version | tee VERSION
 
     if [ -d /mnt/tmp ]; then
       TMPDIR=/mnt/tmp
@@ -65,10 +68,10 @@ task deplete_taxa {
     File   cleaned_fastqc            = "${bam_basename}.cleaned_fastqc.html"
     Int    depletion_read_count_pre  = read_int("depletion_read_count_pre")
     Int    depletion_read_count_post = read_int("depletion_read_count_post")
-    String viralngs_version          = "viral-ngs_version_unknown"
+    String viralngs_version          = read_string("VERSION")
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-classify"
+    docker: ${docker}
     memory: "14 GB"
     cpu: 8
     dx_instance_type: "mem1_ssd1_x16"
@@ -86,14 +89,17 @@ task filter_to_taxon {
   File     reads_unmapped_bam
   File     lastal_db_fasta
   Boolean? error_on_reads_in_neg_control = false
-  Int? negative_control_reads_threshold = 0
-  String? neg_control_prefixes_space_separated = "neg water NTC"
+  Int?     negative_control_reads_threshold = 0
+  String?  neg_control_prefixes_space_separated = "neg water NTC"
+
+  String?  docker="quay.io/broadinstitute/viral-classify"
 
   # do this in two steps in case the input doesn't actually have "cleaned" in the name
-  String bam_basename = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
+  String   bam_basename = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
 
   command {
     set -ex -o pipefail
+    taxon_filter.py --version | tee VERSION
 
     # find 90% memory
     mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 90`
@@ -124,10 +130,10 @@ task filter_to_taxon {
     File   taxfilt_bam            = "${bam_basename}.taxfilt.bam"
     File   taxfilt_fastqc         = "${bam_basename}.taxfilt_fastqc.html"
     Int    filter_read_count_post = read_int("filter_read_count_post")
-    String viralngs_version       = "viral-ngs_version_unknown"
+    String viralngs_version       = read_string("VERSION")
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-classify"
+    docker: ${docker}
     memory: "14 GB"
     cpu: 16
     dx_instance_type: "mem1_ssd1_x8"
@@ -136,21 +142,23 @@ task filter_to_taxon {
 
 task build_lastal_db {
   File    sequences_fasta
+  String? docker="quay.io/broadinstitute/viral-classify"
   String  db_name = basename(sequences_fasta, ".fasta")
 
   command {
     set -ex -o pipefail
+    taxon_filter.py --version | tee VERSION
     taxon_filter.py lastal_build_db ${sequences_fasta} ./ --loglevel=DEBUG
     tar -c ${db_name}* | lz4 -9 > ${db_name}.tar.lz4
   }
 
   output {
     File   lastal_db        = "${db_name}.tar.lz4"
-    String viralngs_version = "viral-ngs_version_unknown"
+    String viralngs_version = read_string("VERSION")
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-classify"
+    docker: ${docker}
     memory: "7 GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_x4"
@@ -162,8 +170,11 @@ task merge_one_per_sample {
   Array[File]+ inputBams
   Boolean?     rmdup=false
 
+  String?      docker="quay.io/broadinstitute/viral-core"
+
   command {
     set -ex -o pipefail
+    read_utils.py --version | tee VERSION
 
     # find 90% memory
     mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 90`
@@ -187,13 +198,13 @@ task merge_one_per_sample {
 
   output {
     File   mergedBam        = "${out_bam_basename}.bam"
-    String viralngs_version = "viral-ngs_version_unknown"
+    String viralngs_version = read_string("VERSION")
   }
 
   runtime{
     memory: "7 GB"
     cpu: 4
-    docker: "quay.io/broadinstitute/viral-classify"
+    docker: ${docker}
     dx_instance_type: "mem1_ssd2_x4"
   }
 }

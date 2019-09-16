@@ -1,16 +1,18 @@
 task assemble {
-    File    reads_unmapped_bam
-    File    trim_clip_db
+    File     reads_unmapped_bam
+    File     trim_clip_db
 
-    Int?    trinity_n_reads=250000
-    Int?    spades_n_reads=10000000
-    Int?    spades_min_contig_len=0
+    Int?     trinity_n_reads=250000
+    Int?     spades_n_reads=10000000
+    Int?     spades_min_contig_len=0
 
-    String? assembler="trinity"  # trinity, spades, or trinity-spades
+    String?  assembler="trinity"  # trinity, spades, or trinity-spades
     Boolean? always_succeed=false
 
     # do this in two steps in case the input doesn't actually have "taxfilt" in the name
-    String  sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
+    String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
+
+    String?  docker="quay.io/broadinstitute/viral-assemble"
 
 
     command {
@@ -20,13 +22,15 @@ task assemble {
         mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 90`
         mem_in_gb=`/opt/viral-ngs/source/docker/calc_mem.py gb 90`
 
+        assembly.py --version | tee VERSION
+
         if [[ "${assembler}" == "trinity" ]]; then
           assembly.py assemble_trinity \
             ${reads_unmapped_bam} \
             ${trim_clip_db} \
             ${sample_name}.assembly1-${assembler}.fasta \
             ${'--n_reads=' + trinity_n_reads} \
-     	    ${true='--alwaysSucceed' false="" always_succeed} \
+     	      ${true='--alwaysSucceed' false="" always_succeed} \
             --JVMmemory "$mem_in_mb"m \
             --outReads=${sample_name}.subsamp.bam \
             --loglevel=DEBUG
@@ -37,7 +41,7 @@ task assemble {
             ${trim_clip_db} \
             ${sample_name}.assembly1-${assembler}.fasta \
             ${'--nReads=' + spades_n_reads} \
-	    ${true="--alwaysSucceed" false="" always_succeed} \
+	          ${true="--alwaysSucceed" false="" always_succeed} \
             ${'--minContigLen=' + spades_min_contig_len} \
             --memLimitGb $mem_in_gb \
             --outReads=${sample_name}.subsamp.bam \
@@ -51,7 +55,7 @@ task assemble {
             ${'--n_reads=' + trinity_n_reads} \
             --JVMmemory "$mem_in_mb"m \
             --outReads=${sample_name}.subsamp.bam \
-     	    ${true='--always_succeed' false='' always_succeed} \
+     	      ${true='--always_succeed' false='' always_succeed} \
             --loglevel=DEBUG
           assembly.py assemble_spades \
             ${reads_unmapped_bam} \
@@ -59,7 +63,7 @@ task assemble {
             ${sample_name}.assembly1-${assembler}.fasta \
             --contigsUntrusted=${sample_name}.assembly1-trinity.fasta \
             ${'--nReads=' + spades_n_reads} \
-     	    ${true='--alwaysSucceed' false='' always_succeed} \
+     	      ${true='--alwaysSucceed' false='' always_succeed} \
             ${'--minContigLen=' + spades_min_contig_len} \
             --memLimitGb $mem_in_gb \
             --loglevel=DEBUG
@@ -76,11 +80,11 @@ task assemble {
         File   contigs_fasta        = "${sample_name}.assembly1-${assembler}.fasta"
         File   subsampBam           = "${sample_name}.subsamp.bam"
         Int    subsample_read_count = read_int("subsample_read_count")
-        String viralngs_version     = "viral-ngs_version_unknown"
+        String viralngs_version     = read_string("VERSION")
     }
 
     runtime {
-        docker: "quay.io/broadinstitute/viral-assembly"
+        docker: ${docker}
         memory: "15 GB"
         cpu: 4
         dx_instance_type: "mem1_ssd1_x8"
@@ -93,24 +97,28 @@ task scaffold {
     File         reads_bam
     Array[File]+ reference_genome_fasta
 
-    String? aligner
-    Float?  min_length_fraction
-    Float?  min_unambig
-    Int?    replace_length=55
+    String?      aligner
+    Float?       min_length_fraction
+    Float?       min_unambig
+    Int?         replace_length=55
 
-    Int?    nucmer_max_gap
-    Int?    nucmer_min_match
-    Int?    nucmer_min_cluster
-    Float?    scaffold_min_pct_contig_aligned
+    Int?         nucmer_max_gap
+    Int?         nucmer_min_match
+    Int?         nucmer_min_cluster
+    Float?       scaffold_min_pct_contig_aligned
+
+    String?      docker="quay.io/broadinstitute/viral-assemble"
 
     # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
-    String  sample_name = basename(basename(basename(contigs_fasta, ".fasta"), ".assembly1-trinity"), ".assembly1-spades")
+    String       sample_name = basename(basename(basename(contigs_fasta, ".fasta"), ".assembly1-trinity"), ".assembly1-spades")
 
     command {
         set -ex -o pipefail
 
         # find 90% memory
         mem_in_gb=`/opt/viral-ngs/source/docker/calc_mem.py gb 90`
+
+        assembly.py --version | tee VERSION
 
         assembly.py order_and_orient \
           ${contigs_fasta} \
@@ -151,20 +159,20 @@ task scaffold {
     }
 
     output {
-        File   scaffold_fasta              = "${sample_name}.scaffolded_imputed.fasta"
-        File   intermediate_scaffold_fasta = "${sample_name}.intermediate_scaffold.fasta"
-        File   intermediate_gapfill_fasta  = "${sample_name}.intermediate_gapfill.fasta"
+        File   scaffold_fasta                        = "${sample_name}.scaffolded_imputed.fasta"
+        File   intermediate_scaffold_fasta           = "${sample_name}.intermediate_scaffold.fasta"
+        File   intermediate_gapfill_fasta            = "${sample_name}.intermediate_gapfill.fasta"
         Int    assembly_preimpute_length             = read_int("assembly_preimpute_length")
         Int    assembly_preimpute_length_unambiguous = read_int("assembly_preimpute_length_unambiguous")
-        String scaffolding_chosen_ref_name = read_string("${sample_name}.scaffolding_chosen_ref.txt")
-        File   scaffolding_chosen_ref      = "${sample_name}.scaffolding_chosen_ref.fasta"
-        File   scaffolding_stats           = "${sample_name}.scaffolding_stats.txt"
-        File   scaffolding_alt_contigs     = "${sample_name}.scaffolding_alt_contigs.fasta"
-        String viralngs_version            = "viral-ngs_version_unknown"
+        String scaffolding_chosen_ref_name           = read_string("${sample_name}.scaffolding_chosen_ref.txt")
+        File   scaffolding_chosen_ref                = "${sample_name}.scaffolding_chosen_ref.fasta"
+        File   scaffolding_stats                     = "${sample_name}.scaffolding_stats.txt"
+        File   scaffolding_alt_contigs               = "${sample_name}.scaffolding_alt_contigs.fasta"
+        String viralngs_version                      = read_string("VERSION")
     }
 
     runtime {
-        docker: "quay.io/broadinstitute/viral-assembly"
+        docker: ${docker}
         memory: "15 GB"
         cpu: 4
         dx_instance_type: "mem1_ssd1_x8"
@@ -181,6 +189,8 @@ task refine {
     Float?  major_cutoff=0.5
     Int?    min_coverage=1
 
+    String? docker="quay.io/broadinstitute/viral-assemble"
+
     String  assembly_basename=basename(basename(assembly_fasta, ".fasta"), ".scaffold")
 
     command {
@@ -188,6 +198,8 @@ task refine {
 
         # find 90% memory
         mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 90`
+
+        assembly.py --version | tee VERSION
 
         ln -s ${assembly_fasta} assembly.fasta
         read_utils.py novoindex assembly.fasta --loglevel=DEBUG
@@ -205,13 +217,13 @@ task refine {
     }
 
     output {
-        File    refined_assembly_fasta = "${assembly_basename}.refined.fasta"
+        File   refined_assembly_fasta  = "${assembly_basename}.refined.fasta"
         File   sites_vcf_gz            = "${assembly_basename}.sites.vcf.gz"
-        String viralngs_version        = "viral-ngs_version_unknown"
+        String viralngs_version        = read_string("VERSION")
     }
 
     runtime {
-        docker: "quay.io/broadinstitute/viral-assembly"
+        docker: ${docker}
         memory: "7 GB"
         cpu: 8
         dx_instance_type: "mem1_ssd1_x8"
@@ -243,13 +255,18 @@ task refine_2x_and_plot {
 
     String? plot_coverage_novoalign_options="-r Random -l 40 -g 40 -x 20 -t 100 -k"
 
+    String? docker="quay.io/broadinstitute/viral-assemble"
+
     # do this in two steps in case the input doesn't actually have "cleaned" in the name
     String  sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
+
     command {
         set -ex -o pipefail
 
         # find 90% memory
         mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 90`
+
+        assembly.py --version | tee VERSION
 
         ln -s ${assembly_fasta} assembly.fasta
         read_utils.py novoindex assembly.fasta --loglevel=DEBUG
@@ -336,11 +353,11 @@ task refine_2x_and_plot {
         Int  read_pairs_aligned          = read_int("read_pairs_aligned")
         Int  bases_aligned               = read_int("bases_aligned")
         Float mean_coverage              = read_float("mean_coverage")
-        String viralngs_version          = "viral-ngs_version_unknown"
+        String viralngs_version          = read_string("VERSION")
     }
 
     runtime {
-        docker: "quay.io/broadinstitute/viral-assembly"
+        docker: ${docker}
         memory: "7 GB"
         cpu: 8
         dx_instance_type: "mem1_ssd1_x8"

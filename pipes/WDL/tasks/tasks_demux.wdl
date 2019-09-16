@@ -2,6 +2,7 @@
 #task merge_tar_chunks {
 #  Array[File]+  tar_chunks
 #  String        out_filename
+#  String?       docker="quay.io/broadinstitute/viral-core"
 #  command {
 #    set -ex -o pipefail
 #
@@ -19,7 +20,7 @@
 #    File tar_lz4=
 #  }
 #  runtime {
-#    docker: "quay.io/broadinstitute/viral-core"
+#    docker: ${docker}
 #    memory: "7 GB"
 #    cpu: 4
 #    dx_instance_type: "mem1_hdd2_x8"
@@ -48,6 +49,8 @@ task illumina_demux {
   Int?    maxRecordsInRam
   Boolean? forceGC=true
 
+  String? docker="quay.io/broadinstitute/viral-core"
+
 
   parameter_meta {
     flowcell_tgz : "stream" # for DNAnexus, until WDL implements the File| type
@@ -63,6 +66,8 @@ task illumina_demux {
       TMPDIR=/mnt/tmp
     fi
     FLOWCELL_DIR=$(mktemp -d)
+
+    read_utils.py --version | tee VERSION
 
     read_utils.py extract_tarball \
       ${flowcell_tgz} $FLOWCELL_DIR \
@@ -194,11 +199,11 @@ task illumina_demux {
     Array[File] raw_reads_unaligned_bams = glob("*.bam")
     File        unmatched_reads_bam      = "unmatched/Unmatched.bam"
     Array[File] raw_reads_fastqc         = glob("*_fastqc.html")
-    String      viralngs_version         = "viral-ngs_version_unknown"
+    String      viralngs_version         = read_string("VERSION")
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-core"
+    docker: ${docker}
     memory: "16 GB"
     cpu: 36
     dx_instance_type: "mem1_ssd2_x36"
@@ -210,9 +215,12 @@ task merge_and_reheader_bams {
   Array[File]+  in_bams
   File?         reheader_table # tsv with 3 cols: field, old value, new value
   String        out_basename
+  String?       docker="quay.io/broadinstitute/viral-core"
 
   command {
     set -ex -o pipefail
+
+    read_utils.py --version | tee VERSION
 
     if [ ${length(in_bams)} -gt 1 ]; then
       read_utils.py merge_bams ${sep=' ' in_bams} merged.bam --loglevel DEBUG
@@ -231,11 +239,11 @@ task merge_and_reheader_bams {
 
   output {
     File   out_bam          = "${out_basename}.bam"
-    String viralngs_version = "viral-ngs_version_unknown"
+    String viralngs_version = read_string("VERSION")
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-core"
+    docker: ${docker}
     memory: "2000 MB"
     cpu: 2
     dx_instance_type: "mem1_ssd2_x4"

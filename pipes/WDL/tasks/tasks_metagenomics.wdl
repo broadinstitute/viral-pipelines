@@ -3,6 +3,8 @@ task krakenuniq {
   File        krakenuniq_db_tar_lz4  # krakenuniq/{database.kdb,taxonomy}
   File        krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
 
+  String?     docker="quay.io/broadinstitute/viral-classify"
+
   parameter_meta {
     krakenuniq_db_tar_lz4:  "stream" # for DNAnexus, until WDL implements the File| type
     krona_taxonomy_db_tgz : "stream" # for DNAnexus, until WDL implements the File| type
@@ -35,6 +37,8 @@ task krakenuniq {
       echo "$(basename $bam .bam).krakenuniq-summary_report.txt" >> $OUT_REPORTS
     done
 
+    metagenomics.py --version | tee VERSION
+
     # execute on all inputs and outputs serially, but with a single
     # database load into ram
     metagenomics.py krakenuniq \
@@ -58,14 +62,14 @@ task krakenuniq {
   }
 
   output {
-    Array[File] krakenuniq_classified_reads    = glob("*.krakenuniq-reads.txt.gz")
-    Array[File] krakenuniq_summary_reports      = glob("*.krakenuniq-summary_report.txt")
-    Array[File] krona_report_html              = glob("*.krakenuniq.krona.html")
-    String      viralngs_version               = "viral-ngs_version_unknown"
+    Array[File] krakenuniq_classified_reads   = glob("*.krakenuniq-reads.txt.gz")
+    Array[File] krakenuniq_summary_reports    = glob("*.krakenuniq-summary_report.txt")
+    Array[File] krona_report_html             = glob("*.krakenuniq.krona.html")
+    String      viralngs_version              = read_string("VERSION")
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-classify"
+    docker: ${docker}
     memory: "200 GB"
     cpu: 32
     dx_instance_type: "mem3_ssd1_x32"
@@ -74,10 +78,12 @@ task krakenuniq {
 }
 
 task krona {
-  File  classified_reads_txt_gz
-  File  krona_taxonomy_db_tgz
+  File    classified_reads_txt_gz
+  File    krona_taxonomy_db_tgz
 
-  String input_basename = basename(classified_reads_txt_gz, ".txt.gz")
+  String? docker="quay.io/broadinstitute/viral-classify"
+
+  String  input_basename = basename(classified_reads_txt_gz, ".txt.gz")
 
   parameter_meta {
     krona_taxonomy_db_tgz : "stream" # for DNAnexus, until WDL implements the File| type
@@ -91,6 +97,8 @@ task krona {
       ${krona_taxonomy_db_tgz} . \
       --loglevel=DEBUG
 
+    metagenomics.py --version | tee VERSION
+
     metagenomics.py krona \
       ${classified_reads_txt_gz} \
       taxonomy \
@@ -100,12 +108,12 @@ task krona {
   }
 
   output {
-    File krona_report_html = "${input_basename}.html"
-    String viralngs_version   = "viral-ngs_version_unknown"
+    File    krona_report_html  = "${input_basename}.html"
+    String  viralngs_version   = read_string("VERSION")
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-classify"
+    docker: ${docker}
     memory: "4 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd2_x2"
@@ -113,14 +121,16 @@ task krona {
 }
 
 task filter_bam_to_taxa {
-  File classified_bam
-  File classified_reads_txt_gz
-  File ncbi_taxonomy_db_tgz # nodes.dmp names.dmp
+  File           classified_bam
+  File           classified_reads_txt_gz
+  File           ncbi_taxonomy_db_tgz # nodes.dmp names.dmp
   Array[String]? taxonomic_names
-  Array[Int]? taxonomic_ids
-  Boolean? withoutChildren=false
+  Array[Int]?    taxonomic_ids
+  Boolean?       withoutChildren=false
 
-  String input_basename = basename(classified_bam, ".bam")
+  String?        docker="quay.io/broadinstitute/viral-classify"
+
+  String         input_basename = basename(classified_bam, ".bam")
 
   parameter_meta {
     ncbi_taxonomy_db_tgz              : "stream" # for DNAnexus, until WDL implements the File| type
@@ -140,6 +150,8 @@ task filter_bam_to_taxa {
     TAX_IDs="${sep=' ' taxonomic_ids}"
     if [ -n "$TAX_IDs" ]; then TAX_IDs="--taxIDs $TAX_IDs"; fi
 
+    metagenomics.py --version | tee VERSION
+
     metagenomics.py filter_bam_to_taxa \
       ${classified_bam} \
       ${classified_reads_txt_gz} \
@@ -156,14 +168,14 @@ task filter_bam_to_taxa {
   }
 
   output {
-    File   bam_filtered_to_taxa                        = "${input_basename}_filtered.bam"
-    Int    classified_taxonomic_filter_read_count_pre  = read_int("classified_taxonomic_filter_read_count_pre")
-    Int    classified_taxonomic_filter_read_count_post = read_int("classified_taxonomic_filter_read_count_post")
-    String viralngs_version                            = "viral-ngs_version_unknown"
+    File    bam_filtered_to_taxa                        = "${input_basename}_filtered.bam"
+    Int     classified_taxonomic_filter_read_count_pre  = read_int("classified_taxonomic_filter_read_count_pre")
+    Int     classified_taxonomic_filter_read_count_post = read_int("classified_taxonomic_filter_read_count_post")
+    String  viralngs_version                            = read_string("VERSION")
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-classify"
+    docker: ${docker}
     memory: "4 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd2_x2"
@@ -172,12 +184,14 @@ task filter_bam_to_taxa {
 }
 
 task kaiju {
-  File  reads_unmapped_bam
-  File  kaiju_db_lz4  # <something>.fmi
-  File  ncbi_taxonomy_db_tgz # taxonomy/{nodes.dmp, names.dmp}
-  File  krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
+  File     reads_unmapped_bam
+  File     kaiju_db_lz4  # <something>.fmi
+  File     ncbi_taxonomy_db_tgz # taxonomy/{nodes.dmp, names.dmp}
+  File     krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
 
-  String input_basename = basename(reads_unmapped_bam, ".bam")
+  String?  docker="quay.io/broadinstitute/viral-classify"
+
+  String   input_basename = basename(reads_unmapped_bam, ".bam")
 
   parameter_meta {
     kaiju_db_lz4            : "stream" # for DNAnexus, until WDL implements the File| type
@@ -203,6 +217,8 @@ task kaiju {
       ${krona_taxonomy_db_tgz} . \
       --loglevel=DEBUG
 
+    metagenomics.py --version | tee VERSION
+
     # classify contigs
     metagenomics.py kaiju \
       ${reads_unmapped_bam} \
@@ -223,14 +239,14 @@ task kaiju {
   }
 
   output {
-    File kaiju_report = "${input_basename}.kaiju.report.txt"
-    File kaiju_reads = "${input_basename}.kaiju.reads.gz"
-    File krona_report_html = "${input_basename}.kaiju.html"
-    String viralngs_version                 = "viral-ngs_version_unknown"
+    File    kaiju_report       = "${input_basename}.kaiju.report.txt"
+    File    kaiju_reads        = "${input_basename}.kaiju.reads.gz"
+    File    krona_report_html  = "${input_basename}.kaiju.html"
+    String  viralngs_version   = read_string("VERSION")
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-classify"
+    docker: ${docker}
     memory: "100 GB"
     cpu: 16
     dx_instance_type: "mem3_ssd1_x16"

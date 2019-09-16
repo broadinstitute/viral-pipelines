@@ -2,23 +2,27 @@
 task plot_coverage {
   # TO DO: add a BWA option
 
-  File assembly_fasta
-  File reads_unmapped_bam
+  File     assembly_fasta
+  File     reads_unmapped_bam
 
-  File? novocraft_license
+  File?    novocraft_license
 
-  String? aligner="novoalign" # novoalign or bwa
-  String? aligner_options="-r Random -l 40 -g 40 -x 20 -t 100 -k"
+  String?  aligner="novoalign" # novoalign or bwa
+  String?  aligner_options="-r Random -l 40 -g 40 -x 20 -t 100 -k"
 
   Boolean? skip_mark_dupes=false
   Boolean? plot_only_non_duplicates=false
   Boolean? bin_large_plots=false
-  String? binning_summary_statistic="max" # max or min
+  String?  binning_summary_statistic="max" # max or min
+
+  String?  docker="quay.io/broadinstitute/viral-core"
   
-  String sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
+  String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
 
   command {
     set -ex -o pipefail
+
+    read_utils.py --version | tee VERSION
 
     cp ${assembly_fasta} assembly.fasta
     read_utils.py novoindex assembly.fasta --loglevel=DEBUG
@@ -92,11 +96,11 @@ task plot_coverage {
     Int    read_pairs_aligned          = read_int("read_pairs_aligned")
     Int    bases_aligned               = read_int("bases_aligned")
     Float  mean_coverage               = read_float("mean_coverage")
-    String viralngs_version            = "viral-ngs_version_unknown"
+    String viralngs_version            = read_string("VERSION")
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-assemble"
+    docker: ${docker}
     memory: "3500 MB"
     cpu: 4
     dx_instance_type: "mem1_ssd1_x8"
@@ -108,8 +112,10 @@ task coverage_report {
   Array[File]+ mapped_bams
   Array[File]  mapped_bam_idx # optional.. speeds it up if you provide it, otherwise we auto-index
   String       out_report_name="coverage_report.txt"
+  String?      docker="quay.io/broadinstitute/viral-core"
 
   command {
+    reports.py --version | tee VERSION
     reports.py coverage_only \
       ${sep=' ' mapped_bams} \
       ${out_report_name} \
@@ -117,11 +123,12 @@ task coverage_report {
   }
 
   output {
-    File  coverage_report = "${out_report_name}"
+    File   coverage_report  = "${out_report_name}"
+    String viralngs_version = read_string("VERSION")
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-assemble"
+    docker: ${docker}
     memory: "2000 MB"
     cpu: 2
     dx_instance_type: "mem1_ssd2_x4"
@@ -130,39 +137,44 @@ task coverage_report {
 
 
 task fastqc {
-  File reads_bam
-
-  String reads_basename=basename(reads_bam, ".bam")
+  File     reads_bam
+  String?  docker="quay.io/broadinstitute/viral-core"
+  String   reads_basename=basename(reads_bam, ".bam")
 
   command {
     set -ex -o pipefail
+    reports.py --version | tee VERSION
     reports.py fastqc ${reads_bam} ${reads_basename}_fastqc.html
   }
 
   output {
     File   fastqc_html      = "${reads_basename}_fastqc.html"
-    String viralngs_version = "viral-ngs_version_unknown"
+    String viralngs_version = read_string("VERSION")
   }
 
   runtime {
     memory: "2 GB"
     cpu: 1
-    docker: "quay.io/broadinstitute/viral-core"
+    docker: ${docker}
     dx_instance_type: "mem1_ssd1_x4"
   }
 }
 
 
 task spikein_report {
-  File  reads_bam
-  File  spikein_db
-  Int?  minScoreToFilter = 60
-  Int?  topNHits = 3
+  File    reads_bam
+  File    spikein_db
+  Int?    minScoreToFilter = 60
+  Int?    topNHits = 3
 
-  String reads_basename=basename(reads_bam, ".bam")
+  String? docker="quay.io/broadinstitute/viral-core"
+
+  String  reads_basename=basename(reads_bam, ".bam")
 
   command {
     set -ex -o pipefail
+
+    read_utils.py --version | tee VERSION
 
     ln -s ${reads_bam} ${reads_basename}.bam
     read_utils.py bwamem_idxstats \
@@ -179,19 +191,20 @@ task spikein_report {
   output {
     File   report           = "${reads_basename}.spike_count.txt"
     File   report_top_hits  = "${reads_basename}.spike_count.top_${topNHits}_hits.txt"
-    String viralngs_version = "viral-ngs_version_unknown"
+    String viralngs_version = read_string("VERSION")
   }
 
   runtime {
     memory: "3 GB"
     cpu: 2
-    docker: "quay.io/broadinstitute/viral-core"
+    docker: ${docker}
     dx_instance_type: "mem1_ssd1_x4"
   }
 }
 
 task spikein_summary {
   Array[File]+  spikein_count_txt
+  String?       docker="quay.io/broadinstitute/viral-core"
 
   command {
     set -ex -o pipefail
@@ -199,34 +212,38 @@ task spikein_summary {
     mkdir spike_summaries
     cp ${sep=' ' spikein_count_txt} spike_summaries/
 
+    reports.py --version | tee VERSION
     reports.py aggregate_spike_count spike_summaries/ spikein_summary.tsv \
       --loglevel=DEBUG
   }
 
   output {
     File   spikein_summary  = "spikein_summary.tsv"
-    String viralngs_version = "viral-ngs_version_unknown"
+    String viralngs_version = read_string("VERSION")
   }
 
   runtime {
     memory: "3 GB"
     cpu: 2
-    docker: "quay.io/broadinstitute/viral-core"
+    docker: ${docker}
     dx_instance_type: "mem1_ssd1_x4"
   }
 }
 
 task aggregate_metagenomics_reports {
   Array[File]+ kraken_summary_reports 
-  String     aggregate_taxon_heading_space_separated  = "Viruses" # The taxonomic heading to analyze. More than one can be specified.
-  String     aggregate_taxlevel_focus                 = "species" # species,genus,family,order,class,phylum,kingdom,superkingdom
-  Int?       aggregate_top_N_hits                     = 5 # only include the top N hits from a given sample in the aggregte report
+  String       aggregate_taxon_heading_space_separated  = "Viruses" # The taxonomic heading to analyze. More than one can be specified.
+  String       aggregate_taxlevel_focus                 = "species" # species,genus,family,order,class,phylum,kingdom,superkingdom
+  Int?         aggregate_top_N_hits                     = 5 # only include the top N hits from a given sample in the aggregte report
 
-  String aggregate_taxon_heading = sub(aggregate_taxon_heading_space_separated, " ", "_") # replace spaces with underscores for use in filename
+  String?      docker="quay.io/broadinstitute/viral-classify"
+
+  String       aggregate_taxon_heading = sub(aggregate_taxon_heading_space_separated, " ", "_") # replace spaces with underscores for use in filename
   
   command {
     set -ex -o pipefail
 
+    metagenomics.py --version | tee VERSION
     metagenomics.py taxlevel_summary \
       ${sep=' ' kraken_summary_reports} \
       --csvOut aggregate_taxa_summary_${aggregate_taxon_heading}_by_${aggregate_taxlevel_focus}_top_${aggregate_top_N_hits}_by_sample.csv \
@@ -238,11 +255,12 @@ task aggregate_metagenomics_reports {
   }
 
   output {
-    File krakenuniq_aggregate_taxlevel_summary = "aggregate_taxa_summary_${aggregate_taxon_heading}_by_${aggregate_taxlevel_focus}_top_${aggregate_top_N_hits}_by_sample.csv"
+    File   krakenuniq_aggregate_taxlevel_summary = "aggregate_taxa_summary_${aggregate_taxon_heading}_by_${aggregate_taxlevel_focus}_top_${aggregate_top_N_hits}_by_sample.csv"
+    String viralngs_version = read_string("VERSION")
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-classify"
+    docker: ${docker}
     memory: "4 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd2_x2"

@@ -5,6 +5,8 @@ task downsample_bams {
   Boolean?     deduplicateBefore=false
   Boolean?     deduplicateAfter=false
 
+  String?      docker="quay.io/broadinstitute/viral-core"
+
   command {
     if [[ "${deduplicateBefore}" == "true" ]]; then
       DEDUP_OPTION="--deduplicateBefore"
@@ -17,6 +19,8 @@ task downsample_bams {
       exit 1
     fi
     
+    read_utils.py --version | tee VERSION
+
     read_utils.py downsample_bams \
         ${sep=' ' reads_bam} \
         --outPath ./output \
@@ -27,10 +31,10 @@ task downsample_bams {
 
   output {
     Array[File] downsampled_bam  = glob("output/*.downsampled-*.bam")
-    String      viralngs_version = "viral-ngs_version_unknown"
+    String      viralngs_version = read_string("VERSION")
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-core"
+    docker: ${docker}
     memory: "3 GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_x4"
