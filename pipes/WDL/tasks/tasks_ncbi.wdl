@@ -3,8 +3,10 @@ task download_fasta {
   String         out_prefix
   Array[String]+ accessions
   String         emailAddress
+  String?        docker="quay.io/broadinstitute/viral-phylo"
 
   command {
+    ncbi.py --version | tee VERSION
     ncbi.py fetch_fastas \
         ${emailAddress} \
         . \
@@ -14,13 +16,13 @@ task download_fasta {
 
   output {
     File   sequences_fasta  = "${out_prefix}.fasta"
-    String viralngs_version = "viral-ngs_version_unknown"
+    String viralngs_version = read_string("VERSION")
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-phylo"
+    docker: ${docker}
     memory: "3 GB"
     cpu: 2
-    dx_instance_type: "mem1_ssd1_x2"
+    dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
 
@@ -28,9 +30,11 @@ task download_annotations {
   Array[String]+ accessions
   String         emailAddress
   String         combined_out_prefix
+  String?        docker="quay.io/broadinstitute/viral-phylo"
 
   command {
     set -ex -o pipefail
+    ncbi.py --version | tee VERSION
     ncbi.py fetch_feature_tables \
         ${emailAddress} \
         ./ \
@@ -48,14 +52,14 @@ task download_annotations {
     File        combined_fasta   = "${combined_out_prefix}.fasta"
     Array[File] genomes_fasta    = glob("*.fasta")
     Array[File] features_tbl     = glob("*.tbl")
-    String      viralngs_version = "viral-ngs_version_unknown"
+    String      viralngs_version = read_string("VERSION")
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-phylo"
+    docker: ${docker}
     memory: "3 GB"
     cpu: 2
-    dx_instance_type: "mem1_ssd1_x2"
+    dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
 
@@ -66,8 +70,11 @@ task annot_transfer {
 
   Array[Int]   chr_nums=range(length(multi_aln_fasta))
 
+  String?      docker="quay.io/broadinstitute/viral-phylo"
+
   command {
     set -ex -o pipefail
+    ncbi.py --version | tee VERSION
     echo ${sep=' ' multi_aln_fasta} > alignments.txt
     echo ${sep=' ' reference_feature_table} > tbls.txt
     for i in ${sep=' ' chr_nums}; do
@@ -84,20 +91,20 @@ task annot_transfer {
   }
 
   output {
-    Array[File]+ transferred_feature_tables = glob("*.tbl")
-    String       viralngs_version           = "viral-ngs_version_unknown"
+    Array[File] transferred_feature_tables = glob("*.tbl")
+    String      viralngs_version           = read_string("VERSION")
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-phylo"
+    docker: ${docker}
     memory: "3 GB"
     cpu: 2
-    dx_instance_type: "mem1_ssd1_x2"
+    dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
 
 task prepare_genbank {
   Array[File]+ assemblies_fasta
-  Array[File]+ annotations_tbl
+  Array[File]  annotations_tbl
   File         authors_sbt
   File         biosampleMap
   File         genbankSourceTable
@@ -106,10 +113,12 @@ task prepare_genbank {
   String       comment # TO DO: make this optional
   String       organism
   String       molType = "cRNA"
+  String?      docker="quay.io/broadinstitute/viral-phylo"
 
   command {
     set -ex -o pipefail
     cp ${sep=' ' annotations_tbl} .
+    ncbi.py --version | tee VERSION
     ncbi.py prep_genbank_files \
         ${authors_sbt} \
         ${sep=' ' assemblies_fasta} \
@@ -133,14 +142,14 @@ task prepare_genbank {
     Array[File] fasta_per_chr_files      = glob("*.fsa")
     Array[File] validation_files         = glob("*.val")
     File        errorSummary             = "errorsummary.val.txt"
-    String      viralngs_version         = "viral-ngs_version_unknown"
+    String      viralngs_version         = read_string("VERSION")
   }
 
   runtime {
-    docker: "quay.io/broadinstitute/viral-phylo"
+    docker: ${docker}
     memory: "3 GB"
     cpu: 2
-    dx_instance_type: "mem1_ssd1_x2"
+    dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
 

@@ -7,9 +7,12 @@ task isnvs_per_sample {
   Int? minReadsPerStrand
   Int? maxBias
 
+  String?  docker="quay.io/broadinstitute/viral-phylo"
+
   String sample_name = basename(basename(basename(mapped_bam, ".bam"), ".all"), ".mapped")
 
   command {
+    intrahost.py --version | tee VERSION
     intrahost.py vphaser_one_sample \
         ${mapped_bam} \
         ${assembly_fasta} \
@@ -22,11 +25,12 @@ task isnvs_per_sample {
 
   output {
     File   isnvsFile        = "vphaser2.${sample_name}.txt.gz"
-    String viralngs_version = "viral-ngs_version_unknown"
+    String viralngs_version = read_string("VERSION")
   }
   runtime {
+    docker: ${docker}
     memory: "7 GB"
-    docker: "quay.io/broadinstitute/viral-phylo"
+    dx_instance_type: "mem1_ssd1_v2_x8"
   }
 }
 
@@ -40,9 +44,12 @@ task isnvs_vcf {
   Array[String]? sampleNames # list of sample names
   String? emailAddress # email address passed to NCBI if we need to download reference sequences
   Boolean naiveFilter=false
+  String? docker="quay.io/broadinstitute/viral-phylo"
 
   command {
     set -ex -o pipefail
+
+    intrahost.py --version | tee VERSION
 
     SAMPLES="${sep=' ' sampleNames}"
     if [ -n "$SAMPLES" ]; then SAMPLES="--samples $SAMPLES"; fi
@@ -79,11 +86,12 @@ task isnvs_vcf {
 
   output {
     Array[File] isnvFiles        = ["isnvs.vcf.gz", "isnvs.vcf.gz.tbi", "isnvs.annot.vcf.gz", "isnvs.annot.txt.gz", "isnvs.annot.vcf.gz.tbi"]
-    String      viralngs_version = "viral-ngs_version_unknown"
+    String      viralngs_version = read_string("VERSION")
   }
   runtime {
+    docker: ${docker}
     memory: "4 GB"
-    docker: "quay.io/broadinstitute/viral-phylo"
+    dx_instance_type: "mem1_ssd1_v2_x4"
   }
 }
 

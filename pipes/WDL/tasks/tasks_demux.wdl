@@ -23,7 +23,7 @@
 #    docker: ${docker}
 #    memory: "7 GB"
 #    cpu: 4
-#    dx_instance_type: "mem1_hdd2_x8"
+#    dx_instance_type: "mem1_hdd2_v2_x4"
 #    preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
 #  }
 #}
@@ -206,7 +206,7 @@ task illumina_demux {
     docker: ${docker}
     memory: "16 GB"
     cpu: 36
-    dx_instance_type: "mem1_ssd2_x36"
+    dx_instance_type: "mem1_ssd2_v2_x36"
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
   }
 }
@@ -246,7 +246,7 @@ task merge_and_reheader_bams {
     docker: ${docker}
     memory: "2000 MB"
     cpu: 2
-    dx_instance_type: "mem1_ssd2_x4"
+    dx_instance_type: "mem1_ssd2_v2_x4"
   }
 }
 
