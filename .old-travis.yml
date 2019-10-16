@@ -41,8 +41,6 @@ jobs:
       env:
         - TRAVIS_JOB=test_cromwell
       install:
-        - DOCKER_TAG=`travis/list-docker-tags.sh | tail -1`
-        - docker pull $DOCKER_TAG
         - travis/install-wdl.sh
       script:
         - travis/validate-wdl.sh
