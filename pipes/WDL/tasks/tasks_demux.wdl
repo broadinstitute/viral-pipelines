@@ -52,9 +52,9 @@ task illumina_demux {
   String? docker="quay.io/broadinstitute/viral-core"
 
 
-  parameter_meta {
-    flowcell_tgz : "stream" # for DNAnexus, until WDL implements the File| type
-  }
+#  parameter_meta {
+#    flowcell_tgz : "stream" # for DNAnexus, until WDL implements the File| type
+#  }
 
   command {
     set -ex -o pipefail
