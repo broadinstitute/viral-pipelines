@@ -77,6 +77,67 @@ task krakenuniq {
   }
 }
 
+task build_krakenuniq_db {
+  File        genome_fastas_tarball
+  File        taxonomy_db_tarball
+  String      db_basename
+
+  Boolean?    subsetTaxonomy
+  Integer?    minimizerLen
+  Integer?    kmerLen
+  Integer?    maxDbSize
+  String?     docker="quay.io/broadinstitute/viral-classify"
+
+  command {
+    set -ex -o pipefail
+
+    if [ -d /mnt/tmp ]; then
+      TMPDIR=/mnt/tmp
+    fi
+    TAXDB_DIR=$(mktemp -d)
+    FASTAS_DIR=$(mktemp -d)
+    DB_DIR="$TMPDIR/${db_basename}"
+    mkdir -p $DB_DIR
+
+    metagenomics.py --version | tee VERSION
+
+    # decompress input tarballs
+    read_utils.py extract_tarball \
+      ${genome_fastas_tarball} $FASTAS_DIR \
+      --loglevel=DEBUG
+    read_utils.py extract_tarball \
+      ${taxonomy_db_tarball} $TAXDB_DIR \
+      --loglevel=DEBUG
+
+    # build database
+    metagenomics.py krakenuniq_build \
+      $DB_DIR --library $FASTAS_DIR --taxonomy $TAXDB_DIR \
+      ${true='--subsetTaxonomy=' false='' subsetTaxonomy} \
+      ${'--minimizerLen=' + minimizerLen} \
+      ${'--kmerLen=' + kmerLen} \
+      ${'--maxDbSize=' + maxDbSize} \
+      --clean \
+      --loglevel=DEBUG
+
+    # tar it up
+    tar -c ${db_basename} -C $TMP_DIR | zstd -19 > ${db_basename}.tar.zst
+  }
+
+  output {
+    File        krakenuniq_db    = "${db_basename}.tar.zst"
+    String      viralngs_version = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "${docker}"
+    memory: "200 GB"
+    disks: "local-disk 350 HDD"
+    cpu: 32
+    dx_instance_type: "mem3_ssd1_v2_x32"
+    preemptible: 0
+  }
+}
+
 task kraken {
   Array[File] reads_unmapped_bam
   File        kraken_db_tar_lz4      # kraken/{database.kdb,taxonomy}
@@ -150,6 +211,67 @@ task kraken {
   runtime {
     docker: "${docker}"
     memory: "200 GB"
+    cpu: 32
+    dx_instance_type: "mem3_ssd1_v2_x32"
+    preemptible: 0
+  }
+}
+
+task build_kraken_db {
+  File        genome_fastas_tarball
+  File        taxonomy_db_tarball
+  String      db_basename
+
+  Boolean?    subsetTaxonomy
+  Integer?    minimizerLen
+  Integer?    kmerLen
+  Integer?    maxDbSize
+  String?     docker="quay.io/broadinstitute/viral-classify"
+
+  command {
+    set -ex -o pipefail
+
+    if [ -d /mnt/tmp ]; then
+      TMPDIR=/mnt/tmp
+    fi
+    TAXDB_DIR=$(mktemp -d)
+    FASTAS_DIR=$(mktemp -d)
+    DB_DIR="$TMPDIR/${db_basename}"
+    mkdir -p $DB_DIR
+
+    metagenomics.py --version | tee VERSION
+
+    # decompress input tarballs
+    read_utils.py extract_tarball \
+      ${genome_fastas_tarball} $FASTAS_DIR \
+      --loglevel=DEBUG
+    read_utils.py extract_tarball \
+      ${taxonomy_db_tarball} $TAXDB_DIR \
+      --loglevel=DEBUG
+
+    # build database
+    metagenomics.py kraken_build \
+      $DB_DIR --library $FASTAS_DIR --taxonomy $TAXDB_DIR \
+      ${true='--subsetTaxonomy=' false='' subsetTaxonomy} \
+      ${'--minimizerLen=' + minimizerLen} \
+      ${'--kmerLen=' + kmerLen} \
+      ${'--maxDbSize=' + maxDbSize} \
+      --clean \
+      --loglevel=DEBUG
+
+    # tar it up
+    tar -c ${db_basename} -C $TMP_DIR | zstd -19 > ${db_basename}.tar.zst
+  }
+
+  output {
+    File        kraken_db        = "${db_basename}.tar.zst"
+    String      viralngs_version = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "${docker}"
+    memory: "200 GB"
+    disks: "local-disk 350 HDD"
     cpu: 32
     dx_instance_type: "mem3_ssd1_v2_x32"
     preemptible: 0
