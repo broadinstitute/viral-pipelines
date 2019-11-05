@@ -10,6 +10,9 @@ env:
   - MINICONDA_DIR="$HOME/miniconda"
   - PYTHONIOENCODING=UTF8
   - BOTO_CONFIG=/dev/null # bogus value to override config on travis
+  - DOCKER_REGISTRY="quay.io"
+  - DOCKER_REPO_PROD="quay.io/broadinstitute/viral-pipelines"
+  - DOCKER_REPO_DEV="quay.io/broadinstitute/viral-pipelines-dev"
 
 cache:
   directories:
@@ -23,16 +26,6 @@ jobs:
 
     - language: java
       jdk: openjdk11
-      stage: validate
-      env:
-        - TRAVIS_JOB=validate_WDL
-      install:
-        - travis/install-wdl.sh
-      script:
-        - travis/validate-wdl.sh
-
-    - language: java
-      jdk: openjdk11
       stage: build
       env:
         - TRAVIS_JOB=build_dxWDL
@@ -42,7 +35,8 @@ jobs:
       install:
         - travis/install-wdl.sh
       script:
-        - echo travis/build-dx.sh
+        - travis/validate-wdl.sh
+        - travis/build-dx.sh
 
     - language: java
       jdk: openjdk11
@@ -52,6 +46,7 @@ jobs:
       install:
         - travis/install-wdl.sh
       script:
+        - travis/validate-wdl.sh
         - travis/tests-cromwell.sh
 
     #- language: generic
