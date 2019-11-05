@@ -55,7 +55,7 @@ task krakenuniq {
       "metagenomics.py krona \
         ,,-summary_report.txt \
         taxonomy \
-        ,,.krona.html \
+        ,,-krona.html \
         --noRank --noHits --inputType krakenuniq \
         --loglevel=DEBUG" \
       ::: `cat $OUT_BASENAME`
@@ -64,7 +64,7 @@ task krakenuniq {
   output {
     Array[File] krakenuniq_classified_reads   = glob("*.krakenuniq-reads.txt.gz")
     Array[File] krakenuniq_summary_reports    = glob("*.krakenuniq-summary_report.txt")
-    Array[File] krona_report_html             = glob("*.krakenuniq.krona.html")
+    Array[File] krona_report_html             = glob("*.krakenuniq-krona.html")
     String      viralngs_version              = read_string("VERSION")
   }
 
@@ -77,11 +77,95 @@ task krakenuniq {
   }
 }
 
-task krona {
-  File    classified_reads_txt_gz
-  File    krona_taxonomy_db_tgz
+task kraken {
+  Array[File] reads_unmapped_bam
+  File        kraken_db_tar_lz4      # kraken/{database.kdb,taxonomy}
+  File        krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
 
-  String? docker="quay.io/broadinstitute/viral-classify"
+  String?     docker="quay.io/broadinstitute/viral-classify"
+
+  #parameter_meta {
+  #  kraken_db_tar_lz4:  "stream" # for DNAnexus, until WDL implements the File| type
+  #  krona_taxonomy_db_tgz : "stream" # for DNAnexus, until WDL implements the File| type
+  #  #reads_unmapped_bam: "stream" # for DNAnexus, until WDL implements the File| type
+  #}
+
+  command {
+    set -ex -o pipefail
+
+    if [ -d /mnt/tmp ]; then
+      TMPDIR=/mnt/tmp
+    fi
+    DB_DIR=$(mktemp -d)
+
+    # decompress DB to $DB_DIR
+    read_utils.py extract_tarball \
+      ${kraken_db_tar_lz4} $DB_DIR \
+      --loglevel=DEBUG
+    read_utils.py extract_tarball \
+      ${krona_taxonomy_db_tgz} . \
+      --loglevel=DEBUG &  # we don't need this until later
+
+    # prep input and output file names
+    OUT_READS=fnames_outreads.txt
+    OUT_REPORTS=fnames_outreports.txt
+    OUT_BASENAME=basenames_reads.txt
+    for bam in ${sep=' ' reads_unmapped_bam}; do
+      echo "$(basename $bam .bam).kraken-reads" >> $OUT_BASENAME
+      echo "$(basename $bam .bam).kraken-reads.txt.gz" >> $OUT_READS
+      echo "$(basename $bam .bam).kraken-summary_report.txt" >> $OUT_REPORTS
+    done
+
+    metagenomics.py --version | tee VERSION
+
+    # execute on all inputs and outputs serially, but with a single
+    # database load into ram
+    metagenomics.py kraken \
+      $DB_DIR \
+      ${sep=' ' reads_unmapped_bam} \
+      --outReads `cat $OUT_READS` \
+      --outReport `cat $OUT_REPORTS` \
+      --loglevel=DEBUG
+
+    wait # for krona_taxonomy_db_tgz to download and extract
+
+    # run single-threaded krona on up to nproc samples at once
+    parallel -I ,, \
+      "metagenomics.py krona \
+        ,,-summary_report.txt \
+        taxonomy \
+        ,,-krona.html \
+        --noRank --noHits --inputType tsv \
+        --loglevel=DEBUG" \
+      ::: `cat $OUT_BASENAME`
+  }
+
+  output {
+    Array[File] kraken_classified_reads = glob("*.kraken-reads.txt.gz")
+    Array[File] kraken_summary_reports  = glob("*.kraken-summary_report.txt")
+    Array[File] krona_report_html       = glob("*.kraken-krona.html")
+    String      viralngs_version        = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "${docker}"
+    memory: "200 GB"
+    cpu: 32
+    dx_instance_type: "mem3_ssd1_v2_x32"
+    preemptible: 0
+  }
+}
+
+task krona {
+  File     classified_reads_txt_gz
+  File     krona_taxonomy_db_tgz
+
+  String?  input_type
+  Integer? query_column
+  Integer? taxid_column
+  Integer? score_column
+  Integer? magnitude_column
+  String?  docker="quay.io/broadinstitute/viral-classify"
 
   String  input_basename = basename(classified_reads_txt_gz, ".txt.gz")
 
@@ -103,6 +187,11 @@ task krona {
       ${classified_reads_txt_gz} \
       taxonomy \
       ${input_basename}.html \
+      ${'--inputType=' + input_type} \
+      ${'--queryColumn=' + query_column} \
+      ${'--taxidColumn=' + taxid_column} \
+      ${'--scoreColumn=' + score_column} \
+      ${'--magnitudeColumn=' + magnitude_column} \
       --noRank --noHits \
       --loglevel=DEBUG
   }
@@ -224,24 +313,24 @@ task kaiju {
       ${reads_unmapped_bam} \
       $DB_DIR/kaiju.fmi \
       $DB_DIR/taxonomy \
-      ${input_basename}.kaiju.report.txt \
-      --outReads ${input_basename}.kaiju.reads.gz \
+      ${input_basename}.kaiju.summary_report.txt \
+      --outReads ${input_basename}.kaiju.reads.txt.gz \
       --loglevel=DEBUG
 
     # run krona
     metagenomics.py krona \
-      ${input_basename}.kaiju.report.txt \
+      ${input_basename}.kaiju.summary_report.txt \
       taxonomy \
-      ${input_basename}.kaiju.html \
+      ${input_basename}.kaiju-krona.html \
       --inputType kaiju \
       --noRank --noHits \
       --loglevel=DEBUG
   }
 
   output {
-    File    kaiju_report       = "${input_basename}.kaiju.report.txt"
-    File    kaiju_reads        = "${input_basename}.kaiju.reads.gz"
-    File    krona_report_html  = "${input_basename}.kaiju.html"
+    File    kaiju_report       = "${input_basename}.kaiju-summary_report.txt"
+    File    kaiju_reads        = "${input_basename}.kaiju-reads.txt.gz"
+    File    krona_report_html  = "${input_basename}.kaiju-krona.html"
     String  viralngs_version   = read_string("VERSION")
   }
 
