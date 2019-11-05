@@ -26,14 +26,14 @@ jobs:
       stage: build
       env:
         - TRAVIS_JOB=build_dxWDL
-        # DX_API_TOKEN (for DNAnexus builds)
-        - secure: "A6aQZE2dtzZB8NRIjE5uRa0S0RdDubpAp7ONmT5arOj7MqMU5ZWOGPkELwE/wyVD0dfI3k2+jSbjMzK3LYuRexaPXnXFxgiTI4eGEk/V02D/aUTiwe0IqAKjRPZs57NmixNzJWhOkunKPc2V7N4vQdq7AOHgHZOBaMb/oJeuOcSJZHiUa+Tk5PptL3FGixGOvPqCPP8wmNp4+rp3SsWzsWvLlDo5FtZfHMtvekjCpWBeArnxWAyddHUu+2YzllMtX4eqCqi4ztq0wJzHzIAkXdh/A+zjm9KawQCLza4LvW8AL1pX4Wrq7jwxc7qtR1hyBD2OFJRpulvp5Qf077RH18Wme+B2OOEtnrDMrtaKo1R4QzNpj3WH25J3OCcW6usjtAwIjpnSd3OFCEvr88hSMV/UAPHddjrXGLBBbZUpSzD45o/bY5101hNLNFHWRc3CPuWwfHhAKaxNZ+AbGJXlpHkNhSiZ6noZvouwv5hwR8CX3CmyrcAdIpEayGWVQSXeheN9bl7+23MJy2j/wnKPRtMArAj8dHgwvIfBggX5daROiYxVMhY4G9UqBo8xUlw+EJrWRAM1id5L1O1y44T8bVxd4WqkJAY7SwOhcXZ4KrkVWdVDxElWWMN7vWj7qxYRYrQpkOqlrSExtTNyIHecfDvgIEuYHdR0qB+sSWw+7CM="
+        # DX_API_TOKEN (for DNAnexus builds) -- token #2, expires 12/31/2024
+        - secure: "EYyJTY20ZV3RehLmBYiZ1sWyBtLMIOGWSkN8a+Ez0PUA2CirKH9GlUFKMfujKOvrro9BYfgng0F6pQaMh9yarQUEIh7nv6zF/+LjPfNpddTY5zd8MJPtoB133uxw18cOkVcmHgxwVrN1aSuO96pWeENhr6FNt5EY5glfzgUvvASILJWRYBoq48YTjmXYA/LOG39gRzjquhxX3lelZpgLujXwLgTH2MR1MziKNfMdeHrJ/WvPZsATjhvSa9/KOO+HFYyHtHMuRCPAmGV0ZjIkpOthUtoG3ck5r5Z8Z6nGCS4b2qJ+uexWExrd7TBwMcpKI6wQlX15ZcZm8mAdC/KUX2eKbtjSYD68ZE/pg77I5inJex0l2suQtMBPxUl4SPK/d+GsnoL9+rGOdDVdgO/RUg+PoIYLcivjk/q2Et4LBS0IqIhe+/SOE3n70gHYMUFiGh2gCdrgyy0/YBfkAt95wtnjA+nSpqZ6lCUnUE5nT5Krs8beiYqCk9yYDF0YWTlwmezi7Jgx7PLuuTmNEScvfV/l2yKut/kVuAoMI6KEmpfeSNFEjIsrIvW9Fbq71Y1H8q+Ex27l3GR/OhrVQSeYaIN5BwVEI353DcRDiSmi4iwsmYLL2x9Q+7qPTadwMOeIU999WiYqk9gH+vk/86hUg2vA7MlKYmzD0G95sxNSFkI="
         - DX_PROJECT=project-F856jv809y3VkzyFGkKqX367
       install:
         - travis/install-wdl.sh
       script:
         - travis/validate-wdl.sh
-        - travis/build-dx.sh
+        - echo travis/build-dx.sh
 
     - language: java
       jdk: openjdk8
