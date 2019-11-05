@@ -31,12 +31,13 @@ jobs:
         - TRAVIS_JOB=build_dxWDL
         # DX_API_TOKEN (for DNAnexus builds) -- token #2, expires 12/31/2024
         - secure: "EYyJTY20ZV3RehLmBYiZ1sWyBtLMIOGWSkN8a+Ez0PUA2CirKH9GlUFKMfujKOvrro9BYfgng0F6pQaMh9yarQUEIh7nv6zF/+LjPfNpddTY5zd8MJPtoB133uxw18cOkVcmHgxwVrN1aSuO96pWeENhr6FNt5EY5glfzgUvvASILJWRYBoq48YTjmXYA/LOG39gRzjquhxX3lelZpgLujXwLgTH2MR1MziKNfMdeHrJ/WvPZsATjhvSa9/KOO+HFYyHtHMuRCPAmGV0ZjIkpOthUtoG3ck5r5Z8Z6nGCS4b2qJ+uexWExrd7TBwMcpKI6wQlX15ZcZm8mAdC/KUX2eKbtjSYD68ZE/pg77I5inJex0l2suQtMBPxUl4SPK/d+GsnoL9+rGOdDVdgO/RUg+PoIYLcivjk/q2Et4LBS0IqIhe+/SOE3n70gHYMUFiGh2gCdrgyy0/YBfkAt95wtnjA+nSpqZ6lCUnUE5nT5Krs8beiYqCk9yYDF0YWTlwmezi7Jgx7PLuuTmNEScvfV/l2yKut/kVuAoMI6KEmpfeSNFEjIsrIvW9Fbq71Y1H8q+Ex27l3GR/OhrVQSeYaIN5BwVEI353DcRDiSmi4iwsmYLL2x9Q+7qPTadwMOeIU999WiYqk9gH+vk/86hUg2vA7MlKYmzD0G95sxNSFkI="
-        - DX_PROJECT=project-F856jv809y3VkzyFGkKqX367
+        - DX_PROJECT=project-F8PQ6380xf5bK0Qk0YPjB17P
       install:
         - travis/install-wdl.sh
       script:
         - travis/validate-wdl.sh
         - travis/build-dx.sh
+        - travis/tests-dx.sh
 
     - language: java
       jdk: openjdk11
