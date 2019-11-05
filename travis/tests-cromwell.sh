@@ -21,11 +21,11 @@ for workflow in ../pipes/WDL/workflows/*.wdl; do
 			error_logs=$(grep stderr cromwell.out | perl -lape 's/.*\s(\S+)$/$1/g')
 			for log in $error_logs; do
 				echo "contents of stderr ($log):"
-				cat $log | sed "s/^/[STDERR] /"
+				cat `dirname $log`/stderr | sed "s/^/[STDERR] /"
 				echo "contents of stdout ($log):"
 				cat `dirname $log`/stdout | sed "s/^/[STDOUT] /"
 			done
-			sync; sleep 30; exit 1
+			sync; sleep 20; exit 1
 		fi
     fi
 done
