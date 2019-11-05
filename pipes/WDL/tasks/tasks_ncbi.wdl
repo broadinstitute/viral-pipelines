@@ -19,7 +19,7 @@ task download_fasta {
     String viralngs_version = read_string("VERSION")
   }
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "3 GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -56,7 +56,7 @@ task download_annotations {
   }
 
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "3 GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -95,7 +95,7 @@ task annot_transfer {
     String      viralngs_version           = read_string("VERSION")
   }
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "3 GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -146,7 +146,7 @@ task prepare_genbank {
   }
 
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "3 GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"

@@ -20,7 +20,7 @@
 #    File tar_lz4=
 #  }
 #  runtime {
-#    docker: ${docker}
+#    docker: "${docker}"
 #    memory: "7 GB"
 #    cpu: 4
 #    dx_instance_type: "mem1_hdd2_v2_x4"
@@ -203,7 +203,7 @@ task illumina_demux {
   }
 
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "16 GB"
     cpu: 36
     dx_instance_type: "mem1_ssd2_v2_x36"
@@ -243,7 +243,7 @@ task merge_and_reheader_bams {
   }
 
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "2000 MB"
     cpu: 2
     dx_instance_type: "mem1_ssd2_v2_x4"

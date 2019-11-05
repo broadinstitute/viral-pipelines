@@ -69,7 +69,7 @@ task krakenuniq {
   }
 
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "200 GB"
     cpu: 32
     dx_instance_type: "mem3_ssd1_v2_x32"
@@ -113,7 +113,7 @@ task krona {
   }
 
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "4 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd2_v2_x2"
@@ -175,7 +175,7 @@ task filter_bam_to_taxa {
   }
 
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "4 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd2_v2_x2"
@@ -246,7 +246,7 @@ task kaiju {
   }
 
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "100 GB"
     cpu: 16
     dx_instance_type: "mem3_ssd1_v2_x16"

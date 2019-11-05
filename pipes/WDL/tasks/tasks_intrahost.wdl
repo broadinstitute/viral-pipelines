@@ -28,7 +28,7 @@ task isnvs_per_sample {
     String viralngs_version = read_string("VERSION")
   }
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "7 GB"
     dx_instance_type: "mem1_ssd1_v2_x8"
   }
@@ -89,7 +89,7 @@ task isnvs_vcf {
     String      viralngs_version = read_string("VERSION")
   }
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "4 GB"
     dx_instance_type: "mem1_ssd1_v2_x4"
   }

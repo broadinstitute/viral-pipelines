@@ -30,7 +30,7 @@ task multi_align_mafft_ref {
   }
 
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "7 GB"
     cpu: 8
     dx_instance_type: "mem1_ssd1_v2_x8"
@@ -67,7 +67,7 @@ task multi_align_mafft {
   }
 
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "7 GB"
     cpu: 8
     dx_instance_type: "mem1_ssd1_v2_x8"
@@ -92,7 +92,7 @@ task index_ref {
     String viralngs_version = read_string("VERSION")
   }
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "4 GB"
   }
 }

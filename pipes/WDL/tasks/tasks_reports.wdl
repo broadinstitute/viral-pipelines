@@ -100,7 +100,7 @@ task plot_coverage {
   }
 
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "3500 MB"
     cpu: 4
     dx_instance_type: "mem1_ssd1_v2_x8"
@@ -128,7 +128,7 @@ task coverage_report {
   }
 
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "2000 MB"
     cpu: 2
     dx_instance_type: "mem1_ssd2_v2_x4"
@@ -155,7 +155,7 @@ task fastqc {
   runtime {
     memory: "2 GB"
     cpu: 1
-    docker: ${docker}
+    docker: "${docker}"
     dx_instance_type: "mem1_ssd1_v2_x4"
   }
 }
@@ -197,7 +197,7 @@ task spikein_report {
   runtime {
     memory: "3 GB"
     cpu: 2
-    docker: ${docker}
+    docker: "${docker}"
     dx_instance_type: "mem1_ssd1_v2_x4"
   }
 }
@@ -225,7 +225,7 @@ task spikein_summary {
   runtime {
     memory: "3 GB"
     cpu: 2
-    docker: ${docker}
+    docker: "${docker}"
     dx_instance_type: "mem1_ssd1_v2_x4"
   }
 }
@@ -260,7 +260,7 @@ task aggregate_metagenomics_reports {
   }
 
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "4 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd2_v2_x2"

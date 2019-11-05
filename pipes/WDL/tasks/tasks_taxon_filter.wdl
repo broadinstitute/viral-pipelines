@@ -71,7 +71,7 @@ task deplete_taxa {
     String viralngs_version          = read_string("VERSION")
   }
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "14 GB"
     cpu: 8
     dx_instance_type: "mem1_ssd1_v2_x16"
@@ -133,7 +133,7 @@ task filter_to_taxon {
     String viralngs_version       = read_string("VERSION")
   }
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "14 GB"
     cpu: 16
     dx_instance_type: "mem1_ssd1_v2_x8"
@@ -158,7 +158,7 @@ task build_lastal_db {
   }
 
   runtime {
-    docker: ${docker}
+    docker: "${docker}"
     memory: "7 GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x4"
@@ -204,7 +204,7 @@ task merge_one_per_sample {
   runtime{
     memory: "7 GB"
     cpu: 4
-    docker: ${docker}
+    docker: "${docker}"
     dx_instance_type: "mem1_ssd2_v2_x4"
   }
 }
