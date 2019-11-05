@@ -13,6 +13,7 @@ env:
   - DOCKER_REGISTRY="quay.io"
   - DOCKER_REPO_PROD="quay.io/broadinstitute/viral-pipelines"
   - DOCKER_REPO_DEV="quay.io/broadinstitute/viral-pipelines-dev"
+  - MODULE_VERSIONS="requirements-modules.txt"
 
 cache:
   directories:
@@ -35,6 +36,7 @@ jobs:
       install:
         - travis/install-wdl.sh
       script:
+        - travis/version-wdl-runtimes.sh
         - travis/validate-wdl.sh
         - travis/build-dx.sh
         - travis/tests-dx.sh
@@ -47,8 +49,16 @@ jobs:
       install:
         - travis/install-wdl.sh
       script:
+        - travis/version-wdl-runtimes.sh
         - travis/validate-wdl.sh
         - travis/tests-cromwell.sh
+
+    - language: python
+      stage: build
+      env: TRAVIS_JOB=build_docs
+      install: travis/install-pip-docs.sh
+      script: travis/build-docs.sh
+
 
     #- language: generic
     #  stage: build
