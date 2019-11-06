@@ -135,7 +135,9 @@ task illumina_demux {
         echo "  **Note: Q20 threshold used since NovaSeq with RTA3 writes only four Q-score values: 2, 12, 23, and 37.**"
         echo "    See: https://www.illumina.com/content/dam/illumina-marketing/documents/products/appnotes/novaseq-hiseq-q30-app-note-770-2017-010.pdf"
     elif [ "$total_tile_count" -gt 1408 ]; then
-        demux_threads=$(echo "$demux_instance_type" | cut -dx -f2)
+        demux_threads=20 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
+        max_reads_in_ram_per_tile=200000 # reduce the number of reads per tile since the NovaSeq has so many
+        max_records_in_ram=1500000
         echo "Tile count: $total_tile_count tiles (unknown instrument type)."
     fi
 
@@ -204,9 +206,9 @@ task illumina_demux {
 
   runtime {
     docker: "${docker}"
-    memory: "16 GB"
-    cpu: 36
-    dx_instance_type: "mem1_ssd2_v2_x36"
+    memory: "30 GB"
+    cpu: 16
+    dx_instance_type: "mem1_ssd2_v2_x16"
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
   }
 }
