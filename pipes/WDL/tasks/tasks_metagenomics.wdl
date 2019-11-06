@@ -83,9 +83,9 @@ task build_krakenuniq_db {
   String      db_basename
 
   Boolean?    subsetTaxonomy
-  Integer?    minimizerLen
-  Integer?    kmerLen
-  Integer?    maxDbSize
+  Int?        minimizerLen
+  Int?        kmerLen
+  Int?        maxDbSize
   String?     docker="quay.io/broadinstitute/viral-classify"
 
   command {
@@ -223,9 +223,9 @@ task build_kraken_db {
   String      db_basename
 
   Boolean?    subsetTaxonomy
-  Integer?    minimizerLen
-  Integer?    kmerLen
-  Integer?    maxDbSize
+  Int?        minimizerLen
+  Int?        kmerLen
+  Int?        maxDbSize
   String?     docker="quay.io/broadinstitute/viral-classify"
 
   command {
@@ -283,10 +283,10 @@ task krona {
   File     krona_taxonomy_db_tgz
 
   String?  input_type
-  Integer? query_column
-  Integer? taxid_column
-  Integer? score_column
-  Integer? magnitude_column
+  Int?     query_column
+  Int?     taxid_column
+  Int?     score_column
+  Int?     magnitude_column
   String?  docker="quay.io/broadinstitute/viral-classify"
 
   String  input_basename = basename(classified_reads_txt_gz, ".txt.gz")

@@ -6,10 +6,11 @@ if [[ ( -n $TRAVIS_PULL_REQUEST && $TRAVIS_PULL_REQUEST != "false" ) || $TRAVIS_
 
 	while IFS='=' read module version; do
 		git clone --depth=1 https://github.com/$module.git
-		pushd $module
+		DIR=`echo $module | cut -f 2 -d /`
+		pushd $DIR
 		git checkout -qf $version
 		popd
-		cp -a $module/* .
+		cp -a $DIR/* .
 	done < $MODULE_VERSIONS
 
     pushd docs
