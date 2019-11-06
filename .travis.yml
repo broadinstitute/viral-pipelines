@@ -60,6 +60,9 @@ jobs:
       env:      TRAVIS_JOB=build_docs
       install:  travis/install-pip-docs.sh
       script:   travis/build-docs.sh
+      ## note: this build_docs job does not actually produce the output on readthedocs
+      ## readthedocs does its own build trigger. this travis job exists simply to alert us
+      ## of build failures of the docs because otherwise we would never know.
 
 
     #- language: generic
