@@ -26,7 +26,7 @@ task deplete_taxa {
 
     # find memory thresholds
     mem_in_mb_50=`/opt/viral-ngs/source/docker/calc_mem.py mb 50`
-    mem_in_mb_90=`/opt/viral-ngs/source/docker/calc_mem.py mb 90`
+    mem_in_mb_75=`/opt/viral-ngs/source/docker/calc_mem.py mb 75`
 
     # bmtagger and blast db args
     DBS_BMTAGGER="${sep=' ' bmtaggerDbs}"
@@ -55,7 +55,7 @@ task deplete_taxa {
       ${'--chunkSize=' + query_chunk_size} \
       $TAGS_TO_CLEAR \
       --JVMmemory="$mem_in_mb_50"m \
-      --srprismMemory=$mem_in_mb_90 \
+      --srprismMemory=$mem_in_mb_75 \
       --loglevel=DEBUG
 
     samtools view -c ${raw_reads_unmapped_bam} | tee depletion_read_count_pre
@@ -72,9 +72,9 @@ task deplete_taxa {
   }
   runtime {
     docker: "${docker}"
-    memory: "14 GB"
+    memory: "15 GB"
     cpu: 8
-    dx_instance_type: "mem1_ssd1_v2_x16"
+    dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: 0
   }
 }
