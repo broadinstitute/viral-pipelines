@@ -10,5 +10,10 @@ workflow assemble_denovo_bulk {
       input:
         reads_unmapped_bam = reads_unmapped_bam
     }
+    
+    call assembly.assemble {
+      input:
+        reads_unmapped_bam = filter_to_taxon.taxfilt_bam
+    }
   }
 }
