@@ -3,7 +3,7 @@ import "tasks_assembly.wdl" as assembly
 
 workflow assemble_denovo {
   
-  Array reads_unmapped_bam
+  File reads_unmapped_bam
   File lastal_db_fasta
   File trim_clip_db
   Array[File]+ reference_genome_fasta
