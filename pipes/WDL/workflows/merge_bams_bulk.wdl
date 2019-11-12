@@ -1,16 +1,19 @@
 import "tasks_demux.wdl" as demux
 
 workflow merge_bams_bulk {
-    Array[File]+ in_bams
-    File? reheader_table # tsv with 3 cols: field, old value, new value
-    String out_basename
-    String? docker="quay.io/broadinstitute/viral-core"
+    File out_basename_in_bams_table # first column is out_basename, remaining columns are in_bams for that basename
+	Array[Array[String]] input_values = read_tsv(out_basename_in_bams_table)
 
-    call demux.merge_and_reheader_bams {
-        input:
-            in_bams = in_bams,
-            reheader_table = reheader_table,
-            out_basename = out_basename,
-            docker = docker
+#     Array[File]+ in_bams
+#     String out_basename
+    String? docker="quay.io/broadinstitute/viral-core"
+    
+    scatter (input_value in input_values) {
+    	call demux.merge_and_reheader_bams {
+            input:
+            	out_basename = input_value[0],
+                in_bams = input_value[1],
+                docker = docker
+        }
     }
 }
