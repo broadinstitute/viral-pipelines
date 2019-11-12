@@ -9,8 +9,6 @@ workflow assemble_denovo_bulk {
   Array[File]+ reference_genome_fasta
 
   scatter(reads_unmapped_bam in reads_unmapped_bam_files) {
-    call sub.
-  
     call taxon_filter.filter_to_taxon {
       input:
         reads_unmapped_bam = reads_unmapped_bam,
