@@ -8,9 +8,10 @@ workflow assemble_denovo_bulk {
 
   scatter(reads_unmapped_bam in reads_unmapped_bam_files) {
     call denovo_assembly.assemble_denovo {
-      input: reads_unmapped_bam = reads_unmapped_bam,
-      lastal_db_fasta = lastal_db_fasta,
-      reference_genome_fasta = reference_genome_fasta
+      input:
+        reads_unmapped_bam = reads_unmapped_bam,
+        lastal_db_fasta = lastal_db_fasta,
+        reference_genome_fasta = reference_genome_fasta
     }
   }
 }
