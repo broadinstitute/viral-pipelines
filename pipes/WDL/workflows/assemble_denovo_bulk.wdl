@@ -1,4 +1,4 @@
-import "assemble_denovo.wdl" as assemble_denovo
+import "assemble_denovo.wdl" as sub
 
 workflow assemble_denovo_bulk {
   
@@ -9,7 +9,7 @@ workflow assemble_denovo_bulk {
   File? novocraft_license
 
   scatter(reads_unmapped_bam in reads_unmapped_bam_files) {
-    call assemble_denovo_bulk.assemble_denovo {
+    call sub.assemble_denovo {
       input:
         reads_unmapped_bam = reads_unmapped_bam,
         lastal_db_fasta = lastal_db_fasta,
