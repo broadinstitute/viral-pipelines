@@ -6,7 +6,7 @@ workflow assemble_denovo {
   File reads_unmapped_bam
   File lastal_db_fasta
   Array[File]+ reference_genome_fasta
-  trim_clip_db
+  File trim_clip_db
 
   call taxon_filter.filter_to_taxon {
     input:
