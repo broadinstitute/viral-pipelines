@@ -6,17 +6,6 @@ workflow align_and_plot_bulk {
     File assembly_fasta
     File? novocraft_license
     
-    String?  aligner="novoalign" # novoalign or bwa
-    String?  aligner_options="-r Random -l 30 -g 40 -x 20 -t 502"
-
-    Boolean? skip_mark_dupes=false
-    Boolean? plot_only_non_duplicates=false
-    Boolean? bin_large_plots=false
-    String?  binning_summary_statistic="max" # max or min
-
-    String?  docker="quay.io/broadinstitute/viral-core"
-  
-    
     scatter(reads_unmapped_bam in reads_unmapped_bam_files) {
         call reports.plot_coverage {
             input:
@@ -24,14 +13,14 @@ workflow align_and_plot_bulk {
                 reads_unmapped_bam = reads_unmapped_bam,
                 novocraft_license = novocraft_license,
                 
-                aligner = aligner,
-                aligner_options = aligner_options,
-                skip_mark_dupes = skip_mark_dupes,
-                plot_only_non_duplicates = plot_only_non_duplicates,
-                bin_large_plots = bin_large_plots,
-                binning_summary_statistic = binning_summary_statistic,
+                aligner = "novoalign",
+                aligner_options = "-r Random -l 30 -g 40 -x 20 -t 502",
+                skip_mark_dupes = false,
+                plot_only_non_duplicates = false,
+                bin_large_plots = false,
+                binning_summary_statistic = "max",
                 
-                docker = docker
+                docker = "quay.io/broadinstitute/viral-core"
         }
     }
 }
