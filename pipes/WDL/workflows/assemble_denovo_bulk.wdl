@@ -4,9 +4,9 @@ import "tasks_assembly.wdl" as assembly
 workflow assemble_denovo_bulk {
   
   Array[File]+ reads_unmapped_bam_files
+  Array[File]+ reference_genome_fasta
   File lastal_db_fasta
   File trim_clip_db
-  Array[File]+ reference_genome_fasta
   File? novocraft_license
 
   scatter(reads_unmapped_bam in reads_unmapped_bam_files) {
