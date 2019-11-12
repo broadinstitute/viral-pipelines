@@ -12,7 +12,7 @@ workflow merge_bams_bulk {
     	call demux.merge_and_reheader_bams {
             input:
             	out_basename = input_value[0],
-                in_bams = input_value[1],
+                in_bams = [input_value[1], input_value[2]],
                 docker = docker
         }
     }
