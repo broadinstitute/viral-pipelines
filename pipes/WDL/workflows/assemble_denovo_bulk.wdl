@@ -5,6 +5,7 @@ workflow assemble_denovo_bulk {
   
   Array[File]+ reads_unmapped_bam_files
   File lastal_db_fasta
+  File trim_clip_db
 
   scatter(reads_unmapped_bam in reads_unmapped_bam_files) {
     call taxon_filter.filter_to_taxon {
@@ -15,7 +16,8 @@ workflow assemble_denovo_bulk {
 
     call assembly.assemble {
       input:
-        reads_unmapped_bam = filter_to_taxon.taxfilt_bam
+        reads_unmapped_bam = filter_to_taxon.taxfilt_bam,
+        trim_clip_db = trim_clip_db
     }
   }
 }
