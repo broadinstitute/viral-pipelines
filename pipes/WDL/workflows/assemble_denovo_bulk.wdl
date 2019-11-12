@@ -7,6 +7,7 @@ workflow assemble_denovo_bulk {
   File lastal_db_fasta
   File trim_clip_db
   Array[File]+ reference_genome_fasta
+  File? novocraft_license
 
   scatter(reads_unmapped_bam in reads_unmapped_bam_files) {
     call taxon_filter.filter_to_taxon {
@@ -31,7 +32,8 @@ workflow assemble_denovo_bulk {
     call assembly.refine_2x_and_plot {
       input:
         assembly_fasta = scaffold.scaffold_fasta,
-        reads_unmapped_bam = reads_unmapped_bam
+        reads_unmapped_bam = reads_unmapped_bam,
+        novocraft_license = novocraft_license
     }
   }
 }
