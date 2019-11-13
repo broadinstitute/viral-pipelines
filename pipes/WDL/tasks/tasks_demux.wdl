@@ -1,32 +1,41 @@
 
-#task merge_tar_chunks {
-#  Array[File]+  tar_chunks
-#  String        out_filename
-#  String?       docker="quay.io/broadinstitute/viral-core"
-#  command {
-#    set -ex -o pipefail
-#
-#    if [ -d /mnt/tmp ]; then
-#      TMPDIR=/mnt/tmp
-#    fi
-#    FLOWCELL_DIR=$(mktemp -d)
-#
-#    read_utils.py extract_tarball \
-#      ${flowcell_tgz} $FLOWCELL_DIR \
-#      --loglevel=DEBUG
-#
-#  }
-#  output {
-#    File tar_lz4=
-#  }
-#  runtime {
-#    docker: "${docker}"
-#    memory: "7 GB"
-#    cpu: 4
-#    dx_instance_type: "mem1_hdd2_v2_x4"
-#    preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
-#  }
-#}
+task merge_tarballs {
+  Array[File]+  tar_chunks
+  String        out_filename
+  String?       docker="quay.io/broadinstitute/viral-core"
+
+  parameter_meta {
+    tar_chunks: {stream: true}
+  }
+
+  command {
+    set -ex -o pipefail
+
+    if [ -d /mnt/tmp ]; then
+      TMPDIR=/mnt/tmp
+    fi
+
+    file_utils.py --version | tee VERSION
+
+    file_utils.py merge_tarballs \
+      ${out_filename} ${sep=' ' tar_chunks} \
+      --loglevel=DEBUG
+  }
+
+  output {
+    File    combined_tar      = "${out_filename}"
+    String  viralngs_version  = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "${docker}"
+    memory: "7 GB"
+    cpu: 16
+    disks: "900 GB"
+    dx_instance_type: "mem1_hdd2_x32"
+    preemptible: 0
+  }
+}
 
 task illumina_demux {
 
@@ -53,7 +62,7 @@ task illumina_demux {
 
 
 #  parameter_meta {
-#    flowcell_tgz : "stream" # for DNAnexus, until WDL implements the File| type
+#    flowcell_tgz: {stream: true}
 #  }
 
   command {
@@ -208,6 +217,7 @@ task illumina_demux {
     docker: "${docker}"
     memory: "30 GB"
     cpu: 16
+    disks: "900 GB"
     dx_instance_type: "mem1_ssd2_v2_x16"
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
   }
