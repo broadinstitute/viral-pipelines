@@ -32,7 +32,7 @@ task merge_tarballs {
     memory: "7 GB"
     cpu: 16
     disks: "900 GB"
-    dx_instance_type: "mem1_hdd2_x32"
+    dx_instance_type: "mem1_ssd2_v2_x16"
     preemptible: 0
   }
 }
