@@ -5,7 +5,7 @@ task merge_tarballs {
   String?       docker="quay.io/broadinstitute/viral-core"
 
   parameter_meta {
-    tar_chunks: {stream: true}
+    tar_chunks: "stream"
   }
 
   command {
@@ -61,9 +61,9 @@ task illumina_demux {
   String? docker="quay.io/broadinstitute/viral-core"
 
 
-#  parameter_meta {
-#    flowcell_tgz: {stream: true}
-#  }
+  parameter_meta {
+    flowcell_tgz: "stream"
+  }
 
   command {
     set -ex -o pipefail

@@ -6,8 +6,8 @@ task krakenuniq {
   String?     docker="quay.io/broadinstitute/viral-classify"
 
   parameter_meta {
-    krakenuniq_db_tar_lz4: { stream: true }
-    krona_taxonomy_db_tgz: { stream: true }
+    krakenuniq_db_tar_lz4: "stream"
+    krona_taxonomy_db_tgz: "stream"
   }
 
   command {
@@ -145,8 +145,8 @@ task kraken {
   String?     docker="quay.io/broadinstitute/viral-classify"
 
   parameter_meta {
-    kraken_db_tar_lz4:     { stream: true }
-    krona_taxonomy_db_tgz: { stream: true }
+    kraken_db_tar_lz4:     "stream"
+    krona_taxonomy_db_tgz: "stream"
   }
 
   command {
@@ -289,9 +289,9 @@ task krona {
 
   String  input_basename = basename(classified_reads_txt_gz, ".txt.gz")
 
-#  parameter_meta {
-#    krona_taxonomy_db_tgz : "stream" # for DNAnexus, until WDL implements the File| type
-#  }
+  parameter_meta {
+    krona_taxonomy_db_tgz : "stream"
+  }
 
   command {
     set -ex -o pipefail
@@ -341,9 +341,9 @@ task filter_bam_to_taxa {
 
   String         input_basename = basename(classified_bam, ".bam")
 
-#  parameter_meta {
-#    ncbi_taxonomy_db_tgz              : "stream" # for DNAnexus, until WDL implements the File| type
-#  }
+  parameter_meta {
+    ncbi_taxonomy_db_tgz: "stream"
+  }
 
   command {
     set -ex -o pipefail
