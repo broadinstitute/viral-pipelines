@@ -13,15 +13,16 @@ workflow merge_bams_bulk {
         String out_basename = out_basenames[basename_index]
         
         # identifies the indices of the input bam files containing this output basename
-        scatter (in_bams_index in range(length(in_bams))) {
-            in_bam = in_bams[in_bams_index]
-            in_bam_name = basename(in_bam, ".bam")
-            
-            if(true) {
-                relevant_in_bam_index = in_bams_index
-            }
-        }
-        Array[Int] relevant_in_bam_indices = relevant_in_bam_index # gathers results from the scatter
+#         scatter (in_bams_index in range(length(in_bams))) {
+#             in_bam = in_bams[in_bams_index]
+#             in_bam_name = basename(in_bam, ".bam")
+#             
+#             if(true) {
+#                 relevant_in_bam_index = in_bams_index
+#             }
+#         }
+#         Array[Int] relevant_in_bam_indices = relevant_in_bam_index # gathers results from the scatter 
+        Array[Int] relevant_in_bam_indices = range(length(in_bams))
         
         # retrieves the input bam files corresponding to the filenames
         scatter (relevant_in_bam_index in relevant_in_bam_indices) {
