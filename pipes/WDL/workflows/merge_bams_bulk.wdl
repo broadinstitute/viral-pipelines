@@ -22,13 +22,16 @@ workflow merge_bams_bulk {
 #             }
 #         }
 #         Array[Int] relevant_in_bam_indices = relevant_in_bam_index # gathers results from the scatter 
+
         Array[Int] relevant_in_bam_indices = range(length(in_bams))
         
         # retrieves the input bam files corresponding to the filenames
-        scatter (relevant_in_bam_index in relevant_in_bam_indices) {
-            relevant_in_bam = in_bams[relevant_in_bam_index]
-        }
-        Array[File] relevant_in_bams = relevant_in_bam # gathers results from the scatter
+#         scatter (relevant_in_bam_index in relevant_in_bam_indices) {
+#             relevant_in_bam = in_bams[relevant_in_bam_index]
+#         }
+#         Array[File] relevant_in_bams = relevant_in_bam # gathers results from the scatter
+        
+        Array[File] relevant_in_bams = in_bams
         
         # merges the bam files to produce this output file
         call demux.merge_and_reheader_bams {
