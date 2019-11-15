@@ -3,13 +3,14 @@ import "tasks_demux.wdl" as demux
 workflow aamerge_bams_bulk {
 
     Array[File]+ in_bams
-    File out_basenames # one per line, same order as in_bams_tsv
+    File out_basenames # one per line
     String? docker="quay.io/broadinstitute/viral-core"
     
     Array[String] out_basenames_list = read_lines(out_basenames)
-    Array[Int] basename_scatter_range = range(length(out_basenames_list))
-    scatter (basename_index in basename_scatter_range) {
-        String out_basename = out_basenames_list[basename_index]
+#     Array[Int] basename_scatter_range = range(length(out_basenames_list))
+#     scatter (basename_index in basename_scatter_range) {
+#         String out_basename = out_basenames_list[basename_index]
+    scatter (out_basename in out_basenames_list) {
         
         # identifies the indices of the input bam files containing this output basename
 #         scatter (in_bams_index in range(length(in_bams))) {
