@@ -10,16 +10,16 @@ workflow aamerge_bams_bulk {
     scatter (out_basename in out_basenames_list) {
         
         # identifies the indices of the input bam files containing this output basename
-#         scatter (in_bam in in_bams) {
-#             String in_bam_name = basename(in_bam, ".bam")
-#             
-#             if(true) {
-#                 File relevant_in_bam = in_bam
-#             }
-#         }
-#         Array[File?] relevant_in_bams = relevant_in_bam # gathers results from the scatter        
+        scatter (in_bam in in_bams) {
+            String in_bam_name = basename(in_bam, ".bam")
+            
+            if(true) {
+                File relevant_in_bam = in_bam
+            }
+        }
+        Array[File?] relevant_in_bams_optional = relevant_in_bam # gathers results from the scatter        
 
-        Array[File?] relevant_in_bams_optional = in_bams
+#         Array[File?] relevant_in_bams_optional = in_bams
         Array[File] relevant_in_bams = select_all(relevant_in_bams_optional)
 
         # merges the bam files to produce this output file
@@ -39,11 +39,15 @@ task does_in_bam_match_out_basename {
     String in_bam_name = basename(in_bam, ".bam")
 
     command {
-        
+        if [[ ${in_bam_name} =~ ^${out_basename}$ ]] || [[ ${in_bam_name} =~ [._-]${out_basename}$ ]] || [[ ${in_bam_name} =~ ^${out_basename}[._-] ]] || [[ ${in_bam_name} =~ [._-]${out_basename}[._-] ]]; then
+            echo true | tee match
+        else
+            echo false | tee match
+        fi
     }
 
     output {
-        
+        Boolean match = read_boolean("match")
     }
 }
 
