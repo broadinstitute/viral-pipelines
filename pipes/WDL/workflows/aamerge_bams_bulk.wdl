@@ -7,8 +7,8 @@ workflow aamerge_bams_bulk {
     String? docker="quay.io/broadinstitute/viral-core"
     
     Array[String] out_basenames_list = read_lines(out_basenames)
-    
-    scatter (basename_index in range(length(out_basenames_list))) {
+    Array[Int] basename_scatter_range = range(length(out_basenames_list))
+    scatter (basename_index in basename_scatter_range) {
         String out_basename = out_basenames_list[basename_index]
         
         # identifies the indices of the input bam files containing this output basename
