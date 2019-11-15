@@ -12,15 +12,17 @@ workflow aamerge_bams_bulk {
         String out_basename = out_basenames_list[basename_index]
         
         # identifies the indices of the input bam files containing this output basename
-        scatter (in_bams_index in range(length(in_bams))) {
-            File in_bam = in_bams[in_bams_index]
-            String in_bam_name = basename(in_bam, ".bam")
-            
-            if(true) {
-                File relevant_in_bam = in_bam
-            }
-        }
-        Array[File?] relevant_in_bams = relevant_in_bam # gathers results from the scatter        
+#         scatter (in_bams_index in range(length(in_bams))) {
+#             File in_bam = in_bams[in_bams_index]
+#             String in_bam_name = basename(in_bam, ".bam")
+#             
+#             if(true) {
+#                 File relevant_in_bam = in_bam
+#             }
+#         }
+#         Array[File?] relevant_in_bams = relevant_in_bam # gathers results from the scatter        
+
+        Array[File?] relevant_in_bams = in_bams
 
         # merges the bam files to produce this output file
         call demux.merge_and_reheader_bams {
