@@ -10,6 +10,9 @@ workflow merge_bams_bulk {
     
     scatter (basename_index in range(length(out_basenames))) {
         out_basename = out_basenames[basename_index]
+        scatter (in_bams_index in range(length(in_bams))) {
+            in_bam = in_bams[in_bams_index]
+        }
     }
 }
 
