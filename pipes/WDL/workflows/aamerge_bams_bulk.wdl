@@ -1,6 +1,6 @@
 import "tasks_demux.wdl" as demux
 
-workflow merge_bams_bulk {
+workflow aamerge_bams_bulk {
 
     Array[File]+ in_bams
     File out_basenames_file # one per line, same order as in_bams_tsv
