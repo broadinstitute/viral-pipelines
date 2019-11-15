@@ -10,16 +10,15 @@ workflow merge_bams_bulk {
     
     scatter (basename_index in range(length(out_basenames))) {
         out_basename = out_basenames[basename_index]
-        
-        call merge_bams_for_basename {
-            input:
-                out_basename = out_basename,
-                in_bams = in_bams,
-                docker = docker
-        }
     }
 }
 
+#         call merge_bams_for_basename {
+#             input:
+#                 out_basename = out_basename,
+#                 in_bams = in_bams,
+#                 docker = docker
+#         }
 
 # 
 # task merge_bams_for_basename {
