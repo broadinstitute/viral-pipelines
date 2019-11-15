@@ -12,7 +12,34 @@ workflow merge_bams_bulk {
         # retrieves output file basename and list of input filenames for this row
         String out_basename = out_basenames[basename_index]
         
-        # identifies the indices of the input bam files containing this output basename
+        call merge_bams_for_basename {
+            input:
+                out_basename = out_basename,
+                in_bams = in_bams,
+                docker = docker
+        }
+    }
+}
+
+task merge_bams_for_basename {
+    String out_basename
+    Array[File]+ in_bams
+    String? docker
+    
+    Array[File] relevant_in_bams = in_bams
+    
+    # merges the bam files to produce this output file
+    call demux.merge_and_reheader_bams {
+        input:
+            out_basename = out_basename,
+            in_bams = relevant_in_bams,
+            docker = docker
+    }
+}
+    
+#     Array[Int] relevant_in_bam_indices = range(length(in_bams))
+
+            # identifies the indices of the input bam files containing this output basename
 #         scatter (in_bams_index in range(length(in_bams))) {
 #             in_bam = in_bams[in_bams_index]
 #             in_bam_name = basename(in_bam, ".bam")
@@ -23,25 +50,14 @@ workflow merge_bams_bulk {
 #         }
 #         Array[Int] relevant_in_bam_indices = relevant_in_bam_index # gathers results from the scatter 
 
-        Array[Int] relevant_in_bam_indices = range(length(in_bams))
+        
         
         # retrieves the input bam files corresponding to the filenames
 #         scatter (relevant_in_bam_index in relevant_in_bam_indices) {
 #             relevant_in_bam = in_bams[relevant_in_bam_index]
 #         }
 #         Array[File] relevant_in_bams = relevant_in_bam # gathers results from the scatter
-        
-        Array[File] relevant_in_bams = in_bams
-        
-        # merges the bam files to produce this output file
-        call demux.merge_and_reheader_bams {
-            input:
-            	out_basename = out_basename,
-                in_bams = relevant_in_bams,
-                docker = docker
-        }
-    }
-}
+
 
 # File in_bams_tsv # filenames to merge, tab-separated, each line one output file
 # 	Array[Array[File]] in_bams_table = read_tsv(in_bams_tsv)
