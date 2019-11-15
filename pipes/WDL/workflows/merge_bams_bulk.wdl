@@ -9,13 +9,36 @@ workflow merge_bams_bulk {
     Array[String] out_basenames = read_lines(out_basenames_file)
     
     scatter (basename_index in range(length(out_basenames))) {
-        out_basename = out_basenames[basename_index]
+        String out_basename = out_basenames[basename_index]
+        
+        # identifies the indices of the input bam files containing this output basename
         scatter (in_bams_index in range(length(in_bams))) {
-            in_bam = in_bams[in_bams_index]
+            File in_bam = in_bams[in_bams_index]
+            String in_bam_name = basename(in_bam, ".bam")
+            
+            if(true) {
+                Int relevant_in_bam_index = in_bams_index
+            }
+        }
+        Array[Int?] relevant_in_bam_indices = relevant_in_bam_index # gathers results from the scatter 
+        
+        # retrieves the input bam files corresponding to the filenames
+        scatter (relevant_in_bam_index in relevant_in_bam_indices) {
+            File relevant_in_bam = in_bams[relevant_in_bam_index]
+        }
+        Array[File] relevant_in_bams = relevant_in_bam # gathers results from the scatter
+
+        # merges the bam files to produce this output file
+        call demux.merge_and_reheader_bams {
+            input:
+                out_basename = out_basename,
+                in_bams = relevant_in_bams,
+                docker = docker
         }
     }
 }
 
+# 
 #         call merge_bams_for_basename {
 #             input:
 #                 out_basename = out_basename,
@@ -31,35 +54,14 @@ workflow merge_bams_bulk {
 #     
 #     Array[File] relevant_in_bams = in_bams
 #     
-#     # merges the bam files to produce this output file
-#     call demux.merge_and_reheader_bams {
-#         input:
-#             out_basename = out_basename,
-#             in_bams = relevant_in_bams,
-#             docker = docker
-#     }
+
 # }
     
 #     Array[Int] relevant_in_bam_indices = range(length(in_bams))
 
-            # identifies the indices of the input bam files containing this output basename
-#         scatter (in_bams_index in range(length(in_bams))) {
-#             in_bam = in_bams[in_bams_index]
-#             in_bam_name = basename(in_bam, ".bam")
-#             
-#             if(true) {
-#                 relevant_in_bam_index = in_bams_index
-#             }
-#         }
-#         Array[Int] relevant_in_bam_indices = relevant_in_bam_index # gathers results from the scatter 
 
         
         
-        # retrieves the input bam files corresponding to the filenames
-#         scatter (relevant_in_bam_index in relevant_in_bam_indices) {
-#             relevant_in_bam = in_bams[relevant_in_bam_index]
-#         }
-#         Array[File] relevant_in_bams = relevant_in_bam # gathers results from the scatter
 
 
 # File in_bams_tsv # filenames to merge, tab-separated, each line one output file
