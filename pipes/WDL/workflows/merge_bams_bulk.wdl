@@ -9,12 +9,9 @@ workflow merge_bams_bulk {
     Array[String] out_basenames = read_lines(out_basenames_file)
     
     scatter (basename_index in range(length(out_basenames))) {
-        # retrieves output file basename and list of input filenames for this row
-        String out_basename = out_basenames[basename_index]
-        
         call merge_bams_for_basename {
             input:
-                out_basename = out_basename,
+                out_basename = out_basenames[basename_index],
                 in_bams = in_bams,
                 docker = docker
         }
