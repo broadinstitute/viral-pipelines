@@ -11,15 +11,17 @@ workflow aamerge_bams_bulk {
         
         # identifies the indices of the input bam files containing this output basename
         scatter (in_bam in in_bams) {
-            String in_bam_name = basename(in_bam, ".bam")
+            call does_in_bam_match_out_basename {
+                input:
+                    out_basename = out_basename,
+                    in_bam = in_bam
+            }
             
-            if(true) {
+            if(does_in_bam_match_out_basename.match) {
                 File relevant_in_bam = in_bam
             }
         }
-        Array[File?] relevant_in_bams_optional = relevant_in_bam # gathers results from the scatter        
-
-#         Array[File?] relevant_in_bams_optional = in_bams
+        Array[File?] relevant_in_bams_optional = relevant_in_bam # gathers results from the scatter
         Array[File] relevant_in_bams = select_all(relevant_in_bams_optional)
 
         # merges the bam files to produce this output file
