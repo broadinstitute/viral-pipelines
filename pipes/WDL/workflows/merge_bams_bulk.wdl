@@ -9,21 +9,18 @@ workflow merge_bams_bulk {
     Array[String] out_basenames = read_lines(out_basenames_file)
     
     scatter (basename_index in range(length(out_basenames))) {
-        call demux.merge_and_reheader_bams {
+        out_basename = out_basenames[basename_index]
+        
+        call merge_bams_for_basename {
             input:
                 out_basename = out_basename,
-                in_bams = relevant_in_bams,
+                in_bams = in_bams,
                 docker = docker
         }
     }
 }
 
-#         call merge_bams_for_basename {
-#             input:
-#                 out_basename = out_basenames[basename_index],
-#                 in_bams = in_bams,
-#                 docker = docker
-#         }
+
 # 
 # task merge_bams_for_basename {
 #     String out_basename
