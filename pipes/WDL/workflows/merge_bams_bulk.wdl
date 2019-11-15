@@ -5,11 +5,16 @@ workflow merge_bams_bulk {
     Array[File]+ in_bams
     File out_basenames_file # one per line, same order as in_bams_tsv
     String? docker="quay.io/broadinstitute/viral-core"
-	
+    
     Array[String] out_basenames = read_lines(out_basenames_file)
     
     scatter (basename_index in range(length(out_basenames))) {
-
+        call demux.merge_and_reheader_bams {
+            input:
+                out_basename = out_basename,
+                in_bams = relevant_in_bams,
+                docker = docker
+        }
     }
 }
 
@@ -59,9 +64,9 @@ workflow merge_bams_bulk {
 
 
 # File in_bams_tsv # filenames to merge, tab-separated, each line one output file
-# 	Array[Array[File]] in_bams_table = read_tsv(in_bams_tsv)
+#     Array[Array[File]] in_bams_table = read_tsv(in_bams_tsv)
 
-# 	Array[Array[String]] in_bams_filenames_table = read_tsv(in_bams_tsv)
+#     Array[Array[String]] in_bams_filenames_table = read_tsv(in_bams_tsv)
 #         Array[String] relevant_in_bams_filenames = in_bams_filenames_table[basename_index]
 
 # goes through an array of files and identifies the indices of those that contain a pattern
@@ -114,14 +119,14 @@ workflow merge_bams_bulk {
 
 
 #     File out_basename_in_bams_table # first column is out_basename, remaining columns are in_bams for that basename
-# 	Array[Array[String]] input_values = read_tsv(out_basename_in_bams_table)
+#     Array[Array[String]] input_values = read_tsv(out_basename_in_bams_table)
 # 
 #     scatter (input_value in input_values) {
 #         String out_basename = input_value[0]
 #         Array[String] in_bam_filenames = [input_value[1], input_value[2]]
-#     	call demux.merge_and_reheader_bams {
+#         call demux.merge_and_reheader_bams {
 #             input:
-#             	out_basename = out_basename,
+#                 out_basename = out_basename,
 #                 in_bams = in_bams,
 #                 docker = docker
 #         }
