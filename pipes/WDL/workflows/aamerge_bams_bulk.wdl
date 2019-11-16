@@ -11,10 +11,11 @@ workflow aamerge_bams_bulk {
     Array[String] out_basenames_list = read_lines(out_basenames)
     scatter (out_basename in out_basenames_list) {
         
+        Array[File?] relevant_in_bams_optional
         if(defined(in_bam_basenames) == true) {
             # we have an input file listing the input bams for each output bam,
             # so we will use it
-            Array[File] relevant_in_bams_optional = in_bams
+            relevant_in_bams_optional = in_bams
         }
         
         if(defined(in_bam_basenames) == false) {
@@ -34,7 +35,7 @@ workflow aamerge_bams_bulk {
                     File relevant_in_bam = in_bam
                 }
             }
-            Array[File?] relevant_in_bams_optional = relevant_in_bam # gathers results from the scatter
+            relevant_in_bams_optional = relevant_in_bam # gathers results from the scatter
         }
         Array[File] relevant_in_bams = select_all(relevant_in_bams_optional)
 
