@@ -39,25 +39,29 @@ workflow aamerge_bams_bulk {
 # returns true if the basename of in_bam contains out_basename,
 # either at the start or end of the string or surrounded by any of [._-]
 task does_in_bam_match_out_basename {
-    File in_bam
     String out_basename
+    File in_bam
     
     String in_bam_name = basename(in_bam, ".bam")
-
+    
     command {
+        # basename (exact match)
         if [[ ${in_bam_name} =~ ^${out_basename}$ ]]; then
             echo true | tee match
+        # something[._-]basename
         elif [[ ${in_bam_name} =~ [._-]${out_basename}$ ]]; then
             echo true | tee match
+        # basename[._-]something
         elif [[ ${in_bam_name} =~ ^${out_basename}[._-] ]]; then
             echo true | tee match
+        # something[._-]basename[._-]something
         elif [[ ${in_bam_name} =~ [._-]${out_basename}[._-] ]]; then
             echo true | tee match
         else
             echo false | tee match
         fi
     }
-
+    
     output {
         Boolean match = read_boolean("match")
     }
