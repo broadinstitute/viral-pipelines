@@ -4,6 +4,7 @@ workflow aamerge_bams_bulk {
 
     Array[File]+ in_bams
     File out_basenames # one per line
+    File? reheader_table
     String? docker="quay.io/broadinstitute/viral-core"
     
     Array[String] out_basenames_list = read_lines(out_basenames)
@@ -29,6 +30,7 @@ workflow aamerge_bams_bulk {
             input:
                 out_basename = out_basename,
                 in_bams = relevant_in_bams,
+                reheader_table = reheader_table,
                 docker = docker
         }
     }
