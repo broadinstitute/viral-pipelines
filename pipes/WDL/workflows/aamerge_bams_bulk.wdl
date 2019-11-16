@@ -23,6 +23,7 @@ workflow aamerge_bams_bulk {
             }
         }
         Array[File?] relevant_in_bams_optional = relevant_in_bam # gathers results from the scatter        Array[File] relevant_in_bams = select_all(relevant_in_bams_optional)
+        Array[File] relevant_in_bams = select_all(relevant_in_bams_optional)
 
         # merges the bam files to produce this output file
         call demux.merge_and_reheader_bams {
