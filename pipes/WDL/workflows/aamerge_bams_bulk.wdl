@@ -20,7 +20,7 @@ workflow aamerge_bams_bulk {
         if(defined(in_bam_basenames) == false) {
             # there is no input file listing the input bams for each output bam,
             # so we will merge all potential input bams matching the output bam
-            # basename at start or end or surrounded by non-character strings (._-)
+            # basename at start or end or surrounded by any of [._-]
             
             # identifies the indices of the input bam files containing this output basename
             scatter (in_bam in in_bams) {
@@ -49,6 +49,8 @@ workflow aamerge_bams_bulk {
     }
 }
 
+# returns true if the basename of in_bam contains out_basename,
+# either at the start or end of the string or surrounded by any of [._-]
 task does_in_bam_match_out_basename {
     File in_bam
     String out_basename
@@ -56,7 +58,13 @@ task does_in_bam_match_out_basename {
     String in_bam_name = basename(in_bam, ".bam")
 
     command {
-        if [[ ${in_bam_name} =~ ^${out_basename}$ ]] || [[ ${in_bam_name} =~ [._-]${out_basename}$ ]] || [[ ${in_bam_name} =~ ^${out_basename}[._-] ]] || [[ ${in_bam_name} =~ [._-]${out_basename}[._-] ]]; then
+        if [[ ${in_bam_name} =~ ^${out_basename}$ ]]; then
+            echo true | tee match
+        elsif [[ ${in_bam_name} =~ [._-]${out_basename}$ ]]; then
+            echo true | tee match
+        elsif [[ ${in_bam_name} =~ ^${out_basename}[._-] ]]; then
+            echo true | tee match
+        elsif [[ ${in_bam_name} =~ [._-]${out_basename}[._-] ]]; then
             echo true | tee match
         else
             echo false | tee match
@@ -68,6 +76,7 @@ task does_in_bam_match_out_basename {
     }
 }
 
+# returns true if the basename of in_bam exactly matches expected_in_bam_name
 task does_in_bam_match_expected_in_bam {
     File in_bam
     String expected_in_bam_name
