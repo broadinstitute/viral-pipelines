@@ -60,11 +60,11 @@ task does_in_bam_match_out_basename {
     command {
         if [[ ${in_bam_name} =~ ^${out_basename}$ ]]; then
             echo true | tee match
-        elsif [[ ${in_bam_name} =~ [._-]${out_basename}$ ]]; then
+        elif [[ ${in_bam_name} =~ [._-]${out_basename}$ ]]; then
             echo true | tee match
-        elsif [[ ${in_bam_name} =~ ^${out_basename}[._-] ]]; then
+        elif [[ ${in_bam_name} =~ ^${out_basename}[._-] ]]; then
             echo true | tee match
-        elsif [[ ${in_bam_name} =~ [._-]${out_basename}[._-] ]]; then
+        elif [[ ${in_bam_name} =~ [._-]${out_basename}[._-] ]]; then
             echo true | tee match
         else
             echo false | tee match
