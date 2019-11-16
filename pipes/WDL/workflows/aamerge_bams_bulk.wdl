@@ -11,14 +11,13 @@ workflow aamerge_bams_bulk {
     Array[String] out_basenames_list = read_lines(out_basenames)
     scatter (out_basename in out_basenames_list) {
         
-        Array[File?] relevant_in_bams_optional
-        if(defined(in_bam_basenames) == true) {
+        if(defined(in_bam_basenames)) {
             # we have an input file listing the input bams for each output bam,
             # so we will use it
-            relevant_in_bams_optional = in_bams
+            
         }
         
-        if(defined(in_bam_basenames) == false) {
+        if(!defined(in_bam_basenames) == false) {
             # there is no input file listing the input bams for each output bam,
             # so we will merge all potential input bams matching the output bam
             # basename at start or end or surrounded by any of [._-]
@@ -35,7 +34,7 @@ workflow aamerge_bams_bulk {
                     File relevant_in_bam = in_bam
                 }
             }
-            relevant_in_bams_optional = relevant_in_bam # gathers results from the scatter
+            Array[File?] relevant_in_bams_optional = relevant_in_bam # gathers results from the scatter
         }
         Array[File] relevant_in_bams = select_all(relevant_in_bams_optional)
 
