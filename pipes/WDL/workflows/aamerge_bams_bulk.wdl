@@ -14,7 +14,7 @@ workflow aamerge_bams_bulk {
         if(defined(in_bam_basenames)) {
             # we have an input file listing the input bams for each output bam,
             # so we will use it
-            
+            Array[File] relevant_in_bams = in_bams
         }
         
         if(!defined(in_bam_basenames) == false) {
@@ -35,8 +35,8 @@ workflow aamerge_bams_bulk {
                 }
             }
             Array[File?] relevant_in_bams_optional = relevant_in_bam # gathers results from the scatter
+            Array[File] relevant_in_bams = select_all(relevant_in_bams_optional)
         }
-        Array[File] relevant_in_bams = select_all(relevant_in_bams_optional)
 
         # merges the bam files to produce this output file
         call demux.merge_and_reheader_bams {
