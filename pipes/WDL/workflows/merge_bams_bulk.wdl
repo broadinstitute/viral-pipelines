@@ -7,10 +7,10 @@ workflow merge_bams_bulk {
     File? reheader_table
     String? docker="quay.io/broadinstitute/viral-core"
     
-    Array[String] out_basenames_list = read_lines(out_basenames)
-    scatter (out_basename in out_basenames_list) {
+    scatter (out_basename in read_lines(out_basenames)) {
         
-        # identifies the indices of the input bam files containing this output basename
+        # identifies the input bam files containing this output basename
+        # (surrounded by start or end of string or any of [._-])
         scatter (in_bam in in_bams) {
             call does_in_bam_match_out_basename {
                 input:
@@ -22,10 +22,9 @@ workflow merge_bams_bulk {
                 File relevant_in_bam = in_bam
             }
         }
-        Array[File?] relevant_in_bams_optional = relevant_in_bam # gathers results from the scatter        Array[File] relevant_in_bams = select_all(relevant_in_bams_optional)
-        Array[File] relevant_in_bams = select_all(relevant_in_bams_optional)
+        Array[File] relevant_in_bams = select_all(relevant_in_bam) # gathers results from the scatter
 
-        # merges the bam files to produce this output file
+        # merges the relevant input bam files to produce this output file
         call demux.merge_and_reheader_bams {
             input:
                 out_basename = out_basename,
@@ -37,7 +36,7 @@ workflow merge_bams_bulk {
 }
 
 # returns true if the basename of in_bam contains out_basename,
-# either at the start or end of the string or surrounded by any of [._-]
+# separated from other characters by start or end of string or any of [._-]
 task does_in_bam_match_out_basename {
     String out_basename
     File in_bam
