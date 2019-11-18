@@ -6,7 +6,6 @@ workflow merge_bams_bulk {
     Pair[String, File] string_and_file_pair
     Array[Pair[File, String]] array_of_pairs_of_files_and_strings
     Map[File, String] map_of_files_to_strings
-    Array[Array[File]] array_of_arrays_of_files
     Array[Pair[String, Array[File]]] array_of_pairs_of_strings_and_arrays_of_files
     Array[Array[File]] array_of_arrays_of_files
     Array[String] array_of_strings
