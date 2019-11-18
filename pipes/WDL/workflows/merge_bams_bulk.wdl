@@ -3,10 +3,10 @@ import "tasks_demux.wdl" as demux
 workflow merge_bams_bulk {
     Map[String, Array[File]] map_of_strings_to_arrays_of_files
 #     Array[Pair] array_of_pairs
-    Pair[String, File] string_and_file_pair
-    Array[Pair[File, String]] array_of_pairs_of_files_and_strings
+#     Pair[String, File] string_and_file_pair
+#     Array[Pair[File, String]] array_of_pairs_of_files_and_strings
     Map[File, String] map_of_files_to_strings
-    Array[Pair[String, Array[File]]] array_of_pairs_of_strings_and_arrays_of_files
+#     Array[Pair[String, Array[File]]] array_of_pairs_of_strings_and_arrays_of_files
     Array[Array[File]] array_of_arrays_of_files
     Array[String] array_of_strings
     
