@@ -1,18 +1,49 @@
 import "tasks_demux.wdl" as demux
 
 workflow merge_bams_bulk {
-    Map[String, Array[File]] map_of_strings_to_arrays_of_files
-    Pair[String, File] string_and_file_pair
-    Array[Pair[File, String]] array_of_pairs_of_files_and_strings
-    Map[File, String] map_of_files_to_strings
-    Array[Pair[String, Array[File]]] array_of_pairs_of_strings_and_arrays_of_files
-    Array[Array[File]] array_of_arrays_of_files
-    Array[String] array_of_strings
-    
+    Array[File]+ in_bams # any order
+    File in_bam_out_bam_table # first column: input bam file basename, second column: output bam file basename
     File? reheader_table
     String? docker="quay.io/broadinstitute/viral-core"
+    
+    
+    # generates map with key: input bam file name -> value: output bam file basename
+    Map[String, String] in_bam_to_out_bam = read_map(in_bam_out_bam_table)
+    
+    # retrieves unique output bam file basenames (no repeats)
+    # TODO
+    File out_bam_basenames # one per line
+    Array[String] out_bams = read_lines(out_bam_basenames)
+    
+    scatter (out_bam in out_bams) {
+        String out_bam_basename_short = basename(out_bam, ".bam")
+        String out_bam_basename_long = basename(out_bam)
+        scatter (in_bam in in_bams) {
+            String in_bam_basename_short = basename(in_bam, ".bam")
+            String in_bam_basename_long = basename(in_bam)
+            
+            if(in_bam_to_out_bam[in_bam_basename_short] == out_bam_basename_short
+                || in_bam_to_out_bam[in_bam_basename_long] == out_bam_basename_long
+                || in_bam_to_out_bam[in_bam_basename_short] == out_bam_basename_long
+                || in_bam_to_out_bam[in_bam_basename_long] == out_bam_basename_short) {
+                File relevant_in_bam = in_bam
+            }
+        }
+        Array[File] relevant_in_bams = select_all(relevant_in_bam) # gathers input bam files from the scatter
+        
+        # merges the relevant input bam files to produce this output file
+        call demux.merge_and_reheader_bams {
+            input:
+                out_basename = in_bam_basename_short,
+                in_bams = relevant_in_bams,
+                reheader_table = reheader_table,
+                docker = docker
+        }
+    }
 }
 
+# workflow merge_bams_bulk {
+# 
 #     Array[File]+ in_bams
 #     File out_basenames # one per line
 #     File? reheader_table
@@ -20,6 +51,7 @@ workflow merge_bams_bulk {
 #     
 #     # identifies out_basename for each in_bam file
 #     Array[String] out_basenames_list = read_lines(out_basenames)
+#     String test = out_basenames_list[0]
 # #     Map[String, Int] test = {"a": 1, "b": 2}
 # #     Int fun = test["b"]
 # #     Map[File, String] in_bam_to_out_basename = {}
