@@ -11,17 +11,20 @@ workflow merge_bams_bulk {
     Map[String, String] in_bam_to_out_bam = read_map(in_bam_out_bam_table)
     
     # retrieves unique output bam file basenames (no repeats)
-    # TODO
-    File out_bam_basenames # one per line
-    Array[String] out_bams = read_lines(out_bam_basenames)
+    call unique_values_in_second_column {
+        input: table = in_bam_to_out_bam
+    }
+    Array[String] out_bams = read_lines(unique_values_in_second_column.unique_values)
     
+    # collects and merges input bam files for each output bam file
     scatter (out_bam in out_bams) {
+        # retrieves the input bam files for this output bam file
         scatter (in_bam in in_bams) {
             String in_bam_basename_long = basename(in_bam)
             String in_bam_basename_short = basename(in_bam, ".bam")
             if(in_bam_to_out_bam[in_bam_basename_long] == out_bam
                 || in_bam_to_out_bam[in_bam_basename_short] == out_bam) {
-
+                
                 File relevant_in_bam = in_bam
             }
         }
@@ -35,6 +38,18 @@ workflow merge_bams_bulk {
                 reheader_table = reheader_table,
                 docker = docker
         }
+    }
+}
+
+task unique_values_in_second_column {
+    File table
+    
+    command {
+        cut -f2 ${table} | sort | uniq | tee unique_values
+    }
+    
+    output {
+        String unique_values = read_string("unique_values")
     }
 }
 
