@@ -22,8 +22,8 @@ workflow merge_bams_bulk {
         scatter (in_bam in in_bams) {
             String in_bam_basename_long = basename(in_bam)
             String in_bam_basename_short = basename(in_bam, ".bam")
-            if(in_bam_to_out_bam[in_bam_basename_long] == out_bam
-                || in_bam_to_out_bam[in_bam_basename_short] == out_bam) {
+            if(defined(in_bam_to_out_bam[in_bam_basename_long]) && in_bam_to_out_bam[in_bam_basename_long] == out_bam
+                || defined(in_bam_to_out_bam[in_bam_basename_short]) && in_bam_to_out_bam[in_bam_basename_short] == out_bam) {
                 
                 File relevant_in_bam = in_bam
             }
