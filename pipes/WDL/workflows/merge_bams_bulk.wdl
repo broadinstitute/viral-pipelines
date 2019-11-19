@@ -16,16 +16,12 @@ workflow merge_bams_bulk {
     Array[String] out_bams = read_lines(out_bam_basenames)
     
     scatter (out_bam in out_bams) {
-        String out_bam_basename_short = basename(out_bam, ".bam")
-        String out_bam_basename_long = basename(out_bam)
         scatter (in_bam in in_bams) {
-            String in_bam_basename_short = basename(in_bam, ".bam")
             String in_bam_basename_long = basename(in_bam)
-            
-            if(in_bam_to_out_bam[in_bam_basename_short] == out_bam_basename_short
-                || in_bam_to_out_bam[in_bam_basename_long] == out_bam_basename_long
-                || in_bam_to_out_bam[in_bam_basename_short] == out_bam_basename_long
-                || in_bam_to_out_bam[in_bam_basename_long] == out_bam_basename_short) {
+            String in_bam_basename_short = basename(in_bam, ".bam")
+            if(in_bam_to_out_bam[in_bam_basename_long] == out_bam
+                || in_bam_to_out_bam[in_bam_basename_short] == out_bam) {
+
                 File relevant_in_bam = in_bam
             }
         }
@@ -34,7 +30,7 @@ workflow merge_bams_bulk {
         # merges the relevant input bam files to produce this output file
         call demux.merge_and_reheader_bams {
             input:
-                out_basename = in_bam_basename_short,
+                out_basename = basename(out_bam),
                 in_bams = relevant_in_bams,
                 reheader_table = reheader_table,
                 docker = docker
