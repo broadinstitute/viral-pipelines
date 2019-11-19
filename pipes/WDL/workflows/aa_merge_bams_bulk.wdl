@@ -49,11 +49,11 @@ task read_map_through_bash {
     File table
     
     command {
-        cat ${table} | tee map_table
+        cat ${table}
     }
     
     output {
-        Map[String, String] map = read_map("map_table")
+        Map[String, String] map = read_map(stdout())
     }
 }
 
