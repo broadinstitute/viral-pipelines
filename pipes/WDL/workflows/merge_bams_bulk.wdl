@@ -13,7 +13,7 @@ workflow merge_bams_bulk {
     call unique_values_in_second_column {
         input: table = in_bam_out_bam_table
     }
-    Array[String] out_bams = read_lines(unique_values_in_second_column.unique_values)
+    Array[String] out_bams = unique_values_in_second_column.unique_values
     
     # collects and merges input bam files for each output bam file
     scatter (out_bam in out_bams) {
@@ -47,7 +47,7 @@ task unique_values_in_second_column {
     }
     
     output {
-        String unique_values = read_string("unique_values")
+        Array[String] unique_values = read_lines("unique_values")
     }
 }
 
