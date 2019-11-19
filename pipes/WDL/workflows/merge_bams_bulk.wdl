@@ -3,6 +3,7 @@ import "tasks_demux.wdl" as demux
 workflow merge_bams_bulk {
     Array[File]+ in_bams # any order
     File in_bam_out_bam_table # first column: input bam file basename, second column: output bam file basename
+    File out_bams_file
     File? reheader_table
     String? docker="quay.io/broadinstitute/viral-core"
     
@@ -10,10 +11,11 @@ workflow merge_bams_bulk {
     Map[String, String] in_bam_to_out_bam = read_map(in_bam_out_bam_table)
     
     # retrieves unique output bam file basenames (no repeats)
-    call unique_values_in_second_column {
-        input: table = in_bam_out_bam_table
-    }
-    Array[String] out_bams = unique_values_in_second_column.unique_values
+#     call unique_values_in_second_column {
+#         input: table = in_bam_out_bam_table
+#     }
+#     Array[String] out_bams = unique_values_in_second_column.unique_values
+    Array[String] out_bams = read_lines(out_bams_file)
     
     # collects and merges input bam files for each output bam file
     scatter (out_bam in out_bams) {
