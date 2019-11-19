@@ -2,14 +2,14 @@ import "tasks_demux.wdl" as demux
 
 workflow aa_merge_bams_bulk {
     Array[File]+ in_bams # any order
-#     File in_bam_out_bam_table # first column: input bam file basename, second column: output bam file basename
+    File in_bam_out_bam_table # first column: input bam file basename, second column: output bam file basename
 #     File out_bams_file
     File? reheader_table
     String? docker="quay.io/broadinstitute/viral-core"
     
     # generates map with key: input bam file name -> value: output bam file basename
-#     Map[String, String] in_bam_to_out_bam = read_map(in_bam_out_bam_table)
-    Map[String, String] in_bam_to_out_bam = {"Hep_WGS19_067": "Hep_WGS19_067", "Hep_WGS19_067_ERCC-57.lExp_8_Hep_A_23_and_spike_pool": "Hep_WGS19_067", "Hep_WGS19_068": "Hep_WGS19_068", "Hep_WGS19_068_ERCC-58.lExp_8_Hep_A_23_and_spike_pool": "Hep_WGS19_068", "Hep_WGS19_069": "Hep_WGS19_069", "Hep_WGS19_069_ERCC-61.lExp_8_Hep_A_23_and_spike_pool": "Hep_WGS19_069"}
+    Map[String, String] in_bam_to_out_bam = read_map(in_bam_out_bam_table)
+#     Map[String, String] in_bam_to_out_bam = {"Hep_WGS19_067": "Hep_WGS19_067", "Hep_WGS19_067_ERCC-57.lExp_8_Hep_A_23_and_spike_pool": "Hep_WGS19_067", "Hep_WGS19_068": "Hep_WGS19_068", "Hep_WGS19_068_ERCC-58.lExp_8_Hep_A_23_and_spike_pool": "Hep_WGS19_068", "Hep_WGS19_069": "Hep_WGS19_069", "Hep_WGS19_069_ERCC-61.lExp_8_Hep_A_23_and_spike_pool": "Hep_WGS19_069"}
     
     # retrieves unique output bam file basenames (no repeats)
 #     call unique_values_in_second_column {
