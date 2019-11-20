@@ -18,7 +18,8 @@ workflow aa_merge_bams_bulk {
     # collects and merges input bam files for each output bam file
     scatter (out_bam in out_bams) {
 #         String test_b1 = in_bam_to_out_bam["Hep_WGS19_067"]
-        length(in_bam_to_out_bam)
+#         String placeholder = write_map(in_bam_to_out_bam)
+        Int placeholder = length(in_bam_to_out_bam)
         
         # retrieves the input bam files for this output bam file
         scatter (in_bam in in_bams) {
