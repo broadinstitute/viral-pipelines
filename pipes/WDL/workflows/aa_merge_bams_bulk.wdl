@@ -12,7 +12,7 @@ workflow aa_merge_bams_bulk {
     Map[String, String] in_bam_to_out_bam = read_map(in_bam_out_bam_table)
     
 #     String test_a2 = in_bam_to_out_bam_hardcoded["Hep_WGS19_067"]
-    String test_a1 = in_bam_to_out_bam["Hep_WGS19_067"]
+#     String test_a1 = in_bam_to_out_bam["Hep_WGS19_067"]
     
     # retrieves unique output bam file basenames (no repeats)
 #     call unique_values_in_second_column {
@@ -25,7 +25,7 @@ workflow aa_merge_bams_bulk {
     # collects and merges input bam files for each output bam file
     scatter (out_bam in out_bams) {
 #         String test_b2 = in_bam_to_out_bam_hardcoded["Hep_WGS19_067"]
-        String test_b1 = in_bam_to_out_bam["Hep_WGS19_067"]
+#         String test_b1 = in_bam_to_out_bam["Hep_WGS19_067"]
         
         # retrieves the input bam files for this output bam file
         scatter (in_bam in in_bams) {
