@@ -8,16 +8,10 @@ workflow aa_merge_bams_bulk {
     String? docker="quay.io/broadinstitute/viral-core"
     
     # generates map with key: input bam file name -> value: output bam file basename
-    Map[String, String] in_bam_to_out_bam_hardcoded = {"Hep_WGS19_067": "Hep_WGS19_067", "Hep_WGS19_067_ERCC-57.lExp_8_Hep_A_23_and_spike_pool": "Hep_WGS19_067", "Hep_WGS19_068": "Hep_WGS19_068", "Hep_WGS19_068_ERCC-58.lExp_8_Hep_A_23_and_spike_pool": "Hep_WGS19_068", "Hep_WGS19_069": "Hep_WGS19_069", "Hep_WGS19_069_ERCC-61.lExp_8_Hep_A_23_and_spike_pool": "Hep_WGS19_069"}
-#     call read_map_through_bash {
-#         input:
-#             table = in_bam_out_bam_table,
-#             hardcoded_map = in_bam_to_out_bam_hardcoded
-#     }
-#     Map[String, String] in_bam_to_out_bam = read_map_through_bash.map_output
+#     Map[String, String] in_bam_to_out_bam_hardcoded = {"Hep_WGS19_067": "Hep_WGS19_067", "Hep_WGS19_067_ERCC-57.lExp_8_Hep_A_23_and_spike_pool": "Hep_WGS19_067", "Hep_WGS19_068": "Hep_WGS19_068", "Hep_WGS19_068_ERCC-58.lExp_8_Hep_A_23_and_spike_pool": "Hep_WGS19_068", "Hep_WGS19_069": "Hep_WGS19_069", "Hep_WGS19_069_ERCC-61.lExp_8_Hep_A_23_and_spike_pool": "Hep_WGS19_069"}
     Map[String, String] in_bam_to_out_bam = read_map(in_bam_out_bam_table)
     
-    String test_a2 = in_bam_to_out_bam_hardcoded["Hep_WGS19_067"]
+#     String test_a2 = in_bam_to_out_bam_hardcoded["Hep_WGS19_067"]
     String test_a1 = in_bam_to_out_bam["Hep_WGS19_067"]
     
     # retrieves unique output bam file basenames (no repeats)
@@ -30,12 +24,12 @@ workflow aa_merge_bams_bulk {
     
     # collects and merges input bam files for each output bam file
     scatter (out_bam in out_bams) {
-        String test_b2 = in_bam_to_out_bam_hardcoded["Hep_WGS19_067"]
+#         String test_b2 = in_bam_to_out_bam_hardcoded["Hep_WGS19_067"]
         String test_b1 = in_bam_to_out_bam["Hep_WGS19_067"]
         
         # retrieves the input bam files for this output bam file
         scatter (in_bam in in_bams) {
-            String test_c2 = in_bam_to_out_bam_hardcoded["Hep_WGS19_067"]
+#             String test_c2 = in_bam_to_out_bam_hardcoded["Hep_WGS19_067"]
             String test_c1 = in_bam_to_out_bam["Hep_WGS19_067"]
             
             String in_bam_basename = basename(in_bam, ".bam")
