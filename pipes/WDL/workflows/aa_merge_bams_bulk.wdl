@@ -14,7 +14,7 @@ workflow aa_merge_bams_bulk {
             table = in_bam_out_bam_table,
             hardcoded_map = in_bam_to_out_bam_hardcoded
     }
-    Map[String, String] in_bam_to_out_bam = read_map_through_bash.map
+    Map[String, String] in_bam_to_out_bam = read_map_through_bash.map_output
 #     Map[String, String] in_bam_to_out_bam = read_map(in_bam_out_bam_table)
     
     # retrieves unique output bam file basenames (no repeats)
@@ -56,7 +56,7 @@ task read_map_through_bash {
     }
     
     output {
-        Map[String, String] map = read_map(stdout())
+        Map[String, String] map_output = read_map(stdout())
         Map[String, String] hardcoded_map_output = hardcoded_map
     }
 }
