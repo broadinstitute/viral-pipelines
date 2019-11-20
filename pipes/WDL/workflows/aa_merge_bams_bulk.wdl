@@ -57,7 +57,7 @@ task read_map_through_bash {
     
     output {
         Map[String, String] map = read_map(stdout())
-        Map[String, String] hardcoded_map = hardcoded_map
+        Map[String, String] hardcoded_map_output = hardcoded_map
     }
 }
 
