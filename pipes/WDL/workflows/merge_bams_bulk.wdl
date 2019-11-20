@@ -1,6 +1,6 @@
 import "tasks_demux.wdl" as demux
 
-workflow aa_merge_bams_bulk {
+workflow merge_bams_bulk {
     Array[File]+ in_bams # any order
     File in_bam_out_bam_table # first column: input bam file basename, second column: output bam file basename (one line per INPUT file)
     File? reheader_table
