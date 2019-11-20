@@ -30,10 +30,11 @@ workflow aa_merge_bams_bulk {
         # retrieves the input bam files for this output bam file
         scatter (in_bam in in_bams) {
 #             String test_c2 = in_bam_to_out_bam_hardcoded["Hep_WGS19_067"]
-            String test_c1 = in_bam_to_out_bam["Hep_WGS19_067"]
+#             String test_c1 = in_bam_to_out_bam["Hep_WGS19_067"]
             
             String in_bam_basename = basename(in_bam, ".bam")
-            if(in_bam_to_out_bam[in_bam_basename] == out_bam) {
+            String this_in_bams_out_bam_basename = in_bam_to_out_bam[in_bam_basename]
+            if(this_in_bams_out_bam_basename == out_bam) {
                 File relevant_in_bam = in_bam
             }
         }
