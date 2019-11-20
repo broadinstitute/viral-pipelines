@@ -9,13 +9,13 @@ workflow aa_merge_bams_bulk {
     
     # generates map with key: input bam file name -> value: output bam file basename
     Map[String, String] in_bam_to_out_bam_hardcoded = {"Hep_WGS19_067": "Hep_WGS19_067", "Hep_WGS19_067_ERCC-57.lExp_8_Hep_A_23_and_spike_pool": "Hep_WGS19_067", "Hep_WGS19_068": "Hep_WGS19_068", "Hep_WGS19_068_ERCC-58.lExp_8_Hep_A_23_and_spike_pool": "Hep_WGS19_068", "Hep_WGS19_069": "Hep_WGS19_069", "Hep_WGS19_069_ERCC-61.lExp_8_Hep_A_23_and_spike_pool": "Hep_WGS19_069"}
-    call read_map_through_bash {
-        input:
-            table = in_bam_out_bam_table,
-            hardcoded_map = in_bam_to_out_bam_hardcoded
-    }
-    Map[String, String] in_bam_to_out_bam = read_map_through_bash.map_output
-#     Map[String, String] in_bam_to_out_bam = read_map(in_bam_out_bam_table)
+#     call read_map_through_bash {
+#         input:
+#             table = in_bam_out_bam_table,
+#             hardcoded_map = in_bam_to_out_bam_hardcoded
+#     }
+#     Map[String, String] in_bam_to_out_bam = read_map_through_bash.map_output
+    Map[String, String] in_bam_to_out_bam = read_map(in_bam_out_bam_table)
     
     # retrieves unique output bam file basenames (no repeats)
 #     call unique_values_in_second_column {
