@@ -10,14 +10,13 @@ workflow merge_bams_bulk {
     call clean_in_bam_out_bam_table {
         input: table = in_bam_out_bam_table
     }
-    File cleaned_in_bam_out_bam_table = clean_in_bam_out_bam_table.cleaned_in_bam_out_bam_table
     
     # generates map with key: input bam file name -> value: output bam file basename
-    Map[String, String] in_bam_to_out_bam = read_map(cleaned_in_bam_out_bam_table)
+    Map[String, String] in_bam_to_out_bam = read_map(clean_in_bam_out_bam_table.clean_table)
     
     # retrieves unique output bam file basenames (no repeats)
     call unique_values_in_second_column {
-        input: table = cleaned_in_bam_out_bam_table
+        input: table = clean_in_bam_out_bam_table.clean_table
     }
     Array[String] out_bams = unique_values_in_second_column.unique_values
     
@@ -49,11 +48,11 @@ task clean_in_bam_out_bam_table {
     File table
     
     command {
-    	cat ${table} | sed 's/[.]bam$//g' | sed $'s/[.]bam\t/\t/g' | tee cleaned_in_bam_out_bam_table
+    	cat ${table} | sed 's/[.]bam$//g' | sed $'s/[.]bam\t/\t/g' | tee cleaned_table
     }
     
     output {
-        File cleaned_in_bam_out_bam_table = "cleaned_in_bam_out_bam_table"
+        File clean_table = "cleaned_table"
     }
 }
 
