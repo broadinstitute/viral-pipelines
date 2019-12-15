@@ -48,11 +48,11 @@ task clean_in_bam_out_bam_table {
     File table
     
     command {
-    	cat ${table} | sed 's/[.]bam$//g' | sed $'s/[.]bam\t/\t/g' | tee cleaned_table
+    	cat ${table} | sed 's/[.]bam$//g' | sed $'s/[.]bam\t/\t/g' | tee in_bam_out_bam_table
     }
     
     output {
-        File clean_table = "cleaned_table"
+        File clean_table = "in_bam_out_bam_table"
     }
 }
 
