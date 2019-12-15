@@ -6,7 +6,7 @@ workflow merge_bams_bulk {
     File? reheader_table
     String? docker="quay.io/broadinstitute/viral-core"
     
-    # removes ".bam" from input bam file
+    # removes ".bam"s from ends of filenames in in_bam_out_bam_table
     call clean_in_bam_out_bam_table {
         input: table = in_bam_out_bam_table
     }
