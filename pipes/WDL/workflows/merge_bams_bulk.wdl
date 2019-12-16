@@ -18,10 +18,9 @@ workflow merge_bams_bulk {
     call unique_values_in_second_column {
         input: table = clean_in_bam_out_bam_table.clean_table
     }
-    Array[String] out_bams = unique_values_in_second_column.unique_values
     
     # collects and merges input bam files for each output bam file
-    scatter (out_bam in out_bams) {
+    scatter (out_bam in unique_values_in_second_column.unique_values) {
         String placeholder = write_map(in_bam_to_out_bam) # need to touch map in outer scatter for it to be seen in inner scatter
         
         # retrieves the input bam files for this output bam file
