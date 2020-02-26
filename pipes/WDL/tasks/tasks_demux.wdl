@@ -31,7 +31,7 @@ task merge_tarballs {
     docker: "${docker}"
     memory: "7 GB"
     cpu: 16
-    disks: "900 GB"
+    disks: "local-disk 1125 LOCAL"
     dx_instance_type: "mem1_ssd2_v2_x16"
     preemptible: 0
   }
@@ -217,7 +217,7 @@ task illumina_demux {
     docker: "${docker}"
     memory: "30 GB"
     cpu: 16
-    disks: "900 GB"
+    disks: "local-disk 1125 LOCAL"
     dx_instance_type: "mem1_ssd2_v2_x16"
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
   }
@@ -256,8 +256,9 @@ task merge_and_reheader_bams {
 
   runtime {
     docker: "${docker}"
-    memory: "2000 MB"
+    memory: "2 GB"
     cpu: 2
+    disks: "local-disk 750 LOCAL"
     dx_instance_type: "mem1_ssd2_v2_x4"
   }
 }

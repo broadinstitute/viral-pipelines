@@ -87,6 +87,7 @@ task assemble {
         docker: "${docker}"
         memory: "15 GB"
         cpu: 4
+        disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
     }
 
@@ -175,6 +176,7 @@ task scaffold {
         docker: "${docker}"
         memory: "15 GB"
         cpu: 4
+        disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
     }
 }
@@ -226,6 +228,7 @@ task refine {
         docker: "${docker}"
         memory: "7 GB"
         cpu: 8
+        disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
     }
 }
@@ -360,6 +363,7 @@ task refine_2x_and_plot {
         docker: "${docker}"
         memory: "7 GB"
         cpu: 8
+        disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
     }
 }
