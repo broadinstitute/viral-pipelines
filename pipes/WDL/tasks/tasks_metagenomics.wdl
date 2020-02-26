@@ -69,8 +69,9 @@ task krakenuniq {
 
   runtime {
     docker: "${docker}"
-    memory: "200 GB"
+    memory: "240 GB"
     cpu: 32
+    disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem3_ssd1_v2_x32"
     preemptible: 0
   }
@@ -129,8 +130,8 @@ task build_krakenuniq_db {
 
   runtime {
     docker: "${docker}"
-    memory: "200 GB"
-    disks: "local-disk 350 HDD"
+    memory: "240 GB"
+    disks: "local-disk 375 LOCAL"
     cpu: 32
     dx_instance_type: "mem3_ssd1_v2_x32"
     preemptible: 0
@@ -208,8 +209,9 @@ task kraken {
 
   runtime {
     docker: "${docker}"
-    memory: "200 GB"
+    memory: "240 GB"
     cpu: 32
+    disks: "local-disk 375 HDD"
     dx_instance_type: "mem3_ssd1_v2_x32"
     preemptible: 0
   }
@@ -268,8 +270,8 @@ task build_kraken_db {
 
   runtime {
     docker: "${docker}"
-    memory: "200 GB"
-    disks: "local-disk 350 HDD"
+    memory: "240 GB"
+    disks: "local-disk 375 HDD"
     cpu: 32
     dx_instance_type: "mem3_ssd1_v2_x32"
     preemptible: 0
@@ -325,6 +327,7 @@ task krona {
     docker: "${docker}"
     memory: "4 GB"
     cpu: 1
+    disks: "local-disk 50 SSD"
     dx_instance_type: "mem1_ssd2_v2_x2"
   }
 }
@@ -386,6 +389,7 @@ task filter_bam_to_taxa {
   runtime {
     docker: "${docker}"
     memory: "4 GB"
+    disks: "local-disk 375 LOCAL"
     cpu: 1
     dx_instance_type: "mem1_ssd2_v2_x2"
   }
@@ -458,6 +462,7 @@ task kaiju {
     docker: "${docker}"
     memory: "100 GB"
     cpu: 16
+    disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem3_ssd1_v2_x16"
   }
 }

@@ -74,6 +74,7 @@ task deplete_taxa {
     docker: "${docker}"
     memory: "15 GB"
     cpu: 8
+    disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: 0
   }
@@ -136,6 +137,7 @@ task filter_to_taxon {
     docker: "${docker}"
     memory: "14 GB"
     cpu: 16
+    disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x8"
   }
 }
@@ -161,6 +163,7 @@ task build_lastal_db {
     docker: "${docker}"
     memory: "7 GB"
     cpu: 2
+    disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x4"
   }
 }
@@ -205,6 +208,7 @@ task merge_one_per_sample {
     memory: "7 GB"
     cpu: 4
     docker: "${docker}"
+    disks: "local-disk 750 LOCAL"
     dx_instance_type: "mem1_ssd2_v2_x4"
   }
 }
