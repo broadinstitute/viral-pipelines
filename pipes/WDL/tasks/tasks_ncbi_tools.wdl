@@ -68,6 +68,7 @@ task Fetch_SRA_to_BAM {
         cpu:     4
         memory:  "15 GB"
         disks:   "local-disk 750 LOCAL"
+        dx_instance_type: "mem2_ssd1_v2_x4"
         docker:  "${docker}"
     }
 }
