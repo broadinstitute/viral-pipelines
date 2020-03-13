@@ -89,8 +89,8 @@ task fetch_fastas_by_taxid_seqlen {
         /opt/docker/scripts/fetch_fastas_by_taxid_seqlen.sh ${ncbi_taxid} ${seq_minlen} ${seq_maxlen} ./
 
         # count the number of accessions so we can emit
-        wc -l refseq_for_txid*.seq | awk '{print $1}' | tee NUM_REFERENCE_SEGMENTS
-        wc -l all_*_on_genbank_as_of_*.seq | awk '{print $1}' | tee NUM_SEQS_FETCHED_FROM_GENBANK
+        wc -l < refseq_for_txid*.seq | tr -d ' ' | tee NUM_REFERENCE_SEGMENTS
+        wc -l < all_*_on_genbank_as_of_*.seq | tr -d ' ' | tee NUM_SEQS_FETCHED_FROM_GENBANK
     }
 
     output {
