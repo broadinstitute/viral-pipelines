@@ -72,3 +72,46 @@ task Fetch_SRA_to_BAM {
         docker:  "${docker}"
     }
 }
+
+task fetch_fastas_by_taxid_seqlen {
+
+    input {
+        String  ncbi_taxid # NCBI taxid, with out without "txid" prefix
+        Int  seq_minlen # minimum sequence length to include
+        Int  seq_maxlen # maximum sequence length to include
+        String  docker = "quay.io/broadinstitute/ncbi-tools"
+    }
+
+    command {
+        set -ex -o pipefail
+
+        # pull reads from SRA and make a fully annotated BAM
+        /opt/docker/scripts/fetch_fastas_by_taxid_seqlen.sh ${ncbi_taxid} ${seq_minlen} ${seq_maxlen} ./
+
+        # count the number of accessions so we can emit
+        wc -l refseq_for_txid*.seq | awk '{print $1}' | tee NUM_REFERENCE_SEGMENTS
+        wc -l all_*_on_genbank_as_of_*.seq | awk '{print $1}' | tee NUM_SEQS_FETCHED_FROM_GENBANK
+    }
+
+    output {
+        # fasta containing refseq sequences for the given taxid 
+        # may contain multiple entries in the case of multi-chr/multi-segment species
+        File refseq_fasta                 = glob("refseq_for_txid*.fasta")[0]
+        Int num_reference_segments        = read_int("NUM_REFERENCE_SEGMENTS")
+
+        # fasta containing all sequences returned from GenBank, including
+        # the seqs from refseq
+        File all_genbank_seqs_fasta       = glob("all_*_on_genbank_as_of_*.fasta")[0]
+        Int num_seqs_fetched_from_genbank = read_int("NUM_SEQS_FETCHED_FROM_GENBANK")
+
+        Array[String] refseq_accessions   = read_lines(glob("refseq_for_txid*.seq")[0])
+    }
+
+    runtime {
+        cpu:     4
+        memory:  "15 GB"
+        disks:   "local-disk 150 LOCAL"
+        dx_instance_type: "mem2_ssd1_v2_x4"
+        docker:  "${docker}"
+    }
+}
