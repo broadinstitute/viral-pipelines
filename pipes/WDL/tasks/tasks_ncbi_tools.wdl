@@ -78,7 +78,7 @@ task fetch_fastas_by_taxid_seqlen {
     input {
         String  ncbi_taxid # NCBI taxid, with out without "txid" prefix
         Int  seq_minlen # minimum sequence length to include
-        Int  seq_maxlen # maximum sequence length to include
+        Int  seq_maxlen = 1000000000000 # maximum sequence length to include
         String  docker = "quay.io/broadinstitute/ncbi-tools"
     }
 
