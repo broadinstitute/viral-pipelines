@@ -1,5 +1,5 @@
-import "tasks_interhost.wdl" as interhost
-import "tasks_intrahost.wdl" as tasks_intrahost
+import "../tasks/tasks_interhost.wdl" as interhost
+import "../tasks/tasks_intrahost.wdl" as tasks_intrahost
 
 workflow isnvs_merge_to_vcf {
     File          reference_fasta

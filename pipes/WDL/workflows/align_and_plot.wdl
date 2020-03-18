@@ -1,4 +1,4 @@
-import "tasks_reports.wdl" as reports
+import "../tasks/tasks_reports.wdl" as reports
 
 workflow align_and_plot {
     call reports.plot_coverage {
