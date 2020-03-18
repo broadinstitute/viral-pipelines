@@ -1,6 +1,6 @@
 version 1.0
 
-import "tasks_ncbi_tools.wdl" as ncbi_tools
+import "../tasks/tasks_ncbi_tools.wdl" as ncbi_tools
 
 workflow multi_Fetch_SRA_to_BAM {
     input {

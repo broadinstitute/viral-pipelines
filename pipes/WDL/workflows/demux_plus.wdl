@@ -1,8 +1,8 @@
-import "tasks_demux.wdl" as demux
-import "tasks_metagenomics.wdl" as metagenomics
-import "tasks_taxon_filter.wdl" as taxon_filter
-import "tasks_assembly.wdl" as assembly
-import "tasks_reports.wdl" as reports
+import "../tasks/tasks_demux.wdl" as demux
+import "../tasks/tasks_metagenomics.wdl" as metagenomics
+import "../tasks/tasks_taxon_filter.wdl" as taxon_filter
+import "../tasks/tasks_assembly.wdl" as assembly
+import "../tasks/tasks_reports.wdl" as reports
 
 workflow demux_plus {
 
