@@ -78,7 +78,7 @@ task fetch_fastas_by_taxid_seqlen {
     input {
         String  ncbi_taxid # NCBI taxid, with out without "txid" prefix
         Int  seq_minlen # minimum sequence length to include
-        Int  seq_maxlen = 1000000000000 # maximum sequence length to include
+        Int?  seq_maxlen # max of 2147483647 (signed 32-bit int) until WDL >1.0 # maximum sequence length to include
         String  docker = "quay.io/broadinstitute/ncbi-tools"
     }
 
@@ -86,7 +86,7 @@ task fetch_fastas_by_taxid_seqlen {
         set -ex -o pipefail
 
         # pull reads from SRA and make a fully annotated BAM
-        /opt/docker/scripts/fetch_fastas_by_taxid_seqlen.sh ${ncbi_taxid} ${seq_minlen} ${seq_maxlen} ./
+        /opt/docker/scripts/fetch_fastas_by_taxid_seqlen.sh ${ncbi_taxid} ${seq_minlen} ${default="1000000000000" seq_maxlen} ./
 
         # count the number of accessions so we can emit
         wc -l < refseq_for_txid*.seq | tr -d ' ' | tee NUM_REFERENCE_SEGMENTS
