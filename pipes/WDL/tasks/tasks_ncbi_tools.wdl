@@ -77,8 +77,9 @@ task fetch_fastas_by_taxid_seqlen {
 
     input {
         String  ncbi_taxid # NCBI taxid, with out without "txid" prefix
-        Int  seq_minlen # minimum sequence length to include
+        Int   seq_minlen # minimum sequence length to include
         Int?  seq_maxlen # max of 2147483647 (signed 32-bit int) until WDL >1.0 # maximum sequence length to include
+        Int?  return_count_limit = 10000 
         String  docker = "quay.io/broadinstitute/ncbi-tools"
     }
 
@@ -86,22 +87,27 @@ task fetch_fastas_by_taxid_seqlen {
         set -ex -o pipefail
 
         # pull reads from SRA and make a fully annotated BAM
-        /opt/docker/scripts/fetch_fastas_by_taxid_seqlen.sh ${ncbi_taxid} ${seq_minlen} ${default="1000000000000" seq_maxlen} ./
+        /opt/docker/scripts/fetch_fastas_by_taxid_seqlen.sh ${ncbi_taxid} ${seq_minlen} ${default="1000000000000" seq_maxlen} ./ ${return_count_limit}
 
         # count the number of accessions so we can emit
-        wc -l < refseq_for_txid*.seq | tr -d ' ' | tee NUM_REFERENCE_SEGMENTS
-        wc -l < all_*_on_genbank_as_of_*.seq | tr -d ' ' | tee NUM_SEQS_FETCHED_FROM_GENBANK
+        wc -l < ncbi_refseq_for_txid*.seq | tr -d ' ' | tee NUM_REFERENCE_SEGMENTS
+        wc -l < ncbi_representative_genome_assemblies_for_txid*.seq | tr -d ' ' | tee NUM_REPRESENTATIVE_SEQS_FETCHED_FROM_NCBI_ASSEMBLY
+        wc -l < ncbi_all_genbank_seq_for_txid*_as_of_*.seq | tr -d ' ' | tee NUM_SEQS_FETCHED_FROM_GENBANK   
     }
 
     output {
         # fasta containing refseq sequences for the given taxid 
         # may contain multiple entries in the case of multi-chr/multi-segment species
-        File refseq_fasta                 = glob("refseq_for_txid*.fasta")[0]
-        Int num_reference_segments        = read_int("NUM_REFERENCE_SEGMENTS")
+        File ncbi_refseq_fasta  = glob("ncbi_refseq_for_txid*.fasta")[0]
+        Int num_refseq_segments = read_int("NUM_REFERENCE_SEGMENTS")
+
+        # fasta containing all sequences returned from searching NCBI Assembly for representative assemblies (comparable to searching NCBI Genome)
+        File ncbi_representative_assembly_seq_fasta = glob("ncbi_representative_genome_assemblies_for_txid*.seq")[0]
+        Int num_representative_assembly_seqs        = read_int("NUM_REPRESENTATIVE_SEQS_FETCHED_FROM_NCBI_ASSEMBLY")
 
         # fasta containing all sequences returned from GenBank, including
         # the seqs from refseq
-        File all_genbank_seqs_fasta       = glob("all_*_on_genbank_as_of_*.fasta")[0]
+        File ncbi_all_genbank_seqs_fasta       = glob("ncbi_all_genbank_seq_for_txid*_as_of_*.seq")[0]
         Int num_seqs_fetched_from_genbank = read_int("NUM_SEQS_FETCHED_FROM_GENBANK")
 
         Array[String] refseq_accessions   = read_lines(glob("refseq_for_txid*.seq")[0])
