@@ -31,9 +31,9 @@ task multi_align_mafft_ref {
 
   runtime {
     docker: "${docker}"
-    memory: "7 GB"
+    memory: "28 GB"
     cpu: 8
-    dx_instance_type: "mem1_ssd1_v2_x8"
+    dx_instance_type: "mem2_ssd1_v2_x8"
   }
 }
 
