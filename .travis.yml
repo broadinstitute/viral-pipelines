@@ -39,6 +39,7 @@ jobs:
       script:
         - set -e
         - travis/version-wdl-runtimes.sh
+        - travis/relative-wdl-paths.sh
         - travis/validate-wdl-womtool.sh
         - travis/build-dx.sh
         - travis/tests-dx.sh
@@ -53,6 +54,7 @@ jobs:
       script:
         - set -e
         - travis/version-wdl-runtimes.sh
+        - travis/relative-wdl-paths.sh
         - travis/validate-wdl-womtool.sh
         - travis/tests-cromwell.sh
 
