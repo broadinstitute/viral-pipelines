@@ -8,6 +8,7 @@ env:
   global:
   - CACHE_DIR="$HOME/misc_cache"
   - MINICONDA_DIR="$HOME/miniconda"
+  - CONDA_DEFAULT_ENV="$HOME/misc_cache/default"
   - PYTHONIOENCODING=UTF8
   - BOTO_CONFIG=/dev/null # bogus value to override config on travis
   - DOCKER_REGISTRY="quay.io"
@@ -55,14 +56,13 @@ jobs:
         - travis/validate-wdl-womtool.sh
         - travis/tests-cromwell.sh
 
-    - language: java
-      jdk: openjdk11
+    - language: python
       stage: build
       env:
         - TRAVIS_JOB=deploy_dockstore
       install:
         - set -e
-        - travis/install-conda.sh
+        - source travis/install-conda.sh
         - conda install miniwdl shellcheck
       script:
         - set -e

@@ -23,7 +23,10 @@ else # if it does not exist, we need to install miniconda
     # Use recommendations from https://github.com/bioconda/bioconda-recipes/issues/13774
     #conda update --quiet -y conda
     # conda config --set channel_priority strict
+
+    conda create -y -m --quiet -p $CONDA_DEFAULT_ENV python="$TRAVIS_PYTHON_VERSION"
 fi
 
+source activate $CONDA_DEFAULT_ENV
 # update certs
 conda info -a # for debugging
