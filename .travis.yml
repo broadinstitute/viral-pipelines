@@ -8,7 +8,7 @@ env:
   global:
   - CACHE_DIR="$HOME/misc_cache"
   - MINICONDA_DIR="$HOME/miniconda"
-  - CONDA_DEFAULT_ENV="$HOME/misc_cache/default"
+  - CONDA_DEFAULT_ENV="$HOME/misc_cache/default_env"
   - PYTHONIOENCODING=UTF8
   - BOTO_CONFIG=/dev/null # bogus value to override config on travis
   - DOCKER_REGISTRY="quay.io"
