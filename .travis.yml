@@ -38,7 +38,7 @@ jobs:
       script:
         - set -e
         - travis/version-wdl-runtimes.sh
-        - travis/validate-wdl.sh
+        - travis/validate-wdl-womtool.sh
         - travis/build-dx.sh
         - travis/tests-dx.sh
 
@@ -52,8 +52,24 @@ jobs:
       script:
         - set -e
         - travis/version-wdl-runtimes.sh
-        - travis/validate-wdl.sh
+        - travis/validate-wdl-womtool.sh
         - travis/tests-cromwell.sh
+
+    - language: java
+      jdk: openjdk11
+      stage: build
+      env:
+        - TRAVIS_JOB=deploy_dockstore
+      install:
+        - set -e
+        - travis/install-conda.sh
+        - conda install miniwdl shellcheck
+      script:
+        - set -e
+        - travis/version-wdl-runtimes.sh
+        - travis/validate-wdl-miniwdl.sh
+        - travis/flatten-wdls.sh
+        - echo "actual dockstore deploy not implemented yet"
 
     - language: python
       stage:    build
