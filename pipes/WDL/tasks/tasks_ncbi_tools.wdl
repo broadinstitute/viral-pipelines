@@ -8,7 +8,7 @@ task Fetch_SRA_to_BAM {
     }
 
     command {
-        set -ex -o pipefail
+        set -euxo pipefail
 
         # pull reads from SRA and make a fully annotated BAM
         /opt/docker/scripts/sra_to_ubam.sh ${SRA_ID} ${SRA_ID}.bam
@@ -23,7 +23,7 @@ task Fetch_SRA_to_BAM {
             '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.PLATFORM | keys[] as $k | "\($k)"' \
             | tee OUT_PLATFORM
         cat ${SRA_ID}.json | jq -r \
-            .EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.PLATFORM.$PLATFORM.INSTRUMENT_MODEL \
+            .EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.PLATFORM.$(<OUT_PLATFORM).INSTRUMENT_MODEL \
             | tee OUT_MODEL
         cat ${SRA_ID}.json | jq -r \
             '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.SAMPLE.IDENTIFIERS.EXTERNAL_ID|select(.namespace == "BioSample")|.content' \
