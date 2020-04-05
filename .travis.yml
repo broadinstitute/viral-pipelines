@@ -8,6 +8,7 @@ env:
   global:
   - CACHE_DIR="$HOME/misc_cache"
   - MINICONDA_DIR="$HOME/miniconda"
+  - CONDA_DEFAULT_ENV="$HOME/misc_cache/default_env"
   - PYTHONIOENCODING=UTF8
   - BOTO_CONFIG=/dev/null # bogus value to override config on travis
   - DOCKER_REGISTRY="quay.io"
@@ -38,7 +39,8 @@ jobs:
       script:
         - set -e
         - travis/version-wdl-runtimes.sh
-        - travis/validate-wdl.sh
+        - travis/relative-wdl-paths.sh
+        - travis/validate-wdl-womtool.sh
         - travis/build-dx.sh
         - travis/tests-dx.sh
 
@@ -52,8 +54,24 @@ jobs:
       script:
         - set -e
         - travis/version-wdl-runtimes.sh
-        - travis/validate-wdl.sh
+        - travis/relative-wdl-paths.sh
+        - travis/validate-wdl-womtool.sh
         - travis/tests-cromwell.sh
+
+    - language: python
+      stage: build
+      env:
+        - TRAVIS_JOB=deploy_dockstore
+      install:
+        - set -e
+        - source travis/install-conda.sh
+        - conda install -y miniwdl shellcheck
+      script:
+        - set -e
+        - travis/version-wdl-runtimes.sh
+        - travis/validate-wdl-miniwdl.sh
+        - travis/flatten-wdls.sh
+        - echo "actual dockstore deploy not implemented yet"
 
     - language: python
       stage:    build

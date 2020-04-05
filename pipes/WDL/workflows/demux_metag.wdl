@@ -23,11 +23,15 @@ workflow demux_metag {
         assembler = "spades",
         reads_unmapped_bam = deplete.cleaned_bam
     }
+    call metagenomics.kaiju as kaiju {
+      input:
+        reads_unmapped_bam = raw_reads
+    }
   }
 
   call metagenomics.krakenuniq as kraken {
-    input:
-      reads_unmapped_bam = illumina_demux.raw_reads_unaligned_bams,
+      input:
+        reads_unmapped_bam = illumina_demux.raw_reads_unaligned_bams
   }
   call reports.aggregate_metagenomics_reports as metag_summary_report {
       input:
@@ -36,9 +40,5 @@ workflow demux_metag {
   call reports.spikein_summary as spike_summary {
       input:
           spikein_count_txt = spikein.report
-  }
-  call metagenomics.kaiju as kaiju {
-    input:
-      reads_unmapped_bam = illumina_demux.raw_reads_unaligned_bams,
   }
 }

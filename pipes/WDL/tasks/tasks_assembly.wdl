@@ -30,7 +30,7 @@ task assemble {
             ${trim_clip_db} \
             ${sample_name}.assembly1-${assembler}.fasta \
             ${'--n_reads=' + trinity_n_reads} \
-     	      ${true='--alwaysSucceed' false="" always_succeed} \
+            ${true='--alwaysSucceed' false="" always_succeed} \
             --JVMmemory "$mem_in_mb"m \
             --outReads=${sample_name}.subsamp.bam \
             --loglevel=DEBUG
@@ -41,7 +41,7 @@ task assemble {
             ${trim_clip_db} \
             ${sample_name}.assembly1-${assembler}.fasta \
             ${'--nReads=' + spades_n_reads} \
-	          ${true="--alwaysSucceed" false="" always_succeed} \
+            ${true="--alwaysSucceed" false="" always_succeed} \
             ${'--minContigLen=' + spades_min_contig_len} \
             --memLimitGb $mem_in_gb \
             --outReads=${sample_name}.subsamp.bam \
@@ -55,7 +55,7 @@ task assemble {
             ${'--n_reads=' + trinity_n_reads} \
             --JVMmemory "$mem_in_mb"m \
             --outReads=${sample_name}.subsamp.bam \
-     	      ${true='--always_succeed' false='' always_succeed} \
+            ${true='--always_succeed' false='' always_succeed} \
             --loglevel=DEBUG
           assembly.py assemble_spades \
             ${reads_unmapped_bam} \
@@ -63,7 +63,7 @@ task assemble {
             ${sample_name}.assembly1-${assembler}.fasta \
             --contigsUntrusted=${sample_name}.assembly1-trinity.fasta \
             ${'--nReads=' + spades_n_reads} \
-     	      ${true='--alwaysSucceed' false='' always_succeed} \
+            ${true='--alwaysSucceed' false='' always_succeed} \
             ${'--minContigLen=' + spades_min_contig_len} \
             --memLimitGb $mem_in_gb \
             --loglevel=DEBUG
