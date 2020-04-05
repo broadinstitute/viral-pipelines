@@ -65,7 +65,7 @@ jobs:
       install:
         - set -e
         - source travis/install-conda.sh
-        - conda install miniwdl shellcheck
+        - conda install -y miniwdl shellcheck
       script:
         - set -e
         - travis/version-wdl-runtimes.sh
