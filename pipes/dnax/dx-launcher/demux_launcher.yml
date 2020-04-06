@@ -131,7 +131,7 @@ runSpec:
           echo "Detected $total_tile_count tiles, interpreting as HiSeq4k run, executing on a $demux_instance_type machine."
       elif [ "$total_tile_count" -le 1408 ]; then
           tar_consolidation_instance_size="mem1_ssd2_x36"
-          demux_instance_type="mem1_ssd2_x36"
+          demux_instance_type="mem2_ssd1_v2_x48"
           min_base_quality=20
           max_reads_in_ram_per_tile=750000
           demux_threads=20 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
