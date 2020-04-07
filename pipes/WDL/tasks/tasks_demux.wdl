@@ -46,12 +46,12 @@ task illumina_demux {
   String? sequencingCenter
 
   String? flowcell
-  Int?    minimumBaseQuality = 25
+  Int?    minimumBaseQuality = 10
   Int?    maxMismatches = 0
   Int?    minMismatchDelta
   Int?    maxNoCalls
   String? readStructure
-  Int?    minimumQuality = 10
+  Int?    minimumQuality
   Int?    threads = 30
   String? runStartDate
   Int?    maxReadsInRamPerTile
