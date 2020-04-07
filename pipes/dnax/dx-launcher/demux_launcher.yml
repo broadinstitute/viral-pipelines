@@ -102,11 +102,11 @@ runSpec:
       max_records_in_ram=2000000
       if [ "$total_tile_count" -le 50 ]; then 
           tar_consolidation_instance_size="mem1_ssd1_x4"
-          demux_instance_type="mem1_ssd1_x4"
+          demux_instance_type="mem1_ssd1_x8"
           echo "Detected $total_tile_count tiles, interpreting as MiSeq run, executing on a $demux_instance_type machine."
       elif [ "$total_tile_count" -le 150 ]; then
           tar_consolidation_instance_size="mem1_ssd2_x4"
-          demux_instance_type="mem1_ssd2_x4"
+          demux_instance_type="mem1_ssd2_x16"
           echo "Detected $total_tile_count tiles, interpreting as HiSeq2k run, executing on a $demux_instance_type machine."
       elif [ "$total_tile_count" -le 288 ]; then
           tar_consolidation_instance_size="mem1_ssd2_x4"
