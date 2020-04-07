@@ -122,13 +122,13 @@ runSpec:
           echo "Detected $total_tile_count tiles, interpreting as HiSeq4k run, executing on a $demux_instance_type machine."
       elif [ "$total_tile_count" -le 1408 ]; then
           tar_consolidation_instance_size="mem1_ssd2_x36"
-          demux_instance_type="mem2_ssd1_v2_x48"
+          demux_instance_type="mem3_ssd2_v2_x32"
           echo "Detected $total_tile_count tiles, interpreting as NovaSeq run, executing on a $demux_instance_type machine."
           echo "  **Note: Q20 threshold used since NovaSeq with RTA3 writes only four Q-score values: 2, 12, 23, and 37.**"
           echo "    See: https://www.illumina.com/content/dam/illumina-marketing/documents/products/appnotes/novaseq-hiseq-q30-app-note-770-2017-010.pdf"
       elif [ "$total_tile_count" -gt 1408 ]; then
           tar_consolidation_instance_size="mem1_ssd2_x36"
-          demux_instance_type="mem2_ssd1_v2_x48"
+          demux_instance_type="mem3_ssd2_v2_x32"
           echo "Tile count: $total_tile_count tiles, (unknown instrument type), executing on a $demux_instance_type machine."
       fi
       echo "For detailed information on instance types, see:"

@@ -137,16 +137,16 @@ task illumina_demux {
         echo "Detected $total_tile_count tiles, interpreting as HiSeq4k run."
     elif [ "$total_tile_count" -le 1408 ]; then
         mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 80)
-        demux_threads=20 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
-        max_reads_in_ram_per_tile=800000 # reduce the number of reads per tile since the NovaSeq has so many
-        max_records_in_ram=6000000
+        demux_threads=32 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
+        max_reads_in_ram_per_tile=1200000 # reduce the number of reads per tile since the NovaSeq has so many
+        max_records_in_ram=3000000
         echo "Detected $total_tile_count tiles, interpreting as NovaSeq run."
         echo "  **Note: Q20 threshold used since NovaSeq with RTA3 writes only four Q-score values: 2, 12, 23, and 37.**"
         echo "    See: https://www.illumina.com/content/dam/illumina-marketing/documents/products/appnotes/novaseq-hiseq-q30-app-note-770-2017-010.pdf"
     elif [ "$total_tile_count" -gt 1408 ]; then
-        demux_threads=20 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
-        max_reads_in_ram_per_tile=800000 # reduce the number of reads per tile since the NovaSeq has so many
-        max_records_in_ram=6000000
+        demux_threads=32 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
+        max_reads_in_ram_per_tile=1200000 # reduce the number of reads per tile since the NovaSeq has so many
+        max_records_in_ram=3000000
         echo "Tile count: $total_tile_count tiles (unknown instrument type)."
     fi
 
@@ -215,10 +215,10 @@ task illumina_demux {
 
   runtime {
     docker: "${docker}"
-    memory: "30 GB"
-    cpu: 20
-    disks: "local-disk 1125 LOCAL"
-    dx_instance_type: "mem2_ssd1_v2_x48"
+    memory: "200 GB"
+    cpu: 32
+    disks: "local-disk 2625 LOCAL"
+    dx_instance_type: "mem3_ssd2_v2_x32"
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
   }
 }
