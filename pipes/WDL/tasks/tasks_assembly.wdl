@@ -184,6 +184,7 @@ task scaffold {
 task ivar_trim {
     File    aligned_bam
     File?   trim_coords_bed
+    Int?    min_keep_length
 
     String? docker="andersenlabapps/ivar"
 
@@ -191,10 +192,11 @@ task ivar_trim {
 
     command {
         set -ex -o pipefail
-        ivar --version | tee VERSION
+        ivar version | tee VERSION
         if [ -n ${trim_coords_bed} ]; then
-          ivar trim -e -i ${aligned_bam} -b ${trim_coords_bed} tmp.bam
-          samtools sort -@ `nproc` -m 1500M -o ${bam_basename}.trimmed.bam tmp.bam
+          ivar trim -e -i ${aligned_bam} -b ${trim_coords_bed} -p trim ${'-m ' + min_keep_length}
+
+          samtools sort -@ `nproc` -m 1500M -o ${bam_basename}.trimmed.bam trim.bam
         else
           ln -s ${aligned_bam} ${bam_basename}.trimmed.bam
         fi
@@ -219,7 +221,7 @@ task refine_assembly_with_aligned_reads {
     File     reads_aligned_bam
     String   sample_name
 
-    Boolean? mark_duplicates=true
+    Boolean? mark_duplicates=false
     Float?   major_cutoff=0.5
     Int?     min_coverage=2
 
