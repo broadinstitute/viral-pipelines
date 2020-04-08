@@ -13,9 +13,9 @@ task multi_align_mafft_ref {
     interhost.py multichr_mafft \
       ${reference_fasta} ${sep=' ' assemblies_fasta} \
       . \
-      ${'--ep' + mafft_ep} \
-      ${'--gapOpeningPenalty' + mafft_gapOpeningPenalty} \
-      ${'--maxiters' + mafft_maxIters} \
+      ${'--ep=' + mafft_ep} \
+      ${'--gapOpeningPenalty=' + mafft_gapOpeningPenalty} \
+      ${'--maxiters=' + mafft_maxIters} \
       --outFilePrefix align_mafft-${fasta_basename} \
       --preservecase \
       --localpair \
@@ -50,9 +50,9 @@ task multi_align_mafft {
     interhost.py multichr_mafft \
       ${sep=' ' assemblies_fasta} \
       . \
-      ${'--ep' + mafft_ep} \
-      ${'--gapOpeningPenalty' + mafft_gapOpeningPenalty} \
-      ${'--maxiters' + mafft_maxIters} \
+      ${'--ep=' + mafft_ep} \
+      ${'--gapOpeningPenalty=' + mafft_gapOpeningPenalty} \
+      ${'--maxiters=' + mafft_maxIters} \
       --outFilePrefix ${out_prefix} \
       --preservecase \
       --localpair \
@@ -76,11 +76,15 @@ task multi_align_mafft {
 
 task index_ref {
   File     referenceGenome
+  File?    novocraft_license
   String?  docker="quay.io/broadinstitute/viral-core"
 
   command {
     read_utils.py --version | tee VERSION
-    read_utils.py novoindex "${referenceGenome}"
+    read_utils.py novoindex \
+    "${referenceGenome}" \
+    ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license}
+    
     read_utils.py index_fasta_samtools "${referenceGenome}"
     read_utils.py index_fasta_picard "${referenceGenome}"
   }
