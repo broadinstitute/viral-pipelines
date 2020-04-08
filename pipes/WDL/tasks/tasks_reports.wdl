@@ -25,7 +25,11 @@ task plot_coverage {
     read_utils.py --version | tee VERSION
 
     cp ${assembly_fasta} assembly.fasta
-    read_utils.py novoindex assembly.fasta --loglevel=DEBUG
+    read_utils.py novoindex \
+    assembly.fasta \
+    ${"--NOVOALIGN_LICENSE_PATH" + novocraft_license} \
+    --loglevel=DEBUG
+    
     read_utils.py index_fasta_picard assembly.fasta --loglevel=DEBUG
     read_utils.py index_fasta_samtools assembly.fasta --loglevel=DEBUG
 

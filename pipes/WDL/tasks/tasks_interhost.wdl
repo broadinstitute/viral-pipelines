@@ -76,11 +76,15 @@ task multi_align_mafft {
 
 task index_ref {
   File     referenceGenome
+  File?    novocraft_license
   String?  docker="quay.io/broadinstitute/viral-core"
 
   command {
     read_utils.py --version | tee VERSION
-    read_utils.py novoindex "${referenceGenome}"
+    read_utils.py novoindex \
+    "${referenceGenome}" \
+    ${"--NOVOALIGN_LICENSE_PATH" + novocraft_license}
+    
     read_utils.py index_fasta_samtools "${referenceGenome}"
     read_utils.py index_fasta_picard "${referenceGenome}"
   }

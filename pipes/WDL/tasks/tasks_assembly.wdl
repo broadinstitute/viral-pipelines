@@ -204,7 +204,10 @@ task refine {
         assembly.py --version | tee VERSION
 
         ln -s ${assembly_fasta} assembly.fasta
-        read_utils.py novoindex assembly.fasta --loglevel=DEBUG
+        read_utils.py novoindex \
+        assembly.fasta \
+        ${"--NOVOALIGN_LICENSE_PATH" + novocraft_license} \
+        --loglevel=DEBUG
 
         assembly.py refine_assembly \
           assembly.fasta \
@@ -273,7 +276,10 @@ task refine_2x_and_plot {
         assembly.py --version | tee VERSION
 
         ln -s ${assembly_fasta} assembly.fasta
-        read_utils.py novoindex assembly.fasta --loglevel=DEBUG
+        read_utils.py novoindex \
+        assembly.fasta \
+        ${"--NOVOALIGN_LICENSE_PATH" + novocraft_license} \
+        --loglevel=DEBUG
 
         # refine 1
         assembly.py refine_assembly \
