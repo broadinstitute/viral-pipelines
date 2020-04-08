@@ -206,7 +206,7 @@ task refine {
         ln -s ${assembly_fasta} assembly.fasta
         read_utils.py novoindex \
         assembly.fasta \
-        ${"--NOVOALIGN_LICENSE_PATH" + novocraft_license} \
+        ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
         --loglevel=DEBUG
 
         assembly.py refine_assembly \
@@ -218,7 +218,7 @@ task refine {
           --major_cutoff ${major_cutoff} \
           --novo_params="${novoalign_options}" \
           --JVMmemory "$mem_in_mb"m \
-          ${"--NOVOALIGN_LICENSE_PATH" + novocraft_license} \
+          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
           --loglevel=DEBUG
     }
 
@@ -278,7 +278,7 @@ task refine_2x_and_plot {
         ln -s ${assembly_fasta} assembly.fasta
         read_utils.py novoindex \
         assembly.fasta \
-        ${"--NOVOALIGN_LICENSE_PATH" + novocraft_license} \
+        ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
         --loglevel=DEBUG
 
         # refine 1
@@ -291,7 +291,7 @@ task refine_2x_and_plot {
           --major_cutoff ${refine1_major_cutoff} \
           --novo_params="${refine1_novoalign_options}" \
           --JVMmemory "$mem_in_mb"m \
-          ${"--NOVOALIGN_LICENSE_PATH" + novocraft_license} \
+          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
           --loglevel=DEBUG
 
         # refine 2
@@ -303,7 +303,7 @@ task refine_2x_and_plot {
           --min_coverage ${refine2_min_coverage} \
           --major_cutoff ${refine2_major_cutoff} \
           --novo_params="${refine2_novoalign_options}" \
-          ${"--NOVOALIGN_LICENSE_PATH" + novocraft_license} \
+          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
           --JVMmemory "$mem_in_mb"m \
           --loglevel=DEBUG
 
@@ -315,7 +315,7 @@ task refine_2x_and_plot {
           --outBamFiltered ${sample_name}.mapped.bam \
           --aligner_options "${plot_coverage_novoalign_options}" \
           --JVMmemory "$mem_in_mb"m \
-          ${"--NOVOALIGN_LICENSE_PATH" + novocraft_license} \
+          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
           --loglevel=DEBUG
 
         # collect figures of merit
