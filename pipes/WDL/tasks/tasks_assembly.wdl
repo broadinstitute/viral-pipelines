@@ -244,6 +244,7 @@ task refine_assembly_with_aligned_reads {
           ln -s ${reads_aligned_bam} temp_markdup.bam
         fi
 
+        ln -s ${reference_fasta} assembly.fasta
         assembly.py refine_assembly \
           assembly.fasta \
           temp_markdup.bam \
