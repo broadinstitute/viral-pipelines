@@ -17,15 +17,14 @@ workflow assemble_refbased {
         aligned_bam = plot_initial.aligned_only_reads_bam
   }
 
-  call assembly.refine_assembly_with_aligned_reads {
+  call assembly.refine_assembly_with_aligned_reads as polish {
     input:
-        reads_aligned_bam   = plot_initial.aligned_only_reads_bam,
-        aligned_trimmed_bam = assembly.ivar_trim.aligned_trimmed_bam
+        reads_aligned_bam = assembly.ivar_trim.aligned_trimmed_bam
   }
 
   call reports.plot_coverage as plot_final {
     input:
-        assembly_fasta = assembly.refine_assembly_with_aligned_reads.refined_assembly_fasta,
+        assembly_fasta = polish.refined_assembly_fasta,
         reads_unmapped_bam = reads_unmapped_bam
   }
 
