@@ -5,7 +5,7 @@ workflow assemble_refbased {
 
   File     assembly_fasta
   File     reads_unmapped_bam
-  
+
   call reports.plot_coverage as plot_initial {
     input:
         assembly_fasta = assembly_fasta,
@@ -20,7 +20,7 @@ workflow assemble_refbased {
   call assembly.refine_assembly_with_aligned_reads {
     input:
         reads_aligned_bam   = plot_initial.aligned_only_reads_bam,
-        aligned_trimmed_bam = assembly.ivar_trim,aligned_trimmed_bam
+        aligned_trimmed_bam = assembly.ivar_trim.aligned_trimmed_bam
   }
 
   call reports.plot_coverage as plot_final {

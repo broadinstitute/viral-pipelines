@@ -195,7 +195,7 @@ task ivar_trim {
         if [ -n ${trim_coords_bed} ]; then
           ivar trim -e -i ${aligned_bam} -b ${trim_coords_bed} tmp.bam
           samtools sort -@ `nproc` -m 1500M -o ${bam_basename}.trimmed.bam tmp.bam
-        elif
+        else
           ln -s ${aligned_bam} ${bam_basename}.trimmed.bam
         fi
     }
