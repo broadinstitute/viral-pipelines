@@ -309,6 +309,7 @@ task refine_2x_and_plot {
           --outBamFiltered ${sample_name}.mapped.bam \
           --aligner_options "${plot_coverage_novoalign_options}" \
           --JVMmemory "$mem_in_mb"m \
+          ${"--NOVOALIGN_LICENSE_PATH" + novocraft_license} \
           --loglevel=DEBUG
 
         # collect figures of merit
