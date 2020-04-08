@@ -206,8 +206,7 @@ task illumina_demux {
     parallel --jobs 0 -I ,, \
       "reports.py fastqc \
         ,,.bam \
-        ,,_fastqc.html \
-        --loglevel=DEBUG" \
+        ,,_fastqc.html" \
       ::: `cat $OUT_BASENAMES`
   }
 
