@@ -215,14 +215,15 @@ task ivar_trim {
 }
 
 task refine_assembly_with_aligned_reads {
-    File    reference_fasta
-    File    reads_aligned_bam
-    String  sample_name
+    File     reference_fasta
+    File     reads_aligned_bam
+    String   sample_name
 
-    Float?  major_cutoff=0.5
-    Int?    min_coverage=2
+    Boolean? mark_duplicates=true
+    Float?   major_cutoff=0.5
+    Int?     min_coverage=2
 
-    String? docker="quay.io/broadinstitute/viral-assemble"
+    String?  docker="quay.io/broadinstitute/viral-assemble"
 
     command {
         set -ex -o pipefail
@@ -232,18 +233,48 @@ task refine_assembly_with_aligned_reads {
 
         assembly.py --version | tee VERSION
 
-        ##### TO DO: rename fasta headers with sample_name
+        if [ ${true='true' false='false' mark_duplicates} == "true" ]; then
+          read_utils.py mkdup_picard \
+            ${reads_aligned_bam} \
+            temp_markdup.bam \
+            --JVMmemory "$mem_in_mb"m \
+            --loglevel=DEBUG
+        else
+          ln -s ${reads_aligned_bam} temp_markdup.bam
+        fi
 
         assembly.py refine_assembly \
           assembly.fasta \
-          ${reads_aligned_bam} \
-          ${sample_name}.fasta \
-          --already_realigned_bam=${reads_aligned_bam} \
+          temp_markdup.bam \
+          refined.fasta \
+          --already_realigned_bam=temp_markdup.bam \
           --outVcf ${sample_name}.sites.vcf.gz \
           --min_coverage ${min_coverage} \
           --major_cutoff ${major_cutoff} \
           --JVMmemory "$mem_in_mb"m \
           --loglevel=DEBUG
+
+        # hacky rename fasta headers
+        python - <<SCRIPT
+          import util.file
+          samplename = ${sample_name}
+          with open('refined.fasta', 'rt') as inf:
+            with open('final.fasta', 'wt') as outf:
+            if util.file.fasta_length('refined.fasta') == 1:
+              # case with just one sequence
+              inf.readline()
+              outf.write('>' + samplename + '\n')
+              for line in inf:
+                outf.write(line)
+            else:
+              # case with multiple sequences
+              i = 1
+              for line in inf:
+                if line.startswith('>'):
+                  line = samplename + '-' + str(i) + '\n'
+                outf.write(line)
+        SCRIPT
+        mv final.fasta ${sample_name}.fasta
     }
 
     output {
