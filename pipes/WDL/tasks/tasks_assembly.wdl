@@ -181,6 +181,87 @@ task scaffold {
     }
 }
 
+task ivar_trim {
+    File    aligned_bam
+    File?   trim_coords_bed
+
+    String? docker="andersenlabapps/ivar"
+
+    String  bam_basename=basename(aligned_bam, ".bam")
+
+    command {
+        set -ex -o pipefail
+        ivar --version | tee VERSION
+        if [ -n ${trim_coords_bed} ]; then
+          ivar trim -e -i ${aligned_bam} -b ${trim_coords_bed} tmp.bam
+          samtools sort -@ `nproc` -m 1500M -o ${bam_basename}.trimmed.bam tmp.bam
+        elif
+          ln -s ${aligned_bam} ${bam_basename}.trimmed.bam
+        fi
+    }
+
+    output {
+        File   aligned_trimmed_bam = "${bam_basename}.trimmed.bam"
+        String ivar_version        = read_string("VERSION")
+    }
+
+    runtime {
+        docker: "${docker}"
+        memory: "7 GB"
+        cpu: 4
+        disks: "local-disk 375 LOCAL"
+        dx_instance_type: "mem1_ssd1_v2_x4"
+    }
+}
+
+task refine_assembly_with_aligned_reads {
+    File    reference_fasta
+    File    reads_aligned_bam
+    String  sample_name
+
+    Float?  major_cutoff=0.5
+    Int?    min_coverage=2
+
+    String? docker="quay.io/broadinstitute/viral-assemble"
+
+    command {
+        set -ex -o pipefail
+
+        # find 90% memory
+        mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 90`
+
+        assembly.py --version | tee VERSION
+
+        ##### TO DO: rename fasta headers with sample_name
+
+        assembly.py refine_assembly \
+          assembly.fasta \
+          ${reads_aligned_bam} \
+          ${sample_name}.fasta \
+          --already_realigned_bam=${reads_aligned_bam} \
+          --outVcf ${sample_name}.sites.vcf.gz \
+          --min_coverage ${min_coverage} \
+          --major_cutoff ${major_cutoff} \
+          --JVMmemory "$mem_in_mb"m \
+          --loglevel=DEBUG
+    }
+
+    output {
+        File   refined_assembly_fasta  = "${sample_name}.fasta"
+        File   sites_vcf_gz            = "${sample_name}.sites.vcf.gz"
+        String viralngs_version        = read_string("VERSION")
+    }
+
+    runtime {
+        docker: "${docker}"
+        memory: "7 GB"
+        cpu: 8
+        disks: "local-disk 375 LOCAL"
+        dx_instance_type: "mem1_ssd1_v2_x8"
+    }
+}
+
+
 task refine {
     File    assembly_fasta
     File    reads_unmapped_bam
