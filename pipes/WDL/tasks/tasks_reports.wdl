@@ -273,3 +273,97 @@ task aggregate_metagenomics_reports {
     preemptible: 0
   }
 }
+
+task MultiQC {
+  input {
+      Array[File] input_files = []
+      Boolean force = false
+      Boolean dirs = false
+      Int? dirs_depth
+      Boolean full_names = false
+      String? title
+      String? comment
+      String? file_name
+      String out_dir = "./multiqc-output"
+      String? template
+      String? tag
+      String? ignore_analysis_files
+      String? ignore_sample_names
+      File? sample_names
+      File? file_with_list_of_input_paths
+      Array[String]+? exclude_modules
+      Array[String]+? module_to_use
+      Boolean data_dir = false
+      Boolean no_data_dir = false
+      String? output_data_format # [tsv|yaml|json] default:tsv
+      Boolean zip_data_dir = false
+      Boolean export = false
+      Boolean flat = false
+      Boolean interactive = true
+      Boolean lint = false
+      Boolean pdf = false
+      Boolean megaQC_upload = false # Upload generated report to MegaQC if MegaQC options are found
+      File? config  # directory
+      String? config_yaml
+
+      String docker = "ewels/multiqc:latest"
+  }
+
+  String analysis_directory="multiqc-input"
+
+  command {
+      set -ex -o pipefail
+
+      mv ${input_files} ${analysis_directory}
+
+      mkdir -p ${out_dir}
+
+      multiqc \
+      ${true="--force" false="" force} \
+      ${true="--dirs" false="" dirs} \
+      ${"--dirs-depth " + dirs_depth} \
+      ${true="--fullnames" false="" full_names} \
+      ${"--title " + title} \
+      ${"--comment " + comment} \
+      ${"--filename " + file_name} \
+      ${"--outdir " + out_dir} \
+      ${"--template " + template} \
+      ${"--tag " + tag} \
+      ${"--ignore " + ignore} \
+      ${"--ignore-samples" + ignore_samples} \
+      ${"--sample-names " + sample_names} \
+      ${"--file-list " + file_with_list_of_input_paths} \
+      ${true="--exclude " false="" defined(exclude_modules)}${sep=" --exclude " exclude_modules} \
+      ${true="--module " false="" defined(module_to_use)}${sep=" --module " module_to_use} \
+      ${true="--data-dir" false="" data_dir} \
+      ${true="--no-data-dir" false="" no_data_dir} \
+      ${"--data-format " + output_data_format} \
+      ${true="--zip-data-dir" false="" zip_data_dir} \
+      ${true="--export" false="" export} \
+      ${true="--flat" false="" flat} \
+      ${true="--interactive" false="" interactive} \
+      ${true="--lint" false="" lint} \
+      ${true="--pdf" false="" pdf} \
+      ${false="--no-megaqc-upload" true="" megaQC_upload} \
+      ${"--config " + config} \
+      ${"--cl-config " + config_yaml } \
+      ${analysis_directory}
+  }
+
+  String reportFilename = if (defined(file_name))
+      then sub(select_first([file_name]), "\.html$", "")
+      else "multiqc"
+
+  output {
+      File multiqc_report = out_dir + "/" + reportFilename + "_report.html"
+      File multiqc_data_ir = out_dir + "/" +reportFilename + "_data"
+  }
+
+  runtime {
+    memory: "2 GB"
+    cpu: 1
+    docker: "${docker}"
+    disks: "local-disk 375 LOCAL"
+    dx_instance_type: "mem1_ssd1_v2_x4"
+  }
+}
