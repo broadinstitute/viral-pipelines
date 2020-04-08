@@ -19,7 +19,7 @@ workflow assemble_refbased {
 
   call assembly.refine_assembly_with_aligned_reads as polish {
     input:
-        reads_aligned_bam = assembly.ivar_trim.aligned_trimmed_bam
+        reads_aligned_bam = ivar_trim.aligned_trimmed_bam
   }
 
   call reports.plot_coverage as plot_final {
