@@ -3,7 +3,7 @@
     "runSpec": {
       "timeoutPolicy": {
         "*": {
-          "hours": 9
+          "hours": 20
         }
       }
     }
