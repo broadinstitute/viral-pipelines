@@ -59,7 +59,7 @@ task plot_coverage {
     python -c "print (float("`cat bases_aligned`")/"`cat assembly_length`") if "`cat assembly_length`">0 else 0" > mean_coverage
 
     # fastqc mapped bam
-    reports.py fastqc ${sample_name}.mapped.bam ${sample_name}.mapped_fastqc.html ${sample_name}.mapped_fastqc.zip
+    reports.py fastqc ${sample_name}.mapped.bam ${sample_name}.mapped_fastqc.html --out_zip ${sample_name}.mapped_fastqc.zip
 
     PLOT_DUPE_OPTION=""
     if [[ "${skip_mark_dupes}" != "true" ]]; then
@@ -152,7 +152,7 @@ task fastqc {
   command {
     set -ex -o pipefail
     reports.py --version | tee VERSION
-    reports.py fastqc ${reads_bam} ${reads_basename}_fastqc.html ${reads_basename}_fastqc.zip
+    reports.py fastqc ${reads_bam} ${reads_basename}_fastqc.html --out_zip ${reads_basename}_fastqc.zip
   }
 
   output {

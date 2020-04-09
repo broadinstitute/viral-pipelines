@@ -60,7 +60,7 @@ task deplete_taxa {
 
     samtools view -c ${raw_reads_unmapped_bam} | tee depletion_read_count_pre
     samtools view -c ${bam_basename}.cleaned.bam | tee depletion_read_count_post
-    reports.py fastqc ${bam_basename}.cleaned.bam ${bam_basename}.cleaned_fastqc.html ${bam_basename}.cleaned_fastqc.zip
+    reports.py fastqc ${bam_basename}.cleaned.bam ${bam_basename}.cleaned_fastqc.html --out_zip ${bam_basename}.cleaned_fastqc.zip
   }
 
   output {
@@ -125,7 +125,7 @@ task filter_to_taxon {
       --loglevel=DEBUG
 
     samtools view -c ${bam_basename}.taxfilt.bam | tee filter_read_count_post
-    reports.py fastqc ${bam_basename}.taxfilt.bam ${bam_basename}.taxfilt_fastqc.html ${bam_basename}.taxfilt_fastqc.zip
+    reports.py fastqc ${bam_basename}.taxfilt.bam ${bam_basename}.taxfilt_fastqc.html --out_zip ${bam_basename}.taxfilt_fastqc.zip
   }
 
   output {

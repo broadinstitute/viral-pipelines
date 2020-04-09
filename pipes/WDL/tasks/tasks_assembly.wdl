@@ -447,7 +447,7 @@ task refine_2x_and_plot {
         python -c "print (float("`cat bases_aligned`")/"`cat assembly_length`") if "`cat assembly_length`">0 else 0" > mean_coverage
 
         # fastqc mapped bam
-        reports.py fastqc ${sample_name}.mapped.bam ${sample_name}.mapped_fastqc.html ${sample_name}.mapped_fastqc.zip
+        reports.py fastqc ${sample_name}.mapped.bam ${sample_name}.mapped_fastqc.html --out_zip ${sample_name}.mapped_fastqc.zip
 
         # plot coverage
         if [ $(cat reads_aligned) != 0 ]; then

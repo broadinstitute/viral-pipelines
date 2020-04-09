@@ -207,7 +207,7 @@ task illumina_demux {
       "reports.py fastqc \
         ,,.bam \
         ,,_fastqc.html \
-        ,,_fastqc.zip" \
+        --out_zip ,,_fastqc.zip" \
       ::: `cat $OUT_BASENAMES`
   }
 
