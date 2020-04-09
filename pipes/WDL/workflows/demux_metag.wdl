@@ -29,6 +29,11 @@ workflow demux_metag {
     }
   }
 
+  call reports.MultiQC {
+        input:
+            input_files = illumina_demux.raw_reads_fastqc
+  }
+
   call metagenomics.krakenuniq as kraken {
       input:
         reads_unmapped_bam = illumina_demux.raw_reads_unaligned_bams
