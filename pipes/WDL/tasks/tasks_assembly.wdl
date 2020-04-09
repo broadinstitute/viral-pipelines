@@ -243,6 +243,7 @@ task refine_assembly_with_aligned_reads {
         else
           ln -s ${reads_aligned_bam} temp_markdup.bam
         fi
+        samtools index -@ `nproc` temp_markdup.bam temp_markdup.bai
 
         ln -s ${reference_fasta} assembly.fasta
         assembly.py refine_assembly \
