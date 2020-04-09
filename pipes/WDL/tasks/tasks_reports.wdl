@@ -355,11 +355,13 @@ task MultiQC {
       ${"--config " + config} \
       ${"--cl-config " + config_yaml } \
       ${input_directory}
+
+      tar -czvf "${report_filename}_data.tar.gz" "${out_dir}/${report_filename}_data"
   }
 
   output {
       File multiqc_report = out_dir + "/" + report_filename + "_report.html"
-      File multiqc_data_ir = out_dir + "/" +report_filename + "_data"
+      File multiqc_data_dir_tarball = report_filename + "_data.tar.gz"
   }
 
   runtime {
