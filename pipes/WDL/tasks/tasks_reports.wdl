@@ -25,7 +25,11 @@ task plot_coverage {
     read_utils.py --version | tee VERSION
 
     cp ${assembly_fasta} assembly.fasta
-    read_utils.py novoindex assembly.fasta --loglevel=DEBUG
+    read_utils.py novoindex \
+    assembly.fasta \
+    ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
+    --loglevel=DEBUG
+    
     read_utils.py index_fasta_picard assembly.fasta --loglevel=DEBUG
     read_utils.py index_fasta_samtools assembly.fasta --loglevel=DEBUG
 
@@ -38,6 +42,7 @@ task plot_coverage {
       --aligner_options "${aligner_options}" \
       ${true='--skipMarkDupes' false="" skip_mark_dupes} \
       --JVMmemory=3g \
+      ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
       --loglevel=DEBUG
 
     samtools index ${sample_name}.mapped.bam
