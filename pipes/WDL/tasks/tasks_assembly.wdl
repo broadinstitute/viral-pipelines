@@ -181,6 +181,123 @@ task scaffold {
     }
 }
 
+task ivar_trim {
+    File    aligned_bam
+    File?   trim_coords_bed
+    Int?    min_keep_length
+
+    String? docker="andersenlabapps/ivar"
+
+    String  bam_basename=basename(aligned_bam, ".bam")
+
+    command {
+        set -ex -o pipefail
+        ivar version | tee VERSION
+        if [ -n "${trim_coords_bed}" ]; then
+          ivar trim -e -i ${aligned_bam} -b ${trim_coords_bed} -p trim ${'-m ' + min_keep_length}
+          samtools sort -@ `nproc` -m 1500M -o ${bam_basename}.trimmed.bam trim.bam
+        else
+          cp ${aligned_bam} ${bam_basename}.trimmed.bam
+        fi
+    }
+
+    output {
+        File   aligned_trimmed_bam = "${bam_basename}.trimmed.bam"
+        String ivar_version        = read_string("VERSION")
+    }
+
+    runtime {
+        docker: "${docker}"
+        memory: "7 GB"
+        cpu: 4
+        disks: "local-disk 375 LOCAL"
+        dx_instance_type: "mem1_ssd1_v2_x4"
+    }
+}
+
+task refine_assembly_with_aligned_reads {
+    File     reference_fasta
+    File     reads_aligned_bam
+    String   sample_name
+
+    File?    novocraft_license
+    Boolean? mark_duplicates=false
+    Float?   major_cutoff=0.5
+    Int?     min_coverage=2
+
+    String?  docker="quay.io/broadinstitute/viral-assemble"
+
+    command {
+        set -ex -o pipefail
+
+        # find 90% memory
+        mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 90`
+
+        assembly.py --version | tee VERSION
+
+        if [ ${true='true' false='false' mark_duplicates} == "true" ]; then
+          read_utils.py mkdup_picard \
+            ${reads_aligned_bam} \
+            temp_markdup.bam \
+            --JVMmemory "$mem_in_mb"m \
+            --loglevel=DEBUG
+        else
+          ln -s ${reads_aligned_bam} temp_markdup.bam
+        fi
+        samtools index -@ `nproc` temp_markdup.bam temp_markdup.bai
+
+        ln -s ${reference_fasta} assembly.fasta
+        assembly.py refine_assembly \
+          assembly.fasta \
+          temp_markdup.bam \
+          refined.fasta \
+          --already_realigned_bam=temp_markdup.bam \
+          --outVcf ${sample_name}.sites.vcf.gz \
+          --min_coverage ${min_coverage} \
+          --major_cutoff ${major_cutoff} \
+          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
+          --JVMmemory "$mem_in_mb"m \
+          --loglevel=DEBUG
+
+        # hacky rename fasta headers
+        python - <<SCRIPT
+import util.file
+samplename = "${sample_name}"
+with open('refined.fasta', 'rt') as inf:
+          with open('final.fasta', 'wt') as outf:
+            if util.file.fasta_length('refined.fasta') == 1:
+              # case with just one sequence
+              inf.readline()
+              outf.write('>' + samplename + '\n')
+              for line in inf:
+                outf.write(line)
+            else:
+              # case with multiple sequences
+              i = 1
+              for line in inf:
+                if line.startswith('>'):
+                  line = samplename + '-' + str(i) + '\n'
+                outf.write(line)
+SCRIPT
+        mv final.fasta ${sample_name}.fasta
+    }
+
+    output {
+        File   refined_assembly_fasta  = "${sample_name}.fasta"
+        File   sites_vcf_gz            = "${sample_name}.sites.vcf.gz"
+        String viralngs_version        = read_string("VERSION")
+    }
+
+    runtime {
+        docker: "${docker}"
+        memory: "7 GB"
+        cpu: 8
+        disks: "local-disk 375 LOCAL"
+        dx_instance_type: "mem1_ssd1_v2_x8"
+    }
+}
+
+
 task refine {
     File    assembly_fasta
     File    reads_unmapped_bam
@@ -204,7 +321,10 @@ task refine {
         assembly.py --version | tee VERSION
 
         ln -s ${assembly_fasta} assembly.fasta
-        read_utils.py novoindex assembly.fasta --loglevel=DEBUG
+        read_utils.py novoindex \
+        assembly.fasta \
+        ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
+        --loglevel=DEBUG
 
         assembly.py refine_assembly \
           assembly.fasta \
@@ -215,6 +335,7 @@ task refine {
           --major_cutoff ${major_cutoff} \
           --novo_params="${novoalign_options}" \
           --JVMmemory "$mem_in_mb"m \
+          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
           --loglevel=DEBUG
     }
 
@@ -272,7 +393,10 @@ task refine_2x_and_plot {
         assembly.py --version | tee VERSION
 
         ln -s ${assembly_fasta} assembly.fasta
-        read_utils.py novoindex assembly.fasta --loglevel=DEBUG
+        read_utils.py novoindex \
+        assembly.fasta \
+        ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
+        --loglevel=DEBUG
 
         # refine 1
         assembly.py refine_assembly \
@@ -284,6 +408,7 @@ task refine_2x_and_plot {
           --major_cutoff ${refine1_major_cutoff} \
           --novo_params="${refine1_novoalign_options}" \
           --JVMmemory "$mem_in_mb"m \
+          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
           --loglevel=DEBUG
 
         # refine 2
@@ -295,6 +420,7 @@ task refine_2x_and_plot {
           --min_coverage ${refine2_min_coverage} \
           --major_cutoff ${refine2_major_cutoff} \
           --novo_params="${refine2_novoalign_options}" \
+          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
           --JVMmemory "$mem_in_mb"m \
           --loglevel=DEBUG
 
@@ -306,6 +432,7 @@ task refine_2x_and_plot {
           --outBamFiltered ${sample_name}.mapped.bam \
           --aligner_options "${plot_coverage_novoalign_options}" \
           --JVMmemory "$mem_in_mb"m \
+          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
           --loglevel=DEBUG
 
         # collect figures of merit

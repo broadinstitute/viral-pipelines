@@ -89,7 +89,6 @@ task illumina_demux {
       # full RunInfo.xml path
       RUNINFO_FILE="$(find $FLOWCELL_DIR -type f -maxdepth 3 -name RunInfo.xml | head -n 1)"
     fi
-
     
     # Parse the lane count & run ID from RunInfo.xml file
     lane_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@LaneCount)" $RUNINFO_FILE)
@@ -198,10 +197,18 @@ task illumina_demux {
     mkdir -p unmatched
     mv Unmatched.bam unmatched/
 
+    OUT_BASENAMES=bam_basenames.txt
     for bam in *.bam; do
-      fastqc_out=$(basename $bam .bam)_fastqc.html
-      reports.py fastqc $bam $fastqc_out
+      echo "$(basename $bam .bam)" >> $OUT_BASENAMES
     done
+
+    # GNU Parallel refresher:
+    # ",," is the replacement string; values after ":::" are substituted where it appears
+    parallel --jobs 0 -I ,, \
+      "reports.py fastqc \
+        ,,.bam \
+        ,,_fastqc.html" \
+      ::: `cat $OUT_BASENAMES`
   }
 
   output {
