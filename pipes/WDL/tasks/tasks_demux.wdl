@@ -206,7 +206,8 @@ task illumina_demux {
     parallel --jobs 0 -I ,, \
       "reports.py fastqc \
         ,,.bam \
-        ,,_fastqc.html" \
+        ,,_fastqc.html \
+        ,,_fastqc.zip" \
       ::: `cat $OUT_BASENAMES`
   }
 
@@ -217,6 +218,7 @@ task illumina_demux {
     Array[File] raw_reads_unaligned_bams = glob("*.bam")
     File        unmatched_reads_bam      = "unmatched/Unmatched.bam"
     Array[File] raw_reads_fastqc         = glob("*_fastqc.html")
+    Array[File] raw_reads_fastqc_zip     = glob("*_fastqc.zip")
     String      viralngs_version         = read_string("VERSION")
   }
 
