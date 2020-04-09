@@ -3,12 +3,12 @@ import "../tasks/tasks_reports.wdl" as reports
 
 workflow assemble_refbased {
 
-  File     assembly_fasta
+  File     reference_fasta
   File     reads_unmapped_bam
 
   call reports.plot_coverage as plot_initial {
     input:
-        assembly_fasta     = assembly_fasta,
+        assembly_fasta     = reference_fasta,
         reads_unmapped_bam = reads_unmapped_bam
   }
 
@@ -19,7 +19,7 @@ workflow assemble_refbased {
 
   call assembly.refine_assembly_with_aligned_reads as polish {
     input:
-        reference_fasta   = assembly_fasta,
+        reference_fasta   = reference_fasta,
         reads_aligned_bam = ivar_trim.aligned_trimmed_bam
   }
 
