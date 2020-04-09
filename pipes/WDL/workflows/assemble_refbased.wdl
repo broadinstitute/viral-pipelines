@@ -14,8 +14,9 @@ workflow assemble_refbased {
         reads_unmapped_bam = reads_unmapped_bam,
         novocraft_license  = novocraft_license,
         skip_mark_dupes    = skip_mark_dupes,
-        aligner            = "bwa",
-        aligner_options    = "-k 12 -B 1"  ## alternatively for novoalign: "-r Random -l 40 -g 40 -x 20 -t 501 -k"
+        aligner_options    = "-r Random -l 40 -g 40 -x 20 -t 501 -k"
+        ## (for bwa) -- aligner_options = "-k 12 -B 1"
+        ## (for novoalign) -- aligner_options = "-r Random -l 40 -g 40 -x 20 -t 501 -k"
   }
 
   call assembly.ivar_trim {
@@ -35,8 +36,7 @@ workflow assemble_refbased {
         assembly_fasta     = call_consensus.refined_assembly_fasta,
         reads_unmapped_bam = reads_unmapped_bam,
         novocraft_license  = novocraft_license,
-        skip_mark_dupes    = skip_mark_dupes,
-        aligner            = "bwa"
+        skip_mark_dupes    = skip_mark_dupes
   }
 
 }
