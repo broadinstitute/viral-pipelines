@@ -38,7 +38,7 @@ task plot_coverage {
       --outBamAll ${sample_name}.all.bam \
       --outBamFiltered ${sample_name}.mapped.bam \
       --aligner ${aligner} \
-      ${"--aligner_options " + aligner_options} \
+      ${'--aligner_options "' + aligner_options + '"'} \
       ${true='--skipMarkDupes' false="" skip_mark_dupes} \
       --JVMmemory=3g \
       ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
