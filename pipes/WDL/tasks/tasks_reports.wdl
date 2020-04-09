@@ -1,14 +1,12 @@
 
 task plot_coverage {
-  # TO DO: add a BWA option
-
   File     assembly_fasta
   File     reads_unmapped_bam
 
   File?    novocraft_license
 
   String?  aligner="novoalign" # novoalign or bwa
-  String?  aligner_options="-r Random -l 40 -g 40 -x 20 -t 100 -k"
+  String?  aligner_options
 
   Boolean? skip_mark_dupes=false
   Boolean? plot_only_non_duplicates=false
@@ -25,11 +23,12 @@ task plot_coverage {
     read_utils.py --version | tee VERSION
 
     cp ${assembly_fasta} assembly.fasta
-    read_utils.py novoindex \
-    assembly.fasta \
-    ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
-    --loglevel=DEBUG
-    
+    if [ "${aligner}" == "novoalign" ]; then
+      read_utils.py novoindex \
+        assembly.fasta \
+        ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
+        --loglevel=DEBUG
+    fi
     read_utils.py index_fasta_picard assembly.fasta --loglevel=DEBUG
     read_utils.py index_fasta_samtools assembly.fasta --loglevel=DEBUG
 
@@ -39,7 +38,7 @@ task plot_coverage {
       --outBamAll ${sample_name}.all.bam \
       --outBamFiltered ${sample_name}.mapped.bam \
       --aligner ${aligner} \
-      --aligner_options "${aligner_options}" \
+      ${'--aligner_options "' + aligner_options + '"'} \
       ${true='--skipMarkDupes' false="" skip_mark_dupes} \
       --JVMmemory=3g \
       ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
@@ -59,7 +58,7 @@ task plot_coverage {
     python -c "print (float("`cat bases_aligned`")/"`cat assembly_length`") if "`cat assembly_length`">0 else 0" > mean_coverage
 
     # fastqc mapped bam
-    reports.py fastqc ${sample_name}.mapped.bam ${sample_name}.mapped_fastqc.html
+    reports.py fastqc ${sample_name}.mapped.bam ${sample_name}.mapped_fastqc.html --out_zip ${sample_name}.mapped_fastqc.zip
 
     PLOT_DUPE_OPTION=""
     if [[ "${skip_mark_dupes}" != "true" ]]; then
@@ -88,20 +87,21 @@ task plot_coverage {
   }
 
   output {
-    File   aligned_bam                 = "${sample_name}.all.bam"
-    File   aligned_bam_idx             = "${sample_name}.all.bai"
-    File   aligned_bam_flagstat        = "${sample_name}.all.bam.flagstat.txt"
-    File   aligned_only_reads_bam      = "${sample_name}.mapped.bam"
-    File   aligned_only_reads_bam_idx  = "${sample_name}.mapped.bai"
-    File   aligned_only_reads_fastqc   = "${sample_name}.mapped_fastqc.html"
-    File   coverage_plot               = "${sample_name}.coverage_plot.pdf"
-    Int    assembly_length             = read_int("assembly_length")
-    Int    assembly_length_unambiguous = read_int("assembly_length_unambiguous")
-    Int    reads_aligned               = read_int("reads_aligned")
-    Int    read_pairs_aligned          = read_int("read_pairs_aligned")
-    Int    bases_aligned               = read_int("bases_aligned")
-    Float  mean_coverage               = read_float("mean_coverage")
-    String viralngs_version            = read_string("VERSION")
+    File   aligned_bam                   = "${sample_name}.all.bam"
+    File   aligned_bam_idx               = "${sample_name}.all.bai"
+    File   aligned_bam_flagstat          = "${sample_name}.all.bam.flagstat.txt"
+    File   aligned_only_reads_bam        = "${sample_name}.mapped.bam"
+    File   aligned_only_reads_bam_idx    = "${sample_name}.mapped.bai"
+    File   aligned_only_reads_fastqc     = "${sample_name}.mapped_fastqc.html"
+    File   aligned_only_reads_fastqc_zip = "${sample_name}.mapped_fastqc.zip"
+    File   coverage_plot                 = "${sample_name}.coverage_plot.pdf"
+    Int    assembly_length               = read_int("assembly_length")
+    Int    assembly_length_unambiguous   = read_int("assembly_length_unambiguous")
+    Int    reads_aligned                 = read_int("reads_aligned")
+    Int    read_pairs_aligned            = read_int("read_pairs_aligned")
+    Int    bases_aligned                 = read_int("bases_aligned")
+    Float  mean_coverage                 = read_float("mean_coverage")
+    String viralngs_version              = read_string("VERSION")
   }
 
   runtime {
@@ -151,11 +151,12 @@ task fastqc {
   command {
     set -ex -o pipefail
     reports.py --version | tee VERSION
-    reports.py fastqc ${reads_bam} ${reads_basename}_fastqc.html
+    reports.py fastqc ${reads_bam} ${reads_basename}_fastqc.html --out_zip ${reads_basename}_fastqc.zip
   }
 
   output {
     File   fastqc_html      = "${reads_basename}_fastqc.html"
+    File   fastqc_zip      = "${reads_basename}_fastqc.zip"
     String viralngs_version = read_string("VERSION")
   }
 
@@ -276,5 +277,97 @@ task aggregate_metagenomics_reports {
     disks: "local-disk 50 SSD"
     dx_instance_type: "mem1_ssd2_v2_x2"
     preemptible: 0
+  }
+}
+
+task MultiQC {
+  Array[File] input_files = []
+  Boolean force = false
+  Boolean dirs = false
+  Int? dirs_depth
+  Boolean full_names = false
+  String? title
+  String? comment
+  String? file_name
+  String out_dir = "./multiqc-output"
+  String? template
+  String? tag
+  String? ignore_analysis_files
+  String? ignore_sample_names
+  File? sample_names
+  File? file_with_list_of_input_paths
+  Array[String]+? exclude_modules
+  Array[String]+? module_to_use
+  Boolean data_dir = false
+  Boolean no_data_dir = false
+  String? output_data_format # [tsv|yaml|json] default:tsv
+  Boolean zip_data_dir = false
+  Boolean export = false
+  Boolean flat = false
+  Boolean interactive = true
+  Boolean lint = false
+  Boolean pdf = false
+  Boolean megaQC_upload = false # Upload generated report to MegaQC if MegaQC options are found
+  File? config  # directory
+  String? config_yaml
+
+  String docker = "ewels/multiqc:latest"
+
+  String input_directory="multiqc-input"
+  # get the basename in all wdl use the filename specified (sans ".html" extension, if specified)
+  String report_filename = if (defined(file_name)) then basename(select_first([file_name]), ".html") else "multiqc"
+
+  command {
+      set -ex -o pipefail
+
+      mkdir -p ${input_directory} ${out_dir}
+
+      mv ${sep=' ' input_files} ${input_directory}
+
+      multiqc \
+      ${true="--force" false="" force} \
+      ${true="--dirs" false="" dirs} \
+      ${"--dirs-depth " + dirs_depth} \
+      ${true="--fullnames" false="" full_names} \
+      ${"--title " + title} \
+      ${"--comment " + comment} \
+      ${"--filename " + file_name} \
+      ${"--outdir " + out_dir} \
+      ${"--template " + template} \
+      ${"--tag " + tag} \
+      ${"--ignore " + ignore_analysis_files} \
+      ${"--ignore-samples" + ignore_sample_names} \
+      ${"--sample-names " + sample_names} \
+      ${"--file-list " + file_with_list_of_input_paths} \
+      ${true="--exclude " false="" defined(exclude_modules)}${sep=" --exclude " exclude_modules} \
+      ${true="--module " false="" defined(module_to_use)}${sep=" --module " module_to_use} \
+      ${true="--data-dir" false="" data_dir} \
+      ${true="--no-data-dir" false="" no_data_dir} \
+      ${"--data-format " + output_data_format} \
+      ${true="--zip-data-dir" false="" zip_data_dir} \
+      ${true="--export" false="" export} \
+      ${true="--flat" false="" flat} \
+      ${true="--interactive" false="" interactive} \
+      ${true="--lint" false="" lint} \
+      ${true="--pdf" false="" pdf} \
+      ${false="--no-megaqc-upload" true="" megaQC_upload} \
+      ${"--config " + config} \
+      ${"--cl-config " + config_yaml } \
+      ${input_directory}
+
+      tar -czvf "${report_filename}_data.tar.gz" "${out_dir}/${report_filename}_data"
+  }
+
+  output {
+      File multiqc_report = out_dir + "/" + report_filename + "_report.html"
+      File multiqc_data_dir_tarball = report_filename + "_data.tar.gz"
+  }
+
+  runtime {
+    memory: "2 GB"
+    cpu: 1
+    docker: "${docker}"
+    disks: "local-disk 375 LOCAL"
+    dx_instance_type: "mem1_ssd1_v2_x4"
   }
 }
