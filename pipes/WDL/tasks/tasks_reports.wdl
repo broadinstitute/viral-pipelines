@@ -314,12 +314,12 @@ task MultiQC {
 
   String analysis_directory="multiqc-input"
   # get the basename in all wdl use the filename specified (sans ".html" extension, if specified)
-  String report_filename = if (defined(file_name)) then basename(file_name, ".html") else "multiqc"
+  String report_filename = if (defined(file_name)) then basename(select_first([file_name]), ".html") else "multiqc"
 
   command {
       set -ex -o pipefail
 
-      mv ${input_files} ${analysis_directory}
+      mv ${sep=' ' input_files} ${analysis_directory}
 
       mkdir -p ${out_dir}
 
