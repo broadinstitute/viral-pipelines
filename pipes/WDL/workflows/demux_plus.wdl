@@ -13,6 +13,7 @@ workflow demux_plus {
     Array[File]? bmtaggerDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
     Array[File]? blastDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
     Array[File]? bwaDbs
+
     scatter(raw_reads in illumina_demux.raw_reads_unaligned_bams) {
         call reports.spikein_report as spikein {
             input:
@@ -33,6 +34,11 @@ workflow demux_plus {
                 trim_clip_db = trim_clip_db,
                 always_succeed = true
         }
+    }
+
+    call reports.MultiQC {
+        input:
+            input_files = illumina_demux.raw_reads_fastqc_zip
     }
 
     call metagenomics.krakenuniq as krakenuniq {
