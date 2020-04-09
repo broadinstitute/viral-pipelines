@@ -312,16 +312,16 @@ task MultiQC {
 
   String docker = "ewels/multiqc:latest"
 
-  String analysis_directory="multiqc-input"
+  String input_directory="multiqc-input"
   # get the basename in all wdl use the filename specified (sans ".html" extension, if specified)
   String report_filename = if (defined(file_name)) then basename(select_first([file_name]), ".html") else "multiqc"
 
   command {
       set -ex -o pipefail
 
-      mv ${sep=' ' input_files} ${analysis_directory}
+      mkdir -p ${input_directory} ${out_dir}
 
-      mkdir -p ${out_dir}
+      mv ${sep=' ' input_files} ${input_directory}
 
       multiqc \
       ${true="--force" false="" force} \
@@ -352,7 +352,7 @@ task MultiQC {
       ${false="--no-megaqc-upload" true="" megaQC_upload} \
       ${"--config " + config} \
       ${"--cl-config " + config_yaml } \
-      ${analysis_directory}
+      ${input_directory}
   }
 
   output {
