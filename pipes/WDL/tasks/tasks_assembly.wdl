@@ -220,6 +220,7 @@ task refine_assembly_with_aligned_reads {
     File     reads_aligned_bam
     String   sample_name
 
+    File?    novocraft_license
     Boolean? mark_duplicates=false
     Float?   major_cutoff=0.5
     Int?     min_coverage=2
@@ -254,6 +255,7 @@ task refine_assembly_with_aligned_reads {
           --outVcf ${sample_name}.sites.vcf.gz \
           --min_coverage ${min_coverage} \
           --major_cutoff ${major_cutoff} \
+          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
           --JVMmemory "$mem_in_mb"m \
           --loglevel=DEBUG
 
