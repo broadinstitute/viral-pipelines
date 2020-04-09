@@ -259,10 +259,10 @@ task refine_assembly_with_aligned_reads {
 
         # hacky rename fasta headers
         python - <<SCRIPT
-          import util.file
-          samplename = ${sample_name}
-          with open('refined.fasta', 'rt') as inf:
-            with open('final.fasta', 'wt') as outf:
+import util.file
+samplename = "${sample_name}"
+with open('refined.fasta', 'rt') as inf:
+          with open('final.fasta', 'wt') as outf:
             if util.file.fasta_length('refined.fasta') == 1:
               # case with just one sequence
               inf.readline()
@@ -276,7 +276,7 @@ task refine_assembly_with_aligned_reads {
                 if line.startswith('>'):
                   line = samplename + '-' + str(i) + '\n'
                 outf.write(line)
-        SCRIPT
+SCRIPT
         mv final.fasta ${sample_name}.fasta
     }
 
