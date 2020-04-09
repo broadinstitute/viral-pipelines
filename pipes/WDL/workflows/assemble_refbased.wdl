@@ -6,12 +6,14 @@ workflow assemble_refbased {
   File     reference_fasta
   File     reads_unmapped_bam
   File?    novocraft_license
+  Boolean? skip_mark_dupes=false
 
   call reports.plot_coverage as plot_initial {
     input:
         assembly_fasta     = reference_fasta,
         reads_unmapped_bam = reads_unmapped_bam,
-        novocraft_license  = novocraft_license
+        novocraft_license  = novocraft_license,
+        skip_mark_dupes    = skip_mark_dupes
   }
 
   call assembly.ivar_trim {
@@ -30,7 +32,8 @@ workflow assemble_refbased {
     input:
         assembly_fasta     = polish.refined_assembly_fasta,
         reads_unmapped_bam = reads_unmapped_bam,
-        novocraft_license  = novocraft_license
+        novocraft_license  = novocraft_license,
+        skip_mark_dupes    = skip_mark_dupes
   }
 
 }
