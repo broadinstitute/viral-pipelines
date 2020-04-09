@@ -23,15 +23,11 @@ task plot_coverage {
     read_utils.py --version | tee VERSION
 
     cp ${assembly_fasta} assembly.fasta
-    ALIGNER_OPTIONS="--aligner_options \"${aligner_options}\""
     if [ "${aligner}" == "novoalign" ]; then
       read_utils.py novoindex \
         assembly.fasta \
         ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
         --loglevel=DEBUG
-      if [ "${aligner_options}" == "" ]; then
-        ALIGNER_OPTIONS="--aligner_options \"-r Random -l 40 -g 40 -x 20 -t 100 -k\""
-      fi
     fi
     read_utils.py index_fasta_picard assembly.fasta --loglevel=DEBUG
     read_utils.py index_fasta_samtools assembly.fasta --loglevel=DEBUG
@@ -42,7 +38,7 @@ task plot_coverage {
       --outBamAll ${sample_name}.all.bam \
       --outBamFiltered ${sample_name}.mapped.bam \
       --aligner ${aligner} \
-      $ALIGNER_OPTIONS \
+      ${"--aligner_options " + aligner_options} \
       ${true='--skipMarkDupes' false="" skip_mark_dupes} \
       --JVMmemory=3g \
       ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
