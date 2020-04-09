@@ -275,41 +275,41 @@ task aggregate_metagenomics_reports {
 }
 
 task MultiQC {
-  input {
-      Array[File] input_files = []
-      Boolean force = false
-      Boolean dirs = false
-      Int? dirs_depth
-      Boolean full_names = false
-      String? title
-      String? comment
-      String? file_name
-      String out_dir = "./multiqc-output"
-      String? template
-      String? tag
-      String? ignore_analysis_files
-      String? ignore_sample_names
-      File? sample_names
-      File? file_with_list_of_input_paths
-      Array[String]+? exclude_modules
-      Array[String]+? module_to_use
-      Boolean data_dir = false
-      Boolean no_data_dir = false
-      String? output_data_format # [tsv|yaml|json] default:tsv
-      Boolean zip_data_dir = false
-      Boolean export = false
-      Boolean flat = false
-      Boolean interactive = true
-      Boolean lint = false
-      Boolean pdf = false
-      Boolean megaQC_upload = false # Upload generated report to MegaQC if MegaQC options are found
-      File? config  # directory
-      String? config_yaml
+  Array[File] input_files = []
+  Boolean force = false
+  Boolean dirs = false
+  Int? dirs_depth
+  Boolean full_names = false
+  String? title
+  String? comment
+  String? file_name
+  String out_dir = "./multiqc-output"
+  String? template
+  String? tag
+  String? ignore_analysis_files
+  String? ignore_sample_names
+  File? sample_names
+  File? file_with_list_of_input_paths
+  Array[String]+? exclude_modules
+  Array[String]+? module_to_use
+  Boolean data_dir = false
+  Boolean no_data_dir = false
+  String? output_data_format # [tsv|yaml|json] default:tsv
+  Boolean zip_data_dir = false
+  Boolean export = false
+  Boolean flat = false
+  Boolean interactive = true
+  Boolean lint = false
+  Boolean pdf = false
+  Boolean megaQC_upload = false # Upload generated report to MegaQC if MegaQC options are found
+  File? config  # directory
+  String? config_yaml
 
-      String docker = "ewels/multiqc:latest"
-  }
+  String docker = "ewels/multiqc:latest"
 
   String analysis_directory="multiqc-input"
+  # get the basename in all wdl use the filename specified (sans ".html" extension, if specified)
+  String report_filename = if (defined(file_name)) then basename(file_name, ".html") else "multiqc"
 
   command {
       set -ex -o pipefail
@@ -329,8 +329,8 @@ task MultiQC {
       ${"--outdir " + out_dir} \
       ${"--template " + template} \
       ${"--tag " + tag} \
-      ${"--ignore " + ignore} \
-      ${"--ignore-samples" + ignore_samples} \
+      ${"--ignore " + ignore_analysis_files} \
+      ${"--ignore-samples" + ignore_sample_names} \
       ${"--sample-names " + sample_names} \
       ${"--file-list " + file_with_list_of_input_paths} \
       ${true="--exclude " false="" defined(exclude_modules)}${sep=" --exclude " exclude_modules} \
@@ -350,13 +350,9 @@ task MultiQC {
       ${analysis_directory}
   }
 
-  String reportFilename = if (defined(file_name))
-      then sub(select_first([file_name]), "\.html$", "")
-      else "multiqc"
-
   output {
-      File multiqc_report = out_dir + "/" + reportFilename + "_report.html"
-      File multiqc_data_ir = out_dir + "/" +reportFilename + "_data"
+      File multiqc_report = out_dir + "/" + report_filename + "_report.html"
+      File multiqc_data_ir = out_dir + "/" +report_filename + "_data"
   }
 
   runtime {
