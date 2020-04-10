@@ -36,7 +36,8 @@ workflow assemble_refbased {
         assembly_fasta     = call_consensus.refined_assembly_fasta,
         reads_unmapped_bam = reads_unmapped_bam,
         novocraft_license  = novocraft_license,
-        skip_mark_dupes    = skip_mark_dupes
+        skip_mark_dupes    = skip_mark_dupes,
+        aligner_options    = "-r Random -l 40 -g 40 -x 20 -t 100"
   }
 
 }
