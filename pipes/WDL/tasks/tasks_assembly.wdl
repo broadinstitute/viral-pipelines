@@ -195,7 +195,7 @@ task ivar_trim {
         ivar version | tee VERSION
         if [ -n "${trim_coords_bed}" ]; then
           ivar trim -e -i ${aligned_bam} -b ${trim_coords_bed} -p trim ${'-m ' + min_keep_length}
-          samtools sort -@ `nproc` -m 1500M -o ${bam_basename}.trimmed.bam trim.bam
+          samtools sort -@ `nproc` -m 1000M -o ${bam_basename}.trimmed.bam trim.bam
         else
           cp ${aligned_bam} ${bam_basename}.trimmed.bam
         fi
