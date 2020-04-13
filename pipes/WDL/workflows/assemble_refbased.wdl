@@ -8,7 +8,7 @@ workflow assemble_refbased {
   File?    novocraft_license
   Boolean? skip_mark_dupes=false
 
-  String?  sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
+  String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
 
   call reports.plot_coverage as align_to_ref {
     input:

@@ -2,6 +2,7 @@
 task plot_coverage {
   File     assembly_fasta
   File     reads_unmapped_bam
+  String   sample_name
 
   File?    novocraft_license
 
@@ -15,8 +16,6 @@ task plot_coverage {
 
   String?  docker="quay.io/broadinstitute/viral-core"
   
-  String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
-
   command {
     set -ex -o pipefail
 
