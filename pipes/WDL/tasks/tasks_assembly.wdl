@@ -194,7 +194,7 @@ task ivar_trim {
 
     command {
         set -ex -o pipefail
-        ivar version | tee VERSION
+        ivar version | head -1 | tee VERSION
 
         if [ -n "${trim_coords_bed}" ]; then
           ivar trim -e \
