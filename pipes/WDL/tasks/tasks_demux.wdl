@@ -133,6 +133,8 @@ task illumina_demux {
         max_reads_in_ram_per_tile=1500000 # reduce the number of reads per tile since the NovaSeq has so many
         max_records_in_ram=2500000
         echo "Detected $total_tile_count tiles, interpreting as NextSeq (high-output) run."
+    elif [ "$total_tile_count" -le 624 ]; then
+        echo "Detected $total_tile_count tiles, interpreting as NovaSeq SP run."
     elif [ "$total_tile_count" -le 896 ]; then
         echo "Detected $total_tile_count tiles, interpreting as HiSeq4k run."
     elif [ "$total_tile_count" -le 1408 ]; then

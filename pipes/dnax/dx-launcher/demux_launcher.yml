@@ -116,9 +116,13 @@ runSpec:
           tar_consolidation_instance_size="mem1_ssd2_x16"
           demux_instance_type="mem1_ssd1_x32"
           echo "Detected $total_tile_count tiles, interpreting as NextSeq (high-output) run."
+      elif [ "$total_tile_count" -le 624 ]; then
+          tar_consolidation_instance_size="mem1_ssd1_x32"
+          demux_instance_type="mem3_ssd1_x32"
+          echo "Detected $total_tile_count tiles, interpreting as NovaSeq SP run, executing on a $demux_instance_type machine."
       elif [ "$total_tile_count" -le 896 ]; then
           tar_consolidation_instance_size="mem1_ssd1_x32"
-          demux_instance_type="mem1_ssd1_x32"
+          demux_instance_type="mem3_ssd1_x32"
           echo "Detected $total_tile_count tiles, interpreting as HiSeq4k run, executing on a $demux_instance_type machine."
       elif [ "$total_tile_count" -le 1408 ]; then
           tar_consolidation_instance_size="mem1_ssd2_x36"
