@@ -185,6 +185,8 @@ task ivar_trim {
     File    aligned_bam
     File?   trim_coords_bed
     Int?    min_keep_length
+    Int?    sliding_window
+    Int?    min_quality
 
     String? docker="andersenlabapps/ivar"
 
@@ -193,8 +195,14 @@ task ivar_trim {
     command {
         set -ex -o pipefail
         ivar version | tee VERSION
+
         if [ -n "${trim_coords_bed}" ]; then
-          ivar trim -e -i ${aligned_bam} -b ${trim_coords_bed} -p trim ${'-m ' + min_keep_length}
+          ivar trim -e \
+            ${'-b ' + trim_coords_bed} \
+            ${'-m ' + min_keep_length} \
+            ${'-s ' + sliding_window} \
+            ${'-q ' + min_quality} \
+            -i ${aligned_bam} -p trim
           samtools sort -@ `nproc` -m 1000M -o ${bam_basename}.trimmed.bam trim.bam
         else
           cp ${aligned_bam} ${bam_basename}.trimmed.bam
