@@ -1,7 +1,7 @@
 task krakenuniq {
   Array[File] reads_unmapped_bam
-  File        krakenuniq_db_tar_lz4  # krakenuniq/{database.kdb,taxonomy}
-  File        krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
+  File        krakenuniq_db_tar_lz4  # {database.kdb,taxonomy}
+  File        krona_taxonomy_db_tgz  # taxonomy.tab
 
   String?     docker="quay.io/broadinstitute/viral-classify"
 
@@ -16,16 +16,22 @@ task krakenuniq {
     if [ -d /mnt/tmp ]; then
       TMPDIR=/mnt/tmp
     fi
-    DB_DIR=$(mktemp -d)
+    DB_DIR=$(mktemp -d --suffix _db)
+    mkdir -p $DB_DIR/krakenuniq $DB_DIR/krona
 
     metagenomics.py --version | tee VERSION
 
     # decompress DB to $DB_DIR
     read_utils.py extract_tarball \
-      ${krakenuniq_db_tar_lz4} $DB_DIR \
+      ${krakenuniq_db_tar_lz4} $DB_DIR/krakenuniq \
       --loglevel=DEBUG
+    # Support old db tar format
+    if [ -d "$DB_DIR/krakenuniq/krakenuniq" ]; then
+      mv $DB_DIR/krakenuniq/krakenuniq/* $DB_DIR/krakenuniq
+    fi
+
     read_utils.py extract_tarball \
-      ${krona_taxonomy_db_tgz} . \
+      ${krona_taxonomy_db_tgz} $DB_DIR/krona \
       --loglevel=DEBUG &  # we don't need this until later
 
     # prep input and output file names
@@ -48,12 +54,16 @@ task krakenuniq {
       --loglevel=DEBUG
 
     wait # for krona_taxonomy_db_tgz to download and extract
+    # Support old db tar format
+    if [ -d $DB_DIR/krona/taxonomy ]; then
+      mv $DB_DIR/krona/taxonomy/* $DB_DIR/krona
+    fi
 
     # run single-threaded krona on up to nproc samples at once
     parallel -I ,, \
       "metagenomics.py krona \
         ,,-summary_report.txt \
-        taxonomy \
+        $DB_DIR/krona \
         ,,-krona.html \
         --noRank --noHits --inputType krakenuniq \
         --loglevel=DEBUG" \
@@ -94,8 +104,8 @@ task build_krakenuniq_db {
     if [ -d /mnt/tmp ]; then
       TMPDIR=/mnt/tmp
     fi
-    TAXDB_DIR=$(mktemp -d)
-    FASTAS_DIR=$(mktemp -d)
+    TAXDB_DIR=$(mktemp -d --suffix _taxdb)
+    FASTAS_DIR=$(mktemp -d --suffix fasta)
     DB_DIR="$TMPDIR/${db_basename}"
     mkdir -p $DB_DIR
 
@@ -120,7 +130,7 @@ task build_krakenuniq_db {
       --loglevel=DEBUG
 
     # tar it up
-    tar -c ${db_basename} -C $TMP_DIR | zstd -19 > ${db_basename}.tar.zst
+    tar -c -C $DB_DIR | zstd -19 > ${db_basename}.tar.zst
   }
 
   output {
@@ -140,8 +150,8 @@ task build_krakenuniq_db {
 
 task kraken {
   Array[File] reads_unmapped_bam
-  File        kraken_db_tar_lz4      # kraken/{database.kdb,taxonomy}
-  File        krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
+  File        kraken_db_tar_lz4      # {database.kdb,taxonomy}
+  File        krona_taxonomy_db_tgz  # taxonomy.tab
 
   String?     docker="quay.io/broadinstitute/viral-classify"
 
@@ -156,14 +166,15 @@ task kraken {
     if [ -d /mnt/tmp ]; then
       TMPDIR=/mnt/tmp
     fi
-    DB_DIR=$(mktemp -d)
+    DB_DIR=$(mktemp -d --suffix _db)
+    mkdir -p $DB_DIR/kraken $DB_DIR/krona
 
     # decompress DB to $DB_DIR
     read_utils.py extract_tarball \
-      ${kraken_db_tar_lz4} $DB_DIR \
+      ${kraken_db_tar_lz4} $DB_DIR/kraken \
       --loglevel=DEBUG
     read_utils.py extract_tarball \
-      ${krona_taxonomy_db_tgz} . \
+      ${krona_taxonomy_db_tgz} $DB_DIR/krona \
       --loglevel=DEBUG &  # we don't need this until later
 
     # prep input and output file names
@@ -181,7 +192,7 @@ task kraken {
     # execute on all inputs and outputs serially, but with a single
     # database load into ram
     metagenomics.py kraken \
-      $DB_DIR \
+      $DB_DIR/kraken \
       ${sep=' ' reads_unmapped_bam} \
       --outReads `cat $OUT_READS` \
       --outReport `cat $OUT_REPORTS` \
@@ -193,7 +204,7 @@ task kraken {
     parallel -I ,, \
       "metagenomics.py krona \
         ,,-summary_report.txt \
-        taxonomy \
+        $DB_DIR/krona \
         ,,-krona.html \
         --noRank --noHits --inputType tsv \
         --loglevel=DEBUG" \
@@ -260,7 +271,7 @@ task build_kraken_db {
       --loglevel=DEBUG
 
     # tar it up
-    tar -c ${db_basename} -C $TMP_DIR | zstd -19 > ${db_basename}.tar.zst
+    tar -c -C $DB_DIR | zstd -19 > ${db_basename}.tar.zst
   }
 
   output {
@@ -297,17 +308,19 @@ task krona {
 
   command {
     set -ex -o pipefail
+    DB_DIR=$(mktemp -d --suffix _db)
+    mkdir -p $DB_DIR/krona
 
     # decompress DB to /mnt/db
     read_utils.py extract_tarball \
-      ${krona_taxonomy_db_tgz} . \
-      --loglevel=DEBUG
+      ${krona_taxonomy_db_tgz} $DB_DIR/krona \
+    --loglevel=DEBUG
 
     metagenomics.py --version | tee VERSION
 
     metagenomics.py krona \
       ${classified_reads_txt_gz} \
-      taxonomy \
+      $DB_DIR/krona \
       ${input_basename}.html \
       ${'--inputType=' + input_type} \
       ${'--queryColumn=' + query_column} \
@@ -418,16 +431,17 @@ task kaiju {
     if [ -d /mnt/tmp ]; then
       TMPDIR=/mnt/tmp
     fi
-    DB_DIR=$(mktemp -d)
+    DB_DIR=$(mktemp -d --suffix _db)
+    mkdir -p $DB_DIR/kaiju $DB_DIR/krona $DB_DIR/taxonomy
 
-    lz4 -d ${kaiju_db_lz4} $DB_DIR/kaiju.fmi
+    lz4 -d ${kaiju_db_lz4} $DB_DIR/kaiju_db/kaiju.fmi
 
     read_utils.py extract_tarball \
-      ${ncbi_taxonomy_db_tgz} $DB_DIR \
+      ${ncbi_taxonomy_db_tgz} $DB_DIR/taxonomy \
       --loglevel=DEBUG
 
     read_utils.py extract_tarball \
-      ${krona_taxonomy_db_tgz} . \
+      ${krona_taxonomy_db_tgz} $DB_DIR/krona \
       --loglevel=DEBUG
 
     metagenomics.py --version | tee VERSION
@@ -435,7 +449,7 @@ task kaiju {
     # classify contigs
     metagenomics.py kaiju \
       ${reads_unmapped_bam} \
-      $DB_DIR/kaiju.fmi \
+      $DB_DIR/kaiju/kaiju.fmi \
       $DB_DIR/taxonomy \
       ${input_basename}.kaiju.summary_report.txt \
       --outReads ${input_basename}.kaiju.reads.txt.gz \
@@ -444,7 +458,7 @@ task kaiju {
     # run krona
     metagenomics.py krona \
       ${input_basename}.kaiju.summary_report.txt \
-      taxonomy \
+      $DB_DIR/krona \
       ${input_basename}.kaiju-krona.html \
       --inputType kaiju \
       --noRank --noHits \
