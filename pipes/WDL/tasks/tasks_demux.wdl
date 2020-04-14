@@ -209,36 +209,13 @@ task illumina_demux {
       echo "$(basename $bam .bam)" >> $OUT_BASENAMES
     done
 
-    FASTQC_HARDCODED_MEM_PER_THREAD=250 # the value fastqc sets for -Xmx per thread, not adjustable
-    num_cpus=$(nproc)
-    num_bam_files=$(cat $OUT_BASENAMES | wc -l)
-    num_fastqc_jobs=1
-    num_fastqc_threads=1
-    total_ram_needed_mb=250
-
-    # determine the number of fastq jobs
-    while [[ $total_ram_needed_mb -lt $mem_in_mb ]] && [[ $num_fastqc_jobs -lt $num_cpus ]] && [[ $num_fastqc_jobs -lt $num_bam_files ]]; do
-        num_fastqc_jobs=$(($num_fastqc_jobs+1))
-        total_ram_needed_mb=$(($total_ram_needed_mb+$FASTQC_HARDCODED_MEM_PER_THREAD))
-    done
-    # determine the number of fastqc threads per job
-    while [[ $(($total_ram_needed_mb)) -lt $mem_in_mb ]] && [[ $(($num_fastqc_jobs*$num_fastqc_threads)) -lt $num_cpus ]]; do
-        if [[ $(( $num_fastqc_jobs * $(($num_fastqc_threads+1)) )) -le $num_cpus ]]; then
-            num_fastqc_threads=$(($num_fastqc_threads+1))
-            total_ram_needed_mb=$(($num_fastqc_jobs*($FASTQC_HARDCODED_MEM_PER_THREAD*$num_fastqc_threads)))
-        else
-            break
-        fi
-    done
-
     # GNU Parallel refresher:
     # ",," is the replacement string; values after ":::" are substituted where it appears
-    parallel --jobs $num_fastqc_jobs -I ,, \
+    parallel --jobs 0 -I ,, \
       "reports.py fastqc \
         ,,.bam \
         ,,_fastqc.html \
-        --out_zip ,,_fastqc.zip \
-        --threads $num_fastqc_threads" \
+        --out_zip ,,_fastqc.zip" \
       ::: `cat $OUT_BASENAMES`
   }
 
