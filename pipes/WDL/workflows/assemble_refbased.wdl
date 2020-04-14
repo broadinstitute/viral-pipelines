@@ -41,6 +41,11 @@ workflow assemble_refbased {
             sample_name         = sample_name
     }
 
+    call reports.MultiQC as multiqc_align_to_ref {
+        input:
+            input_files = align_to_ref.aligned_only_reads_fastqc_zip
+    }
+
     call assembly.refine_assembly_with_aligned_reads as call_consensus {
         input:
             reference_fasta   = reference_fasta,
