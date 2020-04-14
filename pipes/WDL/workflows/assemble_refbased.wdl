@@ -30,7 +30,7 @@ workflow assemble_refbased {
 
     call read_utils.merge_bams_one_sample as merge_align_to_ref {
         input:
-            in_bams             = ivar_trim.aligned_trimmed_bam
+            in_bams             = ivar_trim.aligned_trimmed_bam,
             sample_name         = sample_name,
             out_basename        = "${sample_name}.align_to_ref.trimmed"
     }
