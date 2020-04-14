@@ -273,9 +273,10 @@ task merge_and_reheader_bams {
     set -ex -o pipefail
 
     read_utils.py --version | tee VERSION
+    mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 90`
 
     if [ ${length(in_bams)} -gt 1 ]; then
-      read_utils.py merge_bams ${sep=' ' in_bams} merged.bam --loglevel DEBUG
+      read_utils.py merge_bams ${sep=' ' in_bams} merged.bam --JVMmemory="$mem_in_mb"m --loglevel DEBUG
     else
       echo "Skipping merge, only one input file"
       ln -s ${select_first(in_bams)} merged.bam
