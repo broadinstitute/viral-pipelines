@@ -28,8 +28,9 @@ task plot_coverage {
 
       # plot coverage
       reports.py plot_coverage \
-        ${aligned_reads_bam} \
-        ${sample_name}.coverage_plot.pdf \
+        "${aligned_reads_bam}" \
+        "${sample_name}.coverage_plot.pdf" \
+        --outSummary "${sample_name}.coverage_plot.txt" \
         --plotFormat pdf \
         --plotWidth 1100 \
         --plotHeight 850 \
@@ -41,21 +42,23 @@ task plot_coverage {
         --loglevel=DEBUG
 
     else
-      touch ${sample_name}.coverage_plot.pdf
+      touch ${sample_name}.coverage_plot.pdf ${sample_name}.coverage_plot.txt
     fi
   }
 
   output {
     File   coverage_plot                 = "${sample_name}.coverage_plot.pdf"
+    File   coverage_tsv                  = "${sample_name}.coverage_plot.txt"
     String viralngs_version              = read_string("VERSION")
   }
 
   runtime {
     docker: "${docker}"
     memory: "3500 MB"
-    cpu: 4
+    cpu: 2
     disks: "local-disk 375 LOCAL"
-    dx_instance_type: "mem1_ssd1_v2_x8"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible: 1
   }
 }
 

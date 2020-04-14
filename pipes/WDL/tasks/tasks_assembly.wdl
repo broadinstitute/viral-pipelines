@@ -314,10 +314,11 @@ task align_reads {
 
   runtime {
     docker: "${docker}"
-    memory: "3500 MB"
-    cpu: 4
+    memory: "7000 MB"
+    cpu: 8
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x8"
+    preemptible: 1
   }
 }
 
@@ -545,6 +546,7 @@ task refine_2x_and_plot {
           reports.py plot_coverage \
             ${sample_name}.mapped.bam \
             ${sample_name}.coverage_plot.pdf \
+            --outSummary "${sample_name}.coverage_plot.txt" \
             --plotFormat pdf \
             --plotWidth 1100 \
             --plotHeight 850 \
@@ -552,7 +554,7 @@ task refine_2x_and_plot {
             --plotTitle "${sample_name} coverage plot" \
             --loglevel=DEBUG
         else
-          touch ${sample_name}.coverage_plot.pdf
+          touch ${sample_name}.coverage_plot.pdf ${sample_name}.coverage_plot.txt
         fi
     }
 
@@ -569,6 +571,7 @@ task refine_2x_and_plot {
         File aligned_only_reads_fastqc     = "${sample_name}.mapped_fastqc.html"
         File aligned_only_reads_fastqc_zip = "${sample_name}.mapped_fastqc.zip"
         File coverage_plot                 = "${sample_name}.coverage_plot.pdf"
+        File coverage_tsv                  = "${sample_name}.coverage_plot.txt"
         Int  assembly_length               = read_int("assembly_length")
         Int  assembly_length_unambiguous   = read_int("assembly_length_unambiguous")
         Int  reads_aligned                 = read_int("reads_aligned")
