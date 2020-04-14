@@ -1,7 +1,6 @@
 
 task merge_bams_one_sample {
     Array[File]+    in_bams
-    Array[File]     optional_reads_bais
     String          sample_name
     String          out_basename
     String?         docker="quay.io/broadinstitute/viral-core"
@@ -26,7 +25,7 @@ task merge_bams_one_sample {
             read_utils.py reheader_bam merged.bam sample_remap_table.txt "${out_basename}.bam" --loglevel DEBUG
         else
             # input was empty, so output should be empty (samtools doesn't like empty files)
-            touch "${out_basename}.bam" "${out_basename}.bai"
+            touch "${out_basename}.bam"
 
         fi
     }

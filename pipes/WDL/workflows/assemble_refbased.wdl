@@ -69,7 +69,6 @@ workflow assemble_refbased {
     call read_utils.merge_bams_one_sample as merge_align_to_self {
         input:
             in_bams             = align_to_self.aligned_only_reads_bam,
-            optional_reads_bais = align_to_self.aligned_only_reads_bam_idx,
             sample_name         = sample_name,
             out_basename        = "${sample_name}.merge_align_to_self"
     }
