@@ -23,7 +23,7 @@ task merge_bams_one_sample {
             # create sample name remapping table based on existing sample names
             samtools view -H merged.bam | perl -n -e'/SM:(\S+)/ && print "SM\t$1\t'${sample_name}'\n"' | sort | uniq > sample_remap_table.txt
             # rename samples BAM headers
-            read_utils.py reheader_bam merged.bam ${reheader_table} "${out_basename}.bam" --loglevel DEBUG
+            read_utils.py reheader_bam merged.bam sample_remap_table.txt "${out_basename}.bam" --loglevel DEBUG
         else
             # input was empty, so output should be empty (samtools doesn't like empty files)
             touch "${out_basename}.bam" "${out_basename}.bai"
