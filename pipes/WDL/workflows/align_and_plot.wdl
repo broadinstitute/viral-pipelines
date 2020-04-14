@@ -2,7 +2,7 @@ import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_assembly.wdl" as assembly
 
 workflow align_and_plot {
-    String  reads_unmapped_bam
+    File  reads_unmapped_bam
 
     call assembly.align_reads as align {
         input:
