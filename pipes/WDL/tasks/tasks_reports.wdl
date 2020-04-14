@@ -2,6 +2,7 @@
 task plot_coverage {
   File     assembly_fasta
   File     reads_unmapped_bam
+  String   sample_name
 
   File?    novocraft_license
 
@@ -15,40 +16,47 @@ task plot_coverage {
 
   String?  docker="quay.io/broadinstitute/viral-core"
   
-  String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
-
   command {
     set -ex -o pipefail
 
     read_utils.py --version | tee VERSION
 
     cp ${assembly_fasta} assembly.fasta
-    if [ "${aligner}" == "novoalign" ]; then
-      read_utils.py novoindex \
+    grep -v '^>' assembly.fasta | tr -d '\n' | wc -c | tee assembly_length
+
+    if [ `cat assembly_length` != "0" ]; then
+
+      # only perform the following if the reference is non-empty
+
+      if [ "${aligner}" == "novoalign" ]; then
+        read_utils.py novoindex \
+          assembly.fasta \
+          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
+          --loglevel=DEBUG
+      fi
+      read_utils.py index_fasta_picard assembly.fasta --loglevel=DEBUG
+      read_utils.py index_fasta_samtools assembly.fasta --loglevel=DEBUG
+
+      read_utils.py align_and_fix \
+        ${reads_unmapped_bam} \
         assembly.fasta \
+        --outBamAll "${sample_name}.all.bam" \
+        --outBamFiltered "${sample_name}.mapped.bam" \
+        --aligner ${aligner} \
+        ${'--aligner_options "' + aligner_options + '"'} \
+        ${true='--skipMarkDupes' false="" skip_mark_dupes} \
+        --JVMmemory=3g \
         ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
         --loglevel=DEBUG
+
+    else
+      touch "${sample_name}.all.bam" "${sample_name}.mapped.bam"
+
     fi
-    read_utils.py index_fasta_picard assembly.fasta --loglevel=DEBUG
-    read_utils.py index_fasta_samtools assembly.fasta --loglevel=DEBUG
-
-    read_utils.py align_and_fix \
-      ${reads_unmapped_bam} \
-      assembly.fasta \
-      --outBamAll ${sample_name}.all.bam \
-      --outBamFiltered ${sample_name}.mapped.bam \
-      --aligner ${aligner} \
-      ${'--aligner_options "' + aligner_options + '"'} \
-      ${true='--skipMarkDupes' false="" skip_mark_dupes} \
-      --JVMmemory=3g \
-      ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
-      --loglevel=DEBUG
-
-    samtools index ${sample_name}.mapped.bam
 
     # collect figures of merit
-    grep -v '^>' assembly.fasta | tr -d '\n' | wc -c | tee assembly_length
     grep -v '^>' assembly.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
+    samtools view -c ${reads_unmapped_bam} | tee reads_provided
     samtools view -c ${sample_name}.mapped.bam | tee reads_aligned
     # report only primary alignments 260=exclude unaligned reads and secondary mappings
     samtools view -h -F 260 ${sample_name}.all.bam | samtools flagstat - | tee ${sample_name}.all.bam.flagstat.txt
@@ -56,6 +64,11 @@ task plot_coverage {
     samtools view ${sample_name}.mapped.bam | cut -f10 | tr -d '\n' | wc -c | tee bases_aligned
     #echo $(( $(cat bases_aligned) / $(cat assembly_length) )) | tee mean_coverage
     python -c "print (float("`cat bases_aligned`")/"`cat assembly_length`") if "`cat assembly_length`">0 else 0" > mean_coverage
+
+    # index mapped bam if non-empty
+    if [ `cat reads_aligned` != "0" ]; then
+      samtools index ${sample_name}.mapped.bam
+    fi
 
     # fastqc mapped bam
     reports.py fastqc ${sample_name}.mapped.bam ${sample_name}.mapped_fastqc.html --out_zip ${sample_name}.mapped_fastqc.zip
@@ -97,6 +110,7 @@ task plot_coverage {
     File   coverage_plot                 = "${sample_name}.coverage_plot.pdf"
     Int    assembly_length               = read_int("assembly_length")
     Int    assembly_length_unambiguous   = read_int("assembly_length_unambiguous")
+    Int    reads_provided                = read_int("reads_provided")
     Int    reads_aligned                 = read_int("reads_aligned")
     Int    read_pairs_aligned            = read_int("read_pairs_aligned")
     Int    bases_aligned                 = read_int("bases_aligned")

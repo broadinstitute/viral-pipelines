@@ -4,9 +4,7 @@
   ],
   "contigs.deplete.blastDbs": [
     "dx://file-Fg2p9Zj0xf5VyJ380GxkBg0k",
-    "dx://file-F8BjgXj09y3gkfZGPPQZbZkK",
-    "dx://file-Fg2p9b80xf5y05Vg0GJb12vY",
-    "dx://file-Fg2p9bQ0xf5zx8VB8BYyJj0k"
+    "dx://file-F8BjgXj09y3gkfZGPPQZbZkK"
   ],
 
   "contigs.spades.trim_clip_db":

@@ -185,6 +185,8 @@ task ivar_trim {
     File    aligned_bam
     File?   trim_coords_bed
     Int?    min_keep_length
+    Int?    sliding_window
+    Int?    min_quality
 
     String? docker="andersenlabapps/ivar"
 
@@ -192,9 +194,15 @@ task ivar_trim {
 
     command {
         set -ex -o pipefail
-        ivar version | tee VERSION
+        ivar version | head -1 | tee VERSION
+
         if [ -n "${trim_coords_bed}" ]; then
-          ivar trim -e -i ${aligned_bam} -b ${trim_coords_bed} -p trim ${'-m ' + min_keep_length}
+          ivar trim -e \
+            ${'-b ' + trim_coords_bed} \
+            ${'-m ' + min_keep_length} \
+            ${'-s ' + sliding_window} \
+            ${'-q ' + min_quality} \
+            -i ${aligned_bam} -p trim
           samtools sort -@ `nproc` -m 1000M -o ${bam_basename}.trimmed.bam trim.bam
         else
           cp ${aligned_bam} ${bam_basename}.trimmed.bam
@@ -259,27 +267,8 @@ task refine_assembly_with_aligned_reads {
           --JVMmemory "$mem_in_mb"m \
           --loglevel=DEBUG
 
-        # hacky rename fasta headers
-        python - <<SCRIPT
-import util.file
-samplename = "${sample_name}"
-with open('refined.fasta', 'rt') as inf:
-          with open('final.fasta', 'wt') as outf:
-            if util.file.fasta_length('refined.fasta') == 1:
-              # case with just one sequence
-              inf.readline()
-              outf.write('>' + samplename + '\n')
-              for line in inf:
-                outf.write(line)
-            else:
-              # case with multiple sequences
-              i = 1
-              for line in inf:
-                if line.startswith('>'):
-                  line = samplename + '-' + str(i) + '\n'
-                outf.write(line)
-SCRIPT
-        mv final.fasta ${sample_name}.fasta
+        file_utils.py rename_fasta_sequences \
+          refined.fasta "${sample_name}.fasta" "${sample_name}"
     }
 
     output {

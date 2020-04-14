@@ -1,4 +1,4 @@
 broadinstitute/viral-core=v2.0.20.1
-broadinstitute/viral-assemble=v2.0.16.0
+broadinstitute/viral-assemble=v2.0.17.0
 broadinstitute/viral-classify=v2.0.16.0
 broadinstitute/viral-phylo=v2.0.16.0
