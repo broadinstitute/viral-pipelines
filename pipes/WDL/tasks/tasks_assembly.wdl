@@ -242,7 +242,7 @@ task align_reads {
 
     read_utils.py --version | tee VERSION
 
-    cp ${assembly_fasta} assembly.fasta
+    cp ${reference_fasta} assembly.fasta
     grep -v '^>' assembly.fasta | tr -d '\n' | wc -c | tee assembly_length
 
     if [ `cat assembly_length` != "0" ]; then
