@@ -57,8 +57,9 @@ workflow assemble_refbased {
                 reads_unmapped_bam = reads_unmapped_bam,
                 novocraft_license  = novocraft_license,
                 skip_mark_dupes    = skip_mark_dupes,
-                sample_name        = "${sample_name}.align_to_self",
                 aligner_options    = "-r Random -l 40 -g 40 -x 20 -t 100"
+                ## (for bwa) -- aligner_options = "-k 12 -B 1"
+                ## (for novoalign) -- aligner_options = "-r Random -l 40 -g 40 -x 20 -t 501 -k"
         }
     }
 
