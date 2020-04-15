@@ -44,11 +44,24 @@ task plot_coverage {
     else
       touch ${sample_name}.coverage_plot.pdf ${sample_name}.coverage_plot.txt
     fi
+
+    # collect figures of merit
+    samtools view -H ${aligned_reads_bam} | perl -n -e'/^@SQ.*LN:(\d+)/ && print "$1\n"' | paste -sd+ - | bc | tee assembly_length
+    # report only primary alignments 260=exclude unaligned reads and secondary mappings
+    samtools view -h -F 260 ${aligned_reads_bam} | samtools flagstat - | tee ${sample_name}.flagstat.txt
+    grep properly ${sample_name}.flagstat.txt | cut -f 1 -d ' ' | tee read_pairs_aligned
+    samtools view ${aligned_reads_bam} | cut -f10 | tr -d '\n' | wc -c | tee bases_aligned
+    python -c "print (float("`cat bases_aligned`")/"`cat assembly_length`") if "`cat assembly_length`">0 else 0" > mean_coverage
   }
 
   output {
     File   coverage_plot                 = "${sample_name}.coverage_plot.pdf"
     File   coverage_tsv                  = "${sample_name}.coverage_plot.txt"
+    Int    assembly_length               = read_int("assembly_length")
+    Int    reads_aligned                 = read_int("reads_aligned")
+    Int    read_pairs_aligned            = read_int("read_pairs_aligned")
+    Int    bases_aligned                 = read_int("bases_aligned")
+    Float  mean_coverage                = read_float("mean_coverage")
     String viralngs_version              = read_string("VERSION")
   }
 
