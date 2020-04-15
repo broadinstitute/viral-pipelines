@@ -37,12 +37,12 @@ task merge_bams {
             if [ -s reheader_table.txt ]; then
               read_utils.py reheader_bam merged.bam reheader_table.txt "${out_basename}.bam" --loglevel DEBUG
             else
-              mv merged.bam "${out_basename}.bam}"
+              mv merged.bam "${out_basename}.bam"
             fi
+
         else
             # input was empty, so output should be empty (samtools doesn't like empty files)
             touch "${out_basename}.bam"
-
         fi
     }
 
