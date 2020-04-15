@@ -1,7 +1,8 @@
 
-task merge_bams_one_sample {
+task merge_bams {
     Array[File]+    in_bams
-    String          sample_name
+    String?         sample_name
+    File?           reheader_table # tsv with 3 cols: field, old value, new value
     String          out_basename
     String?         docker="quay.io/broadinstitute/viral-core"
 
@@ -19,10 +20,25 @@ task merge_bams_one_sample {
         fi    
 
         if [ -s merged.bam ]; then
-            # create sample name remapping table based on existing sample names
-            samtools view -H merged.bam | perl -n -e'/SM:(\S+)/ && print "SM\t$1\t'${sample_name}'\n"' | sort | uniq > sample_remap_table.txt
-            # rename samples BAM headers
-            read_utils.py reheader_bam merged.bam sample_remap_table.txt "${out_basename}.bam" --loglevel DEBUG
+            touch reheader_table.txt
+
+            # remap all SM values to user specified value
+            if [ -n "${sample_name}" ]; then
+              # create sample name remapping table based on existing sample names
+              samtools view -H merged.bam | perl -n -e'/SM:(\S+)/ && print "SM\t$1\t'${sample_name}'\n"' | sort | uniq >> reheader_table.txt
+            fi
+
+            # remap arbitrary headers using user specified table
+            if [[ -f "${reheader_table}" ]]; then
+              cat "${reheader_table}" >> reheader_table.txt
+            fi
+
+            # reheader bam file if requested
+            if [ -s reheader_table.txt ]; then
+              read_utils.py reheader_bam merged.bam reheader_table.txt "${out_basename}.bam" --loglevel DEBUG
+            else
+              mv merged.bam "${out_basename}.bam}"
+            fi
         else
             # input was empty, so output should be empty (samtools doesn't like empty files)
             touch "${out_basename}.bam"
