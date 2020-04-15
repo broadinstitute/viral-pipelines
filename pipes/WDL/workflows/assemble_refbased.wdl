@@ -10,6 +10,7 @@ workflow assemble_refbased {
 
     File?           novocraft_license
     Boolean?        skip_mark_dupes=false
+    File?           trim_coords_bed
 
     scatter(reads_unmapped_bam in reads_unmapped_bams) {
         call assembly.align_reads as align_to_ref {
@@ -24,7 +25,8 @@ workflow assemble_refbased {
         }
         call assembly.ivar_trim {
             input:
-                aligned_bam = align_to_ref.aligned_only_reads_bam
+                aligned_bam = align_to_ref.aligned_only_reads_bam,
+                trim_coords_bed = trim_coords_bed
         }
     }
 
