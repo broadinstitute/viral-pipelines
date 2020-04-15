@@ -46,7 +46,7 @@ task plot_coverage {
     fi
 
     # collect figures of merit
-    samtools view -H ${aligned_reads_bam} | perl -n -e'/^@SQ.*LN:(\d+)/ && print "$1\n"' |  awk '{ s+=$1 } END { printf "%.0f\n", s }' | tee assembly_length
+    samtools view -H ${aligned_reads_bam} | perl -n -e'/^@SQ.*LN:(\d+)/ && print "$1\n"' |  awk \{s+=\$1\}END\{'printf "%.0f\n"',s\} | tee assembly_length
     # report only primary alignments 260=exclude unaligned reads and secondary mappings
     samtools view -h -F 260 ${aligned_reads_bam} | samtools flagstat - | tee ${sample_name}.flagstat.txt
     grep properly ${sample_name}.flagstat.txt | cut -f 1 -d ' ' | tee read_pairs_aligned
