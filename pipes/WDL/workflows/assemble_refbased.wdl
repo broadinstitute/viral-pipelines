@@ -28,7 +28,7 @@ workflow assemble_refbased {
         }
     }
 
-    call read_utils.merge_bams as merge_align_to_ref {
+    call read_utils.merge_and_reheader_bams as merge_align_to_ref {
         input:
             in_bams             = ivar_trim.aligned_trimmed_bam,
             sample_name         = sample_name,
@@ -66,7 +66,7 @@ workflow assemble_refbased {
         }
     }
 
-    call read_utils.merge_bams as merge_align_to_self {
+    call read_utils.merge_and_reheader_bams as merge_align_to_self {
         input:
             in_bams             = align_to_self.aligned_only_reads_bam,
             sample_name         = sample_name,

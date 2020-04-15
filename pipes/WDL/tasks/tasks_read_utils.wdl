@@ -1,5 +1,5 @@
 
-task merge_bams {
+task merge_and_reheader_bams {
     Array[File]+    in_bams
     String?         sample_name
     File?           reheader_table # tsv with 3 cols: field, old value, new value
