@@ -11,6 +11,6 @@
   "stage-0.maxMismatches": 0,
   "stage-0.minimumQuality": 25,
 
-  "stage-6.krakenuniq_db_tar_lz4": { "$dnanexus_link": { "project": "project-F8PQ6380xf5bK0Qk0YPjB17P", "id": "file-FVzQ11806zFK7f5Z90KYy14z" } },
-  "stage-6.krona_taxonomy_db_tgz": { "$dnanexus_link": { "project": "project-F8PQ6380xf5bK0Qk0YPjB17P", "id": "file-Fg2p9bQ0xf5y05Vg0GJb12vb" } }
+  "stage-7.krakenuniq_db_tar_lz4": { "$dnanexus_link": { "project": "project-F8PQ6380xf5bK0Qk0YPjB17P", "id": "file-FVzQ11806zFK7f5Z90KYy14z" } },
+  "stage-7.krona_taxonomy_db_tgz": { "$dnanexus_link": { "project": "project-F8PQ6380xf5bK0Qk0YPjB17P", "id": "file-Fg2p9bQ0xf5y05Vg0GJb12vb" } }
 }
