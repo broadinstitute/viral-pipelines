@@ -15,7 +15,7 @@ for workflow in ../pipes/WDL/workflows/*.wdl; do
 		echo "validating $workflow"
 		miniwdl check $workflow
 		echo "Executing $workflow_name using miniWDL on local instance"
-		miniwdl run -i $input_json -d $workflow_name/. $workflow
+		miniwdl run -i $input_json -d $workflow_name/. --verbose --error-json $workflow
 		if [ -f $workflow_name/outputs.json ]; then
 			echo "$workflow_name SUCCESS -- outputs:"
 			cat $workflow_name/outputs.json
