@@ -61,6 +61,19 @@ jobs:
     - language: python
       stage: build
       env:
+        - TRAVIS_JOB=test_miniwdl
+      install:
+        - set -e
+        - source travis/install-conda.sh
+        - conda install -y miniwdl shellcheck
+      script:
+        - set -e
+        - travis/version-wdl-runtimes.sh
+        - travis/tests-miniwdl.sh
+
+    - language: python
+      stage: build
+      env:
         - TRAVIS_JOB=deploy_dockstore
       install:
         - set -e
