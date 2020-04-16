@@ -4,10 +4,6 @@ task merge_tarballs {
   String        out_filename
   String?       docker="quay.io/broadinstitute/viral-core"
 
-#  parameter_meta {
-#    tar_chunks: "stream"
-#  }
-
   command {
     set -ex -o pipefail
 
@@ -31,7 +27,7 @@ task merge_tarballs {
     docker: "${docker}"
     memory: "7 GB"
     cpu: 16
-    disks: "local-disk 1125 LOCAL"
+    disks: "local-disk 2625 LOCAL"
     dx_instance_type: "mem1_ssd2_v2_x16"
     preemptible: 0
   }
@@ -59,11 +55,6 @@ task illumina_demux {
   Boolean? forceGC=true
 
   String? docker="quay.io/broadinstitute/viral-core"
-
-
-#  parameter_meta {
-#    flowcell_tgz: "stream"
-#  }
 
   command {
     set -ex -o pipefail
@@ -262,45 +253,3 @@ task illumina_demux {
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
   }
 }
-
-task merge_and_reheader_bams {
-  Array[File]+  in_bams
-  File?         reheader_table # tsv with 3 cols: field, old value, new value
-  String        out_basename
-  String?       docker="quay.io/broadinstitute/viral-core"
-
-  command {
-    set -ex -o pipefail
-
-    read_utils.py --version | tee VERSION
-
-    if [ ${length(in_bams)} -gt 1 ]; then
-      read_utils.py merge_bams ${sep=' ' in_bams} merged.bam --loglevel DEBUG
-    else
-      echo "Skipping merge, only one input file"
-      ln -s ${select_first(in_bams)} merged.bam
-    fi    
-
-    if [[ -f "${reheader_table}" ]]; then
-      read_utils.py reheader_bam merged.bam ${reheader_table} ${out_basename}.bam --loglevel DEBUG
-    else
-      echo "Skipping reheader, no mapping table specified"
-      ln -s merged.bam ${out_basename}.bam
-    fi
-  }
-
-  output {
-    File   out_bam          = "${out_basename}.bam"
-    String viralngs_version = read_string("VERSION")
-  }
-
-  runtime {
-    docker: "${docker}"
-    memory: "2 GB"
-    cpu: 2
-    disks: "local-disk 750 LOCAL"
-    dx_instance_type: "mem1_ssd2_v2_x4"
-  }
-}
-
-

@@ -1,5 +1,5 @@
-import "../tasks/tasks_demux.wdl" as demux
+import "../tasks/tasks_read_utils.wdl" as read_utils
 
 workflow merge_bams {
-    call demux.merge_and_reheader_bams
+    call read_utils.merge_and_reheader_bams
 }

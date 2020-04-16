@@ -188,25 +188,20 @@ task ivar_trim {
     Int?    sliding_window
     Int?    min_quality
 
-    String? docker="andersenlabapps/ivar"
+    String? docker="andersenlabapps/ivar:1.2.1"
 
     String  bam_basename=basename(aligned_bam, ".bam")
 
     command {
         set -ex -o pipefail
         ivar version | head -1 | tee VERSION
-
-        if [ -n "${trim_coords_bed}" ]; then
-          ivar trim -e \
-            ${'-b ' + trim_coords_bed} \
-            ${'-m ' + min_keep_length} \
-            ${'-s ' + sliding_window} \
-            ${'-q ' + min_quality} \
-            -i ${aligned_bam} -p trim
-          samtools sort -@ `nproc` -m 1000M -o ${bam_basename}.trimmed.bam trim.bam
-        else
-          cp ${aligned_bam} ${bam_basename}.trimmed.bam
-        fi
+        ivar trim -e \
+          ${'-b ' + trim_coords_bed} \
+          ${'-m ' + min_keep_length} \
+          ${'-s ' + sliding_window} \
+          ${'-q ' + min_quality} \
+          -i ${aligned_bam} -p trim
+        samtools sort -@ `nproc` -m 1000M -o ${bam_basename}.trimmed.bam trim.bam
     }
 
     output {
@@ -223,12 +218,104 @@ task ivar_trim {
     }
 }
 
+task align_reads {
+  File     reference_fasta
+  File     reads_unmapped_bam
+
+  File?    novocraft_license
+
+  String?  aligner="novoalign" # novoalign or bwa
+  String?  aligner_options
+  Boolean? skip_mark_dupes=false
+
+  String?  docker="quay.io/broadinstitute/viral-core"
+
+  String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
+  
+  command {
+    set -ex -o pipefail
+
+    read_utils.py --version | tee VERSION
+
+    cp ${reference_fasta} assembly.fasta
+    grep -v '^>' assembly.fasta | tr -d '\n' | wc -c | tee assembly_length
+
+    if [ `cat assembly_length` != "0" ]; then
+
+      # only perform the following if the reference is non-empty
+
+      if [ "${aligner}" == "novoalign" ]; then
+        read_utils.py novoindex \
+          assembly.fasta \
+          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
+          --loglevel=DEBUG
+      fi
+      read_utils.py index_fasta_picard assembly.fasta --loglevel=DEBUG
+      read_utils.py index_fasta_samtools assembly.fasta --loglevel=DEBUG
+
+      read_utils.py align_and_fix \
+        ${reads_unmapped_bam} \
+        assembly.fasta \
+        --outBamAll "${sample_name}.all.bam" \
+        --outBamFiltered "${sample_name}.mapped.bam" \
+        --aligner ${aligner} \
+        ${'--aligner_options "' + aligner_options + '"'} \
+        ${true='--skipMarkDupes' false="" skip_mark_dupes} \
+        --JVMmemory=3g \
+        ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
+        --loglevel=DEBUG
+
+    else
+      touch "${sample_name}.all.bam" "${sample_name}.mapped.bam"
+
+    fi
+    samtools index ${sample_name}.mapped.bam
+
+    # collect figures of merit
+    grep -v '^>' assembly.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
+    samtools view -c ${reads_unmapped_bam} | tee reads_provided
+    samtools view -c ${sample_name}.mapped.bam | tee reads_aligned
+    # report only primary alignments 260=exclude unaligned reads and secondary mappings
+    samtools view -h -F 260 ${sample_name}.all.bam | samtools flagstat - | tee ${sample_name}.all.bam.flagstat.txt
+    grep properly ${sample_name}.all.bam.flagstat.txt | cut -f 1 -d ' ' | tee read_pairs_aligned
+    samtools view ${sample_name}.mapped.bam | cut -f10 | tr -d '\n' | wc -c | tee bases_aligned
+    python -c "print (float("`cat bases_aligned`")/"`cat assembly_length_unambiguous`") if "`cat assembly_length_unambiguous`">0 else 0" > mean_coverage
+
+    # fastqc mapped bam
+    reports.py fastqc ${sample_name}.mapped.bam ${sample_name}.mapped_fastqc.html --out_zip ${sample_name}.mapped_fastqc.zip
+  }
+
+  output {
+    File   aligned_bam                   = "${sample_name}.all.bam"
+    File   aligned_bam_idx               = "${sample_name}.all.bai"
+    File   aligned_bam_flagstat          = "${sample_name}.all.bam.flagstat.txt"
+    File   aligned_only_reads_bam        = "${sample_name}.mapped.bam"
+    File   aligned_only_reads_bam_idx    = "${sample_name}.mapped.bai"
+    File   aligned_only_reads_fastqc     = "${sample_name}.mapped_fastqc.html"
+    File   aligned_only_reads_fastqc_zip = "${sample_name}.mapped_fastqc.zip"
+    Int    reads_provided                = read_int("reads_provided")
+    Int    reads_aligned                 = read_int("reads_aligned")
+    Int    read_pairs_aligned            = read_int("read_pairs_aligned")
+    Int    bases_aligned                 = read_int("bases_aligned")
+    Float  mean_coverage                 = read_float("mean_coverage")
+    String viralngs_version              = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "${docker}"
+    memory: "7000 MB"
+    cpu: 8
+    disks: "local-disk 375 LOCAL"
+    dx_instance_type: "mem1_ssd1_v2_x8"
+    preemptible: 1
+  }
+}
+
 task refine_assembly_with_aligned_reads {
     File     reference_fasta
     File     reads_aligned_bam
     String   sample_name
 
-    File?    novocraft_license
     Boolean? mark_duplicates=false
     Float?   major_cutoff=0.5
     Int?     min_coverage=2
@@ -263,18 +350,23 @@ task refine_assembly_with_aligned_reads {
           --outVcf ${sample_name}.sites.vcf.gz \
           --min_coverage ${min_coverage} \
           --major_cutoff ${major_cutoff} \
-          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
           --JVMmemory "$mem_in_mb"m \
           --loglevel=DEBUG
 
         file_utils.py rename_fasta_sequences \
           refined.fasta "${sample_name}.fasta" "${sample_name}"
+
+      # collect figures of merit
+      grep -v '^>' refined.fasta | tr -d '\n' | wc -c | tee assembly_length
+      grep -v '^>' refined.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
     }
 
     output {
-        File   refined_assembly_fasta  = "${sample_name}.fasta"
-        File   sites_vcf_gz            = "${sample_name}.sites.vcf.gz"
-        String viralngs_version        = read_string("VERSION")
+        File   refined_assembly_fasta       = "${sample_name}.fasta"
+        File   sites_vcf_gz                 = "${sample_name}.sites.vcf.gz"
+        Int    assembly_length              = read_int("assembly_length")
+        Int    assembly_length_unambiguous  = read_int("assembly_length_unambiguous")
+        String viralngs_version             = read_string("VERSION")
     }
 
     runtime {
@@ -443,6 +535,7 @@ task refine_2x_and_plot {
           reports.py plot_coverage \
             ${sample_name}.mapped.bam \
             ${sample_name}.coverage_plot.pdf \
+            --outSummary "${sample_name}.coverage_plot.txt" \
             --plotFormat pdf \
             --plotWidth 1100 \
             --plotHeight 850 \
@@ -450,7 +543,7 @@ task refine_2x_and_plot {
             --plotTitle "${sample_name} coverage plot" \
             --loglevel=DEBUG
         else
-          touch ${sample_name}.coverage_plot.pdf
+          touch ${sample_name}.coverage_plot.pdf ${sample_name}.coverage_plot.txt
         fi
     }
 
@@ -467,6 +560,7 @@ task refine_2x_and_plot {
         File aligned_only_reads_fastqc     = "${sample_name}.mapped_fastqc.html"
         File aligned_only_reads_fastqc_zip = "${sample_name}.mapped_fastqc.zip"
         File coverage_plot                 = "${sample_name}.coverage_plot.pdf"
+        File coverage_tsv                  = "${sample_name}.coverage_plot.txt"
         Int  assembly_length               = read_int("assembly_length")
         Int  assembly_length_unambiguous   = read_int("assembly_length_unambiguous")
         Int  reads_aligned                 = read_int("reads_aligned")
