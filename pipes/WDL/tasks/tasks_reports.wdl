@@ -284,7 +284,7 @@ task MultiQC {
 
       mkdir -p ${input_directory} ${out_dir}
 
-      mv ${sep=' ' input_files} ${input_directory}
+      ln -s ${sep=' ' input_files} ${input_directory}
 
       multiqc \
       ${true="--force" false="" force} \
