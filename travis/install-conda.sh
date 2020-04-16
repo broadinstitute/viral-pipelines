@@ -1,10 +1,6 @@
 #!/bin/bash
 set -e
 
-# debug for now
-rm -rf "$MINICONDA_DIR" "$CONDA_DEFAULT_ENV" # remove the directory in case we have an empty cached directory
-
-
 # the miniconda directory may exist if it has been restored from cache
 if [ -d "$MINICONDA_DIR" ] && [ -e "$MINICONDA_DIR/bin/conda" ] && [ -d "$CONDA_DEFAULT_ENV" ]; then
     echo "Miniconda install already present from cache: $MINICONDA_DIR"
