@@ -1,8 +1,8 @@
 #!/bin/bash
-set -e -o pipefail  # intentionally allow for pipe failures below
+set -ex -o pipefail
 
 mkdir -p workflows
-ln -s test workflows/
+cp -r test workflows/
 cd workflows
 
 miniwdl run_self_test
@@ -13,15 +13,14 @@ for workflow in ../pipes/WDL/workflows/*.wdl; do
 	if [ -f $input_json ]; then
 		date
 		echo "validating $workflow"
-		wfname=`basename $workflow`
 		miniwdl check $workflow
 		echo "Executing $workflow_name using miniWDL on local instance"
 		miniwdl run -i $input_json -d $wfname/. $workflow
-		if [ -f $wfname/outputs.json ]; then
-			echo "$wfname SUCCESS -- outputs:"
-			cat $wfname/outputs.json
+		if [ -f $workflow_name/outputs.json ]; then
+			echo "$workflow_name SUCCESS -- outputs:"
+			cat $workflow_name/outputs.json
 		else
-			echo "$wfname FAILED"
+			echo "$workflow_name FAILED"
 			exit 1
 		fi
     fi
