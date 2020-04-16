@@ -13,14 +13,13 @@ if [ -d "$MINICONDA_DIR" ] && [ -e "$MINICONDA_DIR/bin/conda" ] && [ -d "$CONDA_
 else # if it does not exist, we need to install miniconda
     echo "Downloading conda to $MINICONDA_DIR"
     rm -rf "$MINICONDA_DIR" "$CONDA_DEFAULT_ENV" # remove the directory in case we have an empty cached directory
-    curl -S https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh > miniconda.sh;
-    mkdir -p "$MINICONDA_DIR"
+    curl -S https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh > miniconda.sh
     bash miniconda.sh -b -p "$MINICONDA_DIR"
     chown -R "$USER" "$MINICONDA_DIR"
     export PATH="$MINICONDA_DIR/bin:$PATH"
     hash -r
-    source "$MINICONDA_DIR/bin/activate"
-    conda init
+    #source "$MINICONDA_DIR/bin/activate"
+    #conda init
     #echo "Installing conda"
     #conda install -y conda==4.6.14 # specify "conda update -c conda-canary conda" for pre-release conda
     conda config --set always_yes yes --set changeps1 no --set remote_max_retries 6 #--set channel_priority strict
