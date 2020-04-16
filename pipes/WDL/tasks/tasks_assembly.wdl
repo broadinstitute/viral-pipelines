@@ -188,7 +188,7 @@ task ivar_trim {
     Int?    sliding_window
     Int?    min_quality
 
-    String? docker="andersenlabapps/ivar"
+    String? docker="andersenlabapps/ivar:1.2.1"
 
     String  bam_basename=basename(aligned_bam, ".bam")
 
@@ -196,16 +196,20 @@ task ivar_trim {
         set -ex -o pipefail
         ivar version | head -1 | tee VERSION
 
-        if [ -n "${trim_coords_bed}" ]; then
-          ivar trim -e \
-            ${'-b ' + trim_coords_bed} \
-            ${'-m ' + min_keep_length} \
-            ${'-s ' + sliding_window} \
-            ${'-q ' + min_quality} \
-            -i ${aligned_bam} -p trim
+        ivar trim -e \
+          ${'-b ' + trim_coords_bed} \
+          ${'-m ' + min_keep_length} \
+          ${'-s ' + sliding_window} \
+          ${'-q ' + min_quality} \
+          -i ${aligned_bam} -p trim
+
+        samtools view trim.bam | head -2 > firstreads.txt
+        if [ -s firstreads.txt ]; then
+          # trim.bam is non-empty
           samtools sort -@ `nproc` -m 1000M -o ${bam_basename}.trimmed.bam trim.bam
         else
-          cp ${aligned_bam} ${bam_basename}.trimmed.bam
+          # trim.bam is empty (except headers), samtools sort will fail, just copy empty bam
+          cp trim.bam ${bam_basename}.trimmed.bam
         fi
     }
 
