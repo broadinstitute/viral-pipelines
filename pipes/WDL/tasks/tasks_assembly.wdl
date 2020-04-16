@@ -195,22 +195,13 @@ task ivar_trim {
     command {
         set -ex -o pipefail
         ivar version | head -1 | tee VERSION
-
         ivar trim -e \
           ${'-b ' + trim_coords_bed} \
           ${'-m ' + min_keep_length} \
           ${'-s ' + sliding_window} \
           ${'-q ' + min_quality} \
           -i ${aligned_bam} -p trim
-
-        samtools view trim.bam | head -2 > firstreads.txt
-        if [ -s firstreads.txt ]; then
-          # trim.bam is non-empty
-          samtools sort -@ `nproc` -m 1000M -o ${bam_basename}.trimmed.bam trim.bam
-        else
-          # trim.bam is empty (except headers), samtools sort will fail, just copy empty bam
-          cp trim.bam ${bam_basename}.trimmed.bam
-        fi
+        samtools sort -@ `nproc` -m 1000M -o ${bam_basename}.trimmed.bam trim.bam
     }
 
     output {
@@ -278,6 +269,7 @@ task align_reads {
       touch "${sample_name}.all.bam" "${sample_name}.mapped.bam"
 
     fi
+    samtools index ${sample_name}.mapped.bam
 
     # collect figures of merit
     grep -v '^>' assembly.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
@@ -288,13 +280,6 @@ task align_reads {
     grep properly ${sample_name}.all.bam.flagstat.txt | cut -f 1 -d ' ' | tee read_pairs_aligned
     samtools view ${sample_name}.mapped.bam | cut -f10 | tr -d '\n' | wc -c | tee bases_aligned
     python -c "print (float("`cat bases_aligned`")/"`cat assembly_length_unambiguous`") if "`cat assembly_length_unambiguous`">0 else 0" > mean_coverage
-
-    # index mapped bam if non-empty
-    if [ `cat reads_aligned` != "0" ]; then
-      samtools index ${sample_name}.mapped.bam
-    else
-      touch ${sample_name}.mapped.bai
-    fi
 
     # fastqc mapped bam
     reports.py fastqc ${sample_name}.mapped.bam ${sample_name}.mapped_fastqc.html --out_zip ${sample_name}.mapped_fastqc.zip

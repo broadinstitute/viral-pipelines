@@ -19,30 +19,22 @@ task merge_and_reheader_bams {
             cp ${select_first(in_bams)} merged.bam
         fi    
 
-        if [ -s merged.bam ]; then
-            touch reheader_table.txt
+        # remap all SM values to user specified value
+        if [ -n "${sample_name}" ]; then
+          # create sample name remapping table based on existing sample names
+          samtools view -H merged.bam | perl -n -e'/SM:(\S+)/ && print "SM\t$1\t'${sample_name}'\n"' | sort | uniq >> reheader_table.txt
+        fi
 
-            # remap all SM values to user specified value
-            if [ -n "${sample_name}" ]; then
-              # create sample name remapping table based on existing sample names
-              samtools view -H merged.bam | perl -n -e'/SM:(\S+)/ && print "SM\t$1\t'${sample_name}'\n"' | sort | uniq >> reheader_table.txt
-            fi
+        # remap arbitrary headers using user specified table
+        if [[ -f "${reheader_table}" ]]; then
+          cat "${reheader_table}" >> reheader_table.txt
+        fi
 
-            # remap arbitrary headers using user specified table
-            if [[ -f "${reheader_table}" ]]; then
-              cat "${reheader_table}" >> reheader_table.txt
-            fi
-
-            # reheader bam file if requested
-            if [ -s reheader_table.txt ]; then
-              read_utils.py reheader_bam merged.bam reheader_table.txt "${out_basename}.bam" --loglevel DEBUG
-            else
-              mv merged.bam "${out_basename}.bam"
-            fi
-
+        # reheader bam file if requested
+        if [ -s reheader_table.txt ]; then
+          read_utils.py reheader_bam merged.bam reheader_table.txt "${out_basename}.bam" --loglevel DEBUG
         else
-            # input was empty, so output should be empty (samtools doesn't like empty files)
-            touch "${out_basename}.bam"
+          mv merged.bam "${out_basename}.bam"
         fi
     }
 
