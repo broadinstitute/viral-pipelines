@@ -19,6 +19,8 @@ else # if it does not exist, we need to install miniconda
     chown -R "$USER" "$MINICONDA_DIR"
     export PATH="$MINICONDA_DIR/bin:$PATH"
     hash -r
+    source "$MINICONDA_DIR/bin/activate"
+    conda init
     #echo "Installing conda"
     #conda install -y conda==4.6.14 # specify "conda update -c conda-canary conda" for pre-release conda
     conda config --set always_yes yes --set changeps1 no --set remote_max_retries 6 #--set channel_priority strict
