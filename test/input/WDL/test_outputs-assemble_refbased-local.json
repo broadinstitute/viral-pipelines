@@ -1,0 +1,12 @@
+{
+  "assemble_refbased.plot_self_coverage.bases_aligned": 1765581,
+  "assemble_refbased.plot_self_coverage.read_pairs_aligned": 16798,
+  "assemble_refbased.plot_self_coverage.reads_aligned": 17481,
+  "assemble_refbased.plot_self_coverage.assembly_length": 18872,
+  "assemble_refbased.plot_ref_coverage.bases_aligned": 1800325,
+  "assemble_refbased.plot_ref_coverage.read_pairs_aligned": 17266,
+  "assemble_refbased.plot_ref_coverage.reads_aligned": 17825,
+  "assemble_refbased.plot_ref_coverage.assembly_length": 18959,
+  "assemble_refbased.call_consensus.assembly_length_unambiguous": 18872,
+  "assemble_refbased.call_consensus.assembly_length": 18872
+}
