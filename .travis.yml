@@ -22,9 +22,25 @@ cache:
     - $HOME/miniconda
   timeout: 1000
 
+stages:
+  - validate
+  - build
+
 jobs:
   fast_finish: true
   include:
+    - language: python
+      stage: validate
+      env:
+        - TRAVIS_JOB=validate_wdl_miniwdl
+      install:
+        - set -e
+        - source travis/install-conda.sh
+        - conda install -y miniwdl shellcheck
+      script:
+        - set -e
+        - travis/version-wdl-runtimes.sh
+        - travis/validate-wdl-miniwdl.sh
 
     - language: java
       jdk: openjdk11
@@ -40,7 +56,6 @@ jobs:
         - set -e
         - travis/version-wdl-runtimes.sh
         - travis/relative-wdl-paths.sh
-        - travis/validate-wdl-womtool.sh
         - travis/build-dx.sh
         - travis/tests-dx.sh
 
@@ -65,7 +80,7 @@ jobs:
       install:
         - set -e
         - source travis/install-conda.sh
-        - conda install -y miniwdl shellcheck
+        - conda install -y miniwdl shellcheck jq
       script:
         - set -e
         - travis/version-wdl-runtimes.sh
@@ -82,7 +97,6 @@ jobs:
       script:
         - set -e
         - travis/version-wdl-runtimes.sh
-        - travis/validate-wdl-miniwdl.sh
         - travis/flatten-wdls.sh
         - echo "actual dockstore deploy not implemented yet"
 
