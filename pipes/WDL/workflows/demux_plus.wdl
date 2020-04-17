@@ -51,6 +51,12 @@ workflow demux_plus {
             reads_unmapped_bam = illumina_demux.raw_reads_unaligned_bams
     }
 
+    call metagenomics.krona_merge {
+        input:
+            krona_reports = krakenuniq.krona_report_html,
+            out_basename  = "krakenuniq.krona.combined.html"
+    }
+
     call reports.spikein_summary as spike_summary {
         input:
             spikein_count_txt = spikein.report

@@ -302,10 +302,6 @@ task krona {
 
   String  input_basename = basename(classified_reads_txt_gz, ".txt.gz")
 
-#  parameter_meta {
-#    krona_taxonomy_db_tgz : "stream"
-#  }
-
   command {
     set -ex -o pipefail
     DB_DIR=$(mktemp -d --suffix _db)
@@ -338,9 +334,35 @@ task krona {
 
   runtime {
     docker: "${docker}"
-    memory: "4 GB"
+    memory: "3 GB"
     cpu: 1
-    disks: "local-disk 50 SSD"
+    disks: "local-disk 50 HDD"
+    dx_instance_type: "mem1_ssd2_v2_x2"
+  }
+}
+
+task krona_merge {
+  Array[File]  krona_reports
+  String       out_basename
+
+  String?      docker="biocontainers/krona:v2.7.1_cv1"
+
+  command {
+    set -ex -o pipefail
+    ktImportKrona | head -2 | tail -1 | cut -f 2-3 -d ' ' | tee VERSION
+    ktImportKrona -o "${out_basename}.html" ${sep=' ' krona_reports}
+  }
+
+  output {
+    File    krona_report_html = "${out_basename}.html"
+    String  krona_version     = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "${docker}"
+    memory: "3 GB"
+    cpu: 1
+    disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd2_v2_x2"
   }
 }
