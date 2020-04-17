@@ -23,7 +23,7 @@ for workflow in ../pipes/WDL/workflows/*.wdl; do
 					echo -n "$k=" >> expected
 					echo -n "$k=" >> actual
 					cat $expected_output_json       | jq -r '.["'$k'"]' >> expected
-					cat $workflow_name/outputs.json | jq -r '.outputs["'$k'"]' >> actual
+					cat $workflow_name/outputs.json | jq -r '.["'$k'"]' >> actual
 				done
 				diff expected actual
 			else
