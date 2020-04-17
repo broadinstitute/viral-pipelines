@@ -33,5 +33,11 @@ fi
 
 echo "Activating conda environment: $CONDA_DEFAULT_ENV"
 source activate $CONDA_DEFAULT_ENV
+conda config --set always_yes yes --set changeps1 no --set remote_max_retries 6 #--set channel_priority strict
+conda config --add channels defaults
+conda config --add channels bioconda
+conda config --add channels conda-forge
+#conda config --add channels broad-viral
+conda config --show-sources # print channels
 # update certs
 conda info -a # for debugging
