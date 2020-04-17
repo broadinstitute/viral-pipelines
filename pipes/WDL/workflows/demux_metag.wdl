@@ -41,7 +41,7 @@ workflow demux_metag {
   call metagenomics.krona_merge {
       input:
           krona_reports = kraken.krona_report_html,
-          out_basename  = "krakenuniq.krona.combined.html"
+          out_basename  = "krakenuniq.krona.combined"
   }
   call reports.aggregate_metagenomics_reports as metag_summary_report {
       input:

@@ -7,7 +7,7 @@ workflow classify_krakenuniq {
     call metagenomics.krona_merge {
         input:
             krona_reports = krakenuniq.krona_report_html,
-            out_basename  = "krakenuniq.krona.combined.html"
+            out_basename  = "krakenuniq.krona.combined"
     }
 
     call reports.aggregate_metagenomics_reports as metag_summary_report {

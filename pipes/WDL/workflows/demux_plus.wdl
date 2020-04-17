@@ -54,7 +54,7 @@ workflow demux_plus {
     call metagenomics.krona_merge {
         input:
             krona_reports = krakenuniq.krona_report_html,
-            out_basename  = "krakenuniq.krona.combined.html"
+            out_basename  = "krakenuniq.krona.combined"
     }
 
     call reports.spikein_summary as spike_summary {
