@@ -75,7 +75,7 @@ task augur_mafft_align {
         Boolean? fill_gaps = true
         Boolean? remove_reference = true
 
-        String?  docker = "nextstrain/base:latest"
+        String   docker = "nextstrain/base"
     }
     command {
         augur align --sequences ~{sequences} \
@@ -105,15 +105,15 @@ task augur_mafft_align {
 
 task draft_augur_tree {
     input {
-        File    aligned_fasta
-        String  basename
+        File     aligned_fasta
+        String   basename
 
-        String? method    # default iqtree
-        String? substitution_model  # default GTR
-        File?   exclude_sites
-        File?   vcf_reference
+        String?  method              # default iqtree
+        String?  substitution_model  # default GTR
+        File?    exclude_sites
+        File?    vcf_reference
 
-        String? docker = "nextstrain/base"
+        String   docker = "nextstrain/base"
     }
     command {
         augur tree --alignment ~{aligned_fasta} \
@@ -160,7 +160,7 @@ task refine_augur_tree {
         String? divergence_units
         File? vcf_reference
 
-        String?  docker = "nextstrain/base"
+        String   docker = "nextstrain/base"
     }
     command {
         augur refine \
@@ -212,7 +212,7 @@ task ancestral_tree {
         File? vcf_reference
         File? output_vcf
 
-        String?  docker = "nextstrain/base"
+        String   docker = "nextstrain/base"
     }
     command {
         augur ancestral \
@@ -252,7 +252,7 @@ task translate_augur_tree {
         File?  vcf_reference_output
         File?  vcf_reference
 
-        String?  docker = "nextstrain/base"
+        String   docker = "nextstrain/base"
     }
     command {
         augur translate --tree ~{refined_tree} \
@@ -286,7 +286,7 @@ task export_auspice_json {
         File   aa_muts
         String basename
 
-        String?  docker = "nextstrain/base"
+        String   docker = "nextstrain/base"
     }
     command {
         augur export v2 --tree ~{refined_tree} \
