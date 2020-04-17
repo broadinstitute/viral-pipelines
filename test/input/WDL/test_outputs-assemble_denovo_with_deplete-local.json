@@ -2,7 +2,6 @@
     "assemble_denovo_with_deplete.assemble.subsample_read_count": 17402,
     "assemble_denovo_with_deplete.scaffold.assembly_preimpute_length_unambiguous": 18901,
     "assemble_denovo_with_deplete.scaffold.assembly_preimpute_length": 18901,
-    "assemble_denovo_with_deplete.refine_2x_and_plot.mean_coverage": 93.7324624289735,
     "assemble_denovo_with_deplete.refine_2x_and_plot.bases_aligned": 1765076,
     "assemble_denovo_with_deplete.refine_2x_and_plot.read_pairs_aligned": 16800,
     "assemble_denovo_with_deplete.refine_2x_and_plot.reads_aligned": 17476,
