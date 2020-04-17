@@ -46,7 +46,7 @@ jobs:
       jdk: openjdk11
       stage: validate
       env:
-        - TRAVIS_JOB=validate_cromwell
+        - TRAVIS_JOB=validate_wdl_cromwell
       install:
         - travis/install-wdl.sh
       script:
