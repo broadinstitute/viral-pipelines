@@ -22,15 +22,44 @@ cache:
     - $HOME/miniconda
   timeout: 1000
 
+stages:
+  - validate
+  - build
+
 jobs:
   fast_finish: true
   include:
+    - language: python
+      stage: validate
+      env:
+        - TRAVIS_JOB=validate_wdl_miniwdl
+      install:
+        - set -e
+        - source travis/install-conda.sh
+        - conda install -y miniwdl shellcheck
+      script:
+        - set -e
+        - travis/version-wdl-runtimes.sh
+        - travis/validate-wdl-miniwdl.sh
+
+    - language: java
+      jdk: openjdk11
+      stage: validate
+      env:
+        - TRAVIS_JOB=validate_cromwell
+      install:
+        - travis/install-wdl.sh
+      script:
+        - set -e
+        - travis/version-wdl-runtimes.sh
+        - travis/relative-wdl-paths.sh
+        - travis/validate-wdl-womtool.sh
 
     - language: java
       jdk: openjdk11
       stage: build
       env:
-        - TRAVIS_JOB=build_dxWDL
+        - TRAVIS_JOB=deploy_dnanexus
         # DX_API_TOKEN (for DNAnexus builds) -- token #3, expires 12/31/2024
         - secure: "zAAxwXWwSDcwnLYHawc0+gbshV3UURAZWSyk8g99kXgFCRcgytacvUpRxd44mC+rlgL2RtS8+RPT11hO2zJ+4y0J0FBaC8d9R7aTzEAGKLHk11cfhMg63QMVBt/8Gz9HToeE0BJ8/JbNZr+IZ01dD8GNDRA4FcFj+8maTpp4nrQ5/leDdmUwzkV1XfMiE+0/wR3KttKvqzHy6+6gRTAKbTeSxPICvWpHKlIYkIxFcEoH+3SNxgwWU9jZqG29MRt3/ikzZMBW/T2O9g+tY/5vKRqxm9aqWChFgjrpWRZDwvZqvwdxizokoVfReLZES3Ls//YSKzfFJG2GZ6a2vhAbfjcUkbRnyPOcZPwK+sE91Pq7FgFwL4N8BV63j6GQ5VrHZxe0b6spw8gvlkEjjhBgN1178lcxnp75QANNJ8AprZBqi3MzTQOTlgRZRAsDWTLgpXODrcDib76pg3af+JK5PQb0ncRVps9Z09u2EJ8fk9MGCDB6iw7XFedPPCxlx6MyIp2ywF4v9mkQXUBafYo67KRyPaojUUDGFkJsylYxzGHvvp0PrU93cp8zvDg4NqUkrbgEdGVvPF+qmXxT9MpfLc/yZ4vfhtKfZuQUGmNw+5WfTa3RYbJDEowN6noWCdXBZ67SrusKrok3TxIJV25vxXrFVhD/u/3ermysu7xA9ss="
         - DX_PROJECT=project-F8PQ6380xf5bK0Qk0YPjB17P
@@ -40,23 +69,34 @@ jobs:
         - set -e
         - travis/version-wdl-runtimes.sh
         - travis/relative-wdl-paths.sh
-        - travis/validate-wdl-womtool.sh
         - travis/build-dx.sh
         - travis/tests-dx.sh
 
-    - language: java
-      jdk: openjdk11
+    #- language: java
+    #  jdk: openjdk11
+    #  stage: build
+    #  env:
+    #    - TRAVIS_JOB=test_cromwell
+    #  install:
+    #    - travis/install-wdl.sh
+    #  script:
+    #    - set -e
+    #    - travis/version-wdl-runtimes.sh
+    #    - travis/relative-wdl-paths.sh
+    #    - travis/tests-cromwell.sh
+
+    - language: python
       stage: build
       env:
-        - TRAVIS_JOB=test_cromwell
+        - TRAVIS_JOB=test_miniwdl
       install:
-        - travis/install-wdl.sh
+        - set -e
+        - source travis/install-conda.sh
+        - conda install -y miniwdl shellcheck jq
       script:
         - set -e
         - travis/version-wdl-runtimes.sh
-        - travis/relative-wdl-paths.sh
-        - travis/validate-wdl-womtool.sh
-        - travis/tests-cromwell.sh
+        - travis/tests-miniwdl.sh
 
     - language: python
       stage: build
@@ -69,7 +109,6 @@ jobs:
       script:
         - set -e
         - travis/version-wdl-runtimes.sh
-        - travis/validate-wdl-miniwdl.sh
         - travis/flatten-wdls.sh
         - echo "actual dockstore deploy not implemented yet"
 
