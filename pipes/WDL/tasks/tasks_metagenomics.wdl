@@ -40,7 +40,7 @@ task krakenuniq {
     OUT_BASENAME=basenames_reports.txt
     for bam in ${sep=' ' reads_unmapped_bam}; do
       echo "$(basename $bam .bam).krakenuniq-reads.txt.gz" >> $OUT_READS
-      echo "$(basename $bam .bam).krakenuniq" >> $OUT_BASENAME
+      echo "$(basename $bam .bam)" >> $OUT_BASENAME
       echo "$(basename $bam .bam).krakenuniq-summary_report.txt" >> $OUT_REPORTS
     done
 
@@ -62,18 +62,23 @@ task krakenuniq {
     # run single-threaded krona on up to nproc samples at once
     parallel -I ,, \
       "metagenomics.py krona \
-        ,,-summary_report.txt \
+        ,,.krakenuniq-summary_report.txt \
         $DB_DIR/krona \
-        ,,-krona.html \
+        ,,.krakenuniq-krona.html \
+        --sample_name ,, \
         --noRank --noHits --inputType krakenuniq \
         --loglevel=DEBUG" \
       ::: `cat $OUT_BASENAME`
+
+    # merge all krona reports
+    ktImportKrona -o krakenuniq.krona.combined.html *.krakenuniq-krona.html
   }
 
   output {
     Array[File] krakenuniq_classified_reads   = glob("*.krakenuniq-reads.txt.gz")
     Array[File] krakenuniq_summary_reports    = glob("*.krakenuniq-summary_report.txt")
     Array[File] krona_report_html             = glob("*.krakenuniq-krona.html")
+    File        krona_report_merged_html      = "krakenuniq.krona.combined.html"
     String      viralngs_version              = read_string("VERSION")
   }
 
