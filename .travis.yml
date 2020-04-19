@@ -44,9 +44,9 @@ jobs:
 
     - language: java
       jdk: openjdk11
-      stage: validate
+      stage: build
       env:
-        - TRAVIS_JOB=validate_wdl_cromwell
+        - TRAVIS_JOB=validate_wdl_womtool
       install:
         - travis/install-wdl.sh
       script:
@@ -118,6 +118,8 @@ jobs:
           bucket:     viral-ngs-wdl
           local_dir:  pipes/WDL/flattened
           upload_dir: "$DEST_DIR"
+          on:
+              all_branches: true
 
     #- language: python
     #  stage: build
