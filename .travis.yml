@@ -40,7 +40,7 @@ jobs:
       script:
         - set -e
         - travis/version-wdl-runtimes.sh
-        - travis/validate-wdl-miniwdl.sh
+        - miniwdl check pipes/WDL/workflows/*.wdl
 
     - language: java
       jdk: openjdk11
