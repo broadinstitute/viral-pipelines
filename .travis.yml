@@ -98,19 +98,44 @@ jobs:
         - travis/version-wdl-runtimes.sh
         - travis/tests-miniwdl.sh
 
-    - language: python
-      stage: build
+    - stage: build
       env:
-        - TRAVIS_JOB=deploy_dockstore
-      install:
+        - TRAVIS_JOB=deploy_gcs
+      before_deploy:
         - set -e
+        - openssl aes-256-cbc -K $encrypted_6def3e87f286_key -iv $encrypted_6def3e87f286_iv -in travis/viral-ngs-wdl.json.enc -out travis/viral-ngs-wdl.json -d
+        - export DEST_DIR=`travis/list-docker-tags.sh | tail -1 | sed 's/:/\//'`
         - source travis/install-conda.sh
-        - conda install -y miniwdl shellcheck
-      script:
-        - set -e
+        - conda install -y miniwdl
         - travis/version-wdl-runtimes.sh
         - travis/flatten-wdls.sh
-        - echo "actual dockstore deploy not implemented yet"
+      deploy:
+          provider:   gcs
+          edge:       true
+          key_file:   travis/viral-ngs-wdl.json
+          bucket:     viral-ngs-wdl
+          local_dir:  pipes/WDL/flattened
+          upload_dir: "$DEST_DIR"
+
+    #- language: python
+    #  stage: build
+    #  env:
+    #    - TRAVIS_JOB=deploy_github
+    #  before_deploy:
+    #    - set -e
+    #    - source travis/install-conda.sh
+    #    - conda install -y miniwdl
+    #    - travis/version-wdl-runtimes.sh
+    #    - travis/flatten-wdls.sh
+    #  deploy:
+    #      provider: releases
+    #      edge:      true
+    #      api_key: "$GITHUB_OAUTH_TOKEN"
+    #      file_glob: true
+    #      file: pipes/WDL/flattened/*.wdl
+    #      skip_cleanup: true
+    #      on:
+    #        tags: true
 
     - language: python
       stage:    build
