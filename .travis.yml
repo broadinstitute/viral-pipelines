@@ -98,7 +98,8 @@ jobs:
         - travis/version-wdl-runtimes.sh
         - travis/tests-miniwdl.sh
 
-    - stage: build
+    - language: python
+      stage: build
       env:
         - TRAVIS_JOB=deploy_gcs
       before_deploy:
@@ -128,12 +129,10 @@ jobs:
     #    - travis/version-wdl-runtimes.sh
     #    - travis/flatten-wdls.sh
     #  deploy:
-    #      provider: releases
+    #      provider:  releases
     #      edge:      true
-    #      api_key: "$GITHUB_OAUTH_TOKEN"
-    #      file_glob: true
+    #      token:     "$GITHUB_OAUTH_TOKEN"
     #      file: pipes/WDL/flattened/*.wdl
-    #      skip_cleanup: true
     #      on:
     #        tags: true
 
