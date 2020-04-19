@@ -24,8 +24,7 @@ Continuous deploy to [Dockstore](https://dockstore.org/) is pending.
 Basic execution
 ---------------
 
-The easiest way to get started is on a single, Docker-capable machine (your laptop, shared workstation, or virtual machine) using [miniWDL](https://github.com/chanzuckerberg/miniwdl). MiniWDL can be installed via `pip` or `conda` (via conda-forge). After confirming that it works, you can use [miniwdl run](https://github.com/chanzuckerberg/miniwdl#miniwdl-run) to invoke WDL workflows from this repository.
-
+The easiest way to get started is on a single, Docker-capable machine (your laptop, shared workstation, or virtual machine) using [miniWDL](https://github.com/chanzuckerberg/miniwdl). MiniWDL can be installed via `pip` or `conda` (via conda-forge). After confirming that it works (`miniwdl run_self_test`, you can use [miniwdl run](https://github.com/chanzuckerberg/miniwdl#miniwdl-run) to invoke WDL workflows from this repository. For example: `miniwdl run https://storage.googleapis.com/viral-ngs-wdl/quay.io/broadinstitute/viral-pipelines/2.0.20.3/assemble_refbased.wdl` will execute the reference-based assembly pipeline, when provided with the appropriate inputs.
 
 Available workflows
 -------------------
