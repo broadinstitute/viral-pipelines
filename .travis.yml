@@ -118,6 +118,7 @@ jobs:
           bucket:     viral-ngs-wdl
           local_dir:  pipes/WDL/flattened
           upload_dir: "$DEST_DIR"
+          acl:        public-read
           on:
               all_branches: true
 
