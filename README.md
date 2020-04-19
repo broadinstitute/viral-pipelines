@@ -13,8 +13,13 @@ Workflows are written in [WDL](https://github.com/openwdl/wdl) format, currently
  - on commercial platform as a service vendors (like DNAnexus)
  - on academic cloud platforms (like Terra)
 
-(TO DO: describe how these are automatically pushed to dockstore, etc)
+Currently, all workflows are regularly deployed to a GCS bucket: [gs://viral-ngs-wdl](https://console.cloud.google.com/storage/browser/viral-ngs-wdl?forceOnBucketsSortingFiltering=false&organizationId=548622027621&project=gcid-viral-seq). 
 
+Workflows are also available in the [Terra featured workspace](https://app.terra.bio/#workspaces/pathogen-genomic-surveillance/COVID-19).
+
+Workflows are continuously deployed to a [DNAnexus CI project](https://platform.dnanexus.com/projects/F8PQ6380xf5bK0Qk0YPjB17P).
+
+Continuous deploy to [Dockstore](https://dockstore.org/) is pending.
 
 Basic execution
 ---------------
@@ -25,4 +30,4 @@ The easiest way to get started is on a single, Docker-capable machine (your lapt
 Available workflows
 -------------------
 
-(TO DO)
+Descriptions pending
