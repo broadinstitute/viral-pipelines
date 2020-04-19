@@ -9,7 +9,4 @@ for workflow in pipes/WDL/workflows/*.wdl; do
 	out_fn="$FLAT_DIR/$wf_base"
 	echo "flattening $workflow to $out_fn"
 	travis/paste_wdl_imports.py -o $out_fn $workflow
-
-	### DEBUG
-	cat $out_fn
 done
