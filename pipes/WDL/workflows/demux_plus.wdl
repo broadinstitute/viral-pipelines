@@ -39,13 +39,13 @@ workflow demux_plus {
     call reports.MultiQC as multiqc_raw {
         input:
             input_files = illumina_demux.raw_reads_fastqc_zip,
-            file_name   = "multiqc-raw"
+            file_name   = "multiqc-raw.html"
     }
 
     call reports.MultiQC as multiqc_cleaned {
         input:
             input_files = deplete.cleaned_fastqc_zip,
-            file_name   = "multiqc-cleaned"
+            file_name   = "multiqc-cleaned.html"
     }
 
     call metagenomics.krakenuniq as krakenuniq {
