@@ -317,12 +317,16 @@ task MultiQC {
       ${"--cl-config " + config_yaml } \
       ${input_directory}
 
+      if [ -z "${file_name}" ]; then
+        mv "${out_dir}/${report_filename}_report.html" "${out_dir}/${report_filename}.html"
+      fi
+
       tar -czvf "${report_filename}_data.tar.gz" "${out_dir}/${report_filename}_data"
   }
 
   output {
-      File multiqc_report = out_dir + "/" + report_filename + "_report.html"
-      File multiqc_data_dir_tarball = report_filename + "_data.tar.gz"
+      File multiqc_report            = "${out_dir}/${report_filename}.html"
+      File multiqc_data_dir_tarball  = "${report_filename}_data.tar.gz"
   }
 
   runtime {
