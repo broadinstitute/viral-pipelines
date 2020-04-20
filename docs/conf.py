@@ -23,10 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath('.')))
 
 # -- Mock out the heavyweight pip packages, esp those that require C ----
 import mock
-MOCK_MODULES = ['scipy', 'pysam', 'Bio', 'Bio.AlignIO', 'Bio.Alphabet',
-                'Bio.Alphabet.IUPAC', 'Bio.SeqIO', 'Bio.Data.IUPACData',
-                'Bio.Seq', 'Bio.SeqRecord', 'pybedtools', 'pybedtools.BedTool',
-                'arrow']
+MOCK_MODULES = []
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
 
@@ -52,7 +49,7 @@ __version__ = _git_version()
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.imgmath', 'sphinxarg.ext',]
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.imgmath', 'sphinxarg.ext', 'recommonmark', 'wdl-aid']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -68,7 +65,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'viral-ngs'
-copyright = '2015, Broad Institute Viral Genomics'
+copyright = '2014, Broad Institute Viral Genomics'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

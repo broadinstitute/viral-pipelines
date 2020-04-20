@@ -195,6 +195,18 @@ task ivar_trim {
 
     String  bam_basename=basename(aligned_bam, ".bam")
 
+    meta {
+      description: "this runs ivar trim on aligned reads, which results in soft-clipping of alignments"
+    }
+
+    parameter_meta {
+      aligned_bam:     { description: "aligned reads in BAM format" },
+      trim_coords_bed: { description: "optional primers to trim in reference coordinate space (0-based BED format)" },
+      min_keep_length: { description: "Minimum length of read to retain after trimming (Default: 30)" },
+      sliding_window:  { description: "Width of sliding window for quality trimming (Default: 4)" },
+      min_quality:     { description: "Minimum quality threshold for sliding window to pass (Default: 20)" }
+    }
+
     command {
         set -ex -o pipefail
         ivar version | head -1 | tee VERSION

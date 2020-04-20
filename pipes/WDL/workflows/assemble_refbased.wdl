@@ -4,6 +4,15 @@ import "../tasks/tasks_read_utils.wdl" as read_utils
 
 workflow assemble_refbased {
 
+    meta {
+        description: "Reference-based microbial consensus calling. Aligns short reads to a singular reference genome, calls a new consensus sequence, and emits: new assembly, reads aligned to provided reference, reads aligned to new assembly, various figures of merit, plots, and QC metrics. The user may provide unaligned reads spread across multiple input files and this workflow will parallelize alignment per input file before merging results prior to consensus calling."
+        authors: [
+            name:  "Viral Genomics",
+            email: "viral-ngs@broadinstitute.org",
+            organization: "Broad Institute of MIT and Harvard"
+        ]
+    }
+
     String          sample_name
     Array[File]+    reads_unmapped_bams
     File            reference_fasta
