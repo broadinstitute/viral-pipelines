@@ -317,6 +317,10 @@ task MultiQC {
       ${"--cl-config " + config_yaml } \
       ${input_directory}
 
+      if [ -n "${file_name}" ]; then
+        mv "${file_name}" "${out_dir}/${file_name}"
+      fi
+
       tar -czvf "${report_filename}_data.tar.gz" "${out_dir}/${report_filename}_data"
   }
 
