@@ -4,6 +4,8 @@ task merge_and_reheader_bams {
     String?         sample_name
     File?           reheader_table # tsv with 3 cols: field, old value, new value
     String          out_basename
+
+    Int?            machine_mem_gb
     String?         docker="quay.io/broadinstitute/viral-core"
 
     command {
@@ -45,7 +47,7 @@ task merge_and_reheader_bams {
 
     runtime {
         docker: "${docker}"
-        memory: "3 GB"
+        memory: select_first([machine_mem_gb, 3]) + " GB"
         cpu: 4
         disks: "local-disk 750 LOCAL"
         dx_instance_type: "mem1_ssd2_v2_x4"
@@ -59,6 +61,7 @@ task downsample_bams {
   Boolean?     deduplicateBefore=false
   Boolean?     deduplicateAfter=false
 
+  Int?         machine_mem_gb
   String?      docker="quay.io/broadinstitute/viral-core"
 
   command {
@@ -89,7 +92,7 @@ task downsample_bams {
   }
   runtime {
     docker: "${docker}"
-    memory: "3 GB"
+    memory: select_first([machine_mem_gb, 3]) + " GB"
     cpu:    4
     disks:  "local-disk 750 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x4"

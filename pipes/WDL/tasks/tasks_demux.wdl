@@ -2,6 +2,8 @@
 task merge_tarballs {
   Array[File]+  tar_chunks
   String        out_filename
+
+  Int?          machine_mem_gb
   String?       docker="quay.io/broadinstitute/viral-core"
 
   command {
@@ -25,7 +27,7 @@ task merge_tarballs {
 
   runtime {
     docker: "${docker}"
-    memory: "7 GB"
+    memory: select_first([machine_mem_gb, 7]) + " GB"
     cpu: 16
     disks: "local-disk 2625 LOCAL"
     dx_instance_type: "mem1_ssd2_v2_x16"
@@ -54,6 +56,7 @@ task illumina_demux {
   Int?    maxRecordsInRam
   Boolean? forceGC=true
 
+  Int?    machine_mem_gb
   String? docker="quay.io/broadinstitute/viral-core"
 
   command {
@@ -246,7 +249,7 @@ task illumina_demux {
 
   runtime {
     docker: "${docker}"
-    memory: "200 GB"
+    memory: select_first([machine_mem_gb, 200]) + " GB"
     cpu: 32
     disks: "local-disk 2625 LOCAL"
     dx_instance_type: "mem3_ssd2_v2_x32"

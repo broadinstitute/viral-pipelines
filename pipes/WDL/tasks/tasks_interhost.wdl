@@ -6,6 +6,8 @@ task multi_align_mafft_ref {
   Int?           mafft_maxIters
   Float?         mafft_ep
   Float?         mafft_gapOpeningPenalty
+
+  Int?           machine_mem_gb
   String?        docker="quay.io/broadinstitute/viral-phylo"
 
   command {
@@ -31,7 +33,7 @@ task multi_align_mafft_ref {
 
   runtime {
     docker: "${docker}"
-    memory: "28 GB"
+    memory: select_first([machine_mem_gb, 28]) + " GB"
     cpu: 8
     dx_instance_type: "mem2_ssd1_v2_x8"
   }
@@ -43,6 +45,8 @@ task multi_align_mafft {
   Int?           mafft_maxIters
   Float?         mafft_ep
   Float?         mafft_gapOpeningPenalty
+
+  Int?           machine_mem_gb
   String?        docker="quay.io/broadinstitute/viral-phylo"
 
   command {
@@ -68,7 +72,7 @@ task multi_align_mafft {
 
   runtime {
     docker: "${docker}"
-    memory: "7 GB"
+    memory: select_first([machine_mem_gb, 7]) + " GB"
     cpu: 8
     dx_instance_type: "mem1_ssd1_v2_x8"
   }
@@ -77,6 +81,8 @@ task multi_align_mafft {
 task index_ref {
   File     referenceGenome
   File?    novocraft_license
+
+  Int?     machine_mem_gb
   String?  docker="quay.io/broadinstitute/viral-core"
 
   command {
@@ -97,7 +103,7 @@ task index_ref {
   }
   runtime {
     docker: "${docker}"
-    memory: "4 GB"
+    memory: select_first([machine_mem_gb, 4]) + " GB"
   }
 }
 

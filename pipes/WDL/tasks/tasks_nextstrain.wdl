@@ -26,6 +26,8 @@ task filter_segments {
         File  all_samples_fasta
         Int?  segment = 1
         File? pre_assembled_samples_fasta
+
+        Int? machine_mem_gb
     }
     command <<<
     python3 <<CODE
@@ -54,7 +56,7 @@ task filter_segments {
     >>>
     runtime {
         docker : "python"
-        memory : "3 GB"
+        memory : select_first([machine_mem_gb, 3]) + " GB"
         cpu :    1
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x2"
@@ -75,6 +77,7 @@ task augur_mafft_align {
         Boolean? fill_gaps = true
         Boolean? remove_reference = true
 
+        Int?     machine_mem_gb
         String   docker = "nextstrain/base"
     }
     command {
@@ -90,7 +93,7 @@ task augur_mafft_align {
     }
     runtime {
         docker: docker
-        memory: "104 GB"
+        memory: select_first([machine_mem_gb, 104]) + " GB"
         cpu :   16
         disks:  "local-disk 375 LOCAL"
         preemptible: 2
@@ -113,6 +116,7 @@ task draft_augur_tree {
         File?    exclude_sites
         File?    vcf_reference
 
+        Int?     machine_mem_gb
         String   docker = "nextstrain/base"
     }
     command {
@@ -126,7 +130,7 @@ task draft_augur_tree {
     }
     runtime {
         docker: docker
-        memory: "30 GB"
+        memory: select_first([machine_mem_gb, 30]) + " GB"
         cpu :   16
         disks:  "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x16"
@@ -139,27 +143,28 @@ task draft_augur_tree {
 
 task refine_augur_tree {
     input {
-        File   raw_tree
-        File   aligned_fasta
-        File   metadata
-        String basename
+        File     raw_tree
+        File     aligned_fasta
+        File     metadata
+        String   basename
 
-        Int? gen_per_year
+        Int?     gen_per_year
         Boolean? clock_rate = false
         Boolean? clock_std_dev = false
         Boolean? keep_root = false
-        String? root
+        String?  root
         Boolean? covariance = false
         Boolean? no_covariance = false
         Boolean? keep_polytomies = false
-        Int? precision
+        Int?     precision
         Boolean? date_confidence = false
-        String? date_inference 
-        String? branch_length_inference
+        String?  date_inference 
+        String?  branch_length_inference
         Boolean? clock_filter_iqd = false
-        String? divergence_units
-        File? vcf_reference
+        String?  divergence_units
+        File?    vcf_reference
 
+        Int?     machine_mem_gb
         String   docker = "nextstrain/base"
     }
     command {
@@ -187,7 +192,7 @@ task refine_augur_tree {
     }
     runtime {
         docker: docker
-        memory: "30 GB"
+        memory: select_first([machine_mem_gb, 30]) + " GB"
         cpu :   16
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x16"
@@ -201,17 +206,18 @@ task refine_augur_tree {
 
 task ancestral_tree {
     input {
-        File refined_tree
-        File aligned_fasta
-        String basename
+        File     refined_tree
+        File     aligned_fasta
+        String   basename
 
-        String? inference
+        String?  inference
         Boolean? keep_ambiguous = false
         Boolean? infer_ambiguous = false
         Boolean? keep_overhangs = false
-        File? vcf_reference
-        File? output_vcf
+        File?    vcf_reference
+        File?    output_vcf
 
+        Int?     machine_mem_gb
         String   docker = "nextstrain/base"
     }
     command {
@@ -229,7 +235,7 @@ task ancestral_tree {
     }
     runtime {
         docker: docker
-        memory: "7 GB"
+        memory: select_first([machine_mem_gb, 7]) + " GB"
         cpu :   4
         disks: "local-disk 50 HDD"
         dx_instance_type: "mem1_ssd1_v2_x4"
@@ -252,7 +258,8 @@ task translate_augur_tree {
         File?  vcf_reference_output
         File?  vcf_reference
 
-        String   docker = "nextstrain/base"
+        Int?   machine_mem_gb
+        String docker = "nextstrain/base"
     }
     command {
         augur translate --tree ~{refined_tree} \
@@ -265,7 +272,7 @@ task translate_augur_tree {
     }
     runtime {
         docker: docker
-        memory: "3 GB"
+        memory: select_first([machine_mem_gb, 3]) + " GB"
         cpu :   2
         disks:  "local-disk 50 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
@@ -286,7 +293,8 @@ task export_auspice_json {
         File   aa_muts
         String basename
 
-        String   docker = "nextstrain/base"
+        Int?   machine_mem_gb
+        String docker = "nextstrain/base"
     }
     command {
         augur export v2 --tree ~{refined_tree} \
@@ -297,7 +305,7 @@ task export_auspice_json {
     }
     runtime {
         docker: docker
-        memory: "3 GB"
+        memory: select_first([machine_mem_gb, 3]) + " GB"
         cpu :   2
         disks:  "local-disk 100 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
