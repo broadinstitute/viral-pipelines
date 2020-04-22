@@ -15,6 +15,8 @@
 
 import sys
 import os
+import subprocess
+import wdl_aid
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -27,19 +29,26 @@ MOCK_MODULES = []
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
 
-    # -- Obtain GIT version --
-import subprocess
-
-
+# -- Obtain GIT version --
 def _git_version():
     cmd = ['git', 'describe', '--tags', '--always']  # omit "--dirty" from doc build
     out = subprocess.check_output(cmd)
     if type(out) != str:
         out = out.decode('utf-8')
     return out.strip()
-
-
 __version__ = _git_version()
+
+
+# -- make docs per workflow
+def _make_wdl_markdowns():
+    wf_dir = '../pipes/WDL/workflows'
+    workflows = os.listdir(wf_dir)
+    for wf in workflows:
+        fname_base = os.path.basename(wf, '.wdl')
+        subprocess.check_call(['wdl-aid', '-o', fname_base+'.md', os.path.join(wf_dir, wf)])
+        # add a line to workflows.rst about fname_base+'.md'
+
+_make_wdl_markdowns()
 
 # -- General configuration ------------------------------------------------
 
