@@ -173,7 +173,7 @@ task spikein_report {
   }
 
   runtime {
-    memory: select_first([machine_mem_gb, 3]) + " GB"
+    memory: select_first([machine_mem_gb, 7]) + " GB"
     cpu: 2
     docker: "${docker}"
     disks: "local-disk 375 LOCAL"
