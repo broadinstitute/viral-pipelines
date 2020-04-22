@@ -3,6 +3,8 @@ task download_fasta {
   String         out_prefix
   Array[String]+ accessions
   String         emailAddress
+
+  Int?           machine_mem_gb
   String?        docker="quay.io/broadinstitute/viral-phylo"
 
   command {
@@ -20,7 +22,7 @@ task download_fasta {
   }
   runtime {
     docker: "${docker}"
-    memory: "3 GB"
+    memory: select_first([machine_mem_gb, 3]) + " GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
@@ -30,6 +32,8 @@ task download_annotations {
   Array[String]+ accessions
   String         emailAddress
   String         combined_out_prefix
+
+  Int?           machine_mem_gb
   String?        docker="quay.io/broadinstitute/viral-phylo"
 
   command {
@@ -57,7 +61,7 @@ task download_annotations {
 
   runtime {
     docker: "${docker}"
-    memory: "3 GB"
+    memory: select_first([machine_mem_gb, 3]) + " GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
@@ -70,6 +74,7 @@ task annot_transfer {
 
   Array[Int]   chr_nums=range(length(multi_aln_fasta))
 
+  Int?         machine_mem_gb
   String?      docker="quay.io/broadinstitute/viral-phylo"
 
   command {
@@ -96,7 +101,7 @@ task annot_transfer {
   }
   runtime {
     docker: "${docker}"
-    memory: "3 GB"
+    memory: select_first([machine_mem_gb, 3]) + " GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
@@ -113,6 +118,8 @@ task prepare_genbank {
   String       comment # TO DO: make this optional
   String       organism
   String       molType = "cRNA"
+
+  Int?         machine_mem_gb
   String?      docker="quay.io/broadinstitute/viral-phylo"
 
   command {
@@ -147,7 +154,7 @@ task prepare_genbank {
 
   runtime {
     docker: "${docker}"
-    memory: "3 GB"
+    memory: select_first([machine_mem_gb, 3]) + " GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
   }

@@ -3,7 +3,8 @@ task krakenuniq {
   File        krakenuniq_db_tar_lz4  # {database.kdb,taxonomy}
   File        krona_taxonomy_db_tgz  # taxonomy.tab
 
-  String?     docker="quay.io/broadinstitute/viral-classify"
+  Int?    machine_mem_gb
+  String? docker="quay.io/broadinstitute/viral-classify"
 
 #  parameter_meta {
 #    krakenuniq_db_tar_lz4: "stream"
@@ -84,7 +85,7 @@ task krakenuniq {
 
   runtime {
     docker: "${docker}"
-    memory: "240 GB"
+    memory: select_first([machine_mem_gb, 240]) + " GB"
     cpu: 32
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem3_ssd1_v2_x32"
@@ -101,6 +102,8 @@ task build_krakenuniq_db {
   Int?        minimizerLen
   Int?        kmerLen
   Int?        maxDbSize
+
+  Int?        machine_mem_gb
   String?     docker="quay.io/broadinstitute/viral-classify"
 
   command {
@@ -145,7 +148,7 @@ task build_krakenuniq_db {
 
   runtime {
     docker: "${docker}"
-    memory: "240 GB"
+    memory: select_first([machine_mem_gb, 240]) + " GB"
     disks: "local-disk 375 LOCAL"
     cpu: 32
     dx_instance_type: "mem3_ssd1_v2_x32"
@@ -158,6 +161,7 @@ task kraken {
   File        kraken_db_tar_lz4      # {database.kdb,taxonomy}
   File        krona_taxonomy_db_tgz  # taxonomy.tab
 
+  Int?        machine_mem_gb
   String?     docker="quay.io/broadinstitute/viral-classify"
 
 #  parameter_meta {
@@ -225,7 +229,7 @@ task kraken {
 
   runtime {
     docker: "${docker}"
-    memory: "240 GB"
+    memory: select_first([machine_mem_gb, 240]) + " GB"
     cpu: 32
     disks: "local-disk 375 HDD"
     dx_instance_type: "mem3_ssd1_v2_x32"
@@ -242,6 +246,8 @@ task build_kraken_db {
   Int?        minimizerLen
   Int?        kmerLen
   Int?        maxDbSize
+
+  Int?        machine_mem_gb
   String?     docker="quay.io/broadinstitute/viral-classify"
 
   command {
@@ -286,7 +292,7 @@ task build_kraken_db {
 
   runtime {
     docker: "${docker}"
-    memory: "240 GB"
+    memory: select_first([machine_mem_gb, 240]) + " GB"
     disks: "local-disk 375 HDD"
     cpu: 32
     dx_instance_type: "mem3_ssd1_v2_x32"
@@ -303,6 +309,8 @@ task krona {
   Int?     taxid_column
   Int?     score_column
   Int?     magnitude_column
+
+  Int?     machine_mem_gb
   String?  docker="quay.io/broadinstitute/viral-classify"
 
   String  input_basename = basename(classified_reads_txt_gz, ".txt.gz")
@@ -339,7 +347,7 @@ task krona {
 
   runtime {
     docker: "${docker}"
-    memory: "3 GB"
+    memory: select_first([machine_mem_gb, 3]) + " GB"
     cpu: 1
     disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd2_v2_x2"
@@ -350,6 +358,7 @@ task krona_merge {
   Array[File]  krona_reports
   String       out_basename
 
+  Int?         machine_mem_gb
   String?      docker="biocontainers/krona:v2.7.1_cv1"
 
   command {
@@ -365,7 +374,7 @@ task krona_merge {
 
   runtime {
     docker: "${docker}"
-    memory: "3 GB"
+    memory: select_first([machine_mem_gb, 3]) + " GB"
     cpu: 1
     disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd2_v2_x2"
@@ -380,6 +389,7 @@ task filter_bam_to_taxa {
   Array[Int]?    taxonomic_ids
   Boolean?       withoutChildren=false
 
+  Int?           machine_mem_gb
   String?        docker="quay.io/broadinstitute/viral-classify"
 
   String         input_basename = basename(classified_bam, ".bam")
@@ -428,7 +438,7 @@ task filter_bam_to_taxa {
 
   runtime {
     docker: "${docker}"
-    memory: "4 GB"
+    memory: select_first([machine_mem_gb, 4]) + " GB"
     disks: "local-disk 375 LOCAL"
     cpu: 1
     dx_instance_type: "mem1_ssd2_v2_x2"
@@ -442,6 +452,7 @@ task kaiju {
   File     ncbi_taxonomy_db_tgz # taxonomy/{nodes.dmp, names.dmp}
   File     krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
 
+  Int?     machine_mem_gb
   String?  docker="quay.io/broadinstitute/viral-classify"
 
   String   input_basename = basename(reads_unmapped_bam, ".bam")
@@ -501,7 +512,7 @@ task kaiju {
 
   runtime {
     docker: "${docker}"
-    memory: "100 GB"
+    memory: select_first([machine_mem_gb, 100]) + " GB"
     cpu: 16
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem3_ssd1_v2_x16"

@@ -12,6 +12,7 @@ task deplete_taxa {
   Boolean?     clear_tags = false
   String?      tags_to_clear_space_separated = "XT X0 X1 XA AM SM BQ CT XN OC OP"
 
+  Int?         machine_mem_gb
   String?      docker="quay.io/broadinstitute/viral-classify"
 
   String       bam_basename = basename(raw_reads_unmapped_bam, ".bam")
@@ -73,7 +74,7 @@ task deplete_taxa {
   }
   runtime {
     docker: "${docker}"
-    memory: "15 GB"
+    memory: select_first([machine_mem_gb, 15]) + " GB"
     cpu: 8
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x8"
@@ -94,6 +95,7 @@ task filter_to_taxon {
   Int?     negative_control_reads_threshold = 0
   String?  neg_control_prefixes_space_separated = "neg water NTC"
 
+  Int?     machine_mem_gb
   String?  docker="quay.io/broadinstitute/viral-classify"
 
   # do this in two steps in case the input doesn't actually have "cleaned" in the name
@@ -137,7 +139,7 @@ task filter_to_taxon {
   }
   runtime {
     docker: "${docker}"
-    memory: "14 GB"
+    memory: select_first([machine_mem_gb, 15]) + " GB"
     cpu: 16
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x8"
@@ -146,7 +148,10 @@ task filter_to_taxon {
 
 task build_lastal_db {
   File    sequences_fasta
+
+  Int?    machine_mem_gb
   String? docker="quay.io/broadinstitute/viral-classify"
+
   String  db_name = basename(sequences_fasta, ".fasta")
 
   command {
@@ -163,7 +168,7 @@ task build_lastal_db {
 
   runtime {
     docker: "${docker}"
-    memory: "7 GB"
+    memory: select_first([machine_mem_gb, 7]) + " GB"
     cpu: 2
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x4"
@@ -207,7 +212,7 @@ task merge_one_per_sample {
   }
 
   runtime{
-    memory: "7 GB"
+    memory: select_first([machine_mem_gb, 7]) + " GB"
     cpu: 4
     docker: "${docker}"
     disks: "local-disk 750 LOCAL"

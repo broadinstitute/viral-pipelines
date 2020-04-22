@@ -4,6 +4,8 @@ task Fetch_SRA_to_BAM {
 
     input {
         String  SRA_ID
+
+        Int?    machine_mem_gb
         String  docker = "quay.io/broadinstitute/ncbi-tools"
     }
 
@@ -66,7 +68,7 @@ task Fetch_SRA_to_BAM {
 
     runtime {
         cpu:     4
-        memory:  "15 GB"
+        memory:  select_first([machine_mem_gb, 15]) + " GB"
         disks:   "local-disk 750 LOCAL"
         dx_instance_type: "mem2_ssd1_v2_x4"
         docker:  "${docker}"

@@ -12,6 +12,7 @@ task assemble {
     # do this in two steps in case the input doesn't actually have "taxfilt" in the name
     String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
 
+    Int?     machine_mem_gb
     String?  docker="quay.io/broadinstitute/viral-assemble"
 
 
@@ -85,7 +86,7 @@ task assemble {
 
     runtime {
         docker: "${docker}"
-        memory: "15 GB"
+        memory: select_first([machine_mem_gb, 15]) + " GB"
         cpu: 4
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
@@ -108,6 +109,7 @@ task scaffold {
     Int?         nucmer_min_cluster
     Float?       scaffold_min_pct_contig_aligned
 
+    Int?         machine_mem_gb
     String?      docker="quay.io/broadinstitute/viral-assemble"
 
     # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
@@ -174,7 +176,7 @@ task scaffold {
 
     runtime {
         docker: "${docker}"
-        memory: "15 GB"
+        memory: select_first([machine_mem_gb, 15]) + " GB"
         cpu: 4
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
@@ -188,6 +190,7 @@ task ivar_trim {
     Int?    sliding_window
     Int?    min_quality
 
+    Int?    machine_mem_gb
     String? docker="andersenlabapps/ivar:1.2.1"
 
     String  bam_basename=basename(aligned_bam, ".bam")
@@ -211,7 +214,7 @@ task ivar_trim {
 
     runtime {
         docker: "${docker}"
-        memory: "7 GB"
+        memory: select_first([machine_mem_gb, 7]) + " GB"
         cpu: 4
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x4"
@@ -228,6 +231,7 @@ task align_reads {
   String?  aligner_options
   Boolean? skip_mark_dupes=false
 
+  Int?     machine_mem_gb
   String?  docker="quay.io/broadinstitute/viral-core"
 
   String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
@@ -303,7 +307,7 @@ task align_reads {
 
   runtime {
     docker: "${docker}"
-    memory: "7000 MB"
+    memory: select_first([machine_mem_gb, 7]) + " GB"
     cpu: 8
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x8"
@@ -320,6 +324,7 @@ task refine_assembly_with_aligned_reads {
     Float?   major_cutoff=0.5
     Int?     min_coverage=2
 
+    Int?     machine_mem_gb
     String?  docker="quay.io/broadinstitute/viral-assemble"
 
     command {
@@ -371,7 +376,7 @@ task refine_assembly_with_aligned_reads {
 
     runtime {
         docker: "${docker}"
-        memory: "7 GB"
+        memory: select_first([machine_mem_gb, 7]) + " GB"
         cpu: 8
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
@@ -389,6 +394,7 @@ task refine {
     Float?  major_cutoff=0.5
     Int?    min_coverage=1
 
+    Int?    machine_mem_gb
     String? docker="quay.io/broadinstitute/viral-assemble"
 
     String  assembly_basename=basename(basename(assembly_fasta, ".fasta"), ".scaffold")
@@ -428,7 +434,7 @@ task refine {
 
     runtime {
         docker: "${docker}"
-        memory: "7 GB"
+        memory: select_first([machine_mem_gb, 7]) + " GB"
         cpu: 8
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
@@ -460,6 +466,7 @@ task refine_2x_and_plot {
 
     String? plot_coverage_novoalign_options="-r Random -l 40 -g 40 -x 20 -t 100 -k"
 
+    Int?    machine_mem_gb
     String? docker="quay.io/broadinstitute/viral-assemble"
 
     # do this in two steps in case the input doesn't actually have "cleaned" in the name
@@ -572,7 +579,7 @@ task refine_2x_and_plot {
 
     runtime {
         docker: "${docker}"
-        memory: "7 GB"
+        memory: select_first([machine_mem_gb, 7]) + " GB"
         cpu: 8
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
