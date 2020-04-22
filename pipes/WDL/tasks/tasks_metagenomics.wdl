@@ -85,10 +85,10 @@ task krakenuniq {
 
   runtime {
     docker: "${docker}"
-    memory: select_first([machine_mem_gb, 240]) + " GB"
+    memory: select_first([machine_mem_gb, 320]) + " GB"
     cpu: 32
     disks: "local-disk 375 LOCAL"
-    dx_instance_type: "mem3_ssd1_v2_x32"
+    dx_instance_type: "mem3_ssd1_v2_x48"
     preemptible: 0
   }
 }
@@ -229,10 +229,10 @@ task kraken {
 
   runtime {
     docker: "${docker}"
-    memory: select_first([machine_mem_gb, 240]) + " GB"
+    memory: select_first([machine_mem_gb, 320]) + " GB"
     cpu: 32
     disks: "local-disk 375 HDD"
-    dx_instance_type: "mem3_ssd1_v2_x32"
+    dx_instance_type: "mem3_ssd1_v2_x48"
     preemptible: 0
   }
 }

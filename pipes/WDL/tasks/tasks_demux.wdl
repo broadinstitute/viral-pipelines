@@ -249,7 +249,7 @@ task illumina_demux {
 
   runtime {
     docker: "${docker}"
-    memory: select_first([machine_mem_gb, 240]) + " GB"
+    memory: select_first([machine_mem_gb, 200]) + " GB"
     cpu: 32
     disks: "local-disk 2625 LOCAL"
     dx_instance_type: "mem3_ssd2_v2_x32"
