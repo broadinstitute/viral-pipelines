@@ -43,14 +43,15 @@ __version__ = _git_version()
 def _make_wdl_markdowns():
     wf_dir = '../pipes/WDL/workflows'
     workflows = os.listdir(wf_dir)
-    for wf in sorted(workflows):
-        fname_base = os.path.basename(wf)
-        if fname_base.endswith('.wdl'):
-            fname_base = fname_base[:-4]
-            subprocess.check_call(['wdl-aid', '-o', fname_base+'.md', os.path.join(wf_dir, fname_base)+'.wdl'])
-            with open('workflows.rst', 'a') as outf:
+    with open('workflows.rst', 'a') as outf:
+        for wf in sorted(workflows):
+            fname_base = os.path.basename(wf)
+            if fname_base.endswith('.wdl'):
+                fname_base = fname_base[:-4]
+                subprocess.check_call(['wdl-aid', '-o', fname_base+'.md', os.path.join(wf_dir, fname_base)+'.wdl'])
                 outf.write("   {}_\n".format(fname_base))
             #    outf.write(" - `{} <{}.md>`_\n".format(fname_base, fname_base))
+        outf.write("\n")
 _make_wdl_markdowns()
 
 # -- General configuration ------------------------------------------------
