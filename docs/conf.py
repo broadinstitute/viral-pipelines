@@ -50,7 +50,6 @@ def _make_wdl_markdowns():
                 fname_base = fname_base[:-4]
                 subprocess.check_call(['wdl-aid', '-o', fname_base+'.md', os.path.join(wf_dir, wf)])
                 outf.write("   {}\n".format(fname_base))
-            #    outf.write(" - `{} <{}.md>`_\n".format(fname_base, fname_base))
         outf.write("\n")
 _make_wdl_markdowns()
 
