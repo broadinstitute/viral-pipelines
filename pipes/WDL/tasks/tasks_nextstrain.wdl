@@ -297,9 +297,15 @@ task export_auspice_json {
         String docker = "nextstrain/base"
     }
     command {
+
+        NODE_DATA_FLAG=""
+        if [[ -n "~{branch_lengths}" || -n "~{nt_muts}" || -n "~{aa_muts}" ]]; then
+          NODE_DATA_FLAG="--node-data "
+        fi
+
         augur export v2 --tree ~{refined_tree} \
             --metadata ~{metadata} \
-            --node-data ~{branch_lengths} ~{nt_muts} ~{aa_muts}\
+            $NODE_DATA_FLAG ~{sep=' ' select_all([branch_lengths,nt_muts,aa_muts])}\
             --auspice-config ~{auspice_config} \
             --output ~{basename}_auspice.json
     }
