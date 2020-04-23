@@ -288,9 +288,9 @@ task export_auspice_json {
         File   auspice_config
         File   metadata
         File   refined_tree
-        File   branch_lengths
-        File   nt_muts
-        File   aa_muts
+        File?   branch_lengths
+        File?   nt_muts
+        File?   aa_muts
         String basename
 
         Int?   machine_mem_gb
