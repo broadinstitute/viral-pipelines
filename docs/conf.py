@@ -44,10 +44,11 @@ def _make_wdl_markdowns():
     wf_dir = '../pipes/WDL/workflows'
     workflows = os.listdir(wf_dir)
     for wf in workflows:
-        fname_base = os.path.basename(wf, '.wdl')
-        subprocess.check_call(['wdl-aid', '-o', fname_base+'.md', os.path.join(wf_dir, wf)])
-        # add a line to workflows.rst about fname_base+'.md'
-
+        fname_base = os.path.basename(wf)
+        if fname_base.endswith('.wdl'):
+            fname_base = fname_base[:-4]
+            subprocess.check_call(['wdl-aid', '-o', fname_base+'.md', os.path.join(wf_dir, wf)])
+            # add a line to workflows.rst about fname_base+'.md'
 _make_wdl_markdowns()
 
 # -- General configuration ------------------------------------------------
