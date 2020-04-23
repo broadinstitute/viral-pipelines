@@ -29,4 +29,4 @@ The easiest way to get started is on a single, Docker-capable machine (your lapt
 Available workflows
 -------------------
 
-Descriptions pending
+The workflows provided here are more fully documented at our [ReadTheDocs](https://viral-pipelines.readthedocs.io/) page.

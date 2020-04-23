@@ -16,3 +16,4 @@ Contents
    
    description
    pipes-wdl
+   workflows
