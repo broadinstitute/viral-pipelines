@@ -17,4 +17,3 @@ Contents
    description
    pipes-wdl
    workflows
-   test_doc
