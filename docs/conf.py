@@ -49,6 +49,8 @@ def _make_wdl_markdowns():
             fname_base = fname_base[:-4]
             subprocess.check_call(['wdl-aid', '-o', fname_base+'.md', os.path.join(wf_dir, wf)])
             # add a line to workflows.rst about fname_base+'.md'
+            with open('workflows.rst', 'a') as outf:
+                outf.write(" - `{} <{}.md>`_\n".format(fname_base, fname_base))
 _make_wdl_markdowns()
 
 # -- General configuration ------------------------------------------------
