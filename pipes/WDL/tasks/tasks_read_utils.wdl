@@ -1,10 +1,14 @@
 version 1.0
 
 task merge_and_reheader_bams {
+    meta {
+      description: "Merge and/or reheader bam files using a mapping table. This task can modify read group tags in a BAM header field for single BAM files or as part of a BAM merge operation. The output is a single BAM file (given one or more input BAMs) and a three-column tab delimited text table that defines: the field, the old value, and the new value (e.g. LB, old_lib_name, new_lib_name or SM, old_sample_name, new_sample_name)"
+    }
+
     input {
       Array[File]+    in_bams
       String?         sample_name
-      File?           reheader_table # tsv with 3 cols: field, old value, new value
+      File?           reheader_table
       String          out_basename
 
       Int?            machine_mem_gb
@@ -59,6 +63,10 @@ task merge_and_reheader_bams {
 }
 
 task downsample_bams {
+  meta {
+    description: "Downsample reads in a BAM file randomly subsampling to a target read count. Read deduplication can occur either before or after random subsampling, or not at all (default: not at all)."
+  }
+
   input {
     Array[File]  reads_bam
     Int?         readCount

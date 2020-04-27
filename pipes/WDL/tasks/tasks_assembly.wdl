@@ -241,6 +241,10 @@ task ivar_trim {
 }
 
 task align_reads {
+  meta {
+    description: "Align unmapped reads to a reference genome, either using novoalign (default) or bwa. Produces an aligned bam file (including all unmapped reads), an aligned-only bam file, both sorted and indexed, along with samtools flagstat output, fastqc stats (on mapped only reads), and some basic figures of merit."
+  }
+
   input {
     File     reference_fasta
     File     reads_unmapped_bam
@@ -337,6 +341,10 @@ task align_reads {
 }
 
 task refine_assembly_with_aligned_reads {
+    meta {
+      description: "This step refines/polishes a genome based on short read alignments, producing a new consensus genome. Uses GATK3 Unified Genotyper to produce new consensus. Produces new genome (fasta), variant calls (VCF), and figures of merit."
+    }
+
     input {
       File     reference_fasta
       File     reads_aligned_bam
@@ -407,6 +415,10 @@ task refine_assembly_with_aligned_reads {
 }
 
 task refine {
+    meta {
+      description: "This step refines/polishes a genome based on unmapped short reads, aligning them (with either novoalign or bwa), and producing a new consensus genome. Uses GATK3 Unified Genotyper to produce new consensus. Produces new genome (fasta), variant calls (VCF), and figures of merit."
+    }
+
     input {
       File    assembly_fasta
       File    reads_unmapped_bam
@@ -468,7 +480,7 @@ task refine {
 
 task refine_2x_and_plot {
     meta {
-      description: "This combined task exists just to streamline the two calls to assembly.refine and one call to reports.plot_coverage that almost every assembly workflow uses. It saves on instance spin up and docker pull times, file staging time, and all steps contained here have similar hardware requirements. It is also extremely rare for analyses to branch off of intermediate products between these three steps. The more atomic WDL tasks are still available for custom workflows."
+      description: "This combined task exists just to streamline the two calls to assembly.refine and one call to reports.plot_coverage that many denovo assembly workflows use. It saves on instance spin up and docker pull times, file staging time, and all steps contained here have similar hardware requirements. The more atomic WDL tasks are still available for custom workflows (see refine, refine_assembly_with_aligned_reads, align_reads, etc)."
     }
 
     input {
