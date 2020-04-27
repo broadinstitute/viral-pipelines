@@ -21,7 +21,7 @@ task merge_and_reheader_bams {
             read_utils.py merge_bams ${sep=' ' in_bams} merged.bam --JVMmemory="$mem_in_mb"m --loglevel DEBUG
         else
             echo "Skipping merge, only one input file"
-            cp ${select_first(in_bams)} merged.bam
+            cp ${sep=' ' in_bams} merged.bam
         fi    
 
         # remap all SM values to user specified value
