@@ -1,3 +1,5 @@
+version 1.0
+
 import "../tasks/tasks_assembly.wdl" as assembly
 import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_read_utils.wdl" as read_utils
@@ -10,13 +12,15 @@ workflow assemble_refbased {
         email:  "viral-ngs@broadinstitute.org"
     }
 
-    String          sample_name
-    Array[File]+    reads_unmapped_bams
-    File            reference_fasta
+    input {
+        String          sample_name
+        Array[File]+    reads_unmapped_bams
+        File            reference_fasta
 
-    File?           novocraft_license
-    Boolean?        skip_mark_dupes=false
-    File?           trim_coords_bed
+        File?           novocraft_license
+        Boolean?        skip_mark_dupes=false
+        File?           trim_coords_bed
+    }
 
     scatter(reads_unmapped_bam in reads_unmapped_bams) {
         call assembly.align_reads as align_to_ref {

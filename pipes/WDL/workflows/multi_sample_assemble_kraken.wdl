@@ -1,3 +1,5 @@
+version 1.0
+
 import "../tasks/tasks_demux.wdl" as demux
 import "../tasks/tasks_metagenomics.wdl" as metagenomics
 import "../tasks/tasks_taxon_filter.wdl" as taxon_filter
@@ -6,32 +8,24 @@ import "../tasks/tasks_reports.wdl" as reports
 
 workflow multi_sample_assemble_kraken {
 
-	Array[File]+ raw_uBAMs
-    Array[File]+ reference_genome_fasta
-    File spikein_db
-    File trim_clip_db
-    Array[File]? bmtaggerDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
-    Array[File]? blastDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
-    Array[File]? bwaDbs
+    input {
+    	Array[File]+ raw_uBAMs
+        Array[File]+ reference_genome_fasta
+    }
     
     scatter(raw_reads in raw_uBAMs) {
         call reports.spikein_report as spikein {
             input:
-                reads_bam = raw_reads,
-                spikein_db = spikein_db
+                reads_bam = raw_reads
         }
         call taxon_filter.deplete_taxa as deplete {
             input:
-                raw_reads_unmapped_bam = raw_reads,
-                bmtaggerDbs = bmtaggerDbs,
-                blastDbs = blastDbs,
-                bwaDbs = bwaDbs
+                raw_reads_unmapped_bam = raw_reads
         }
         call assembly.assemble as spades {
             input:
                 assembler = "spades",
                 reads_unmapped_bam = deplete.cleaned_bam,
-                trim_clip_db = trim_clip_db,
                 always_succeed = true
         }
         call assembly.scaffold {

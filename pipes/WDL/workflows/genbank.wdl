@@ -1,10 +1,14 @@
+version 1.0
+
 import "../tasks/tasks_interhost.wdl" as interhost
 import "../tasks/tasks_ncbi.wdl" as ncbi
 
 workflow genbank {
 
-    File          reference_fasta
-    Array[File]+  assemblies_fasta     # one per genome
+    input {
+        File          reference_fasta
+        Array[File]+  assemblies_fasta     # one per genome
+    }
 
     call interhost.multi_align_mafft_ref as mafft {
         input:

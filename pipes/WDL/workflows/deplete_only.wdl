@@ -1,3 +1,5 @@
+version 1.0
+
 import "../tasks/tasks_taxon_filter.wdl" as taxon_filter
 
 workflow deplete_only {

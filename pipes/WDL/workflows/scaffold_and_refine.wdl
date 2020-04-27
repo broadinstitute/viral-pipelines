@@ -1,7 +1,11 @@
+version 1.0
+
 import "../tasks/tasks_assembly.wdl" as assembly
 
 workflow scaffold_and_refine {
-    File reads_unmapped_bam
+    input {
+        File reads_unmapped_bam
+    }
 
     call assembly.scaffold {
         input:
@@ -13,5 +17,4 @@ workflow scaffold_and_refine {
             assembly_fasta = scaffold.scaffold_fasta,
             reads_unmapped_bam = reads_unmapped_bam
     }
-
 }

@@ -1,3 +1,5 @@
+version 1.0
+
 import "../tasks/tasks_assembly.wdl" as assembly
 
 workflow assemble_refbased_old {
