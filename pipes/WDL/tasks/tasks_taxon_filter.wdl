@@ -1,7 +1,7 @@
 version 1.0
 
 task deplete_taxa {
-  meta { description: "Runs a full human read depletion pipeline and removes PCR duplicates" }
+  meta { description: "Runs a full human read depletion pipeline and removes PCR duplicates. Input database files (bmtaggerDbs, blastDbs, bwaDbs) may be any combination of: .fasta, .fasta.gz, or tarred up indexed fastas (using the software's indexing method) as .tar.gz, .tar.bz2, .tar.lz4, or .tar.zst." }
 
   input {
     File         raw_reads_unmapped_bam

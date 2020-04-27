@@ -75,14 +75,20 @@ task download_annotations {
 
 task annot_transfer {
   input {
-    Array[File]+ multi_aln_fasta         # fasta; multiple alignments of sample sequences for each chromosome
-    File         reference_fasta         # fasta; all chromosomes in one file
-    Array[File]+ reference_feature_table # tbl; feature table corresponding to each chromosome in the alignment
-
-    Array[Int]   chr_nums=range(length(multi_aln_fasta))
+    Array[File]+ multi_aln_fasta
+    File         reference_fasta
+    Array[File]+ reference_feature_table
 
     Int?         machine_mem_gb
     String?      docker="quay.io/broadinstitute/viral-phylo"
+  }
+
+  Array[Int]   chr_nums=range(length(multi_aln_fasta))
+
+  parameter_meta {
+    multi_aln_fasta:         { description: "fasta; multiple alignments of sample sequences for each chromosome" }
+    reference_fasta:         { description: "fasta; all chromosomes in one file" }
+    reference_feature_table: { description: "tbl; feature table corresponding to each chromosome in the alignment" }
   }
 
   command {

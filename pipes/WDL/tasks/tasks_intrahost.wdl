@@ -41,17 +41,25 @@ task isnvs_per_sample {
 
 task isnvs_vcf {
   input {
-    Array[File]    vphaser2Calls # vphaser output; ex. vphaser2.${sample}.txt.gz
-    Array[File]    perSegmentMultiAlignments # aligned_##.fasta, where ## is segment number
+    Array[File]    vphaser2Calls
+    Array[File]    perSegmentMultiAlignments
     File           reference_fasta
 
-    Array[String]? snpEffRef # list of accessions to build/find snpEff database
-    Array[String]? sampleNames # list of sample names
-    String?        emailAddress # email address passed to NCBI if we need to download reference sequences
+    Array[String]? snpEffRef
+    Array[String]? sampleNames
+    String?        emailAddress
     Boolean        naiveFilter=false
 
     Int?           machine_mem_gb
     String?        docker="quay.io/broadinstitute/viral-phylo"
+  }
+
+  parameter_meta {
+    vphaser2Calls:             { description: "vphaser output; ex. vphaser2.<sample>.txt.gz" }
+    perSegmentMultiAlignments: { description: "aligned_##.fasta, where ## is segment number" }
+    snpEffRef:                 { description: "list of accessions to build/find snpEff database" }
+    sampleNames:               { description: "list of sample names" }
+    emailAddress:              { description: "email address passed to NCBI if we need to download reference sequences" }
   }
 
   command {
