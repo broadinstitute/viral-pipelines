@@ -1,3 +1,5 @@
+version 1.0
+
 import "../tasks/tasks_demux.wdl" as demux
 import "../tasks/tasks_metagenomics.wdl" as metagenomics
 import "../tasks/tasks_taxon_filter.wdl" as taxon_filter
@@ -6,13 +8,15 @@ import "../tasks/tasks_reports.wdl" as reports
 
 workflow demux_plus {
 
-    call demux.illumina_demux as illumina_demux
+    input {
+        File spikein_db
+        File trim_clip_db
+        Array[File]? bmtaggerDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
+        Array[File]? blastDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
+        Array[File]? bwaDbs
+    }
 
-    File spikein_db
-    File trim_clip_db
-    Array[File]? bmtaggerDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
-    Array[File]? blastDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
-    Array[File]? bwaDbs
+    call demux.illumina_demux as illumina_demux
 
     scatter(raw_reads in illumina_demux.raw_reads_unaligned_bams) {
         call reports.spikein_report as spikein {

@@ -1,9 +1,12 @@
+version 1.0
+
 import "../tasks/tasks_taxon_filter.wdl" as taxon_filter
 import "../tasks/tasks_assembly.wdl" as assembly
 
 workflow assemble_denovo {
-  
-  File reads_unmapped_bam
+  input {  
+    File reads_unmapped_bam
+  }
 
   call taxon_filter.filter_to_taxon {
     input:

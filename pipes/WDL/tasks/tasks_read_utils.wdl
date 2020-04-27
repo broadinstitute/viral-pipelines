@@ -1,12 +1,19 @@
+version 1.0
 
 task merge_and_reheader_bams {
-    Array[File]+    in_bams
-    String?         sample_name
-    File?           reheader_table # tsv with 3 cols: field, old value, new value
-    String          out_basename
+    meta {
+      description: "Merge and/or reheader bam files using a mapping table. This task can modify read group tags in a BAM header field for single BAM files or as part of a BAM merge operation. The output is a single BAM file (given one or more input BAMs) and a three-column tab delimited text table that defines: the field, the old value, and the new value (e.g. LB, old_lib_name, new_lib_name or SM, old_sample_name, new_sample_name)"
+    }
 
-    Int?            machine_mem_gb
-    String?         docker="quay.io/broadinstitute/viral-core"
+    input {
+      Array[File]+    in_bams
+      String?         sample_name
+      File?           reheader_table
+      String          out_basename
+
+      Int?            machine_mem_gb
+      String?         docker="quay.io/broadinstitute/viral-core"
+    }
 
     command {
         set -ex -o pipefail
@@ -18,7 +25,7 @@ task merge_and_reheader_bams {
             read_utils.py merge_bams ${sep=' ' in_bams} merged.bam --JVMmemory="$mem_in_mb"m --loglevel DEBUG
         else
             echo "Skipping merge, only one input file"
-            cp ${select_first(in_bams)} merged.bam
+            cp ${sep=' ' in_bams} merged.bam
         fi    
 
         # remap all SM values to user specified value
@@ -56,13 +63,19 @@ task merge_and_reheader_bams {
 }
 
 task downsample_bams {
-  Array[File]  reads_bam
-  Int?         readCount
-  Boolean?     deduplicateBefore=false
-  Boolean?     deduplicateAfter=false
+  meta {
+    description: "Downsample reads in a BAM file randomly subsampling to a target read count. Read deduplication can occur either before or after random subsampling, or not at all (default: not at all)."
+  }
 
-  Int?         machine_mem_gb
-  String?      docker="quay.io/broadinstitute/viral-core"
+  input {
+    Array[File]  reads_bam
+    Int?         readCount
+    Boolean?     deduplicateBefore=false
+    Boolean?     deduplicateAfter=false
+
+    Int?         machine_mem_gb
+    String?      docker="quay.io/broadinstitute/viral-core"
+  }
 
   command {
     if [[ "${deduplicateBefore}" == "true" ]]; then
@@ -90,6 +103,7 @@ task downsample_bams {
     Array[File] downsampled_bam  = glob("output/*.downsampled-*.bam")
     String      viralngs_version = read_string("VERSION")
   }
+
   runtime {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 3]) + " GB"
@@ -98,5 +112,3 @@ task downsample_bams {
     dx_instance_type: "mem1_ssd1_v2_x4"
   }
 }
-
-

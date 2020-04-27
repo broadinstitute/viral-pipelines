@@ -1,15 +1,18 @@
+version 1.0
 
 task plot_coverage {
-  File     aligned_reads_bam
-  String   sample_name
+  input {
+    File     aligned_reads_bam
+    String   sample_name
 
-  Boolean? skip_mark_dupes=false
-  Boolean? plot_only_non_duplicates=false
-  Boolean? bin_large_plots=false
-  String?  binning_summary_statistic="max" # max or min
+    Boolean? skip_mark_dupes=false
+    Boolean? plot_only_non_duplicates=false
+    Boolean? bin_large_plots=false
+    String?  binning_summary_statistic="max" # max or min
 
-  Int?     machine_mem_gb
-  String?  docker="quay.io/broadinstitute/viral-core"
+    Int?     machine_mem_gb
+    String?  docker="quay.io/broadinstitute/viral-core"
+  }
   
   command {
     set -ex -o pipefail
@@ -76,14 +79,15 @@ task plot_coverage {
   }
 }
 
-
 task coverage_report {
-  Array[File]+ mapped_bams
-  Array[File]  mapped_bam_idx # optional.. speeds it up if you provide it, otherwise we auto-index
-  String       out_report_name="coverage_report.txt"
+  input {
+    Array[File]+ mapped_bams
+    Array[File]  mapped_bam_idx # optional.. speeds it up if you provide it, otherwise we auto-index
+    String       out_report_name="coverage_report.txt"
 
-  Int?         machine_mem_gb
-  String?      docker="quay.io/broadinstitute/viral-core"
+    Int?         machine_mem_gb
+    String?      docker="quay.io/broadinstitute/viral-core"
+  }
 
   command {
     reports.py --version | tee VERSION
@@ -109,10 +113,12 @@ task coverage_report {
 
 
 task fastqc {
-  File     reads_bam
+  input {
+    File     reads_bam
 
-  Int?     machine_mem_gb
-  String?  docker="quay.io/broadinstitute/viral-core"
+    Int?     machine_mem_gb
+    String?  docker="quay.io/broadinstitute/viral-core"
+  }
 
   String   reads_basename=basename(reads_bam, ".bam")
 
@@ -137,15 +143,16 @@ task fastqc {
   }
 }
 
-
 task spikein_report {
-  File    reads_bam
-  File    spikein_db
-  Int?    minScoreToFilter = 60
-  Int?    topNHits = 3
+  input {
+    File    reads_bam
+    File    spikein_db
+    Int?    minScoreToFilter = 60
+    Int?    topNHits = 3
 
-  Int?    machine_mem_gb
-  String? docker="quay.io/broadinstitute/viral-core"
+    Int?    machine_mem_gb
+    String? docker="quay.io/broadinstitute/viral-core"
+  }
 
   String  reads_basename=basename(reads_bam, ".bam")
 
@@ -182,10 +189,12 @@ task spikein_report {
 }
 
 task spikein_summary {
-  Array[File]+  spikein_count_txt
+  input {
+    Array[File]+  spikein_count_txt
 
-  Int?          machine_mem_gb
-  String?       docker="quay.io/broadinstitute/viral-core"
+    Int?          machine_mem_gb
+    String?       docker="quay.io/broadinstitute/viral-core"
+  }
 
   command {
     set -ex -o pipefail
@@ -213,16 +222,24 @@ task spikein_summary {
 }
 
 task aggregate_metagenomics_reports {
-  Array[File]+ kraken_summary_reports 
-  String       aggregate_taxon_heading_space_separated  = "Viruses" # The taxonomic heading to analyze. More than one can be specified.
-  String       aggregate_taxlevel_focus                 = "species" # species,genus,family,order,class,phylum,kingdom,superkingdom
-  Int?         aggregate_top_N_hits                     = 5 # only include the top N hits from a given sample in the aggregte report
+  input {
+    Array[File]+ kraken_summary_reports 
+    String       aggregate_taxon_heading_space_separated  = "Viruses"
+    String       aggregate_taxlevel_focus                 = "species"
+    Int?         aggregate_top_N_hits                     = 5
 
-  Int?         machine_mem_gb
-  String?      docker="quay.io/broadinstitute/viral-classify"
+    Int?         machine_mem_gb
+    String?      docker="quay.io/broadinstitute/viral-classify"
+  }
+
+  parameter_meta {
+    aggregate_taxon_heading_space_separated: { description: "The taxonomic heading to analyze. More than one can be specified." }
+    aggregate_taxlevel_focus:                { description: "species,genus,family,order,class,phylum,kingdom,superkingdom" }
+    aggregate_top_N_hits:                    { description: "only include the top N hits from a given sample in the aggregate report" }
+  }
 
   String       aggregate_taxon_heading = sub(aggregate_taxon_heading_space_separated, " ", "_") # replace spaces with underscores for use in filename
-  
+
   command {
     set -ex -o pipefail
 
@@ -253,38 +270,45 @@ task aggregate_metagenomics_reports {
 }
 
 task MultiQC {
-  Array[File] input_files = []
-  Boolean force = false
-  Boolean dirs = false
-  Int? dirs_depth
-  Boolean full_names = false
-  String? title
-  String? comment
-  String? file_name
-  String out_dir = "./multiqc-output"
-  String? template
-  String? tag
-  String? ignore_analysis_files
-  String? ignore_sample_names
-  File? sample_names
-  File? file_with_list_of_input_paths
-  Array[String]+? exclude_modules
-  Array[String]+? module_to_use
-  Boolean data_dir = false
-  Boolean no_data_dir = false
-  String? output_data_format # [tsv|yaml|json] default:tsv
-  Boolean zip_data_dir = false
-  Boolean export = false
-  Boolean flat = false
-  Boolean interactive = true
-  Boolean lint = false
-  Boolean pdf = false
-  Boolean megaQC_upload = false # Upload generated report to MegaQC if MegaQC options are found
-  File? config  # directory
-  String? config_yaml
+  input {
+    Array[File]     input_files = []
 
-  Int?   machine_mem_gb
-  String docker = "ewels/multiqc:latest"
+    Boolean         force = false
+    Boolean         dirs = false
+    Int?            dirs_depth
+    Boolean         full_names = false
+    String?         title
+    String?         comment
+    String?         file_name
+    String          out_dir = "./multiqc-output"
+    String?         template
+    String?         tag
+    String?         ignore_analysis_files
+    String?         ignore_sample_names
+    File?           sample_names
+    File?           file_with_list_of_input_paths
+    Array[String]+? exclude_modules
+    Array[String]+? module_to_use
+    Boolean         data_dir = false
+    Boolean         no_data_dir = false
+    String?         output_data_format
+    Boolean         zip_data_dir = false
+    Boolean         export = false
+    Boolean         flat = false
+    Boolean         interactive = true
+    Boolean         lint = false
+    Boolean         pdf = false
+    Boolean         megaQC_upload = false # Upload generated report to MegaQC if MegaQC options are found
+    File?           config  # directory
+    String?         config_yaml
+
+    Int?            machine_mem_gb
+    String          docker = "ewels/multiqc:latest"
+  }
+
+  parameter_meta {
+    output_data_format: { description: "[tsv|yaml|json] default:tsv" }
+  }
 
   String input_directory="multiqc-input"
   # get the basename in all wdl use the filename specified (sans ".html" extension, if specified)

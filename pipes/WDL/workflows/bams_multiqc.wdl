@@ -1,7 +1,11 @@
+version 1.0
+
 import "../tasks/tasks_reports.wdl" as reports
 
 workflow bams_multiqc {
-    Array[File]+  read_bams
+    input {
+        Array[File]+  read_bams
+    }
 
     scatter(reads_bam in read_bams) {
         call reports.fastqc as fastqc {
