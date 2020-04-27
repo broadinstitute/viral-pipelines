@@ -1,20 +1,23 @@
+version 1.0
+
 task assemble {
-    File     reads_unmapped_bam
-    File     trim_clip_db
+    input {
+      File     reads_unmapped_bam
+      File     trim_clip_db
 
-    Int?     trinity_n_reads=250000
-    Int?     spades_n_reads=10000000
-    Int?     spades_min_contig_len=0
+      Int?     trinity_n_reads=250000
+      Int?     spades_n_reads=10000000
+      Int?     spades_min_contig_len=0
 
-    String?  assembler="trinity"  # trinity, spades, or trinity-spades
-    Boolean? always_succeed=false
+      String?  assembler="trinity"  # trinity, spades, or trinity-spades
+      Boolean? always_succeed=false
 
-    # do this in two steps in case the input doesn't actually have "taxfilt" in the name
-    String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
+      # do this in two steps in case the input doesn't actually have "taxfilt" in the name
+      String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
 
-    Int?     machine_mem_gb
-    String?  docker="quay.io/broadinstitute/viral-assemble"
-
+      Int?     machine_mem_gb
+      String?  docker="quay.io/broadinstitute/viral-assemble"
+    }
 
     command {
         set -ex -o pipefail
@@ -95,25 +98,27 @@ task assemble {
 }
 
 task scaffold {
-    File         contigs_fasta
-    File         reads_bam
-    Array[File]+ reference_genome_fasta
+    input {
+      File         contigs_fasta
+      File         reads_bam
+      Array[File]+ reference_genome_fasta
 
-    String?      aligner
-    Float?       min_length_fraction
-    Float?       min_unambig
-    Int?         replace_length=55
+      String?      aligner
+      Float?       min_length_fraction
+      Float?       min_unambig
+      Int?         replace_length=55
 
-    Int?         nucmer_max_gap
-    Int?         nucmer_min_match
-    Int?         nucmer_min_cluster
-    Float?       scaffold_min_pct_contig_aligned
+      Int?         nucmer_max_gap
+      Int?         nucmer_min_match
+      Int?         nucmer_min_cluster
+      Float?       scaffold_min_pct_contig_aligned
 
-    Int?         machine_mem_gb
-    String?      docker="quay.io/broadinstitute/viral-assemble"
+      Int?         machine_mem_gb
+      String?      docker="quay.io/broadinstitute/viral-assemble"
 
-    # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
-    String       sample_name = basename(basename(basename(contigs_fasta, ".fasta"), ".assembly1-trinity"), ".assembly1-spades")
+      # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
+      String       sample_name = basename(basename(basename(contigs_fasta, ".fasta"), ".assembly1-trinity"), ".assembly1-spades")
+    }
 
     command {
         set -ex -o pipefail
@@ -184,27 +189,29 @@ task scaffold {
 }
 
 task ivar_trim {
-    File    aligned_bam
-    File?   trim_coords_bed
-    Int?    min_keep_length
-    Int?    sliding_window
-    Int?    min_quality
-
-    Int?    machine_mem_gb
-    String? docker="andersenlabapps/ivar:1.2.1"
-
-    String  bam_basename=basename(aligned_bam, ".bam")
-
     meta {
       description: "this runs ivar trim on aligned reads, which results in soft-clipping of alignments"
     }
 
+    input {
+      File    aligned_bam
+      File?   trim_coords_bed
+      Int?    min_keep_length
+      Int?    sliding_window
+      Int?    min_quality
+
+      Int?    machine_mem_gb
+      String? docker="andersenlabapps/ivar:1.2.1"
+    }
+
+    String  bam_basename=basename(aligned_bam, ".bam")
+
     parameter_meta {
-      aligned_bam:     "aligned reads in BAM format"
-      trim_coords_bed: "optional primers to trim in reference coordinate space (0-based BED format)"
-      min_keep_length: "Minimum length of read to retain after trimming (Default: 30)"
-      sliding_window:  "Width of sliding window for quality trimming (Default: 4)"
-      min_quality:     "Minimum quality threshold for sliding window to pass (Default: 20)"
+      aligned_bam:     { description: "aligned reads in BAM format" }
+      trim_coords_bed: { description: "optional primers to trim in reference coordinate space (0-based BED format)" }
+      min_keep_length: { description: "Minimum length of read to retain after trimming (Default: 30)" }
+      sliding_window:  { description: "Width of sliding window for quality trimming (Default: 4)" }
+      min_quality:     { description: "Minimum quality threshold for sliding window to pass (Default: 20)" }
     }
 
     command {
@@ -234,19 +241,21 @@ task ivar_trim {
 }
 
 task align_reads {
-  File     reference_fasta
-  File     reads_unmapped_bam
+  input {
+    File     reference_fasta
+    File     reads_unmapped_bam
 
-  File?    novocraft_license
+    File?    novocraft_license
 
-  String?  aligner="novoalign" # novoalign or bwa
-  String?  aligner_options
-  Boolean? skip_mark_dupes=false
+    String?  aligner="novoalign" # novoalign or bwa
+    String?  aligner_options
+    Boolean? skip_mark_dupes=false
 
-  Int?     machine_mem_gb
-  String?  docker="quay.io/broadinstitute/viral-core"
+    Int?     machine_mem_gb
+    String?  docker="quay.io/broadinstitute/viral-core"
 
-  String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
+    String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
+  }
   
   command {
     set -ex -o pipefail
@@ -328,16 +337,18 @@ task align_reads {
 }
 
 task refine_assembly_with_aligned_reads {
-    File     reference_fasta
-    File     reads_aligned_bam
-    String   sample_name
+    input {
+      File     reference_fasta
+      File     reads_aligned_bam
+      String   sample_name
 
-    Boolean? mark_duplicates=false
-    Float?   major_cutoff=0.5
-    Int?     min_coverage=2
+      Boolean? mark_duplicates=false
+      Float?   major_cutoff=0.5
+      Int?     min_coverage=2
 
-    Int?     machine_mem_gb
-    String?  docker="quay.io/broadinstitute/viral-assemble"
+      Int?     machine_mem_gb
+      String?  docker="quay.io/broadinstitute/viral-assemble"
+    }
 
     command {
         set -ex -o pipefail
@@ -395,21 +406,22 @@ task refine_assembly_with_aligned_reads {
     }
 }
 
-
 task refine {
-    File    assembly_fasta
-    File    reads_unmapped_bam
+    input {
+      File    assembly_fasta
+      File    reads_unmapped_bam
 
-    File?   novocraft_license
+      File?   novocraft_license
 
-    String? novoalign_options="-r Random -l 40 -g 40 -x 20 -t 100"
-    Float?  major_cutoff=0.5
-    Int?    min_coverage=1
+      String? novoalign_options="-r Random -l 40 -g 40 -x 20 -t 100"
+      Float?  major_cutoff=0.5
+      Int?    min_coverage=1
 
-    Int?    machine_mem_gb
-    String? docker="quay.io/broadinstitute/viral-assemble"
+      Int?    machine_mem_gb
+      String? docker="quay.io/broadinstitute/viral-assemble"
 
-    String  assembly_basename=basename(basename(assembly_fasta, ".fasta"), ".scaffold")
+      String  assembly_basename=basename(basename(assembly_fasta, ".fasta"), ".scaffold")
+    }
 
     command {
         set -ex -o pipefail
@@ -455,34 +467,32 @@ task refine {
 
 
 task refine_2x_and_plot {
-    # This combined task exists just to streamline the two calls to
-    # assembly.refine and one call to reports.plot_coverage that almost
-    # every assembly workflow uses. It saves on instance spin up and
-    # docker pull times, file staging time, and all steps contained
-    # here have similar hardware requirements. It is also extremely
-    # rare for analyses to branch off of intermediate products between
-    # these three steps.
-    # The more atomic WDL tasks are still available for custom workflows.
-    File    assembly_fasta
-    File    reads_unmapped_bam
+    meta {
+      description: "This combined task exists just to streamline the two calls to assembly.refine and one call to reports.plot_coverage that almost every assembly workflow uses. It saves on instance spin up and docker pull times, file staging time, and all steps contained here have similar hardware requirements. It is also extremely rare for analyses to branch off of intermediate products between these three steps. The more atomic WDL tasks are still available for custom workflows."
+    }
 
-    File?   novocraft_license
+    input {
+      File    assembly_fasta
+      File    reads_unmapped_bam
 
-    String? refine1_novoalign_options="-r Random -l 30 -g 40 -x 20 -t 502"
-    Float?  refine1_major_cutoff=0.5
-    Int?    refine1_min_coverage=2
+      File?   novocraft_license
 
-    String? refine2_novoalign_options="-r Random -l 40 -g 40 -x 20 -t 100"
-    Float?  refine2_major_cutoff=0.5
-    Int?    refine2_min_coverage=3
+      String? refine1_novoalign_options="-r Random -l 30 -g 40 -x 20 -t 502"
+      Float?  refine1_major_cutoff=0.5
+      Int?    refine1_min_coverage=2
 
-    String? plot_coverage_novoalign_options="-r Random -l 40 -g 40 -x 20 -t 100 -k"
+      String? refine2_novoalign_options="-r Random -l 40 -g 40 -x 20 -t 100"
+      Float?  refine2_major_cutoff=0.5
+      Int?    refine2_min_coverage=3
 
-    Int?    machine_mem_gb
-    String? docker="quay.io/broadinstitute/viral-assemble"
+      String? plot_coverage_novoalign_options="-r Random -l 40 -g 40 -x 20 -t 100 -k"
 
-    # do this in two steps in case the input doesn't actually have "cleaned" in the name
-    String  sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
+      Int?    machine_mem_gb
+      String? docker="quay.io/broadinstitute/viral-assemble"
+
+      # do this in two steps in case the input doesn't actually have "cleaned" in the name
+      String  sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
+    }
 
     command {
         set -ex -o pipefail
@@ -597,4 +607,3 @@ task refine_2x_and_plot {
         dx_instance_type: "mem1_ssd1_v2_x8"
     }
 }
-

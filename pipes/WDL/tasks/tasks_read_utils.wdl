@@ -1,12 +1,15 @@
+version 1.0
 
 task merge_and_reheader_bams {
-    Array[File]+    in_bams
-    String?         sample_name
-    File?           reheader_table # tsv with 3 cols: field, old value, new value
-    String          out_basename
+    input {
+      Array[File]+    in_bams
+      String?         sample_name
+      File?           reheader_table # tsv with 3 cols: field, old value, new value
+      String          out_basename
 
-    Int?            machine_mem_gb
-    String?         docker="quay.io/broadinstitute/viral-core"
+      Int?            machine_mem_gb
+      String?         docker="quay.io/broadinstitute/viral-core"
+    }
 
     command {
         set -ex -o pipefail
@@ -56,13 +59,15 @@ task merge_and_reheader_bams {
 }
 
 task downsample_bams {
-  Array[File]  reads_bam
-  Int?         readCount
-  Boolean?     deduplicateBefore=false
-  Boolean?     deduplicateAfter=false
+  input {
+    Array[File]  reads_bam
+    Int?         readCount
+    Boolean?     deduplicateBefore=false
+    Boolean?     deduplicateAfter=false
 
-  Int?         machine_mem_gb
-  String?      docker="quay.io/broadinstitute/viral-core"
+    Int?         machine_mem_gb
+    String?      docker="quay.io/broadinstitute/viral-core"
+  }
 
   command {
     if [[ "${deduplicateBefore}" == "true" ]]; then
@@ -90,6 +95,7 @@ task downsample_bams {
     Array[File] downsampled_bam  = glob("output/*.downsampled-*.bam")
     String      viralngs_version = read_string("VERSION")
   }
+
   runtime {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 3]) + " GB"
@@ -98,5 +104,3 @@ task downsample_bams {
     dx_instance_type: "mem1_ssd1_v2_x4"
   }
 }
-
-
