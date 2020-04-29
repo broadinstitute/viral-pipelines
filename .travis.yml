@@ -44,7 +44,7 @@ jobs:
 
     - language: java
       jdk: openjdk11
-      stage: build
+      stage: validate
       env:
         - TRAVIS_JOB=validate_wdl_womtool
       install:
@@ -52,7 +52,6 @@ jobs:
       script:
         - set -e
         - travis/version-wdl-runtimes.sh
-        - travis/relative-wdl-paths.sh
         - travis/validate-wdl-womtool.sh
 
     - language: java
