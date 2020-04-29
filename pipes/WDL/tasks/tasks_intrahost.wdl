@@ -101,8 +101,12 @@ task isnvs_vcf {
   }
 
   output {
-    Array[File] isnvFiles        = ["isnvs.vcf.gz", "isnvs.vcf.gz.tbi", "isnvs.annot.vcf.gz", "isnvs.annot.txt.gz", "isnvs.annot.vcf.gz.tbi"]
-    String      viralngs_version = read_string("VERSION")
+    File        isnvs_vcf           = "isnvs.vcf.gz"
+    File        isnvs_vcf_idx       = "isnvs.vcf.gz.tbi"
+    File        isnvs_annot_vcf     = "isnvs.annot.vcf.gz"
+    File        isnvs_annot_vcf_idx = "isnvs.annot.vcf.gz.tbi"
+    File        isnvs_annot_txt     = "isnvs.annot.txt.gz"
+    String      viralngs_version    = read_string("VERSION")
   }
   runtime {
     docker: "${docker}"

@@ -46,5 +46,4 @@ workflow scaffold_and_refine {
     String scaffold_viral_assemble_version = scaffold.viralngs_version
     String refine_viral_assemble_version   = refine_2x_and_plot.viralngs_version
   }
-
 }
