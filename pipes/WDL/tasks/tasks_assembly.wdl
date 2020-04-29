@@ -263,7 +263,7 @@ task align_reads {
 
   parameter_meta {
     aligner:     {
-       description: "Short read aligner to use (Default: novoalign)"
+       description: "Short read aligner to use (Default: novoalign)",
        choices: ["novoalign", "bwa"]
     }
   }
