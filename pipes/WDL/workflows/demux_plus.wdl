@@ -80,11 +80,11 @@ workflow demux_plus {
         File        demux_commonBarcodes     = illumina_demux.commonBarcodes
         File        demux_outlierBarcodes    = illumina_demux.outlierBarcodes
 
-        File        multiqc_raw          = multiqc_raw.multiqc_report
-        File        multiqc_cleaned      = multiqc_cleaned.multiqc_report
-        File        spikein_counts       = spike_summary.spikein_summary
-        File        metagenomics_krona   = krakenuniq.krona_report_merged_html
-        File        metagenomics_summary = metag_summary_report.krakenuniq_aggregate_taxlevel_summary
+        File        multiqc_report_raw     = multiqc_raw.multiqc_report
+        File        multiqc_report_cleaned = multiqc_cleaned.multiqc_report
+        File        spikein_counts         = spike_summary.spikein_summary
+        File        metagenomics_krona     = krakenuniq.krona_report_merged_html
+        File        metagenomics_summary   = metag_summary_report.krakenuniq_aggregate_taxlevel_summary
 
         String      demux_viral_core_version          = illumina_demux.viralngs_version
         String      krakenuniq_viral_classify_version = krakenuniq.viralngs_version
