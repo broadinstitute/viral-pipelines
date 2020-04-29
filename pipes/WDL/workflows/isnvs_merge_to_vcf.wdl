@@ -23,8 +23,8 @@ workflow isnvs_merge_to_vcf {
 
     output {
         Array[File] alignments_by_chr   = mafft.alignments_by_chr
-        File        isnvs_vcf           = isnvs_vcf.isnvs_vcf
-        File        isnvs_vcf_idx       = isnvs_vcf.isnvs_vcf_idx
+        File        isnvs_plain_vcf     = isnvs_vcf.isnvs_vcf
+        File        isnvs_plain_vcf_idx = isnvs_vcf.isnvs_vcf_idx
         File        isnvs_annot_vcf     = isnvs_vcf.isnvs_annot_vcf
         File        isnvs_annot_vcf_idx = isnvs_vcf.isnvs_annot_vcf_idx
         File        isnvs_annot_txt     = isnvs_vcf.isnvs_annot_txt
