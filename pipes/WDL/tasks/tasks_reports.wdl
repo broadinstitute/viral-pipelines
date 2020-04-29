@@ -20,8 +20,8 @@ task plot_coverage {
     read_utils.py --version | tee VERSION
 
     samtools view -c ${aligned_reads_bam} | tee reads_aligned
-    if [ `cat reads_aligned` != "0" ]; then
-      samtools index -@ `nproc` ${aligned_reads_bam}
+    if [ $(cat reads_aligned) != "0" ]; then
+      samtools index -@ $(nproc) "${aligned_reads_bam}""
 
       PLOT_DUPE_OPTION=""
       if [[ "${skip_mark_dupes}" != "true" ]]; then

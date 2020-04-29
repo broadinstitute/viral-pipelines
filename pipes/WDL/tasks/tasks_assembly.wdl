@@ -207,8 +207,8 @@ task ivar_trim {
     String  bam_basename=basename(aligned_bam, ".bam")
 
     parameter_meta {
-      aligned_bam:     { description: "aligned reads in BAM format" }
-      trim_coords_bed: { description: "optional primers to trim in reference coordinate space (0-based BED format)" }
+      aligned_bam:     { description: "aligned reads in BAM format", patterns: ["*.bam"] }
+      trim_coords_bed: { description: "optional primers to trim in reference coordinate space (0-based BED format)", patterns: ["*.bed"] }
       min_keep_length: { description: "Minimum length of read to retain after trimming (Default: 30)" }
       sliding_window:  { description: "Width of sliding window for quality trimming (Default: 4)" }
       min_quality:     { description: "Minimum quality threshold for sliding window to pass (Default: 20)" }
@@ -259,6 +259,13 @@ task align_reads {
     String?  docker="quay.io/broadinstitute/viral-core"
 
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
+  }
+
+  parameter_meta {
+    aligner:     {
+       description: "Short read aligner to use (Default: novoalign)"
+       choices: ["novoalign", "bwa"]
+    }
   }
   
   command {
