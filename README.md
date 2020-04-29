@@ -6,7 +6,7 @@ viral-pipelines
 
 A set of scripts and tools for the analysis of viral NGS data.
 
-Workflows are written in [WDL](https://github.com/openwdl/wdl) format, currently in a mix of WDL "draft-2" and "1.0". This is a portable workflow language that allows for easy execution on a wide variety of platforms:
+Workflows are written in [WDL](https://github.com/openwdl/wdl) format. This is a portable workflow language that allows for easy execution on a wide variety of platforms:
  - on individual machines (using miniWDL or Cromwell to execute)
  - on commercial cloud platforms like GCP, AWS, or Azure (using Cromwell or CromwellOnAzure)
  - on institutional HPC systems (using Cromwell)
