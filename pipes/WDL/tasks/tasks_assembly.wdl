@@ -273,7 +273,7 @@ task align_reads {
     cp ${reference_fasta} assembly.fasta
     grep -v '^>' assembly.fasta | tr -d '\n' | wc -c | tee assembly_length
 
-    if [ `cat assembly_length` != "0" ]; then
+    if [ "$(cat assembly_length)" != "0" ]; then
 
       # only perform the following if the reference is non-empty
 
