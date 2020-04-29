@@ -88,7 +88,7 @@ workflow demux_plus {
 
         String      demux_viral_core_version          = illumina_demux.viralngs_version
         String      krakenuniq_viral_classify_version = krakenuniq.viralngs_version
-        String      deplete_viral_classify_version    = deplete.viralngs_version
-        String      spades_viral_assemble_version     = spades.viralngs_version
+        String      deplete_viral_classify_version    = deplete.viralngs_version[0]
+        String      spades_viral_assemble_version     = spades.viralngs_version[0]
     }
 }
