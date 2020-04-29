@@ -19,7 +19,7 @@ task merge_and_reheader_bams {
         set -ex -o pipefail
 
         read_utils.py --version | tee VERSION
-        mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 90`
+        mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
 
         if [ ${length(in_bams)} -gt 1 ]; then
             read_utils.py merge_bams ${sep=' ' in_bams} merged.bam --JVMmemory="$mem_in_mb"m --loglevel DEBUG
@@ -31,7 +31,7 @@ task merge_and_reheader_bams {
         # remap all SM values to user specified value
         if [ -n "${sample_name}" ]; then
           # create sample name remapping table based on existing sample names
-          samtools view -H merged.bam | perl -n -e'/SM:(\S+)/ && print "SM\t$1\t'${sample_name}'\n"' | sort | uniq >> reheader_table.txt
+          samtools view -H merged.bam | perl -n -e'/SM:(\S+)/ && print "SM\t$1\t'"${sample_name}"'\n"' | sort | uniq >> reheader_table.txt
         fi
 
         # remap arbitrary headers using user specified table
