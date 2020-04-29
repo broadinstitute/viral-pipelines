@@ -66,4 +66,29 @@ workflow demux_plus {
         input:
             kraken_summary_reports = krakenuniq.krakenuniq_summary_reports
     }
+
+    output {
+        Array[File] raw_reads_unaligned_bams     = illumina_demux.raw_reads_unaligned_bams
+        Array[File] cleaned_reads_unaligned_bams = deplete.cleaned_bam
+        Array[File] contigs_fastas               = spades.contigs_fasta
+
+        Array[Int]  read_counts_raw = deplete.depletion_read_count_pre
+        Array[Int]  read_counts_depleted = deplete.depletion_read_count_post
+        Array[Int]  read_counts_prespades_subsample = spades.subsample_read_count
+
+        File        demux_metrics            = illumina_demux.metrics
+        File        demux_commonBarcodes     = illumina_demux.commonBarcodes
+        File        demux_outlierBarcodes    = illumina_demux.outlierBarcodes
+
+        File        multiqc_raw          = multiqc_raw.multiqc_report
+        File        multiqc_cleaned      = multiqc_cleaned.multiqc_report
+        File        spikein_counts       = spike_summary.spikein_summary
+        File        metagenomics_krona   = krakenuniq.krona_report_merged_html
+        File        metagenomics_summary = metag_summary_report.krakenuniq_aggregate_taxlevel_summary
+
+        String      demux_viral_core_version          = illumina_demux.viralngs_version
+        String      krakenuniq_viral_classify_version = krakenuniq.viralngs_version
+        String      deplete_viral_classify_version    = deplete.viralngs_version
+        String      spades_viral_assemble_version     = spades.viralngs_version
+    }
 }
