@@ -34,7 +34,7 @@ workflow align_and_plot {
         String align_viral_core_version      = align.viralngs_version
         File   coverage_plot                 = plot_coverage.coverage_plot
         File   coverage_tsv                  = plot_coverage.coverage_tsv
-        Int    assembly_length               = plot_coverage.assembly_length
+        Int    reference_length              = plot_coverage.assembly_length
         String plot_viral_core_version       = plot_coverage.viralngs_version
     }
 }
