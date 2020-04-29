@@ -130,7 +130,6 @@ task trimal_clean_msa {
 
   output {
     File   trimal_cleaned_fasta = "${input_basename}_trimal_cleaned.fasta"
-    String viralngs_version     = read_string("VERSION")
   }
   runtime {
     docker: "${docker}"

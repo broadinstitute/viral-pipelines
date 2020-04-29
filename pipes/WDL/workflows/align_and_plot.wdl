@@ -5,7 +5,7 @@ import "../tasks/tasks_assembly.wdl" as assembly
 
 workflow align_and_plot {
     input {
-    	String? aligner_options = "-r Random -l 30 -g 40 -x 20 -t 502"
+        String? aligner_options = "-r Random -l 30 -g 40 -x 20 -t 502"
     }
 
     call assembly.align_reads as align {
