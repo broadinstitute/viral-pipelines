@@ -12,6 +12,37 @@ workflow assemble_refbased {
         email:  "viral-ngs@broadinstitute.org"
     }
 
+    parameter_meta {
+        sample_name: {
+            description: "Base name of output files. The 'SM' field in BAM read group headers are also rewritten to this value. Avoid spaces and other filename-unfriendly characters."
+        }
+        reads_unmapped_bams: {
+            description: "Unaligned reads in BAM format",
+            patterns: ["*.bam"]
+        }
+        reference_fasta: {
+            description: "Reference genome to align reads to.",
+            patterns: ["*.fasta"]
+        }
+        novocraft_license: {
+            description: "The default Novoalign short read aligner is a commercially licensed software that is available in a much slower, single-threaded version for free. If you have a paid license file, provide it here to run in multi-threaded mode. If this is omitted, it will run in single-threaded mode.",
+            patterns: ["*.lic"]
+        }
+        skip_mark_dupes: {
+            description: "skip Picard MarkDuplicates step after alignment. This is recommended to be set to true for PCR amplicon based data. (Default: false)"
+        }
+        trim_coords_bed: {
+            description: "optional primers to trim in reference coordinate space (0-based BED format)",
+            patterns: ["*.bed"]
+        }
+
+
+        assembly_fasta: { description: "The new assembly / consensus sequence for this sample" }
+        align_to_ref_variants_vcf_gz: { description: "All variants in the input reads against the original reference genome. This VCF file is used to create the assembly_fasta" }
+        assembly_length: { description: "The length of the sequence described in assembly_fasta, inclusive of any uncovered regions denoted by Ns" }
+        assembly_length_unambiguous: { description: "The number of called consensus bases in assembly_fasta (excludes regions of the genome that lack read coverage)" }
+    }
+
     input {
         String          sample_name
         Array[File]+    reads_unmapped_bams
@@ -90,4 +121,38 @@ workflow assemble_refbased {
             aligned_reads_bam   = merge_align_to_self.out_bam,
             sample_name         = sample_name
     }
+
+    output {
+        File   assembly_fasta               = call_consensus.refined_assembly_fasta
+        File   align_to_ref_variants_vcf_gz = call_consensus.sites_vcf_gz
+        Int    assembly_length              = call_consensus.assembly_length
+        Int    assembly_length_unambiguous  = call_consensus.assembly_length_unambiguous
+        Int    reference_genome_length      = plot_ref_coverage.assembly_length
+        Float  assembly_mean_coverage       = plot_self_coverage.mean_coverage
+
+        Array[File]   align_to_ref_per_input_aligned_flagstat = align_to_ref.aligned_bam_flagstat
+        Array[Int]    align_to_ref_per_input_reads_provided   = align_to_ref.reads_provided
+        Array[Int]    align_to_ref_per_input_reads_aligned    = align_to_ref.reads_aligned
+
+        File   align_to_ref_merged_aligned_trimmed_only_bam = merge_align_to_ref.out_bam
+        File   align_to_ref_multiqc_report                  = multiqc_align_to_ref.multiqc_report
+        File   align_to_ref_merged_coverage_plot            = plot_ref_coverage.coverage_plot
+        File   align_to_ref_merged_coverage_tsv             = plot_ref_coverage.coverage_tsv
+        Int    align_to_ref_merged_reads_aligned            = plot_ref_coverage.reads_aligned
+        Int    align_to_ref_merged_read_pairs_aligned       = plot_ref_coverage.read_pairs_aligned
+        Int    align_to_ref_merged_bases_aligned            = plot_ref_coverage.bases_aligned
+        Float  align_to_ref_merged_mean_coverage            = plot_ref_coverage.mean_coverage
+
+        File   align_to_self_merged_aligned_only_bam   = merge_align_to_self.out_bam
+        File   align_to_self_merged_coverage_plot      = plot_self_coverage.coverage_plot
+        File   align_to_self_merged_coverage_tsv       = plot_self_coverage.coverage_tsv
+        Int    align_to_self_merged_reads_aligned      = plot_self_coverage.reads_aligned
+        Int    align_to_self_merged_read_pairs_aligned = plot_self_coverage.read_pairs_aligned
+        Int    align_to_self_merged_bases_aligned      = plot_self_coverage.bases_aligned
+
+        String align_to_ref_viral_core_version = select_first(align_to_ref.viralngs_version)
+        String ivar_version                    = select_first(ivar_trim.ivar_version)
+        String viral_assemble_version          = call_consensus.viralngs_version
+    }
+
 }
