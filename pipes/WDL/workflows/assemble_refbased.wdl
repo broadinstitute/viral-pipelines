@@ -150,8 +150,8 @@ workflow assemble_refbased {
         Int    align_to_self_merged_read_pairs_aligned = plot_self_coverage.read_pairs_aligned
         Int    align_to_self_merged_bases_aligned      = plot_self_coverage.bases_aligned
 
-        String align_to_ref_viral_core_version = select_first(align_to_ref.viralngs_version)
-        String ivar_version                    = select_first(ivar_trim.ivar_version)
+        String align_to_ref_viral_core_version = align_to_ref.viralngs_version[0]
+        String ivar_version                    = ivar_trim.ivar_version[0]
         String viral_assemble_version          = call_consensus.viralngs_version
     }
 
