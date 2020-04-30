@@ -5,15 +5,31 @@ task deplete_taxa {
 
   input {
     File         raw_reads_unmapped_bam
-    Array[File]? bmtaggerDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
-    Array[File]? blastDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
-    Array[File]? bwaDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
+    Array[File]? bmtaggerDbs
+    Array[File]? blastDbs
+    Array[File]? bwaDbs
     Int?         query_chunk_size
     Boolean?     clear_tags = false
     String?      tags_to_clear_space_separated = "XT X0 X1 XA AM SM BQ CT XN OC OP"
 
     Int?         machine_mem_gb
     String?      docker="quay.io/broadinstitute/viral-classify"
+  }
+
+  parameter_meta {
+    raw_reads_unmapped_bam: { description: "unaligned reads in BAM format", patterns: ["*.bam"] }
+    bmtaggerDbs: {
+       description: "Optional list of databases to use for bmtagger-based depletion. Sequences in fasta format will be indexed on the fly, pre-bmtagger-indexed databases may be provided as tarballs.",
+       patterns: ["*.fasta", "*.fasta.gz", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+    }
+    blastDbs: {
+      description: "Optional list of databases to use for blastn-based depletion. Sequences in fasta format will be indexed on the fly, pre-blast-indexed databases may be provided as tarballs.",
+      patterns: ["*.fasta", "*.fasta.gz", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+    }
+    bwaDbs: {
+      description: "Optional list of databases to use for bwa mem-based depletion. Sequences in fasta format will be indexed on the fly, pre-bwa-indexed databases may be provided as tarballs.",
+      patterns: ["*.fasta", "*.fasta.gz", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+    }
   }
 
   String       bam_basename = basename(raw_reads_unmapped_bam, ".bam")

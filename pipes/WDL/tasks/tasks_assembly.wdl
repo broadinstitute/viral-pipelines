@@ -207,8 +207,8 @@ task ivar_trim {
     String  bam_basename=basename(aligned_bam, ".bam")
 
     parameter_meta {
-      aligned_bam:     { description: "aligned reads in BAM format" }
-      trim_coords_bed: { description: "optional primers to trim in reference coordinate space (0-based BED format)" }
+      aligned_bam:     { description: "aligned reads in BAM format", patterns: ["*.bam"] }
+      trim_coords_bed: { description: "optional primers to trim in reference coordinate space (0-based BED format)", patterns: ["*.bed"] }
       min_keep_length: { description: "Minimum length of read to retain after trimming (Default: 30)" }
       sliding_window:  { description: "Width of sliding window for quality trimming (Default: 4)" }
       min_quality:     { description: "Minimum quality threshold for sliding window to pass (Default: 20)" }
@@ -260,6 +260,10 @@ task align_reads {
 
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
   }
+
+  parameter_meta {
+    aligner: { description: "Short read aligner to use: novoalign or bwa. (Default: novoalign)" }
+  }
   
   command {
     set -ex -o pipefail
@@ -269,7 +273,7 @@ task align_reads {
     cp ${reference_fasta} assembly.fasta
     grep -v '^>' assembly.fasta | tr -d '\n' | wc -c | tee assembly_length
 
-    if [ `cat assembly_length` != "0" ]; then
+    if [ "$(cat assembly_length)" != "0" ]; then
 
       # only perform the following if the reference is non-empty
 

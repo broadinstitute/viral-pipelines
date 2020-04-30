@@ -28,4 +28,20 @@ workflow genbank {
             annotations_tbl = annot.transferred_feature_tables
     }
 
+    output {
+        Array[File] alignments_by_chr          = mafft.alignments_by_chr
+
+        Array[File] transferred_feature_tables = annot.transferred_feature_tables
+
+        Array[File] sequin_files               = prep_genbank.sequin_files
+        Array[File] structured_comment_files   = prep_genbank.structured_comment_files
+        Array[File] genbank_preview_files      = prep_genbank.genbank_preview_files
+        Array[File] source_table_files         = prep_genbank.source_table_files
+        Array[File] fasta_per_chr_files        = prep_genbank.fasta_per_chr_files
+        Array[File] validation_files           = prep_genbank.validation_files
+        File        errorSummary               = prep_genbank.errorSummary
+
+        String      viral_phylo_version        = mafft.viralngs_version
+    }
+
 }

@@ -44,7 +44,7 @@ jobs:
 
     - language: java
       jdk: openjdk11
-      stage: build
+      stage: validate
       env:
         - TRAVIS_JOB=validate_wdl_womtool
       install:
@@ -52,8 +52,42 @@ jobs:
       script:
         - set -e
         - travis/version-wdl-runtimes.sh
-        - travis/relative-wdl-paths.sh
         - travis/validate-wdl-womtool.sh
+
+    - language: python
+      stage:    validate
+      env:      TRAVIS_JOB=test_docs
+      install:  travis/install-pip-docs.sh
+      script:   travis/build-docs.sh
+      ## note: this build_docs job does not actually produce the output on readthedocs
+      ## readthedocs does its own build trigger. this travis job exists simply to alert us
+      ## of build failures of the docs because otherwise we would never know.
+
+    - language: java
+      jdk: openjdk11
+      stage: build
+      env:
+        - TRAVIS_JOB=test_cromwell
+      install:
+        - travis/install-wdl.sh
+      script:
+        - set -e
+        - travis/version-wdl-runtimes.sh
+        - travis/relative-wdl-paths.sh
+        - travis/tests-cromwell.sh
+
+    - language: python
+      stage: build
+      env:
+        - TRAVIS_JOB=test_miniwdl
+      install:
+        - set -e
+        - source travis/install-conda.sh
+        - conda install -y miniwdl shellcheck jq
+      script:
+        - set -e
+        - travis/version-wdl-runtimes.sh
+        - travis/tests-miniwdl.sh
 
     - language: java
       jdk: openjdk11
@@ -71,32 +105,6 @@ jobs:
         - travis/relative-wdl-paths.sh
         - travis/build-dx.sh
         - travis/tests-dx.sh
-
-    #- language: java
-    #  jdk: openjdk11
-    #  stage: build
-    #  env:
-    #    - TRAVIS_JOB=test_cromwell
-    #  install:
-    #    - travis/install-wdl.sh
-    #  script:
-    #    - set -e
-    #    - travis/version-wdl-runtimes.sh
-    #    - travis/relative-wdl-paths.sh
-    #    - travis/tests-cromwell.sh
-
-    - language: python
-      stage: build
-      env:
-        - TRAVIS_JOB=test_miniwdl
-      install:
-        - set -e
-        - source travis/install-conda.sh
-        - conda install -y miniwdl shellcheck jq
-      script:
-        - set -e
-        - travis/version-wdl-runtimes.sh
-        - travis/tests-miniwdl.sh
 
     - language: python
       stage: build
@@ -140,26 +148,4 @@ jobs:
     #      on:
     #        tags: true
 
-    - language: python
-      stage:    build
-      env:      TRAVIS_JOB=build_docs
-      install:  travis/install-pip-docs.sh
-      script:   travis/build-docs.sh
-      ## note: this build_docs job does not actually produce the output on readthedocs
-      ## readthedocs does its own build trigger. this travis job exists simply to alert us
-      ## of build failures of the docs because otherwise we would never know.
-
-
-    #- language: generic
-    #  stage: build
-    #  env:
-    #    - TRAVIS_JOB=build_conda_in_docker
-    #    # $ANACONDA_TOKEN for uploading builds to anaconda.org ("broad-viral" channel)
-    #    - secure: "cDKRuVUr2NMZk933RHMMYKDCfU2gZfe3VJLNG82zsj47rrfoRzUsDny71v27OuydgjICiBWGuFAl4alNBVkzQWGt7G1DaFVLn48SwqtnG4u0KAUVX32b/0sw7OrXRDDqD5pr5Q8J59xwxSKQmmXFXlMbZpSEeREf8c3Yn6pvm2c="
-    #  install:
-    #    - DOCKER_TAG=`travis/list-docker-tags.sh | tail -1`
-    #    - docker pull $DOCKER_TAG
-    #    - travis/install-gatk.sh
-    #  script:
-    #    - docker run -v $GATK_PATH:/gatk -e _JAVA_OPTIONS -e TRAVIS_BRANCH -e TRAVIS_PULL_REQUEST -e TRAVIS_TAG -e TRAVIS_COMMIT -e ANACONDA_TOKEN --entrypoint /bin/bash $DOCKER_TAG -c 'set -e; cd /opt/viral-ngs/source; gatk3-register /gatk/GenomeAnalysisTK.jar; travis/install-conda-build.sh; travis/build-conda.sh'
 

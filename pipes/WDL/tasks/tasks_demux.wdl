@@ -257,6 +257,7 @@ task illumina_demux {
     cpu: 32
     disks: "local-disk 2625 LOCAL"
     dx_instance_type: "mem3_ssd2_v2_x32"
+    dx_timeout: "20H"
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
   }
 }
