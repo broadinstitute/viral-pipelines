@@ -20,10 +20,10 @@ workflow demux_metag {
     call demux.illumina_demux as illumina_demux
 
     scatter(raw_reads in illumina_demux.raw_reads_unaligned_bams) {
-        call reports.spikein_report as spikein {
+        call reports.align_and_count as spikein {
             input:
                 reads_bam = raw_reads,
-                spikein_db = spikein_db
+                ref_db = spikein_db
         }
         call taxon_filter.deplete_taxa as deplete {
             input:
@@ -62,9 +62,9 @@ workflow demux_metag {
             reads_unmapped_bam = illumina_demux.raw_reads_unaligned_bams
     }
 
-    call reports.spikein_summary as spike_summary {
+    call reports.align_and_count_summary as spike_summary {
         input:
-            spikein_count_txt = spikein.report
+            counts_txt = spikein.report
     }
 
     call reports.aggregate_metagenomics_reports as metag_summary_report {
@@ -87,7 +87,7 @@ workflow demux_metag {
 
         File        multiqc_report_raw     = multiqc_raw.multiqc_report
         File        multiqc_report_cleaned = multiqc_cleaned.multiqc_report
-        File        spikein_counts         = spike_summary.spikein_summary
+        File        spikein_counts         = spike_summary.count_summary
         File        metagenomics_krona     = krakenuniq.krona_report_merged_html
         File        metagenomics_summary   = metag_summary_report.krakenuniq_aggregate_taxlevel_summary
 

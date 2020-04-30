@@ -143,10 +143,10 @@ task fastqc {
   }
 }
 
-task spikein_report {
+task align_and_count {
   input {
     File    reads_bam
-    File    spikein_db
+    File    ref_db
     Int?    minScoreToFilter = 60
     Int?    topNHits = 3
 
@@ -155,6 +155,7 @@ task spikein_report {
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
+  String  ref_basename=basename(ref_db, ".fasta")
 
   command {
     set -ex -o pipefail
@@ -164,33 +165,33 @@ task spikein_report {
     ln -s ${reads_bam} ${reads_basename}.bam
     read_utils.py bwamem_idxstats \
       ${reads_basename}.bam \
-      ${spikein_db} \
-      --outStats ${reads_basename}.spike_count.txt.unsorted \
+      ${ref_db} \
+      --outStats ${reads_basename}.count.${ref_basename}.txt.unsorted \
       --minScoreToFilter=${minScoreToFilter} \
       --loglevel=DEBUG
 
-      sort -b -r -n -k3 ${reads_basename}.spike_count.txt.unsorted > ${reads_basename}.spike_count.txt
-      head -n ${topNHits} ${reads_basename}.spike_count.txt > ${reads_basename}.spike_count.top_${topNHits}_hits.txt
+      sort -b -r -n -k3 ${reads_basename}.count.${ref_basename}.txt.unsorted > ${reads_basename}.count.${ref_basename}.txt
+      head -n ${topNHits} ${reads_basename}.count.${ref_basename}.txt > ${reads_basename}.count.${ref_basename}.top_${topNHits}_hits.txt
   }
 
   output {
-    File   report           = "${reads_basename}.spike_count.txt"
-    File   report_top_hits  = "${reads_basename}.spike_count.top_${topNHits}_hits.txt"
+    File   report           = "${reads_basename}.count.${ref_basename}.txt"
+    File   report_top_hits  = "${reads_basename}.count.${ref_basename}.top_${topNHits}_hits.txt"
     String viralngs_version = read_string("VERSION")
   }
 
   runtime {
     memory: select_first([machine_mem_gb, 7]) + " GB"
-    cpu: 2
+    cpu: 4
     docker: "${docker}"
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x4"
   }
 }
 
-task spikein_summary {
+task align_and_count_summary {
   input {
-    Array[File]+  spikein_count_txt
+    Array[File]+  counts_txt
 
     Int?          machine_mem_gb
     String?       docker="quay.io/broadinstitute/viral-core"
@@ -200,15 +201,15 @@ task spikein_summary {
     set -ex -o pipefail
 
     mkdir spike_summaries
-    cp ${sep=' ' spikein_count_txt} spike_summaries/
+    cp ${sep=' ' counts_txt} spike_summaries/
 
     reports.py --version | tee VERSION
-    reports.py aggregate_spike_count spike_summaries/ spikein_summary.tsv \
+    reports.py aggregate_spike_count spike_summaries/ count_summary.tsv \
       --loglevel=DEBUG
   }
 
   output {
-    File   spikein_summary  = "spikein_summary.tsv"
+    File   count_summary    = "count_summary.tsv"
     String viralngs_version = read_string("VERSION")
   }
 
@@ -217,7 +218,7 @@ task spikein_summary {
     cpu: 2
     docker: "${docker}"
     disks: "local-disk 50 SSD"
-    dx_instance_type: "mem1_ssd1_v2_x4"
+    dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
 
