@@ -2,11 +2,11 @@ version 1.0
 
 import "../tasks/tasks_reports.wdl" as reports
 
-workflow spikein {
-    call reports.spikein_report
+workflow align_and_count_report {
+    call reports.align_and_count
     output {
-        File report               = spikein_report.report
-        File report_top_hits      = spikein_report.report_top_hits
-        String viral_core_version = spikein_report.viralngs_version
+        File report               = align_and_count.report
+        File report_top_hits      = align_and_count.report_top_hits
+        String viral_core_version = align_and_count.viralngs_version
     }
 }
