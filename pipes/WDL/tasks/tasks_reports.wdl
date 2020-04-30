@@ -303,7 +303,7 @@ task MultiQC {
     String?         config_yaml
 
     Int?            machine_mem_gb
-    String          docker = "ewels/multiqc:latest"
+    String          docker = "quay.io/biocontainers/multiqc:1.8--py_2"
   }
 
   parameter_meta {
@@ -356,7 +356,8 @@ task MultiQC {
         mv "${out_dir}/${report_filename}_report.html" "${out_dir}/${report_filename}.html"
       fi
 
-      tar -czvf "${report_filename}_data.tar.gz" "${out_dir}/${report_filename}_data"
+      #tar -czvf "${report_filename}_data.tar.gz" "${out_dir}/${report_filename}_data"
+      tar -c "${out_dir}/${report_filename}_data" | gzip -c > "${report_filename}_data.tar.gz"
   }
 
   output {
