@@ -3,6 +3,7 @@ version 1.0
 import "../tasks/tasks_taxon_filter.wdl" as taxon_filter
 import "../tasks/tasks_read_utils.wdl" as read_utils
 import "../tasks/tasks_assembly.wdl" as assembly
+import "../tasks/tasks_intrahost.wdl" as intrahost
 
 workflow assemble_denovo {
   
