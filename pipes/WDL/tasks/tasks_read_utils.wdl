@@ -88,7 +88,7 @@ task rmdup_ubam {
     read_utils.py --version | tee VERSION
 
     read_utils.py rmdup_"${method}"_bam \
-      "${reads_unmapped_bam}".bam \
+      "${reads_unmapped_bam}" \
       "${reads_basename}".dedup.bam \
       --JVMmemory "$mem_in_mb"m \
       --loglevel=DEBUG
