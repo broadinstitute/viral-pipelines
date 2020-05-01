@@ -57,7 +57,7 @@ for workflow in pipes/WDL/workflows/*.wdl; do
            -f $input_json \
            --name "$VERSION $workflow_name" \
            --destination /tests/$VERSION/$workflow_name \
-           --extra-args $timeout_args \
+           #--extra-args $timeout_args \
            )
        if [ $? -eq 0 ]; then
            echo "Launched $workflow_name as $dx_job_id"
