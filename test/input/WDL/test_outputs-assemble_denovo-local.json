@@ -1,7 +1,7 @@
 {
-    "assemble_denovo.subsample_read_count": 17402,
-    "assemble_denovo.assembly_preimpute_length_unambiguous": 18901,
-    "assemble_denovo.assembly_preimpute_length": 18901,
+    "assemble_denovo.subsample_read_count": 18624,
+    "assemble_denovo.assembly_preimpute_length_unambiguous": 18889,
+    "assemble_denovo.assembly_preimpute_length": 18889,
     "assemble_denovo.bases_aligned": 1765076,
     "assemble_denovo.read_pairs_aligned": 16800,
     "assemble_denovo.reads_aligned": 17476,
