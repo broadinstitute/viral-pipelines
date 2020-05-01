@@ -10,9 +10,9 @@ workflow assemble_denovo {
   input {
     File         reads_unmapped_bam
 
-    Array[File]  deplete_bmtaggerDbs
-    Array[File]  deplete_blastDbs
-    Array[File]  deplete_bwaDbs
+    Array[File]  deplete_bmtaggerDbs = []
+    Array[File]  deplete_blastDbs = []
+    Array[File]  deplete_bwaDbs =[]
 
     File?        filter_to_taxon_db
 

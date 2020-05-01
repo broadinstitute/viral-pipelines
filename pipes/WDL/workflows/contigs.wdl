@@ -9,9 +9,9 @@ workflow contigs {
     input {
         File         reads_unmapped_bam
 
-        Array[File]  deplete_bmtaggerDbs
-        Array[File]  deplete_blastDbs
-        Array[File]  deplete_bwaDbs
+        Array[File]  deplete_bmtaggerDbs = []
+        Array[File]  deplete_blastDbs = []
+        Array[File]  deplete_bwaDbs = []
     }
 
     if(length(deplete_bmtaggerDbs) + length(deplete_blastDbs) + length(deplete_bwaDbs) > 0) {
