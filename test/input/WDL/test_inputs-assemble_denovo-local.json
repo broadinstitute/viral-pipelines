@@ -4,6 +4,6 @@
     "test/input/5kb_human_from_chr6.fasta"
   ],
   "assemble_denovo.filter_to_taxon_db": "test/input/ebov-makona.fasta",
-  "assemble_denovo.assemble.trim_clip_db": "test/input/clipDb.fasta",
-  "assemble_denovo.scaffold.reference_genome_fasta": ["test/input/ebov-makona.fasta"]
+  "assemble_denovo.trim_clip_db": "test/input/clipDb.fasta",
+  "assemble_denovo.reference_genome_fasta": ["test/input/ebov-makona.fasta"]
 }

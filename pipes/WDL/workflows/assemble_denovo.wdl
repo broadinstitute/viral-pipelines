@@ -10,13 +10,27 @@ workflow assemble_denovo {
   input {
     File         reads_unmapped_bam
 
+    Array[File]+ reference_genome_fasta
+
     Array[File]  deplete_bmtaggerDbs = []
     Array[File]  deplete_blastDbs = []
     Array[File]  deplete_bwaDbs =[]
 
     File?        filter_to_taxon_db
+    File         trim_clip_db
+
+    File?        novocraft_license
 
     Boolean      call_isnvs=false
+
+    String       assembler="spades"
+    Float?       scaffold_min_length_fraction
+    Float?       scaffold_min_unambig
+    Int?         scaffold_replace_length=55
+    Int?         nucmer_max_gap
+    Int?         nucmer_min_match
+    Int?         nucmer_min_cluster
+    Float?       scaffold_min_pct_contig_aligned
   }
 
   parameter_meta {
@@ -37,7 +51,13 @@ workflow assemble_denovo {
       description: "Optional database to use to filter read set to those that match by LASTAL. Sequences in fasta format will be indexed on the fly.",
       patterns: ["*.fasta"]
     }
+    reference_genome_fasta: {
+      description: "After denovo assembly, large contigs are scaffolded against a reference genome to determine orientation and to join contigs together, before further polishing by reads. You must supply at least one reference genome (all segments/chromomes in a single fasta file). If more than one reference is provided, contigs will be scaffolded against all of them and the one with the most complete assembly will be chosen for downstream polishing.",
+      patterns: ["*.fasta"]
+    }
   }
+
+  String sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
 
   if(length(deplete_bmtaggerDbs) + length(deplete_blastDbs) + length(deplete_bwaDbs) > 0) {
     call taxon_filter.deplete_taxa {
@@ -64,19 +84,33 @@ workflow assemble_denovo {
 
   call assembly.assemble {
     input:
-      reads_unmapped_bam = rmdup_ubam.dedup_bam
+      reads_unmapped_bam = rmdup_ubam.dedup_bam,
+      trim_clip_db = trim_clip_db,
+      always_succeed = true,
+      assembler = assembler,
+      sample_name = sample_name
   }
 
   call assembly.scaffold {
     input:
       contigs_fasta = assemble.contigs_fasta,
-      reads_bam = select_first([filter_to_taxon.taxfilt_bam, deplete_taxa.cleaned_bam, reads_unmapped_bam])
+      reads_bam = select_first([filter_to_taxon.taxfilt_bam, deplete_taxa.cleaned_bam, reads_unmapped_bam]),
+      reference_genome_fasta = reference_genome_fasta,
+      min_length_fraction = scaffold_min_length_fraction,
+      min_unambig = scaffold_min_unambig,
+      replace_length = scaffold_replace_length,
+      nucmer_max_gap = nucmer_max_gap,
+      nucmer_min_match = nucmer_min_match,
+      nucmer_min_cluster = nucmer_min_cluster,
+      scaffold_min_pct_contig_aligned = scaffold_min_pct_contig_aligned
   }
 
   call assembly.refine_2x_and_plot {
     input:
       assembly_fasta = scaffold.scaffold_fasta,
-      reads_unmapped_bam = select_first([deplete_taxa.cleaned_bam, reads_unmapped_bam])
+      reads_unmapped_bam = select_first([deplete_taxa.cleaned_bam, reads_unmapped_bam]),
+      novocraft_license = novocraft_license,
+      sample_name = sample_name
   }
 
   if(call_isnvs) {
