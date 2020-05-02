@@ -128,7 +128,6 @@ task FastqToUBAM {
     String? platform_name
     String? sequencing_center
 
-    Int    machine_mem_gb = 3
     String docker = "broadinstitute/gatk:latest"
   }
   parameter_meta {
@@ -137,13 +136,12 @@ task FastqToUBAM {
     sample_name: { description: "Sample name. This is required and will populate the 'SM' read group value and will be used as the output filename (must be filename-friendly)." }
     library_name: { description: "Library name. This is required and will populate the 'LB' read group value. SM & LB combinations must be identical for any sequencing reads generated from the same sequencing library, and must be distinct for any reads generated from different libraries." }
   }
-  Int command_mem_gb = machine_mem_gb - 1
   Int disk_space_gb = ceil((size(fastq_1, "GB")) * 4 ) + 20
   command {
-      /gatk/gatk --java-options "-Xmx~{command_mem_gb}g" \
+      /gatk/gatk --java-options "-Xmx2800m" \
       FastqToSam \
       --FASTQ ~{fastq_1} \
-      ${"--FASTQ2 " + fastq_2}
+      ${"--FASTQ2 " + fastq_2} \
       --SAMPLE_NAME "${sample_name}" \
       --LIBRARY_NAME "${library_name}" \
       --OUTPUT "${sample_name}".bam \
@@ -156,7 +154,7 @@ task FastqToUBAM {
   runtime {
     docker: docker
     cpu: 2
-    memory: machine_mem_gb + " GB"
+    memory: "3 GB"
     disks: "local-disk " + disk_space_gb + " HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
