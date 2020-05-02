@@ -1,11 +1,14 @@
+version 1.0
 
 task download_fasta {
-  String         out_prefix
-  Array[String]+ accessions
-  String         emailAddress
+  input {
+    String         out_prefix
+    Array[String]+ accessions
+    String         emailAddress
 
-  Int?           machine_mem_gb
-  String?        docker="quay.io/broadinstitute/viral-phylo"
+    Int?           machine_mem_gb
+    String?        docker="quay.io/broadinstitute/viral-phylo"
+  }
 
   command {
     ncbi.py --version | tee VERSION
@@ -20,6 +23,7 @@ task download_fasta {
     File   sequences_fasta  = "${out_prefix}.fasta"
     String viralngs_version = read_string("VERSION")
   }
+
   runtime {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 3]) + " GB"
@@ -29,12 +33,14 @@ task download_fasta {
 }
 
 task download_annotations {
-  Array[String]+ accessions
-  String         emailAddress
-  String         combined_out_prefix
+  input {
+    Array[String]+ accessions
+    String         emailAddress
+    String         combined_out_prefix
 
-  Int?           machine_mem_gb
-  String?        docker="quay.io/broadinstitute/viral-phylo"
+    Int?           machine_mem_gb
+    String?        docker="quay.io/broadinstitute/viral-phylo"
+  }
 
   command {
     set -ex -o pipefail
@@ -68,14 +74,22 @@ task download_annotations {
 }
 
 task annot_transfer {
-  Array[File]+ multi_aln_fasta         # fasta; multiple alignments of sample sequences for each chromosome
-  File         reference_fasta         # fasta; all chromosomes in one file
-  Array[File]+ reference_feature_table # tbl; feature table corresponding to each chromosome in the alignment
+  input {
+    Array[File]+ multi_aln_fasta
+    File         reference_fasta
+    Array[File]+ reference_feature_table
+
+    Int?         machine_mem_gb
+    String?      docker="quay.io/broadinstitute/viral-phylo"
+  }
 
   Array[Int]   chr_nums=range(length(multi_aln_fasta))
 
-  Int?         machine_mem_gb
-  String?      docker="quay.io/broadinstitute/viral-phylo"
+  parameter_meta {
+    multi_aln_fasta:         { description: "fasta; multiple alignments of sample sequences for each chromosome" }
+    reference_fasta:         { description: "fasta; all chromosomes in one file" }
+    reference_feature_table: { description: "tbl; feature table corresponding to each chromosome in the alignment" }
+  }
 
   command {
     set -ex -o pipefail
@@ -99,6 +113,7 @@ task annot_transfer {
     Array[File] transferred_feature_tables = glob("*.tbl")
     String      viralngs_version           = read_string("VERSION")
   }
+
   runtime {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 3]) + " GB"
@@ -108,19 +123,21 @@ task annot_transfer {
 }
 
 task prepare_genbank {
-  Array[File]+ assemblies_fasta
-  Array[File]  annotations_tbl
-  File         authors_sbt
-  File         biosampleMap
-  File         genbankSourceTable
-  File?        coverage_table # summary.assembly.txt (from Snakemake) -- change this to accept a list of mapped bam files and we can create this table ourselves
-  String       sequencingTech
-  String       comment # TO DO: make this optional
-  String       organism
-  String       molType = "cRNA"
+  input {
+    Array[File]+ assemblies_fasta
+    Array[File]  annotations_tbl
+    File         authors_sbt
+    File         biosampleMap
+    File         genbankSourceTable
+    File?        coverage_table # summary.assembly.txt (from Snakemake) -- change this to accept a list of mapped bam files and we can create this table ourselves
+    String       sequencingTech
+    String       comment # TO DO: make this optional
+    String       organism
+    String       molType = "cRNA"
 
-  Int?         machine_mem_gb
-  String?      docker="quay.io/broadinstitute/viral-phylo"
+    Int?         machine_mem_gb
+    String?      docker="quay.io/broadinstitute/viral-phylo"
+  }
 
   command {
     set -ex -o pipefail
@@ -159,5 +176,3 @@ task prepare_genbank {
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
-
-

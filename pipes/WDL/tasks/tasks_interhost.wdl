@@ -1,14 +1,17 @@
+version 1.0
 
 task multi_align_mafft_ref {
-  File           reference_fasta
-  Array[File]+   assemblies_fasta # fasta files, one per sample, multiple chrs per file okay
-  String         fasta_basename = basename(reference_fasta, '.fasta')
-  Int?           mafft_maxIters
-  Float?         mafft_ep
-  Float?         mafft_gapOpeningPenalty
+  input {
+    File           reference_fasta
+    Array[File]+   assemblies_fasta # fasta files, one per sample, multiple chrs per file okay
+    String         fasta_basename = basename(reference_fasta, '.fasta')
+    Int?           mafft_maxIters
+    Float?         mafft_ep
+    Float?         mafft_gapOpeningPenalty
 
-  Int?           machine_mem_gb
-  String?        docker="quay.io/broadinstitute/viral-phylo"
+    Int?           machine_mem_gb
+    String?        docker="quay.io/broadinstitute/viral-phylo"
+  }
 
   command {
     interhost.py --version | tee VERSION
@@ -40,14 +43,16 @@ task multi_align_mafft_ref {
 }
 
 task multi_align_mafft {
-  Array[File]+   assemblies_fasta # fasta files, one per sample, multiple chrs per file okay
-  String         out_prefix = "aligned"
-  Int?           mafft_maxIters
-  Float?         mafft_ep
-  Float?         mafft_gapOpeningPenalty
+  input {
+    Array[File]+   assemblies_fasta # fasta files, one per sample, multiple chrs per file okay
+    String         out_prefix = "aligned"
+    Int?           mafft_maxIters
+    Float?         mafft_ep
+    Float?         mafft_gapOpeningPenalty
 
-  Int?           machine_mem_gb
-  String?        docker="quay.io/broadinstitute/viral-phylo"
+    Int?           machine_mem_gb
+    String?        docker="quay.io/broadinstitute/viral-phylo"
+  }
 
   command {
     interhost.py --version | tee VERSION
@@ -79,11 +84,13 @@ task multi_align_mafft {
 }
 
 task index_ref {
-  File     referenceGenome
-  File?    novocraft_license
+  input {
+    File     referenceGenome
+    File?    novocraft_license
 
-  Int?     machine_mem_gb
-  String?  docker="quay.io/broadinstitute/viral-core"
+    Int?     machine_mem_gb
+    String?  docker="quay.io/broadinstitute/viral-core"
+  }
 
   command {
     read_utils.py --version | tee VERSION
@@ -108,12 +115,14 @@ task index_ref {
 }
 
 task trimal_clean_msa {
-  File     in_aligned_fasta
+  input {
+    File     in_aligned_fasta
 
-  Int?     machine_mem_gb
-  String?  docker="quay.io/biocontainers/trimal:1.4.1--h6bb024c_3"
+    Int?     machine_mem_gb
+    String?  docker="quay.io/biocontainers/trimal:1.4.1--h6bb024c_3"
 
-  String   input_basename = basename(basename(in_aligned_fasta, ".fasta"), ".fa")
+    String   input_basename = basename(basename(in_aligned_fasta, ".fasta"), ".fa")
+  }
 
   command {
     trimal -fasta -automated1 -in "${in_aligned_fasta}" -out "${input_basename}_trimal_cleaned.fasta"
@@ -121,7 +130,6 @@ task trimal_clean_msa {
 
   output {
     File   trimal_cleaned_fasta = "${input_basename}_trimal_cleaned.fasta"
-    String viralngs_version     = read_string("VERSION")
   }
   runtime {
     docker: "${docker}"

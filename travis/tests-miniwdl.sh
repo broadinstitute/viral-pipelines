@@ -29,7 +29,7 @@ for workflow in ../pipes/WDL/workflows/*.wdl; do
 		echo "Executing $workflow_name using miniWDL on local instance"
 		# the following invocation with -d $workflow_name/. tells miniwdl not to create
 		# a timestamped subdirectory within $workflow_name/
-		time miniwdl run -i $input_json -d $workflow_name/. --error-json $workflow
+		time miniwdl run -i $input_json -d $workflow_name/. --error-json --verbose $workflow
 		# the existence of $workflow_name/outputs.json is a guarantee of successful execution
 		if [ -f $workflow_name/outputs.json ]; then
 			echo "$workflow_name SUCCESS -- outputs:"

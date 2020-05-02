@@ -1,16 +1,19 @@
+version 1.0
 
 task isnvs_per_sample {
-  File    mapped_bam
-  File    assembly_fasta
+  input {
+    File    mapped_bam
+    File    assembly_fasta
 
-  Int?    threads
-  Int?    minReadsPerStrand
-  Int?    maxBias
+    Int?    threads
+    Int?    minReadsPerStrand
+    Int?    maxBias
 
-  Int?    machine_mem_gb
-  String? docker="quay.io/broadinstitute/viral-phylo"
+    Int?    machine_mem_gb
+    String? docker="quay.io/broadinstitute/viral-phylo"
 
-  String  sample_name = basename(basename(basename(mapped_bam, ".bam"), ".all"), ".mapped")
+    String  sample_name = basename(basename(basename(mapped_bam, ".bam"), ".all"), ".mapped")
+  }
 
   command {
     intrahost.py --version | tee VERSION
@@ -37,17 +40,27 @@ task isnvs_per_sample {
 
 
 task isnvs_vcf {
-  Array[File]    vphaser2Calls # vphaser output; ex. vphaser2.${sample}.txt.gz
-  Array[File]    perSegmentMultiAlignments # aligned_##.fasta, where ## is segment number
-  File           reference_fasta
+  input {
+    Array[File]    vphaser2Calls
+    Array[File]    perSegmentMultiAlignments
+    File           reference_fasta
 
-  Array[String]? snpEffRef # list of accessions to build/find snpEff database
-  Array[String]? sampleNames # list of sample names
-  String?        emailAddress # email address passed to NCBI if we need to download reference sequences
-  Boolean        naiveFilter=false
+    Array[String]? snpEffRef
+    Array[String]? sampleNames
+    String?        emailAddress
+    Boolean        naiveFilter=false
 
-  Int?           machine_mem_gb
-  String?        docker="quay.io/broadinstitute/viral-phylo"
+    Int?           machine_mem_gb
+    String?        docker="quay.io/broadinstitute/viral-phylo"
+  }
+
+  parameter_meta {
+    vphaser2Calls:             { description: "vphaser output; ex. vphaser2.<sample>.txt.gz" }
+    perSegmentMultiAlignments: { description: "aligned_##.fasta, where ## is segment number" }
+    snpEffRef:                 { description: "list of accessions to build/find snpEff database" }
+    sampleNames:               { description: "list of sample names" }
+    emailAddress:              { description: "email address passed to NCBI if we need to download reference sequences" }
+  }
 
   command {
     set -ex -o pipefail
@@ -88,8 +101,12 @@ task isnvs_vcf {
   }
 
   output {
-    Array[File] isnvFiles        = ["isnvs.vcf.gz", "isnvs.vcf.gz.tbi", "isnvs.annot.vcf.gz", "isnvs.annot.txt.gz", "isnvs.annot.vcf.gz.tbi"]
-    String      viralngs_version = read_string("VERSION")
+    File        isnvs_vcf           = "isnvs.vcf.gz"
+    File        isnvs_vcf_idx       = "isnvs.vcf.gz.tbi"
+    File        isnvs_annot_vcf     = "isnvs.annot.vcf.gz"
+    File        isnvs_annot_vcf_idx = "isnvs.annot.vcf.gz.tbi"
+    File        isnvs_annot_txt     = "isnvs.annot.txt.gz"
+    String      viralngs_version    = read_string("VERSION")
   }
   runtime {
     docker: "${docker}"

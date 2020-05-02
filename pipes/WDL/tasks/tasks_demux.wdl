@@ -1,10 +1,13 @@
+version 1.0
 
 task merge_tarballs {
-  Array[File]+  tar_chunks
-  String        out_filename
+  input {
+    Array[File]+  tar_chunks
+    String        out_filename
 
-  Int?          machine_mem_gb
-  String?       docker="quay.io/broadinstitute/viral-core"
+    Int?          machine_mem_gb
+    String?       docker="quay.io/broadinstitute/viral-core"
+  }
 
   command {
     set -ex -o pipefail
@@ -36,28 +39,29 @@ task merge_tarballs {
 }
 
 task illumina_demux {
+  input {
+    File    flowcell_tgz
+    Int?    lane=1
+    File?   samplesheet
+    File?   runinfo
+    String? sequencingCenter
 
-  File    flowcell_tgz
-  Int?    lane=1
-  File?   samplesheet
-  File?   runinfo
-  String? sequencingCenter
+    String? flowcell
+    Int?    minimumBaseQuality = 10
+    Int?    maxMismatches = 0
+    Int?    minMismatchDelta
+    Int?    maxNoCalls
+    String? readStructure
+    Int?    minimumQuality
+    Int?    threads
+    String? runStartDate
+    Int?    maxReadsInRamPerTile
+    Int?    maxRecordsInRam
+    Boolean? forceGC=true
 
-  String? flowcell
-  Int?    minimumBaseQuality = 10
-  Int?    maxMismatches = 0
-  Int?    minMismatchDelta
-  Int?    maxNoCalls
-  String? readStructure
-  Int?    minimumQuality
-  Int?    threads
-  String? runStartDate
-  Int?    maxReadsInRamPerTile
-  Int?    maxRecordsInRam
-  Boolean? forceGC=true
-
-  Int?    machine_mem_gb
-  String? docker="quay.io/broadinstitute/viral-core"
+    Int?    machine_mem_gb
+    String? docker="quay.io/broadinstitute/viral-core"
+  }
 
   command {
     set -ex -o pipefail
@@ -253,6 +257,7 @@ task illumina_demux {
     cpu: 32
     disks: "local-disk 2625 LOCAL"
     dx_instance_type: "mem3_ssd2_v2_x32"
+    dx_timeout: "20H"
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
   }
 }
