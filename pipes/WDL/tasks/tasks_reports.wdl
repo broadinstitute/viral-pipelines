@@ -270,8 +270,6 @@ task MultiQC {
     Array[File]     input_files = []
 
     Boolean         force = false
-    Boolean         dirs = false
-    Int?            dirs_depth
     Boolean         full_names = false
     String?         title
     String?         comment
@@ -282,7 +280,6 @@ task MultiQC {
     String?         ignore_analysis_files
     String?         ignore_sample_names
     File?           sample_names
-    File?           file_with_list_of_input_paths
     Array[String]+? exclude_modules
     Array[String]+? module_to_use
     Boolean         data_dir = false
@@ -305,32 +302,29 @@ task MultiQC {
     output_data_format: { description: "[tsv|yaml|json] default:tsv" }
   }
 
-  String input_directory="multiqc-input"
   # get the basename in all wdl use the filename specified (sans ".html" extension, if specified)
   String report_filename = if (defined(file_name)) then basename(select_first([file_name]), ".html") else "multiqc"
 
   command {
       set -ex -o pipefail
 
-      mkdir -p ${input_directory} ${out_dir}
-
-      ln -s ${sep=' ' input_files} ${input_directory}
+      echo "${sep='\n' input_files}" > input-filenames.txt
+      echo "" >> input-filenames.txt
 
       multiqc \
+      --file-list input-filenames.txt \
+      --dirs \
+      --outdir "${out_dir}" \
       ${true="--force" false="" force} \
-      ${true="--dirs" false="" dirs} \
-      ${"--dirs-depth " + dirs_depth} \
       ${true="--fullnames" false="" full_names} \
       ${"--title " + title} \
       ${"--comment " + comment} \
       ${"--filename " + file_name} \
-      ${"--outdir " + out_dir} \
       ${"--template " + template} \
       ${"--tag " + tag} \
       ${"--ignore " + ignore_analysis_files} \
       ${"--ignore-samples" + ignore_sample_names} \
       ${"--sample-names " + sample_names} \
-      ${"--file-list " + file_with_list_of_input_paths} \
       ${true="--exclude " false="" defined(exclude_modules)}${sep=" --exclude " exclude_modules} \
       ${true="--module " false="" defined(module_to_use)}${sep=" --module " module_to_use} \
       ${true="--data-dir" false="" data_dir} \
@@ -344,14 +338,12 @@ task MultiQC {
       ${true="--pdf" false="" pdf} \
       ${false="--no-megaqc-upload" true="" megaQC_upload} \
       ${"--config " + config} \
-      ${"--cl-config " + config_yaml } \
-      ${input_directory}
+      ${"--cl-config " + config_yaml }
 
       if [ -z "${file_name}" ]; then
         mv "${out_dir}/${report_filename}_report.html" "${out_dir}/${report_filename}.html"
       fi
 
-      #tar -czvf "${report_filename}_data.tar.gz" "${out_dir}/${report_filename}_data"
       tar -c "${out_dir}/${report_filename}_data" | gzip -c > "${report_filename}_data.tar.gz"
   }
 
