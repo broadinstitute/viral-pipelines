@@ -7,7 +7,7 @@ task krakenuniq {
     File        krona_taxonomy_db_tgz  # taxonomy.tab
 
     Int?        machine_mem_gb
-    String?     docker="quay.io/broadinstitute/viral-classify"
+    String      docker="quay.io/broadinstitute/viral-classify"
   }
 
   command {
@@ -104,7 +104,7 @@ task build_krakenuniq_db {
     Int?        maxDbSize
 
     Int?        machine_mem_gb
-    String?     docker="quay.io/broadinstitute/viral-classify"
+    String      docker="quay.io/broadinstitute/viral-classify"
   }
 
   command {
@@ -164,7 +164,7 @@ task kraken {
     File        krona_taxonomy_db_tgz  # taxonomy.tab
 
     Int?        machine_mem_gb
-    String?     docker="quay.io/broadinstitute/viral-classify"
+    String      docker="quay.io/broadinstitute/viral-classify"
   }
 
   command {
@@ -247,7 +247,7 @@ task build_kraken_db {
     Int?        maxDbSize
 
     Int?        machine_mem_gb
-    String?     docker="quay.io/broadinstitute/viral-classify"
+    String      docker="quay.io/broadinstitute/viral-classify"
   }
 
   command {
@@ -312,7 +312,7 @@ task krona {
     Int?     magnitude_column
 
     Int?     machine_mem_gb
-    String?  docker="quay.io/broadinstitute/viral-classify"
+    String   docker="quay.io/broadinstitute/viral-classify"
   }
 
   String  input_basename = basename(classified_reads_txt_gz, ".txt.gz")
@@ -362,7 +362,7 @@ task krona_merge {
     String       out_basename
 
     Int?         machine_mem_gb
-    String?      docker="biocontainers/krona:v2.7.1_cv1"
+    String       docker="biocontainers/krona:v2.7.1_cv1"
   }
 
   command {
@@ -395,7 +395,7 @@ task filter_bam_to_taxa {
     Boolean?       withoutChildren=false
 
     Int?           machine_mem_gb
-    String?        docker="quay.io/broadinstitute/viral-classify"
+    String         docker="quay.io/broadinstitute/viral-classify"
   }
 
   String         input_basename = basename(classified_bam, ".bam")
@@ -456,7 +456,7 @@ task kaiju {
     File     krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
 
     Int?     machine_mem_gb
-    String?  docker="quay.io/broadinstitute/viral-classify"
+    String   docker="quay.io/broadinstitute/viral-classify"
   }
 
   String   input_basename = basename(reads_unmapped_bam, ".bam")

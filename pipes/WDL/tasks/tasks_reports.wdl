@@ -10,8 +10,7 @@ task plot_coverage {
     Boolean? bin_large_plots=false
     String?  binning_summary_statistic="max" # max or min
 
-    Int?     machine_mem_gb
-    String?  docker="quay.io/broadinstitute/viral-core"
+    String   docker="quay.io/broadinstitute/viral-core"
   }
   
   command {
@@ -71,7 +70,7 @@ task plot_coverage {
 
   runtime {
     docker: "${docker}"
-    memory: select_first([machine_mem_gb, 7]) + " GB"
+    memory: "7 GB"
     cpu: 2
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x4"
@@ -85,8 +84,7 @@ task coverage_report {
     Array[File]  mapped_bam_idx # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name="coverage_report.txt"
 
-    Int?         machine_mem_gb
-    String?      docker="quay.io/broadinstitute/viral-core"
+    String       docker="quay.io/broadinstitute/viral-core"
   }
 
   command {
@@ -104,7 +102,7 @@ task coverage_report {
 
   runtime {
     docker: "${docker}"
-    memory: select_first([machine_mem_gb, 2]) + " GB"
+    memory: "2 GB"
     cpu: 2
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd2_v2_x4"
@@ -116,8 +114,7 @@ task fastqc {
   input {
     File     reads_bam
 
-    Int?     machine_mem_gb
-    String?  docker="quay.io/broadinstitute/viral-core"
+    String   docker="quay.io/broadinstitute/viral-core"
   }
 
   String   reads_basename=basename(reads_bam, ".bam")
@@ -135,11 +132,11 @@ task fastqc {
   }
 
   runtime {
-    memory: select_first([machine_mem_gb, 2]) + " GB"
+    memory: "2 GB"
     cpu: 1
     docker: "${docker}"
     disks: "local-disk 375 LOCAL"
-    dx_instance_type: "mem1_ssd1_v2_x4"
+    dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
 
@@ -151,7 +148,7 @@ task align_and_count {
     Int?    topNHits = 3
 
     Int?    machine_mem_gb
-    String? docker="quay.io/broadinstitute/viral-core"
+    String  docker="quay.io/broadinstitute/viral-core"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
@@ -193,8 +190,7 @@ task align_and_count_summary {
   input {
     Array[File]+  counts_txt
 
-    Int?          machine_mem_gb
-    String?       docker="quay.io/broadinstitute/viral-core"
+    String        docker="quay.io/broadinstitute/viral-core"
   }
 
   command {
@@ -214,7 +210,7 @@ task align_and_count_summary {
   }
 
   runtime {
-    memory: select_first([machine_mem_gb, 3]) + " GB"
+    memory: "3 GB"
     cpu: 2
     docker: "${docker}"
     disks: "local-disk 50 HDD"
@@ -229,8 +225,7 @@ task aggregate_metagenomics_reports {
     String       aggregate_taxlevel_focus                 = "species"
     Int?         aggregate_top_N_hits                     = 5
 
-    Int?         machine_mem_gb
-    String?      docker="quay.io/broadinstitute/viral-classify"
+    String       docker="quay.io/broadinstitute/viral-classify"
   }
 
   parameter_meta {
@@ -262,7 +257,7 @@ task aggregate_metagenomics_reports {
 
   runtime {
     docker: "${docker}"
-    memory: select_first([machine_mem_gb, 4]) + " GB"
+    memory: "3 GB"
     cpu: 1
     disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd2_v2_x2"
@@ -300,7 +295,6 @@ task MultiQC {
     File?           config  # directory
     String?         config_yaml
 
-    Int?            machine_mem_gb
     String          docker = "quay.io/biocontainers/multiqc:1.8--py_2"
   }
 
@@ -359,7 +353,7 @@ task MultiQC {
   }
 
   runtime {
-    memory: select_first([machine_mem_gb, 2]) + " GB"
+    memory: "2 GB"
     cpu: 1
     docker: "${docker}"
     disks: "local-disk 375 LOCAL"

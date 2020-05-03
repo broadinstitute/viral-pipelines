@@ -7,7 +7,7 @@ task download_fasta {
     String         emailAddress
 
     Int?           machine_mem_gb
-    String?        docker="quay.io/broadinstitute/viral-phylo"
+    String         docker="quay.io/broadinstitute/viral-phylo"
   }
 
   command {
@@ -39,7 +39,7 @@ task download_annotations {
     String         combined_out_prefix
 
     Int?           machine_mem_gb
-    String?        docker="quay.io/broadinstitute/viral-phylo"
+    String         docker="quay.io/broadinstitute/viral-phylo"
   }
 
   command {
@@ -80,7 +80,7 @@ task annot_transfer {
     Array[File]+ reference_feature_table
 
     Int?         machine_mem_gb
-    String?      docker="quay.io/broadinstitute/viral-phylo"
+    String       docker="quay.io/broadinstitute/viral-phylo"
   }
 
   Array[Int]   chr_nums=range(length(multi_aln_fasta))
@@ -136,7 +136,7 @@ task prepare_genbank {
     String       molType = "cRNA"
 
     Int?         machine_mem_gb
-    String?      docker="quay.io/broadinstitute/viral-phylo"
+    String       docker="quay.io/broadinstitute/viral-phylo"
   }
 
   command {
