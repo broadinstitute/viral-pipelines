@@ -147,16 +147,16 @@ task FastqToUBAM {
 
       picard -Xmx"$mem_in_mb"m \
         FastqToSam \
-        --FASTQ ~{fastq_1} \
-        ${"--FASTQ2 " + fastq_2} \
-        --SAMPLE_NAME "${sample_name}" \
-        --LIBRARY_NAME "${library_name}" \
-        --OUTPUT "${sample_name}".bam \
-        ${"--READ_GROUP_NAME " + readgroup_name} \
-        ${"--PLATFORM_UNIT " + platform_unit} \
-        ${"--RUN_DATE " + run_date} \
-        ${"--PLATFORM " + platform_name} \
-        ${"--SEQUENCING_CENTER " + sequencing_center}
+        FASTQ="~{fastq_1}"" \
+        ${"FASTQ2=" + fastq_2} \
+        SAMPLE_NAME="${sample_name}" \
+        LIBRARY_NAME="${library_name}" \
+        OUTPUT="${sample_name}".bam \
+        ${"READ_GROUP_NAME=" + readgroup_name} \
+        ${"PLATFORM_UNIT=" + platform_unit} \
+        ${"RUN_DATE=" + run_date} \
+        ${"PLATFORM=" + platform_name} \
+        ${"SEQUENCING_CENTER=" + sequencing_center}
   }
   runtime {
     docker: docker
