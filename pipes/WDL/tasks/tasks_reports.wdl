@@ -315,6 +315,7 @@ task MultiQC {
       set -ex -o pipefail
 
       echo "${sep='\n' input_files}" > input-filenames.txt
+      echo "" >> input-filenames.txt
 
       multiqc \
       --file-list input-filenames.txt \
@@ -349,7 +350,6 @@ task MultiQC {
         mv "${out_dir}/${report_filename}_report.html" "${out_dir}/${report_filename}.html"
       fi
 
-      "${out_dir}/${report_filename}_data"
       tar -c "${out_dir}/${report_filename}_data" | gzip -c > "${report_filename}_data.tar.gz"
   }
 
