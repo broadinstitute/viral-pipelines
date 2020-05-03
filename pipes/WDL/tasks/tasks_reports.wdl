@@ -260,7 +260,7 @@ task aggregate_metagenomics_reports {
     memory: "3 GB"
     cpu: 1
     disks: "local-disk 50 HDD"
-    dx_instance_type: "mem1_ssd2_v2_x1"
+    dx_instance_type: "mem1_ssd2_v2_x2"
     preemptible: 0
   }
 }
