@@ -11,7 +11,6 @@ task merge_and_reheader_bams {
       File?           reheader_table
       String          out_basename
 
-      Int?            machine_mem_gb
       String          docker="quay.io/broadinstitute/viral-core"
     }
 
@@ -54,8 +53,8 @@ task merge_and_reheader_bams {
 
     runtime {
         docker: "${docker}"
-        memory: select_first([machine_mem_gb, 3]) + " GB"
-        cpu: 4
+        memory: "3 GB"
+        cpu: 2
         disks: "local-disk 750 LOCAL"
         dx_instance_type: "mem1_ssd2_v2_x4"
         preemptible: 0
@@ -130,6 +129,11 @@ task downsample_bams {
   }
 
   command {
+    set -ex -o pipefail
+
+    # find 90% memory
+    mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 90`
+
     if [[ "${deduplicateBefore}" == "true" ]]; then
       DEDUP_OPTION="--deduplicateBefore"
     elif [[ "${deduplicateAfter}" == "true" ]]; then
@@ -148,7 +152,7 @@ task downsample_bams {
         --outPath ./output \
         ${'--readCount=' + readCount} \
         $DEDUP_OPTION \
-        --JVMmemory "1g"
+        --JVMmemory "$mem_in_mb"m
   }
 
   output {

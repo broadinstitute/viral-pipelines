@@ -255,7 +255,6 @@ task align_reads {
     String?  aligner_options
     Boolean? skip_mark_dupes=false
 
-    Int?     machine_mem_gb
     String   docker="quay.io/broadinstitute/viral-core"
 
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
@@ -336,7 +335,7 @@ task align_reads {
 
   runtime {
     docker: "${docker}"
-    memory: select_first([machine_mem_gb, 7]) + " GB"
+    memory: "7 GB"
     cpu: 8
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x8"
