@@ -62,6 +62,58 @@ task merge_and_reheader_bams {
     }
 }
 
+task rmdup_ubam {
+  meta {
+    description: "Perform read deduplication on unaligned reads."
+  }
+
+  input {
+    File     reads_unmapped_bam
+    String   method="mvicuna"
+
+    Int?     machine_mem_gb
+    String?  docker="quay.io/broadinstitute/viral-core"
+  }
+
+  parameter_meta {
+    reads_unmapped_bam: { description: "unaligned reads in BAM format", patterns: ["*.bam"] }
+    method:             { description: "mvicuna or cdhit" }
+  }
+
+  String reads_basename = basename(reads_unmapped_bam, ".bam")
+  
+  command {
+    set -ex -o pipefail
+    mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
+    read_utils.py --version | tee VERSION
+
+    read_utils.py rmdup_"${method}"_bam \
+      "${reads_unmapped_bam}" \
+      "${reads_basename}".dedup.bam \
+      --JVMmemory "$mem_in_mb"m \
+      --loglevel=DEBUG
+
+    samtools view -c ${reads_basename}.dedup.bam | tee dedup_read_count_post
+    reports.py fastqc ${reads_basename}.dedup.bam ${reads_basename}.dedup_fastqc.html --out_zip ${reads_basename}.dedup_fastqc.zip
+  }
+
+  output {
+    File   dedup_bam             = "${reads_basename}.dedup.bam"
+    File   dedup_fastqc          = "${reads_basename}.dedup_fastqc.html"
+    File   dedup_fastqc_zip      = "${reads_basename}.dedup_fastqc.zip"
+    Int    dedup_read_count_post = read_int("dedup_read_count_post")
+    String viralngs_version      = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "${docker}"
+    memory: select_first([machine_mem_gb, 7]) + " GB"
+    cpu:    2
+    disks:  "local-disk 375 LOCAL"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task downsample_bams {
   meta {
     description: "Downsample reads in a BAM file randomly subsampling to a target read count. Read deduplication can occur either before or after random subsampling, or not at all (default: not at all)."

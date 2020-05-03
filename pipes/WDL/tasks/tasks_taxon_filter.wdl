@@ -12,6 +12,7 @@ task deplete_taxa {
     Boolean?     clear_tags = false
     String?      tags_to_clear_space_separated = "XT X0 X1 XA AM SM BQ CT XN OC OP"
 
+    Int?         cpu=8
     Int?         machine_mem_gb
     String?      docker="quay.io/broadinstitute/viral-classify"
   }
@@ -67,7 +68,6 @@ task deplete_taxa {
       tmpfile.raw.bam \
       tmpfile.bwa.bam \
       tmpfile.bmtagger_depleted.bam \
-      tmpfile.rmdup.bam \
       ${bam_basename}.cleaned.bam \
       $DBS_BMTAGGER $DBS_BLAST $DBS_BWA \
       ${'--chunkSize=' + query_chunk_size} \
@@ -92,10 +92,10 @@ task deplete_taxa {
   runtime {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 15]) + " GB"
-    cpu: 8
+    cpu: "${cpu}"
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x8"
-    preemptible: 0
+    preemptible: 1
   }
 }
 

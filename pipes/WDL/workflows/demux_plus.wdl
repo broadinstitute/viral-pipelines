@@ -2,6 +2,7 @@ version 1.0
 
 import "../tasks/tasks_demux.wdl" as demux
 import "../tasks/tasks_metagenomics.wdl" as metagenomics
+import "../tasks/tasks_read_utils.wdl" as read_utils
 import "../tasks/tasks_taxon_filter.wdl" as taxon_filter
 import "../tasks/tasks_assembly.wdl" as assembly
 import "../tasks/tasks_reports.wdl" as reports
@@ -85,6 +86,9 @@ workflow demux_plus {
         File        spikein_counts         = spike_summary.count_summary
         File        metagenomics_krona     = krakenuniq.krona_report_merged_html
         File        metagenomics_summary   = metag_summary_report.krakenuniq_aggregate_taxlevel_summary
+        Array[File] krakenuniq_classified_reads = krakenuniq.krakenuniq_classified_reads
+        Array[File] krakenuniq_summary_reports  = krakenuniq.krakenuniq_summary_reports
+        Array[File] krakenuniq_krona_by_sample  = krakenuniq.krona_report_html
 
         String      demux_viral_core_version          = illumina_demux.viralngs_version
         String      krakenuniq_viral_classify_version = krakenuniq.viralngs_version

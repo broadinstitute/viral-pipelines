@@ -51,12 +51,13 @@ for workflow in pipes/WDL/workflows/*.wdl; do
        # launch simple test cases on DNAnexus CI project
        dx_workflow_id=$(grep -w "^$workflow_name" $COMPILE_SUCCESS | cut -f 2)
        timeout_args=$(dx_run_timeout_args $dx_workflow_id)
+       echo "running test $workflow_name - $dx_workflow_id -y --brief -f $input_json --extra-args $timeout_args"
        dx_job_id=$(dx run \
            $dx_workflow_id -y --brief \
            -f $input_json \
            --name "$VERSION $workflow_name" \
            --destination /tests/$VERSION/$workflow_name \
-           --extra-args $timeout_args \
+           #--extra-args $timeout_args \
            )
        if [ $? -eq 0 ]; then
            echo "Launched $workflow_name as $dx_job_id"

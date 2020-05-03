@@ -1,8 +1,8 @@
 {
-  "contigs.deplete.bwaDbs": [
+  "contigs.deplete_bwaDbs": [
     "dx://file-Fg2p9b00xf5zx8VB8BYyJj0g"
   ],
-  "contigs.deplete.blastDbs": [
+  "contigs.deplete_blastDbs": [
     "dx://file-Fg2p9Zj0xf5VyJ380GxkBg0k",
     "dx://file-F8BjgXj09y3gkfZGPPQZbZkK"
   ],
