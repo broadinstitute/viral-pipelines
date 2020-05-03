@@ -86,7 +86,7 @@ task krakenuniq {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 320]) + " GB"
     cpu: 32
-    disks: "local-disk 375 LOCAL"
+    disks: "local-disk 750 LOCAL"
     dx_instance_type: "mem3_ssd1_v2_x48"
     preemptible: 0
   }
@@ -150,7 +150,7 @@ task build_krakenuniq_db {
   runtime {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 240]) + " GB"
-    disks: "local-disk 375 LOCAL"
+    disks: "local-disk 750 LOCAL"
     cpu: 32
     dx_instance_type: "mem3_ssd1_v2_x32"
     preemptible: 0
