@@ -13,7 +13,7 @@ task deplete_taxa {
     String?      tags_to_clear_space_separated = "XT X0 X1 XA AM SM BQ CT XN OC OP"
 
     Int?         machine_mem_gb
-    String?      docker="quay.io/broadinstitute/viral-classify"
+    String       docker="quay.io/broadinstitute/viral-classify"
   }
 
   parameter_meta {
@@ -110,7 +110,7 @@ task filter_to_taxon {
     String?  neg_control_prefixes_space_separated = "neg water NTC"
 
     Int?     machine_mem_gb
-    String?  docker="quay.io/broadinstitute/viral-classify"
+    String   docker="quay.io/broadinstitute/viral-classify"
   }
 
   # do this in two steps in case the input doesn't actually have "cleaned" in the name
@@ -166,7 +166,7 @@ task build_lastal_db {
     File    sequences_fasta
 
     Int?    machine_mem_gb
-    String? docker="quay.io/broadinstitute/viral-classify"
+    String  docker="quay.io/broadinstitute/viral-classify"
   }
 
   String  db_name = basename(sequences_fasta, ".fasta")
@@ -199,7 +199,7 @@ task merge_one_per_sample {
     Boolean?     rmdup=false
 
     Int?         machine_mem_gb
-    String?      docker="quay.io/broadinstitute/viral-core"
+    String       docker="quay.io/broadinstitute/viral-core"
   }
 
   command {

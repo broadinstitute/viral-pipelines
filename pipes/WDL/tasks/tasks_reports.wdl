@@ -11,7 +11,7 @@ task plot_coverage {
     String?  binning_summary_statistic="max" # max or min
 
     Int?     machine_mem_gb
-    String?  docker="quay.io/broadinstitute/viral-core"
+    String   docker="quay.io/broadinstitute/viral-core"
   }
   
   command {
@@ -86,7 +86,7 @@ task coverage_report {
     String       out_report_name="coverage_report.txt"
 
     Int?         machine_mem_gb
-    String?      docker="quay.io/broadinstitute/viral-core"
+    String       docker="quay.io/broadinstitute/viral-core"
   }
 
   command {
@@ -117,7 +117,7 @@ task fastqc {
     File     reads_bam
 
     Int?     machine_mem_gb
-    String?  docker="quay.io/broadinstitute/viral-core"
+    String   docker="quay.io/broadinstitute/viral-core"
   }
 
   String   reads_basename=basename(reads_bam, ".bam")
@@ -151,7 +151,7 @@ task align_and_count {
     Int?    topNHits = 3
 
     Int?    machine_mem_gb
-    String? docker="quay.io/broadinstitute/viral-core"
+    String  docker="quay.io/broadinstitute/viral-core"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
@@ -194,7 +194,7 @@ task align_and_count_summary {
     Array[File]+  counts_txt
 
     Int?          machine_mem_gb
-    String?       docker="quay.io/broadinstitute/viral-core"
+    String        docker="quay.io/broadinstitute/viral-core"
   }
 
   command {
@@ -230,7 +230,7 @@ task aggregate_metagenomics_reports {
     Int?         aggregate_top_N_hits                     = 5
 
     Int?         machine_mem_gb
-    String?      docker="quay.io/broadinstitute/viral-classify"
+    String       docker="quay.io/broadinstitute/viral-classify"
   }
 
   parameter_meta {

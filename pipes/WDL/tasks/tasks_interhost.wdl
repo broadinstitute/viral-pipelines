@@ -10,7 +10,7 @@ task multi_align_mafft_ref {
     Float?         mafft_gapOpeningPenalty
 
     Int?           machine_mem_gb
-    String?        docker="quay.io/broadinstitute/viral-phylo"
+    String         docker="quay.io/broadinstitute/viral-phylo"
   }
 
   command {
@@ -51,7 +51,7 @@ task multi_align_mafft {
     Float?         mafft_gapOpeningPenalty
 
     Int?           machine_mem_gb
-    String?        docker="quay.io/broadinstitute/viral-phylo"
+    String         docker="quay.io/broadinstitute/viral-phylo"
   }
 
   command {
@@ -89,7 +89,7 @@ task index_ref {
     File?    novocraft_license
 
     Int?     machine_mem_gb
-    String?  docker="quay.io/broadinstitute/viral-core"
+    String   docker="quay.io/broadinstitute/viral-core"
   }
 
   command {
@@ -119,7 +119,7 @@ task trimal_clean_msa {
     File     in_aligned_fasta
 
     Int?     machine_mem_gb
-    String?  docker="quay.io/biocontainers/trimal:1.4.1--h6bb024c_3"
+    String   docker="quay.io/biocontainers/trimal:1.4.1--h6bb024c_3"
 
     String   input_basename = basename(basename(in_aligned_fasta, ".fasta"), ".fa")
   }
