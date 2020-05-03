@@ -217,7 +217,7 @@ task align_and_count_summary {
     memory: select_first([machine_mem_gb, 3]) + " GB"
     cpu: 2
     docker: "${docker}"
-    disks: "local-disk 50 SSD"
+    disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
@@ -264,7 +264,7 @@ task aggregate_metagenomics_reports {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 4]) + " GB"
     cpu: 1
-    disks: "local-disk 50 SSD"
+    disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd2_v2_x2"
     preemptible: 0
   }
