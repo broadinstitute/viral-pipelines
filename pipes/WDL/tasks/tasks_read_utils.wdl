@@ -147,7 +147,7 @@ task FastqToUBAM {
 
       picard -Xmx"$mem_in_mb"m \
         FastqToSam \
-        FASTQ="~{fastq_1}"" \
+        FASTQ="~{fastq_1}" \
         ${"FASTQ2=" + fastq_2} \
         SAMPLE_NAME="${sample_name}" \
         LIBRARY_NAME="${library_name}" \
