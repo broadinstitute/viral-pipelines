@@ -12,7 +12,7 @@ task merge_and_reheader_bams {
       String          out_basename
 
       Int?            machine_mem_gb
-      String?         docker="quay.io/broadinstitute/viral-core"
+      String          docker="quay.io/broadinstitute/viral-core"
     }
 
     command {
@@ -74,7 +74,7 @@ task downsample_bams {
     Boolean?     deduplicateAfter=false
 
     Int?         machine_mem_gb
-    String?      docker="quay.io/broadinstitute/viral-core"
+    String       docker="quay.io/broadinstitute/viral-core"
   }
 
   command {
@@ -128,7 +128,7 @@ task FastqToUBAM {
     String? platform_name
     String? sequencing_center
 
-    String docker = "broadinstitute/gatk:latest"
+    String  docker="quay.io/broadinstitute/viral-core"
   }
   parameter_meta {
     fastq_1: { description: "Unaligned read1 file in fastq format", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }
@@ -138,18 +138,25 @@ task FastqToUBAM {
   }
   Int disk_space_gb = ceil((size(fastq_1, "GB")) * 4 ) + 20
   command {
-      /gatk/gatk --java-options "-Xmx2800m" \
-      FastqToSam \
-      --FASTQ ~{fastq_1} \
-      ${"--FASTQ2 " + fastq_2} \
-      --SAMPLE_NAME "${sample_name}" \
-      --LIBRARY_NAME "${library_name}" \
-      --OUTPUT "${sample_name}".bam \
-      ${"--READ_GROUP_NAME " + readgroup_name} \
-      ${"--PLATFORM_UNIT " + platform_unit} \
-      ${"--RUN_DATE " + run_date} \
-      ${"--PLATFORM " + platform_name} \
-      ${"--SEQUENCING_CENTER " + sequencing_center}
+      set -ex -o pipefail
+
+      # find 90% memory
+      mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 90`
+
+      read_utils.py --version | tee VERSION
+
+      picard -Xmx"$mem_in_mb"m \
+        FastqToSam \
+        --FASTQ ~{fastq_1} \
+        ${"--FASTQ2 " + fastq_2} \
+        --SAMPLE_NAME "${sample_name}" \
+        --LIBRARY_NAME "${library_name}" \
+        --OUTPUT "${sample_name}".bam \
+        ${"--READ_GROUP_NAME " + readgroup_name} \
+        ${"--PLATFORM_UNIT " + platform_unit} \
+        ${"--RUN_DATE " + run_date} \
+        ${"--PLATFORM " + platform_name} \
+        ${"--SEQUENCING_CENTER " + sequencing_center}
   }
   runtime {
     docker: docker
