@@ -188,7 +188,6 @@ task FastqToUBAM {
     sample_name: { description: "Sample name. This is required and will populate the 'SM' read group value and will be used as the output filename (must be filename-friendly)." }
     library_name: { description: "Library name. This is required and will populate the 'LB' read group value. SM & LB combinations must be identical for any sequencing reads generated from the same sequencing library, and must be distinct for any reads generated from different libraries." }
   }
-  Int disk_space_gb = ceil((size(fastq_1, "GB")) * 4 ) + 20
   command {
       set -ex -o pipefail
 
@@ -214,7 +213,7 @@ task FastqToUBAM {
     docker: docker
     cpu: 2
     memory: "3 GB"
-    disks: "local-disk " + disk_space_gb + " HDD"
+    disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
   output {
