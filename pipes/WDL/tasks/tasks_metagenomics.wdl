@@ -368,7 +368,7 @@ task build_kraken2_db {
     # prep input custom fastas, if specified
     CUSTOM_INPUT_CMD=""
     if [ -n "${sep=' ' custom_libraries}" ]; then
-      for TGZ in "${sep=' ' custom_libraries}"; do
+      for TGZ in ${sep=' ' custom_libraries}; do
         if [[ ($TGZ == *.tar.*) || ($TGZ == *.tgz) ]]; then
           read_utils.py extract_tarball \
             $TGZ $FASTAS_DIR \
@@ -393,7 +393,7 @@ task build_kraken2_db {
     # prep standard libraries, if specified
     STD_INPUT_CMD=""
     if [ -n "${sep=' ' standard_libraries}" ]; then
-      for LIB in "${sep=' ' standard_libraries}"; do
+      for LIB in ${sep=' ' standard_libraries}; do
         STD_INPUT_CMD="$STD_INPUT_CMD --standard_libraries=$LIB"
       done
     fi
