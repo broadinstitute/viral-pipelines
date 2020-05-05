@@ -14,6 +14,9 @@ workflow demux_metag {
         Array[File]? bmtaggerDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
         Array[File]? blastDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
         Array[File]? bwaDbs
+
+        File kraken2_db_tgz
+        File krona_taxonomy_db_kraken2_tgz
     }
 
     call demux.illumina_demux as illumina_demux
@@ -42,7 +45,13 @@ workflow demux_metag {
                 trim_clip_db = trim_clip_db,
                 always_succeed = true
         }
-        # call metagenomics.kraken2 task on raw_reads
+        call metagenomics.kraken2 as kraken2 {
+            input:
+                reads_unmapped_bam = raw_reads,
+                kraken2_db_tgz = kraken2_db_tgz,
+                krona_taxonomy_db_tgz = krona_taxonomy_db_kraken2_tgz
+        }
+        # TO DO: call blast on spades contigs
     }
 
     call reports.MultiQC as multiqc_raw {
@@ -63,11 +72,6 @@ workflow demux_metag {
             file_name   = "multiqc-dedup.html"
     }
 
-    call metagenomics.krakenuniq as krakenuniq {
-        input:
-            reads_unmapped_bam = illumina_demux.raw_reads_unaligned_bams
-    }
-
     call reports.align_and_count_summary as spike_summary {
         input:
             counts_txt = spikein.report
@@ -75,7 +79,13 @@ workflow demux_metag {
 
     call reports.aggregate_metagenomics_reports as metag_summary_report {
         input:
-            kraken_summary_reports = krakenuniq.krakenuniq_summary_reports
+            kraken_summary_reports = kraken2.kraken2_summary_report
+    }
+
+    call metagenomics.krona_merge {
+        input:
+            krona_reports = kraken2.krona_report_html,
+            out_basename = "merged-kraken2.krona.html"
     }
 
     output {
@@ -97,14 +107,13 @@ workflow demux_metag {
         File        multiqc_report_cleaned = multiqc_cleaned.multiqc_report
         File        multiqc_report_dedup   = multiqc_dedup.multiqc_report
         File        spikein_counts         = spike_summary.count_summary
-        File        metagenomics_krona     = krakenuniq.krona_report_merged_html
+        File        metagenomics_krona     = krona_merge.krona_report_html
         File        metagenomics_summary   = metag_summary_report.krakenuniq_aggregate_taxlevel_summary
-        Array[File] krakenuniq_classified_reads = krakenuniq.krakenuniq_classified_reads
-        Array[File] krakenuniq_summary_reports  = krakenuniq.krakenuniq_summary_reports
-        Array[File] krakenuniq_krona_by_sample  = krakenuniq.krona_report_html
+        Array[File] kraken2_summary_reports  = kraken2.kraken2_summary_report
+        Array[File] kraken2_krona_by_sample  = kraken2.krona_report_html
 
         String      demux_viral_core_version          = illumina_demux.viralngs_version
-        String      krakenuniq_viral_classify_version = krakenuniq.viralngs_version
+        String      kraken2_viral_classify_version = kraken2.viralngs_version[0]
         String      deplete_viral_classify_version    = deplete.viralngs_version[0]
         String      spades_viral_assemble_version     = spades.viralngs_version[0]
     }
