@@ -1,6 +1,10 @@
 version 1.0
 
 task krakenuniq {
+  meta {
+    description: "Runs Krakenuniq classification"
+  }
+
   input {
     Array[File] reads_unmapped_bam
     File        krakenuniq_db_tar_lz4  # {database.kdb,taxonomy}
@@ -8,6 +12,20 @@ task krakenuniq {
 
     Int?        machine_mem_gb
     String      docker="quay.io/broadinstitute/viral-classify"
+  }
+
+  parameter_meta {
+    reads_unmapped_bam: {
+      description: "Reads to classify. May be unmapped or mapped or both, paired-end or single-end.",
+      patterns: ["*.bam"] }
+    krakenuniq_db_tar_lz4: {
+      description: "Pre-built Kraken database tarball.",
+      patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+    }
+    krona_taxonomy_db_tgz: {
+      description: "Krona taxonomy database containing a single file: taxonomy.tab, or possibly just a compressed taxonomy.tab",
+      patterns: ["*.tab.zst", "*.tab.gz", "*.tab", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+    }
   }
 
   command {
@@ -30,9 +48,22 @@ task krakenuniq {
       mv $DB_DIR/krakenuniq/krakenuniq/* $DB_DIR/krakenuniq
     fi
 
-    read_utils.py extract_tarball \
-      ${krona_taxonomy_db_tgz} $DB_DIR/krona \
-      --loglevel=DEBUG &  # we don't need this until later
+    # unpack krona taxonomy.tab
+    if [[ ${krona_taxonomy_db_tgz} == *.tar.* ]]; then
+      read_utils.py extract_tarball \
+        ${krona_taxonomy_db_tgz} $DB_DIR/krona \
+        --loglevel=DEBUG &  # we don't need this until later
+    else
+      if [[ "${krona_taxonomy_db_tgz}" == *.zst ]]; then
+        cat "${krona_taxonomy_db_tgz}" | zstd -d > $DB_DIR/krona/taxonomy.tab &
+      elif [[ "${krona_taxonomy_db_tgz}" == *.gz ]]; then
+        cat "${krona_taxonomy_db_tgz}" | pigz -dc > $DB_DIR/krona/taxonomy.tab &
+      elif [[ "${krona_taxonomy_db_tgz}" == *.bz2 ]]; then
+        cat "${krona_taxonomy_db_tgz}" | bzip -dc > $DB_DIR/krona/taxonomy.tab &
+      else
+        cp "${krona_taxonomy_db_tgz}" $DB_DIR/krona/taxonomy.tab &
+      fi
+    fi
 
     # prep input and output file names
     OUT_READS=fnames_outreads.txt
@@ -180,8 +211,8 @@ task kraken2 {
       patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
     }
     krona_taxonomy_db_tgz: {
-      description: "Krona taxonomy database containing a single file: taxonomy.tab.",
-      patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+      description: "Krona taxonomy database containing a single file: taxonomy.tab, or possibly just a compressed taxonomy.tab",
+      patterns: ["*.tab.zst", "*.tab.gz", "*.tab", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
     }
   }
 
@@ -200,6 +231,24 @@ task kraken2 {
     read_utils.py extract_tarball \
       ${kraken2_db_tgz} $DB_DIR/kraken2 \
       --loglevel=DEBUG
+
+    # unpack krona taxonomy.tab
+    if [[ ${krona_taxonomy_db_tgz} == *.tar.* ]]; then
+      read_utils.py extract_tarball \
+        ${krona_taxonomy_db_tgz} $DB_DIR/krona \
+        --loglevel=DEBUG &  # we don't need this until later
+    else
+      if [[ "${krona_taxonomy_db_tgz}" == *.zst ]]; then
+        cat "${krona_taxonomy_db_tgz}" | zstd -d > $DB_DIR/krona/taxonomy.tab &
+      elif [[ "${krona_taxonomy_db_tgz}" == *.gz ]]; then
+        cat "${krona_taxonomy_db_tgz}" | pigz -dc > $DB_DIR/krona/taxonomy.tab &
+      elif [[ "${krona_taxonomy_db_tgz}" == *.bz2 ]]; then
+        cat "${krona_taxonomy_db_tgz}" | bzip -dc > $DB_DIR/krona/taxonomy.tab &
+      else
+        cp "${krona_taxonomy_db_tgz}" $DB_DIR/krona/taxonomy.tab &
+      fi
+    fi
+
     read_utils.py extract_tarball \
       ${krona_taxonomy_db_tgz} $DB_DIR/krona \
       --loglevel=DEBUG &  # we don't need this until later
@@ -279,8 +328,8 @@ task build_kraken2_db {
       description: "A list of 'standard' kraken2 databases to include in this build. Including any values here will cause fresh downloads of data at the time of build. A list of acceptable names is available at https://ccb.jhu.edu/software/kraken2/index.shtml?t=manual#custom-databases"
     }
     custom_libraries: {
-      description: "A list of 'custom' kraken2 databases to include in this build. Headers must be formatted as described in the kraken2 documentation. These are tarball collections of such fastas--multiple may be provided here.",
-      patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+      description: "A list of 'custom' kraken2 databases to include in this build. Headers must be formatted as described in the kraken2 documentation. These are fastas or tarball collections of such fastas--multiple may be provided here.",
+      patterns: ["*.fasta", "*.fasta.zst", "*.fasta.gz", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
     }
     protein: {
       description: "Build a protein (translated search) database. Default is nucleotide."
@@ -320,9 +369,21 @@ task build_kraken2_db {
     CUSTOM_INPUT_CMD=""
     if [ -n "${sep=' ' custom_libraries}" ]; then
       for TGZ in "${sep=' ' custom_libraries}"; do
-        read_utils.py extract_tarball \
-          $TGZ $FASTAS_DIR \
-          --loglevel=DEBUG
+        if [[ ($TGZ == *.tar.*) || ($TGZ == *.tgz) ]]; then
+          read_utils.py extract_tarball \
+            $TGZ $FASTAS_DIR \
+            --loglevel=DEBUG
+        else
+          if [[ $TGZ == *.zst ]]; then
+            cat $TGZ | zstd -d > $FASTAS_DIR/$(basename $TGZ .zst)
+          elif [[ $TGZ == *.gz ]]; then
+            cat $TGZ | pigz -dc > $FASTAS_DIR/$(basename $TGZ .gz)
+          elif [[ $TGZ == *.bz2 ]]; then
+            cat $TGZ | bzip -dc > $FASTAS_DIR/$(basename $TGZ .bz2)
+          else
+            CUSTOM_INPUT_CMD="$CUSTOM_INPUT_CMD --custom_libraries=$TGZ"
+          fi
+        fi
       done
       for FASTA in "$FASTAS_DIR/*"; do
         CUSTOM_INPUT_CMD="$CUSTOM_INPUT_CMD --custom_libraries=$FASTA"
@@ -355,7 +416,7 @@ task build_kraken2_db {
     # build matching krona db
     metagenomics.py krona_build \
       $KRONA_DIR --taxdump_tar_gz "taxdump-${db_basename}.tar.gz"
-    tar -c -C $KRONA_DIR | zstd -19 > "krona-${db_basename}.tar.zst"
+    cat $KRONA_DIR/taxonomy.tab | zstd -19 > "krona-${db_basename}-taxonomy.tab.zst"
 
     wait # tar/zst of kraken2 db
   }
@@ -363,7 +424,7 @@ task build_kraken2_db {
   output {
     File        kraken2_db       = "kraken2-${db_basename}.tar.zst"
     File        taxdump_tgz      = "taxdump-${db_basename}.tar.gz"
-    File        krona_db         = "krona-${db_basename}.tar.zst"
+    File        krona_db         = "krona-${db_basename}-taxonomy.tab.zst"
     String      viralngs_version = read_string("VERSION")
   }
 
@@ -399,12 +460,24 @@ task krona {
     DB_DIR=$(mktemp -d --suffix _db)
     mkdir -p $DB_DIR/krona
 
-    # decompress DB to /mnt/db
-    read_utils.py extract_tarball \
-      ${krona_taxonomy_db_tgz} $DB_DIR/krona \
-    --loglevel=DEBUG
-
     metagenomics.py --version | tee VERSION
+
+    # unpack krona taxonomy.tab
+    if [[ ${krona_taxonomy_db_tgz} == *.tar.* ]]; then
+      read_utils.py extract_tarball \
+        ${krona_taxonomy_db_tgz} $DB_DIR/krona \
+        --loglevel=DEBUG
+    else
+      if [[ "${krona_taxonomy_db_tgz}" == *.zst ]]; then
+        cat "${krona_taxonomy_db_tgz}" | zstd -d > $DB_DIR/krona/taxonomy.tab
+      elif [[ "${krona_taxonomy_db_tgz}" == *.gz ]]; then
+        cat "${krona_taxonomy_db_tgz}" | pigz -dc > $DB_DIR/krona/taxonomy.tab
+      elif [[ "${krona_taxonomy_db_tgz}" == *.bz2 ]]; then
+        cat "${krona_taxonomy_db_tgz}" | bzip -dc > $DB_DIR/krona/taxonomy.tab
+      else
+        cp "${krona_taxonomy_db_tgz}" $DB_DIR/krona/taxonomy.tab
+      fi
+    fi
 
     metagenomics.py krona \
       ${report_txt_gz} \
