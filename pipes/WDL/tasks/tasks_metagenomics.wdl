@@ -158,6 +158,10 @@ task build_krakenuniq_db {
 }
 
 task kraken2 {
+  meta {
+    description: "Runs Kraken2 classification"
+  }
+
   input {
     File     reads_unmapped_bam
     File     kraken2_db_tgz         # {database.kdb,taxonomy}
@@ -257,7 +261,7 @@ task build_kraken2_db {
       description: "A list of 'standard' kraken2 databases to include in this build. Including any values here will cause fresh downloads of data at the time of build. A list of acceptable names is available at https://ccb.jhu.edu/software/kraken2/index.shtml?t=manual#custom-databases"
     }
     custom_libraries: {
-      description: "A list of 'custom' kraken2 databases to include in this build. Headers must be formatted as described in the kraken2 documentation. These are tarball collections of such fastas--multiple may be provided here."
+      description: "A list of 'custom' kraken2 databases to include in this build. Headers must be formatted as described in the kraken2 documentation. These are tarball collections of such fastas--multiple may be provided here.",
       patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
     }
     protein: {
