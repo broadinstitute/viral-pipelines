@@ -163,7 +163,7 @@ task kraken2 {
   }
 
   input {
-    File     reads_unmapped_bam
+    File     reads_bam
     File     kraken2_db_tgz         # {database.kdb,taxonomy}
     File     krona_taxonomy_db_tgz  # taxonomy.tab
 
@@ -171,7 +171,21 @@ task kraken2 {
     String   docker="quay.io/broadinstitute/viral-classify"
   }
 
-  String out_basename=basename(reads_unmapped_bam, '.bam')
+  parameter_meta {
+    reads_bam: {
+      description: "Reads to classify. May be unmapped or mapped or both, paired-end or single-end.",
+      patterns: ["*.bam"] }
+    kraken2_db_tgz: {
+      description: "Pre-built Kraken database tarball containing three files: hash.k2d, opts.k2d, and taxo.k2d.",
+      patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+    }
+    krona_taxonomy_db_tgz: {
+      description: "Krona taxonomy database containing a single file: taxonomy.tab.",
+      patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+    }
+  }
+
+  String out_basename=basename(reads_bam, '.bam')
 
   command {
     set -ex -o pipefail
@@ -194,11 +208,13 @@ task kraken2 {
 
     metagenomics.py kraken2 \
       $DB_DIR/kraken2 \
-      ${reads_unmapped_bam} \
+      ${reads_bam} \
+      --outReads   "${out_basename}".reads.txt \
       --outReports "${out_basename}".report.txt \
       --loglevel=DEBUG
 
     wait # for krona_taxonomy_db_tgz to download and extract
+    pigz "${out_basename}".reads.txt &
 
     metagenomics.py krona \
       "${out_basename}".kraken2.report.txt \
@@ -209,9 +225,11 @@ task kraken2 {
       --loglevel=DEBUG"
 
     pigz "${out_basename}".kraken2.report.txt 
+    wait # pigz reads.txt
   }
 
   output {
+    File    kraken2_reads_report   = "${out_basename}.kraken2.reads.txt.gz"
     File    kraken2_summary_report = "${out_basename}.kraken2.report.txt.gz"
     File    krona_report_html      = "${out_basename}.kraken2.krona.html"
     String  viralngs_version       = read_string("VERSION")
@@ -266,6 +284,15 @@ task build_kraken2_db {
     }
     protein: {
       description: "Build a protein (translated search) database. Default is nucleotide."
+    }
+    kmerLen: {
+      description: "(k) K-mer length in bp/aa (Kraken2 defaults: 35 nt, 15 aa)"
+    }
+    minimizerLen: {
+      description: "(l) Minimizer length in bp/aa (Kraken2 defaults: 31 nt, 12 aa)"
+    }
+    minimizerSpaces: {
+      description: "(s) Number of bp/aa in minimizer that are ignored in comparisons (Kraken2 defaults: 7 nt, 0 aa)"
     }
   }
 

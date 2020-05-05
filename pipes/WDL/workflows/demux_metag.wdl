@@ -47,7 +47,7 @@ workflow demux_metag {
         }
         call metagenomics.kraken2 as kraken2 {
             input:
-                reads_unmapped_bam = raw_reads,
+                reads_bam = raw_reads,
                 kraken2_db_tgz = kraken2_db_tgz,
                 krona_taxonomy_db_tgz = krona_taxonomy_db_kraken2_tgz
         }
