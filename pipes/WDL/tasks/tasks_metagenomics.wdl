@@ -368,6 +368,7 @@ task build_kraken2_db {
     # prep input custom fastas, if specified
     CUSTOM_INPUT_CMD=""
     if [ -n "${sep=' ' custom_libraries}" ]; then
+      CUSTOM_INPUT_CMD="--custom_libraries "
       for TGZ in ${sep=' ' custom_libraries}; do
         if [[ ($TGZ == *.tar.*) || ($TGZ == *.tgz) ]]; then
           read_utils.py extract_tarball \
@@ -381,21 +382,19 @@ task build_kraken2_db {
           elif [[ $TGZ == *.bz2 ]]; then
             cat $TGZ | bzip -dc > $FASTAS_DIR/$(basename $TGZ .bz2)
           else
-            CUSTOM_INPUT_CMD="$CUSTOM_INPUT_CMD --custom_libraries=$TGZ"
+            CUSTOM_INPUT_CMD="$CUSTOM_INPUT_CMD $TGZ"
           fi
         fi
       done
-      for FASTA in "$FASTAS_DIR/*"; do
-        CUSTOM_INPUT_CMD="$CUSTOM_INPUT_CMD --custom_libraries=$FASTA"
+      for FASTA in $FASTAS_DIR/*; do
+        CUSTOM_INPUT_CMD="$CUSTOM_INPUT_CMD $FASTA"
       done
     fi
 
     # prep standard libraries, if specified
     STD_INPUT_CMD=""
     if [ -n "${sep=' ' standard_libraries}" ]; then
-      for LIB in ${sep=' ' standard_libraries}; do
-        STD_INPUT_CMD="$STD_INPUT_CMD --standard_libraries=$LIB"
-      done
+      STD_INPUT_CMD="--standard_libraries ${sep=' ' standard_libraries}"
     fi
 
     # build kraken2 database
