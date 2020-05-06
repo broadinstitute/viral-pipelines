@@ -515,9 +515,9 @@ task blastx {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 60]) + " GB"
     cpu: 16
-    disks: "local-disk 750 HDD"
+    disks: "local-disk 375 HDD"
     dx_instance_type: "mem2_ssd1_v2_x16"
-    preemptible: 2
+    preemptible: 1
   }
 }
 
