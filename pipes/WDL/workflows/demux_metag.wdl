@@ -17,6 +17,8 @@ workflow demux_metag {
 
         File kraken2_db_tgz
         File krona_taxonomy_db_kraken2_tgz
+        File blast_db_tgz
+        File krona_taxonomy_db_blast_tgz
     }
 
     call demux.illumina_demux as illumina_demux
@@ -51,7 +53,12 @@ workflow demux_metag {
                 kraken2_db_tgz = kraken2_db_tgz,
                 krona_taxonomy_db_tgz = krona_taxonomy_db_kraken2_tgz
         }
-        # TO DO: call blast on spades contigs
+        call metagenomics.blastx as blastx {
+            input:
+                contigs_fasta = spades.contigs_fasta,
+                blast_db_tgz = blast_db_tgz,
+                krona_taxonomy_db_tgz = krona_taxonomy_db_blast_tgz
+        }
     }
 
     call reports.MultiQC as multiqc_raw {
@@ -82,10 +89,16 @@ workflow demux_metag {
             kraken_summary_reports = kraken2.kraken2_summary_report
     }
 
-    call metagenomics.krona_merge {
+    call metagenomics.krona_merge as krona_merge_kraken2 {
         input:
             krona_reports = kraken2.krona_report_html,
             out_basename = "merged-kraken2.krona.html"
+    }
+
+    call metagenomics.krona_merge as krona_merge_blastx {
+        input:
+            krona_reports = blastx.krona_report_html,
+            out_basename = "merged-spades-blastx.krona.html"
     }
 
     output {
@@ -107,10 +120,14 @@ workflow demux_metag {
         File        multiqc_report_cleaned = multiqc_cleaned.multiqc_report
         File        multiqc_report_dedup   = multiqc_dedup.multiqc_report
         File        spikein_counts         = spike_summary.count_summary
-        File        metagenomics_krona     = krona_merge.krona_report_html
-        File        metagenomics_summary   = metag_summary_report.krakenuniq_aggregate_taxlevel_summary
-        Array[File] kraken2_summary_reports  = kraken2.kraken2_summary_report
-        Array[File] kraken2_krona_by_sample  = kraken2.krona_report_html
+        File        kraken2_merged_krona   = krona_merge_kraken2.krona_report_html
+        File        kraken2_summary        = metag_summary_report.krakenuniq_aggregate_taxlevel_summary
+        File        blastx_merged_krona   = krona_merge_blastx.krona_report_html
+
+        Array[File] kraken2_summary_reports = kraken2.kraken2_summary_report
+        Array[File] kraken2_krona_by_sample = kraken2.krona_report_html
+        Array[File] blastx_report_by_sample = blastx.blast_report
+        Array[File] blastx_krona_by_sample  = blastx.krona_report_html
 
         String      demux_viral_core_version          = illumina_demux.viralngs_version
         String      kraken2_viral_classify_version = kraken2.viralngs_version[0]

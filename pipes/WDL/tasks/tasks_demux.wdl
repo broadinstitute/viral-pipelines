@@ -12,8 +12,8 @@ task merge_tarballs {
   command {
     set -ex -o pipefail
 
-    if [ -d /mnt/tmp ]; then
-      TMPDIR=/mnt/tmp
+    if [ -z "$TMPDIR" ]; then
+      TMPDIR=$(pwd)
     fi
 
     file_utils.py --version | tee VERSION
@@ -69,8 +69,8 @@ task illumina_demux {
     # find N% memory
     mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 85`
 
-    if [ -d /mnt/tmp ]; then
-      TMPDIR=/mnt/tmp
+    if [ -z "$TMPDIR" ]; then
+      TMPDIR=$(pwd)
     fi
     FLOWCELL_DIR=$(mktemp -d)
 

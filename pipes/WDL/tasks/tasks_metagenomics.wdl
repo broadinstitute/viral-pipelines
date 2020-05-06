@@ -31,8 +31,8 @@ task krakenuniq {
   command {
     set -ex -o pipefail
 
-    if [ -d /mnt/tmp ]; then
-      TMPDIR=/mnt/tmp
+    if [ -z "$TMPDIR" ]; then
+      TMPDIR=$(pwd)
     fi
     DB_DIR=$(mktemp -d --suffix _db)
     mkdir -p $DB_DIR/krakenuniq $DB_DIR/krona
@@ -141,8 +141,8 @@ task build_krakenuniq_db {
   command {
     set -ex -o pipefail
 
-    if [ -d /mnt/tmp ]; then
-      TMPDIR=/mnt/tmp
+    if [ -z "$TMPDIR" ]; then
+      TMPDIR=$(pwd)
     fi
     TAXDB_DIR=$(mktemp -d --suffix _taxdb)
     FASTAS_DIR=$(mktemp -d --suffix fasta)
@@ -221,8 +221,8 @@ task kraken2 {
   command {
     set -ex -o pipefail
 
-    if [ -d /mnt/tmp ]; then
-      TMPDIR=/mnt/tmp
+    if [ -z "$TMPDIR" ]; then
+      TMPDIR=$(pwd)
     fi
     DB_DIR=$(mktemp -d --suffix _db)
     mkdir -p $DB_DIR/kraken2 $DB_DIR/krona
@@ -249,21 +249,17 @@ task kraken2 {
       fi
     fi
 
-    read_utils.py extract_tarball \
-      ${krona_taxonomy_db_tgz} $DB_DIR/krona \
-      --loglevel=DEBUG &  # we don't need this until later
-
     metagenomics.py --version | tee VERSION
 
     metagenomics.py kraken2 \
       $DB_DIR/kraken2 \
       ${reads_bam} \
-      --outReads   "${out_basename}".reads.txt \
-      --outReports "${out_basename}".report.txt \
+      --outReads   "${out_basename}".kraken2.reads.txt \
+      --outReports "${out_basename}".kraken2.report.txt \
       --loglevel=DEBUG
 
     wait # for krona_taxonomy_db_tgz to download and extract
-    pigz "${out_basename}".reads.txt &
+    pigz "${out_basename}".kraken2.reads.txt &
 
     metagenomics.py krona \
       "${out_basename}".kraken2.report.txt \
@@ -296,7 +292,7 @@ task kraken2 {
 
 task build_kraken2_db {
   meta {
-    description: "Builds a custom kraken2 database. Outputs tar.zst tarballs of kraken2 database, associated krona taxonomy db, and an ncbi taxdump.tar.gz."
+    description: "Builds a custom kraken2 database. Outputs tar.zst tarballs of kraken2 database, associated krona taxonomy db, and an ncbi taxdump.tar.gz. Requires live internet access if any standard_libraries are specified or if taxonomy_db_tgz is absent."
   }
 
   input {
@@ -348,6 +344,9 @@ task build_kraken2_db {
   command {
     set -ex -o pipefail
 
+    if [ -z "$TMPDIR" ]; then
+      TMPDIR=$(pwd)
+    fi
     TAXDB_DIR=$(mktemp -d)
     FASTAS_DIR=$(mktemp -d)
     KRONA_DIR=$(mktemp -d)
@@ -437,6 +436,91 @@ task build_kraken2_db {
   }
 }
 
+task blastx {
+  meta {
+    description: "Runs BLASTx classification"
+  }
+
+  input {
+    File     contigs_fasta
+    File     blast_db_tgz
+    File     krona_taxonomy_db_tgz
+
+    Int?     machine_mem_gb
+    String   docker="quay.io/broadinstitute/viral-classify"
+  }
+
+  parameter_meta {
+    contigs_fasta: {
+      description: "Sequences to classify. Use for a small number of longer query sequences (e.g. contigs)",
+      patterns: ["*.fasta"] }
+    blast_db_tgz: {
+      description: "Pre-built BLAST database tarball",
+      patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+    }
+    krona_taxonomy_db_tgz: {
+      description: "Krona taxonomy database: a tarball containing a taxonomy.tab file as well as accession to taxid mapping (a kraken-based taxonomy database will not suffice).",
+      patterns: ["*.tab.zst", "*.tab.gz", "*.tab", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+    }
+  }
+
+  String out_basename=basename(contigs_fasta, '.fasta')
+
+  command {
+    set -ex -o pipefail
+
+    if [ -z "$TMPDIR" ]; then
+      TMPDIR=$(pwd)
+    fi
+    DB_DIR=$(mktemp -d --suffix _db)
+    mkdir -p $DB_DIR/blast $DB_DIR/krona
+
+    # decompress DB to $DB_DIR
+    read_utils.py extract_tarball \
+      ${blast_db_tgz} $DB_DIR/blast \
+      --loglevel=DEBUG
+
+    # unpack krona taxonomy database
+    read_utils.py extract_tarball \
+      ${krona_taxonomy_db_tgz} $DB_DIR/krona \
+      --loglevel=DEBUG &  # we don't need this until later
+
+    blastx -version | tee VERSION
+
+    blastx \
+      -query ${contigs_fasta} \
+      -db $DB_DIR/blast \
+      -out "${out_basename}.blastx.contigs.txt" \
+      -outfmt 6 \
+      -num_threads `nproc`
+
+    wait # for krona_taxonomy_db_tgz to download and extract
+
+    ktImportBLAST \
+      -i -k \
+      -tax $DB_DIR/krona \
+      -o "${out_basename}.blastx.krona.html" \
+      "${out_basename}.blastx.contigs.txt","${out_basename}"
+
+    pigz "${out_basename}".blastx.contigs.txt
+  }
+
+  output {
+    File    blast_report       = "${out_basename}.blastx.contigs.txt.gz"
+    File    krona_report_html  = "${out_basename}.blastx.krona.html"
+    String  blastx_version     = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "${docker}"
+    memory: select_first([machine_mem_gb, 60]) + " GB"
+    cpu: 16
+    disks: "local-disk 750 HDD"
+    dx_instance_type: "mem2_ssd1_v2_x16"
+    preemptible: 2
+  }
+}
+
 task krona {
   input {
     File     report_txt_gz
@@ -456,6 +540,9 @@ task krona {
 
   command {
     set -ex -o pipefail
+    if [ -z "$TMPDIR" ]; then
+      TMPDIR=$(pwd)
+    fi
     DB_DIR=$(mktemp -d --suffix _db)
     mkdir -p $DB_DIR/krona
 
@@ -551,6 +638,9 @@ task filter_bam_to_taxa {
 
   command {
     set -ex -o pipefail
+    if [ -z "$TMPDIR" ]; then
+      TMPDIR=$(pwd)
+    fi
 
     # decompress DB to /mnt/db
     read_utils.py extract_tarball \
@@ -613,8 +703,8 @@ task kaiju {
   command {
     set -ex -o pipefail
 
-    if [ -d /mnt/tmp ]; then
-      TMPDIR=/mnt/tmp
+    if [ -z "$TMPDIR" ]; then
+      TMPDIR=$(pwd)
     fi
     DB_DIR=$(mktemp -d --suffix _db)
     mkdir -p $DB_DIR/kaiju $DB_DIR/krona $DB_DIR/taxonomy
