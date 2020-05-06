@@ -329,8 +329,8 @@ task export_auspice_json {
             --metadata ~{metadata} \
             $NODE_DATA_FLAG ~{sep=' ' select_all([branch_lengths,nt_muts,aa_muts])}\
             --auspice-config ~{auspice_config} \
-            ~{"--lat-longs" + lat_longs_tsv} \
-            ~{"--colors" + colors_tsv} \
+            ~{"--lat-longs " + lat_longs_tsv} \
+            ~{"--colors " + colors_tsv} \
             --output ~{basename}_auspice.json
     }
     runtime {
