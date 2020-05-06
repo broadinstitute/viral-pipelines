@@ -32,7 +32,7 @@ task krakenuniq {
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
-      TMPDIR=$(pwd)
+      export TMPDIR=$(pwd)
     fi
     DB_DIR=$(mktemp -d --suffix _db)
     mkdir -p $DB_DIR/krakenuniq $DB_DIR/krona
@@ -142,7 +142,7 @@ task build_krakenuniq_db {
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
-      TMPDIR=$(pwd)
+      export TMPDIR=$(pwd)
     fi
     TAXDB_DIR=$(mktemp -d --suffix _taxdb)
     FASTAS_DIR=$(mktemp -d --suffix fasta)
@@ -222,7 +222,7 @@ task kraken2 {
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
-      TMPDIR=$(pwd)
+      export TMPDIR=$(pwd)
     fi
     DB_DIR=$(mktemp -d --suffix _db)
     mkdir -p $DB_DIR/kraken2 $DB_DIR/krona
@@ -345,7 +345,7 @@ task build_kraken2_db {
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
-      TMPDIR=$(pwd)
+      export TMPDIR=$(pwd)
     fi
     TAXDB_DIR=$(mktemp -d)
     FASTAS_DIR=$(mktemp -d)
@@ -470,7 +470,7 @@ task blastx {
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
-      TMPDIR=$(pwd)
+      export TMPDIR=$(pwd)
     fi
     DB_DIR=$(mktemp -d --suffix _db)
     mkdir -p $DB_DIR/blast $DB_DIR/krona
@@ -541,7 +541,7 @@ task krona {
   command {
     set -ex -o pipefail
     if [ -z "$TMPDIR" ]; then
-      TMPDIR=$(pwd)
+      export TMPDIR=$(pwd)
     fi
     DB_DIR=$(mktemp -d --suffix _db)
     mkdir -p $DB_DIR/krona
@@ -639,7 +639,7 @@ task filter_bam_to_taxa {
   command {
     set -ex -o pipefail
     if [ -z "$TMPDIR" ]; then
-      TMPDIR=$(pwd)
+      export TMPDIR=$(pwd)
     fi
 
     # decompress DB to /mnt/db
@@ -704,7 +704,7 @@ task kaiju {
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
-      TMPDIR=$(pwd)
+      export TMPDIR=$(pwd)
     fi
     DB_DIR=$(mktemp -d --suffix _db)
     mkdir -p $DB_DIR/kaiju $DB_DIR/krona $DB_DIR/taxonomy

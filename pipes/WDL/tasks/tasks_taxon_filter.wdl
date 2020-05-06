@@ -40,7 +40,7 @@ task deplete_taxa {
     taxon_filter.py --version | tee VERSION
 
     if [ -z "$TMPDIR" ]; then
-      TMPDIR=$(pwd)
+      export TMPDIR=$(pwd)
     fi
 
     # find memory thresholds
@@ -174,7 +174,7 @@ task build_lastal_db {
   command {
     set -ex -o pipefail
     if [ -z "$TMPDIR" ]; then
-      TMPDIR=$(pwd)
+      export TMPDIR=$(pwd)
     fi
     taxon_filter.py --version | tee VERSION
     taxon_filter.py lastal_build_db ${sequences_fasta} ./ --loglevel=DEBUG

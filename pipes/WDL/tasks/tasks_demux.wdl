@@ -13,7 +13,7 @@ task merge_tarballs {
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
-      TMPDIR=$(pwd)
+      export TMPDIR=$(pwd)
     fi
 
     file_utils.py --version | tee VERSION
@@ -70,7 +70,7 @@ task illumina_demux {
     mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 85`
 
     if [ -z "$TMPDIR" ]; then
-      TMPDIR=$(pwd)
+      export TMPDIR=$(pwd)
     fi
     FLOWCELL_DIR=$(mktemp -d)
 
