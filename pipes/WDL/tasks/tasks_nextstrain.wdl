@@ -1,7 +1,9 @@
 version 1.0
 
 task concatenate {
-    # this is nothing more than unix cat
+    meta {
+        description: "This is nothing more than unix cat."
+    }
     input {
         Array[File] infiles
         String      output_name
@@ -67,6 +69,9 @@ task filter_segments {
 }
 
 task augur_mafft_align {
+    meta {
+        description: "Align multiple sequences from FASTA. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/align.html"
+    }
     input {
         File     sequences
         File     ref_fasta
@@ -107,12 +112,15 @@ task augur_mafft_align {
 }
 
 task draft_augur_tree {
+    meta {
+        description: "Build a tree using a variety of methods. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/tree.html"
+    }
     input {
         File     aligned_fasta
         String   basename
 
-        String?  method              # default iqtree
-        String?  substitution_model  # default GTR
+        String   method = "iqtree"
+        String   substitution_model = "GTR"
         File?    exclude_sites
         File?    vcf_reference
 
@@ -142,6 +150,9 @@ task draft_augur_tree {
 }
 
 task refine_augur_tree {
+    meta {
+        description: "Refine an initial tree using sequence metadata. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/refine.html"
+    }
     input {
         File     raw_tree
         File     aligned_fasta
@@ -149,19 +160,19 @@ task refine_augur_tree {
         String   basename
 
         Int?     gen_per_year
-        Boolean? clock_rate = false
-        Boolean? clock_std_dev = false
-        Boolean? keep_root = false
+        Boolean  clock_rate = false
+        Boolean  clock_std_dev = false
+        Boolean  keep_root = false
         String?  root
-        Boolean? covariance = false
-        Boolean? no_covariance = false
-        Boolean? keep_polytomies = false
+        Boolean  covariance = false
+        Boolean  no_covariance = false
+        Boolean  keep_polytomies = false
         Int?     precision
-        Boolean? date_confidence = false
-        String?  date_inference 
-        String?  branch_length_inference
-        Boolean? clock_filter_iqd = false
-        String?  divergence_units
+        Boolean  date_confidence = false
+        String   date_inference = "joint"
+        String   branch_length_inference = "auto"
+        Boolean  clock_filter_iqd = false
+        String   divergence_units = "mutations-per-site"
         File?    vcf_reference
 
         Int?     machine_mem_gb
@@ -205,15 +216,18 @@ task refine_augur_tree {
 }
 
 task ancestral_tree {
+    meta {
+        description: "Infer ancestral sequences based on a tree. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/ancestral.html"
+    }
     input {
         File     refined_tree
         File     aligned_fasta
         String   basename
 
-        String?  inference
-        Boolean? keep_ambiguous = false
-        Boolean? infer_ambiguous = false
-        Boolean? keep_overhangs = false
+        String   inference = "joint"
+        Boolean  keep_ambiguous = false
+        Boolean  infer_ambiguous = false
+        Boolean  keep_overhangs = false
         File?    vcf_reference
         File?    output_vcf
 
@@ -248,6 +262,9 @@ task ancestral_tree {
 }
 
 task translate_augur_tree {
+    meta {
+        description: "export augur files to json suitable for auspice visualization. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/translate.html"
+    }
     input {
         String basename
         File   refined_tree
@@ -284,6 +301,9 @@ task translate_augur_tree {
 }
 
 task export_auspice_json {
+    meta {
+        description: "export augur files to json suitable for auspice visualization. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/export.html"
+    }
     input {
         File   auspice_config
         File   metadata
@@ -309,8 +329,8 @@ task export_auspice_json {
             --metadata ~{metadata} \
             $NODE_DATA_FLAG ~{sep=' ' select_all([branch_lengths,nt_muts,aa_muts])}\
             --auspice-config ~{auspice_config} \
-            ${"--lat-longs" + lat_longs_tsv} \
-            ${"--colors" + colors_tsv} \
+            ~{"--lat-longs" + lat_longs_tsv} \
+            ~{"--colors" + colors_tsv} \
             --output ~{basename}_auspice.json
     }
     runtime {
