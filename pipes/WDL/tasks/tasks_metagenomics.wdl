@@ -304,8 +304,8 @@ task build_kraken2_db {
     File?         taxonomy_db_tgz
     Array[String] standard_libraries = [
                       "archaea", "bacteria", "plasmid",
-                      "viral", "human", "fungi", "plant", "protozoa",
-                      "nt", "UniVec_Core"]
+                      "viral", "human", "fungi", "protozoa",
+                      "UniVec_Core"]
     Array[File]   custom_libraries = []
     Boolean       protein=false
 
