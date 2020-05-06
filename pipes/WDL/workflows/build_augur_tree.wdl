@@ -33,6 +33,12 @@ workflow build_augur_tree {
             metadata       = metadata,
             basename       = virus
     }
+    call nextstrain.ancestral_traits {
+        input:
+            tree           = refine_augur_tree.tree_refined,
+            metadata       = metadata,
+            basename       = virus
+    }
     call nextstrain.ancestral_tree {
         input:
             refined_tree   = refine_augur_tree.tree_refined,
@@ -51,6 +57,7 @@ workflow build_augur_tree {
             refined_tree   = refine_augur_tree.tree_refined,
             metadata       = metadata,
             branch_lengths = refine_augur_tree.branch_lengths,
+            traits         = ancestral_traits.node_data_json,
             nt_muts        = ancestral_tree.nt_muts_json,
             aa_muts        = translate_augur_tree.aa_muts_json,
             basename       = virus
@@ -64,6 +71,7 @@ workflow build_augur_tree {
         File json_nt_muts               = ancestral_tree.nt_muts_json
         File ancestral_sequences_fasta  = ancestral_tree.sequences
         File json_aa_muts               = translate_augur_tree.aa_muts_json
+        File json_ancestral_traits      = ancestral_traits.node_data_json
         File auspice_input_json         = export_auspice_json.virus_json
     }
 }

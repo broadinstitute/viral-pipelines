@@ -68,6 +68,64 @@ task filter_segments {
     }
 }
 
+task filter_subsample_sequences {
+    meta {
+        description: "Filter and subsample a sequence set. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/filter.html"
+    }
+    input {
+        File     sequences_fasta
+        File     metadata_tsv
+
+        Int?     sequences_per_group
+        String?  group_by
+        File?    include
+        File?    exclude
+
+        Boolean  non_nucleotide=true
+
+        String?  min_date
+        String?  max_date
+        Int?     min_length
+        File?    priority
+        Int?     subsample_seed
+        String?  exclude_where
+        String?  include_where
+
+        Int?     machine_mem_gb
+        String   docker = "nextstrain/base"
+    }
+    String in_basename = basename(sequences_fasta, ".fasta")
+    command {
+        augur filter \
+            --sequences ~{sequences_fasta} \
+            --metadata ~{metadata_tsv} \
+            ~{"--min-date " + min_date} \
+            ~{"--max-date " + max_date} \
+            ~{"--min-length " + min_length} \
+            ~{true="--non-nucleotide " false=""  non_nucleotide} \
+            ~{"--exclude " + exclude} \
+            ~{"--include " + include} \
+            ~{"--priority " + priority} \
+            ~{"--sequences-per-group " + sequences_per_group} \
+            ~{"--group-by " + group_by} \
+            ~{"--subsample-seed " + subsample_seed} \
+            ~{"--exclude-where " + exclude_where} \
+            ~{"--include-where " + include_where} \
+            --output "~{in_basename}.filtered.fasta"
+    }
+    runtime {
+        docker: docker
+        memory: "4 GB"
+        cpu :   2
+        disks:  "local-disk 375 LOCAL"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+        preemptible: 1
+    }
+    output {
+        File filtered_fasta = "~{in_basename}.filtered.fasta"
+    }
+}
+
 task augur_mafft_align {
     meta {
         description: "Align multiple sequences from FASTA. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/align.html"
@@ -77,10 +135,9 @@ task augur_mafft_align {
         File     ref_fasta
         String   basename
 
-        Boolean? existing_alignment = false
-        Boolean? debug = false
-        Boolean? fill_gaps = true
-        Boolean? remove_reference = true
+        File?    existing_alignment
+        Boolean  fill_gaps = true
+        Boolean  remove_reference = true
 
         Int?     machine_mem_gb
         String   docker = "nextstrain/base"
@@ -90,9 +147,9 @@ task augur_mafft_align {
             --reference-sequence ~{ref_fasta} \
             --output ~{basename}_aligned.fasta \
             ~{true="--fill-gaps" false="" fill_gaps} \
-            ~{true="--existing-alignment " false="" existing_alignment} \
+            ~{"--existing-alignment " + existing_alignment} \
             ~{true="--remove-reference" false="" remove_reference} \
-            ~{true="--debug" false="" debug} \
+            --debug \
             --nthreads auto
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes | tee MAX_RAM
     }
@@ -123,6 +180,7 @@ task draft_augur_tree {
         String   substitution_model = "GTR"
         File?    exclude_sites
         File?    vcf_reference
+        String?  tree_builder_args
 
         Int?     machine_mem_gb
         String   docker = "nextstrain/base"
@@ -134,6 +192,7 @@ task draft_augur_tree {
             --substitution-model ~{default="GTR" substitution_model} \
             ~{"--exclude-sites " + exclude_sites} \
             ~{"--vcf-reference " + vcf_reference} \
+            ~{"--tree-builder-args " + tree_builder_args} \
             --nthreads auto
     }
     runtime {
@@ -160,19 +219,19 @@ task refine_augur_tree {
         String   basename
 
         Int?     gen_per_year
-        Boolean  clock_rate = false
-        Boolean  clock_std_dev = false
+        Float?   clock_rate
+        Float?   clock_std_dev
         Boolean  keep_root = false
         String?  root
-        Boolean  covariance = false
-        Boolean  no_covariance = false
+        Boolean? covariance
         Boolean  keep_polytomies = false
         Int?     precision
-        Boolean  date_confidence = false
-        String   date_inference = "joint"
-        String   branch_length_inference = "auto"
-        Boolean  clock_filter_iqd = false
-        String   divergence_units = "mutations-per-site"
+        Boolean  date_confidence = true
+        String?  date_inference = "marginal"
+        String?  branch_length_inference
+        String?  coalescent
+        Int?     clock_filter_iqd = 4
+        String?  divergence_units
         File?    vcf_reference
 
         Int?     machine_mem_gb
@@ -185,20 +244,21 @@ task refine_augur_tree {
             --metadata ~{metadata} \
             --output-tree ~{basename}_refined_tree.nwk \
             --output-node-data ~{basename}_branch_lengths.json \
-            --timetree ~{true="--clock-rate" false="" clock_rate} \
-            ~{true="--clock-std-dev" false="" clock_std_dev} \
-            --gen-per-year ~{default=50 gen_per_year} \
-            ~{true="--covariance" false="" covariance} \
-            ~{true="--no-covariance" false="" no_covariance} \
-            --root ~{default="best" root} \
+            --timetree \
+            ~{"--clock-rate " + clock_rate} \
+            ~{"--clock-std-dev " + clock_std_dev} \
+            ~{"--coalescent " + coalescent} \
+            ~{"--clock-filter-iqd " + clock_filter_iqd} \
+            ~{"--gen-per-year " + gen_per_year} \
+            ~{"--root " + root} \
+            ~{"--precision " + precision} \
+            ~{"--date-inference " + date_inference} \
+            ~{"--branch-length-inference " + branch_length_inference} \
+            ~{"--divergence-units " + divergence_units} \
+            ~{true="--covariance" false="--no-covariance" covariance} \
             ~{true="--keep-root" false="" keep_root} \
-            --precision ~{default=1 precision} \
             ~{true="--keep-polytomies" false="" keep_polytomies} \
-            --date-inference ~{default="joint" date_inference} \
             ~{true="--date-confidence" false="" date_confidence} \
-            --branch-length-inference ~{default="auto" branch_length_inference} \
-            ~{true="--clock-filter-iqd" false="" clock_filter_iqd} \
-            --divergence-units ~{default="mutations-per-site" divergence_units} \
             ~{"--vcf-reference " + vcf_reference}
     }
     runtime {
@@ -212,6 +272,45 @@ task refine_augur_tree {
     output {
         File tree_refined  = "~{basename}_refined_tree.nwk"
         File branch_lengths = "~{basename}_branch_lengths.json"
+    }
+}
+
+task ancestral_traits {
+    meta {
+        description: "Infer ancestral traits based on a tree. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/traits.html"
+    }
+    input {
+        File           tree
+        File           metadata
+        Array[String]+ columns
+        String         basename
+
+        Boolean        confidence = true
+        File?          weights
+        Float?         sampling_bias_correction
+
+        Int?     machine_mem_gb
+        String   docker = "nextstrain/base"
+    }
+    command {
+        augur traits \
+            --tree ~{tree} \
+            --metadata ~{metadata} \
+            --columns ~{sep=" " columns} \
+            --output-node-data "~{basename}_nodes.json" \
+            ~{"--weights " + weights} \
+            ~{true="--confidence" false="" confidence}
+    }
+    runtime {
+        docker: docker
+        memory: select_first([machine_mem_gb, 3]) + " GB"
+        cpu :   2
+        disks: "local-disk 50 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+        preemptible: 2
+    }
+    output {
+        File node_data_json = "~{basename}_nodes.json"
     }
 }
 
@@ -242,7 +341,7 @@ task ancestral_tree {
             ~{"--vcf-reference " + vcf_reference} \
             ~{"--output-vcf " + output_vcf} \
             --output-sequences ~{basename}_ancestral_sequences.fasta \
-            ~{true="--keep-0verhands" false="" keep_overhangs} \
+            ~{true="--keep-overhangs" false="" keep_overhangs} \
             --inference ~{default="joint" inference} \
             ~{true="--keep-ambiguous" false="" keep_ambiguous} \
             ~{true="--infer-ambiguous" false="" infer_ambiguous}
@@ -309,6 +408,7 @@ task export_auspice_json {
         File   metadata
         File   refined_tree
         File?  branch_lengths
+        File?  traits
         File?  nt_muts
         File?  aa_muts
         File?  lat_longs_tsv
@@ -321,13 +421,13 @@ task export_auspice_json {
     command {
 
         NODE_DATA_FLAG=""
-        if [[ -n "~{branch_lengths}" || -n "~{nt_muts}" || -n "~{aa_muts}" ]]; then
+        if [[ -n "~{branch_lengths}" || -n "~{traits}" || -n "~{nt_muts}" || -n "~{aa_muts}" ]]; then
           NODE_DATA_FLAG="--node-data "
         fi
 
         augur export v2 --tree ~{refined_tree} \
             --metadata ~{metadata} \
-            $NODE_DATA_FLAG ~{sep=' ' select_all([branch_lengths,nt_muts,aa_muts])}\
+            $NODE_DATA_FLAG ~{sep=' ' select_all([branch_lengths,traits,nt_muts,aa_muts])}\
             --auspice-config ~{auspice_config} \
             ~{"--lat-longs " + lat_longs_tsv} \
             ~{"--colors " + colors_tsv} \
