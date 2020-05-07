@@ -1,0 +1,5 @@
+{
+  "classify_kraken2.kraken2.reads_bam": "test/input/G5012.3.testreads.bam",
+  "classify_kraken2.kraken2.kraken2_db_tgz": "test/input/kraken2_db-tinytest.tar.zst",
+  "classify_kraken2.kraken2.krona_taxonomy_db_tgz": "test/input/krona.taxonomy-20200505.tab.zst"
+}
