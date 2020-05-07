@@ -428,10 +428,10 @@ task build_kraken2_db {
 
   runtime {
     docker: "${docker}"
-    memory: select_first([machine_mem_gb, 120]) + " GB"
+    memory: select_first([machine_mem_gb, 200]) + " GB"
     disks: "local-disk 750 HDD"
     cpu: 32
-    dx_instance_type: "mem2_ssd1_v2_x32"
+    dx_instance_type: "mem3_ssd1_v2_x32"
     preemptible: 0
   }
 }
