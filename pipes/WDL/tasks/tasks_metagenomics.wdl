@@ -133,6 +133,7 @@ task build_krakenuniq_db {
     Int?        minimizerLen
     Int?        kmerLen
     Int?        maxDbSize
+    Int         zstd_compression_level=9
 
     Int?        machine_mem_gb
     String      docker="quay.io/broadinstitute/viral-classify"
@@ -170,7 +171,7 @@ task build_krakenuniq_db {
       --loglevel=DEBUG
 
     # tar it up
-    tar -c -C $DB_DIR . | zstd -9 > ${db_basename}.tar.zst
+    tar -c -C $DB_DIR . | zstd -${zstd_compression_level} > ${db_basename}.tar.zst
   }
 
   output {
@@ -319,6 +320,7 @@ task build_kraken2_db {
     Int?        minimizerLen
     Int?        minimizerSpaces
     Int?        maxDbSize
+    Int         zstd_compression_level=9
 
     Int?        machine_mem_gb
     String      docker="quay.io/broadinstitute/viral-classify"
@@ -419,7 +421,7 @@ task build_kraken2_db {
       ${'--minimizerSpaces=' + minimizerSpaces} \
       ${'--maxDbSize=' + maxDbSize}
       --loglevel=DEBUG
-    tar -c -C $DB_DIR . | zstd -9 > "kraken2-${db_basename}.tar.zst" &
+    tar -c -C $DB_DIR . | zstd -${zstd_compression_level} > "kraken2-${db_basename}.tar.zst" &
 
     # build matching krona db
     metagenomics.py krona_build \
