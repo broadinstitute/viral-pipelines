@@ -170,7 +170,7 @@ task build_krakenuniq_db {
       --loglevel=DEBUG
 
     # tar it up
-    tar -c -C $DB_DIR | zstd -19 > ${db_basename}.tar.zst
+    tar -c -C $DB_DIR . | zstd -19 > ${db_basename}.tar.zst
   }
 
   output {
@@ -409,7 +409,7 @@ task build_kraken2_db {
       ${'--minimizerSpaces=' + minimizerSpaces} \
       ${'--maxDbSize=' + maxDbSize}
       --loglevel=DEBUG
-    tar -c -C $DB_DIR | zstd -19 > "kraken2-${db_basename}.tar.zst" &
+    tar -c -C $DB_DIR . | zstd -19 > "kraken2-${db_basename}.tar.zst" &
 
     # build matching krona db
     metagenomics.py krona_build \
