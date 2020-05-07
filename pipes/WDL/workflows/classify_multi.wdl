@@ -8,7 +8,7 @@ import "../tasks/tasks_reports.wdl" as reports
 
 workflow classify_multi {
     input {
-        Array[File]+ reads_bam
+        Array[File]+ reads_bams
 
         File spikein_db
         File trim_clip_db
@@ -22,9 +22,9 @@ workflow classify_multi {
         File krona_taxonomy_db_blast_tgz
     }
 
-    scatter(raw_reads in reads_bam) {
+    scatter(raw_reads in reads_bams) {
         call reports.fastqc as fastqc_raw {
-            input: reads_bam = reads_bam
+            input: reads_bam = raw_reads
         }
         call reports.align_and_count as spikein {
             input:
