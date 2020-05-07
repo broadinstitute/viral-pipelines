@@ -170,7 +170,7 @@ task build_krakenuniq_db {
       --loglevel=DEBUG
 
     # tar it up
-    tar -c -C $DB_DIR . | zstd -19 > ${db_basename}.tar.zst
+    tar -c -C $DB_DIR . | zstd -9 > ${db_basename}.tar.zst
   }
 
   output {
@@ -197,6 +197,8 @@ task kraken2 {
     File     reads_bam
     File     kraken2_db_tgz         # {database.kdb,taxonomy}
     File     krona_taxonomy_db_tgz  # taxonomy.tab
+    Float?   confidence_threshold = 0.05
+    Int?     min_base_qual
 
     Int?     machine_mem_gb
     String   docker="quay.io/broadinstitute/viral-classify"
@@ -213,6 +215,12 @@ task kraken2 {
     krona_taxonomy_db_tgz: {
       description: "Krona taxonomy database containing a single file: taxonomy.tab, or possibly just a compressed taxonomy.tab",
       patterns: ["*.tab.zst", "*.tab.gz", "*.tab", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+    }
+    confidence_threshold: {
+      description: "Kraken2 confidence score threshold (0.0-1.0). See https://ccb.jhu.edu/software/kraken2/index.shtml?t=manual#confidence-scoring"
+    }
+    min_base_qual: {
+      description: "Minimum base quality used in classification"
     }
   }
 
@@ -256,6 +264,8 @@ task kraken2 {
       ${reads_bam} \
       --outReads   "${out_basename}".kraken2.reads.txt \
       --outReports "${out_basename}".kraken2.report.txt \
+      ${"--confidence " + confidence_threshold} \
+      ${"--min_base_qual " + min_base_qual} \
       --loglevel=DEBUG
 
     wait # for krona_taxonomy_db_tgz to download and extract
@@ -409,7 +419,7 @@ task build_kraken2_db {
       ${'--minimizerSpaces=' + minimizerSpaces} \
       ${'--maxDbSize=' + maxDbSize}
       --loglevel=DEBUG
-    tar -c -C $DB_DIR . | zstd -19 > "kraken2-${db_basename}.tar.zst" &
+    tar -c -C $DB_DIR . | zstd -9 > "kraken2-${db_basename}.tar.zst" &
 
     # build matching krona db
     metagenomics.py krona_build \
@@ -428,10 +438,10 @@ task build_kraken2_db {
 
   runtime {
     docker: "${docker}"
-    memory: select_first([machine_mem_gb, 200]) + " GB"
+    memory: select_first([machine_mem_gb, 100]) + " GB"
     disks: "local-disk 750 HDD"
-    cpu: 32
-    dx_instance_type: "mem3_ssd1_v2_x32"
+    cpu: 16
+    dx_instance_type: "mem3_ssd1_v2_x16"
     preemptible: 0
   }
 }
