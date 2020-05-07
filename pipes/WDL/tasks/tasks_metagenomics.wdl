@@ -133,7 +133,7 @@ task build_krakenuniq_db {
     Int?        minimizerLen
     Int?        kmerLen
     Int?        maxDbSize
-    Int         zstd_compression_level=9
+    Int?        zstd_compression_level
 
     Int?        machine_mem_gb
     String      docker="quay.io/broadinstitute/viral-classify"
@@ -171,7 +171,7 @@ task build_krakenuniq_db {
       --loglevel=DEBUG
 
     # tar it up
-    tar -c -C $DB_DIR . | zstd -${zstd_compression_level} > ${db_basename}.tar.zst
+    tar -c -C $DB_DIR . | zstd ${"-" + zstd_compression_level} > ${db_basename}.tar.zst
   }
 
   output {
@@ -229,6 +229,7 @@ task kraken2 {
 
   command {
     set -ex -o pipefail
+    vmstat -t -a -n -S m 600 | stdbuf -oL -eL tail +3 | awk -Winteractive '{print "heartbeat", $18, $19, "UTC - mem free: ", $4, "MB - mem used: ", $6, "MB - cpu: ", $13, "%"}' | cat 1>&2 &
 
     if [ -z "$TMPDIR" ]; then
       export TMPDIR=$(pwd)
@@ -320,7 +321,7 @@ task build_kraken2_db {
     Int?        minimizerLen
     Int?        minimizerSpaces
     Int?        maxDbSize
-    Int         zstd_compression_level=9
+    Int?        zstd_compression_level
 
     Int?        machine_mem_gb
     String      docker="quay.io/broadinstitute/viral-classify"
@@ -355,6 +356,7 @@ task build_kraken2_db {
 
   command {
     set -ex -o pipefail
+    vmstat -t -a -n -S m 600 | stdbuf -oL -eL tail +3 | awk -Winteractive '{print "heartbeat", $18, $19, "UTC - mem free: ", $4, "MB - mem used: ", $6, "MB - cpu: ", $13, "%"}' | cat 1>&2 &
 
     if [ -z "$TMPDIR" ]; then
       export TMPDIR=$(pwd)
@@ -421,7 +423,7 @@ task build_kraken2_db {
       ${'--minimizerSpaces=' + minimizerSpaces} \
       ${'--maxDbSize=' + maxDbSize}
       --loglevel=DEBUG
-    tar -c -C $DB_DIR . | zstd -${zstd_compression_level} > "kraken2-${db_basename}.tar.zst" &
+    tar -c -C $DB_DIR . | zstd ${"-" + zstd_compression_level} > "kraken2-${db_basename}.tar.zst" &
 
     # build matching krona db
     metagenomics.py krona_build \
@@ -480,6 +482,7 @@ task blastx {
 
   command {
     set -ex -o pipefail
+    vmstat -t -a -n -S m 600 | stdbuf -oL -eL tail +3 | awk -Winteractive '{print "heartbeat", $18, $19, "UTC - mem free: ", $4, "MB - mem used: ", $6, "MB - cpu: ", $13, "%"}' | cat 1>&2 &
 
     if [ -z "$TMPDIR" ]; then
       export TMPDIR=$(pwd)
