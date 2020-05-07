@@ -229,7 +229,6 @@ task kraken2 {
 
   command {
     set -ex -o pipefail
-    vmstat -t -a -n -S m 600 | stdbuf -oL -eL tail +3 | awk -Winteractive '{print "heartbeat", $18, $19, "UTC - mem free: ", $4, "MB - mem used: ", $6, "MB - cpu: ", $13, "%"}' | cat 1>&2 &
 
     if [ -z "$TMPDIR" ]; then
       export TMPDIR=$(pwd)
@@ -356,7 +355,6 @@ task build_kraken2_db {
 
   command {
     set -ex -o pipefail
-    vmstat -t -a -n -S m 600 | stdbuf -oL -eL tail +3 | awk -Winteractive '{print "heartbeat", $18, $19, "UTC - mem free: ", $4, "MB - mem used: ", $6, "MB - cpu: ", $13, "%"}' | cat 1>&2 &
 
     if [ -z "$TMPDIR" ]; then
       export TMPDIR=$(pwd)
@@ -482,7 +480,6 @@ task blastx {
 
   command {
     set -ex -o pipefail
-    vmstat -t -a -n -S m 600 | stdbuf -oL -eL tail +3 | awk -Winteractive '{print "heartbeat", $18, $19, "UTC - mem free: ", $4, "MB - mem used: ", $6, "MB - cpu: ", $13, "%"}' | cat 1>&2 &
 
     if [ -z "$TMPDIR" ]; then
       export TMPDIR=$(pwd)
