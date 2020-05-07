@@ -267,7 +267,7 @@ task kraken2 {
       "${out_basename}".kraken2.krona.html \
       --sample_name "${out_basename}" \
       --noRank --noHits --inputType kraken2 \
-      --loglevel=DEBUG"
+      --loglevel=DEBUG
 
     pigz "${out_basename}".kraken2.report.txt 
     wait # pigz reads.txt
