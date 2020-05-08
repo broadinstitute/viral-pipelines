@@ -370,7 +370,7 @@ task build_kraken2_db {
     if [ -n "${taxonomy_db_tgz}" ]; then
       read_utils.py extract_tarball \
         ${taxonomy_db_tgz} $TAXDB_DIR \
-        --loglevel=DEBUG
+        --loglevel=DEBUG &
       TAX_INPUT_CMD="--tax_db=$TAXDB_DIR"
     else
       TAX_INPUT_CMD=""
@@ -384,19 +384,20 @@ task build_kraken2_db {
         if [[ ($TGZ == *.tar.*) || ($TGZ == *.tgz) ]]; then
           read_utils.py extract_tarball \
             $TGZ $FASTAS_DIR \
-            --loglevel=DEBUG
+            --loglevel=DEBUG &
         else
           if [[ $TGZ == *.zst ]]; then
-            cat $TGZ | zstd -d > $FASTAS_DIR/$(basename $TGZ .zst)
+            cat $TGZ | zstd -d > $FASTAS_DIR/$(basename $TGZ .zst) &
           elif [[ $TGZ == *.gz ]]; then
-            cat $TGZ | pigz -dc > $FASTAS_DIR/$(basename $TGZ .gz)
+            cat $TGZ | pigz -dc > $FASTAS_DIR/$(basename $TGZ .gz) &
           elif [[ $TGZ == *.bz2 ]]; then
-            cat $TGZ | bzip -dc > $FASTAS_DIR/$(basename $TGZ .bz2)
+            cat $TGZ | bzip -dc > $FASTAS_DIR/$(basename $TGZ .bz2) &
           else
             CUSTOM_INPUT_CMD="$CUSTOM_INPUT_CMD $TGZ"
           fi
         fi
       done
+      wait # wait for all decompressions to finish
       for FASTA in $FASTAS_DIR/*; do
         CUSTOM_INPUT_CMD="$CUSTOM_INPUT_CMD $FASTA"
       done
@@ -409,6 +410,7 @@ task build_kraken2_db {
     fi
 
     # build kraken2 database
+    wait # wait for all decompressions to finish
     metagenomics.py kraken2_build \
       $DB_DIR \
       $TAX_INPUT_CMD \
