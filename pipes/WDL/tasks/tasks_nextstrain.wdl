@@ -151,7 +151,7 @@ task augur_mafft_align {
             ~{true="--remove-reference" false="" remove_reference} \
             --debug \
             --nthreads auto
-        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes | tee MAX_RAM
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MAX_RAM
     }
     runtime {
         docker: docker
@@ -164,7 +164,7 @@ task augur_mafft_align {
     output {
         File aligned_sequences = "~{basename}_aligned.fasta"
         File align_troubleshoot = stdout()
-        Int  max_ram_usage_in_bytes = read_int("MAX_RAM")
+        File max_ram_usage_in_bytes = "MAX_RAM"
     }
 }
 
