@@ -198,7 +198,7 @@ task kraken2 {
     File     reads_bam
     File     kraken2_db_tgz         # {database.kdb,taxonomy}
     File     krona_taxonomy_db_tgz  # taxonomy.tab
-    Float?   confidence_threshold = 0.05
+    Float?   confidence_threshold
     Int?     min_base_qual
 
     Int?     machine_mem_gb
@@ -240,6 +240,7 @@ task kraken2 {
     read_utils.py extract_tarball \
       ${kraken2_db_tgz} $DB_DIR/kraken2 \
       --loglevel=DEBUG
+    du -hs $DB_DIR/kraken2
 
     # unpack krona taxonomy.tab
     if [[ ${krona_taxonomy_db_tgz} == *.tar.* ]]; then
@@ -293,10 +294,10 @@ task kraken2 {
 
   runtime {
     docker: "${docker}"
-    memory: select_first([machine_mem_gb, 60]) + " GB"
-    cpu: 16
+    memory: select_first([machine_mem_gb, 52]) + " GB"
+    cpu: 8
     disks: "local-disk 750 LOCAL"
-    dx_instance_type: "mem2_ssd1_v2_x16"
+    dx_instance_type: "mem3_ssd1_v2_x8"
     preemptible: 2
   }
 }
