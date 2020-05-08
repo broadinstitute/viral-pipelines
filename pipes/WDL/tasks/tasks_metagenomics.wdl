@@ -295,7 +295,7 @@ task kraken2 {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 60]) + " GB"
     cpu: 16
-    disks: "local-disk 750 HDD"
+    disks: "local-disk 750 LOCAL"
     dx_instance_type: "mem2_ssd1_v2_x16"
     preemptible: 2
   }
@@ -443,7 +443,7 @@ task build_kraken2_db {
   runtime {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 100]) + " GB"
-    disks: "local-disk 750 HDD"
+    disks: "local-disk 750 LOCAL"
     cpu: 16
     dx_instance_type: "mem3_ssd1_v2_x16"
     preemptible: 0
@@ -505,7 +505,7 @@ task blastx {
       -query ${contigs_fasta} \
       -db $DB_DIR/blast/nr \
       -out "${out_basename}.blastx.contigs.txt" \
-      -outfmt 6 \
+      -outfmt 7 \
       -num_threads `nproc`
 
     wait # for krona_taxonomy_db_tgz to download and extract
@@ -527,10 +527,10 @@ task blastx {
 
   runtime {
     docker: "${docker}"
-    memory: select_first([machine_mem_gb, 50]) + " GB"
-    cpu: 8
-    disks: "local-disk 375 HDD"
-    dx_instance_type: "mem2_ssd1_v2_x16"
+    memory: select_first([machine_mem_gb, 8]) + " GB"
+    cpu: 32
+    disks: "local-disk 375 LOCAL"
+    dx_instance_type: "mem2_ssd1_v2_x36"
     preemptible: 1
   }
 }
