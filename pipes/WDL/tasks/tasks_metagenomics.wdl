@@ -467,7 +467,7 @@ task blastx {
       description: "Sequences to classify. Use for a small number of longer query sequences (e.g. contigs)",
       patterns: ["*.fasta"] }
     blast_db_tgz: {
-      description: "Pre-built BLAST database tarball",
+      description: "Pre-built BLAST database tarball containing an indexed blast database named 'nr'",
       patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
     }
     krona_taxonomy_db_tgz: {
@@ -501,7 +501,7 @@ task blastx {
 
     blastx \
       -query ${contigs_fasta} \
-      -db $DB_DIR/blast \
+      -db $DB_DIR/blast/nr \
       -out "${out_basename}.blastx.contigs.txt" \
       -outfmt 6 \
       -num_threads `nproc`
