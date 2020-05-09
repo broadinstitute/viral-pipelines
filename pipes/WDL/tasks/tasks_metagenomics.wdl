@@ -281,13 +281,12 @@ task kraken2 {
       --noRank --noHits --inputType kraken2 \
       --loglevel=DEBUG
 
-    pigz "${out_basename}".kraken2.report.txt 
     wait # pigz reads.txt
   }
 
   output {
     File    kraken2_reads_report   = "${out_basename}.kraken2.reads.txt.gz"
-    File    kraken2_summary_report = "${out_basename}.kraken2.report.txt.gz"
+    File    kraken2_summary_report = "${out_basename}.kraken2.report.txt"
     File    krona_report_html      = "${out_basename}.kraken2.krona.html"
     String  viralngs_version       = read_string("VERSION")
   }
@@ -538,8 +537,9 @@ task blastx {
 
 task krona {
   input {
-    File     report_txt_gz
-    File     krona_taxonomy_db_tgz
+    Array[File]+  reports_txt_gz
+    File          krona_taxonomy_db_tgz
+    String        out_basename = basename(basename(reports_txt_gz[0], '.gz'), '.txt')
 
     String?  input_type
     Int?     query_column
@@ -550,8 +550,6 @@ task krona {
     Int?     machine_mem_gb
     String   docker="quay.io/broadinstitute/viral-classify"
   }
-
-  String  input_basename = basename(report_txt_gz, ".txt.gz")
 
   command {
     set -ex -o pipefail
@@ -581,9 +579,9 @@ task krona {
     fi
 
     metagenomics.py krona \
-      ${report_txt_gz} \
+      ${sep=' ' reports_txt_gz} \
       $DB_DIR/krona \
-      ${input_basename}.html \
+      ${out_basename}.html \
       ${'--inputType=' + input_type} \
       ${'--queryColumn=' + query_column} \
       ${'--taxidColumn=' + taxid_column} \
@@ -594,7 +592,7 @@ task krona {
   }
 
   output {
-    File    krona_report_html  = "${input_basename}.html"
+    File    krona_report_html  = "${out_basename}.html"
     String  viralngs_version   = read_string("VERSION")
   }
 
