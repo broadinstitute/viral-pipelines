@@ -531,7 +531,7 @@ task blastx {
     memory: select_first([machine_mem_gb, 8]) + " GB"
     cpu: 32
     disks: "local-disk 375 LOCAL"
-    dx_instance_type: "mem2_ssd1_v2_x36"
+    dx_instance_type: "mem1_ssd1_v2_x36"
     preemptible: 1
   }
 }
