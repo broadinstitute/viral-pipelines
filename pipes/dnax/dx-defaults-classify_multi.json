@@ -2,11 +2,6 @@
   "classify_multi.spikein_db":
     "dx://file-FZY2v7Q0xf5VBy5FFY3z5fz7",
 
-  "classify_multi.bwaDbs": [
-    "dx://file-Fg2p9b00xf5zx8VB8BYyJj0g",
-    "dx://file-F8BjgXj09y3gkfZGPPQZbZkK"
-  ],
-
   "classify_multi.trim_clip_db":
     "dx://file-BXF0vYQ0QyBF509G9J12g927",
 
@@ -17,5 +12,7 @@
   "classify_multi.blast_db_tgz":
     "dx://file-Fpp4Z780xf5qk1qB4fb8yPkQ",
   "classify_multi.krona_taxonomy_db_blast_tgz":
-    "dx://file-Fpp14jj0xf5bYPKQ5J13JJpX"
+    "dx://file-Fpp14jj0xf5bYPKQ5J13JJpX",
+  "classify_multi.ncbi_taxdump_tgz":
+    "dx://file-FppzzVj0xf5zfvpg44fY1V93"
 }

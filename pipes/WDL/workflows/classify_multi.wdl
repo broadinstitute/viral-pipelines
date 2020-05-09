@@ -20,6 +20,7 @@ workflow classify_multi {
         File krona_taxonomy_db_kraken2_tgz
         File blast_db_tgz
         File krona_taxonomy_db_blast_tgz
+        File ncbi_taxdump_tgz
     }
 
     scatter(raw_reads in reads_bams) {
@@ -31,16 +32,27 @@ workflow classify_multi {
                 reads_bam = raw_reads,
                 ref_db = spikein_db
         }
-        call taxon_filter.deplete_taxa as deplete {
+        call metagenomics.kraken2 as kraken2 {
             input:
-                raw_reads_unmapped_bam = raw_reads,
-                bmtaggerDbs = bmtaggerDbs,
-                blastDbs = blastDbs,
-                bwaDbs = bwaDbs
+                reads_bam = raw_reads,
+                kraken2_db_tgz = kraken2_db_tgz,
+                krona_taxonomy_db_tgz = krona_taxonomy_db_kraken2_tgz
+        }
+        call metagenomics.filter_bam_to_taxa as deplete {
+            input:
+                classified_bam = raw_reads,
+                classified_reads_txt_gz = kraken2.kraken2_reads_report,
+                ncbi_taxonomy_db_tgz = ncbi_taxdump_tgz,
+                exclude_taxa = true,
+                taxonomic_names = ["Mammalia"],
+                out_filename_suffix = "hs_depleted"
+        }
+        call reports.fastqc as fastqc_cleaned {
+            input: reads_bam = deplete.bam_filtered_to_taxa
         }
         call read_utils.rmdup_ubam {
            input:
-                reads_unmapped_bam = deplete.cleaned_bam
+                reads_unmapped_bam = deplete.bam_filtered_to_taxa
         }
         call assembly.assemble as spades {
             input:
@@ -48,12 +60,6 @@ workflow classify_multi {
                 reads_unmapped_bam = rmdup_ubam.dedup_bam,
                 trim_clip_db = trim_clip_db,
                 always_succeed = true
-        }
-        call metagenomics.kraken2 as kraken2 {
-            input:
-                reads_bam = raw_reads,
-                kraken2_db_tgz = kraken2_db_tgz,
-                krona_taxonomy_db_tgz = krona_taxonomy_db_kraken2_tgz
         }
         call metagenomics.blastx as blastx {
             input:
@@ -71,7 +77,7 @@ workflow classify_multi {
 
     call reports.MultiQC as multiqc_cleaned {
         input:
-            input_files = deplete.cleaned_fastqc_zip,
+            input_files = fastqc_cleaned.fastqc_zip,
             file_name   = "multiqc-cleaned.html"
     }
 
@@ -104,12 +110,12 @@ workflow classify_multi {
     }
 
     output {
-        Array[File] cleaned_reads_unaligned_bams = deplete.cleaned_bam
+        Array[File] cleaned_reads_unaligned_bams = deplete.bam_filtered_to_taxa
         Array[File] deduplicated_reads_unaligned = rmdup_ubam.dedup_bam
         Array[File] contigs_fastas               = spades.contigs_fasta
 
-        Array[Int]  read_counts_raw                 = deplete.depletion_read_count_pre
-        Array[Int]  read_counts_depleted            = deplete.depletion_read_count_post
+        Array[Int]  read_counts_raw                 = deplete.classified_taxonomic_filter_read_count_pre
+        Array[Int]  read_counts_depleted            = deplete.classified_taxonomic_filter_read_count_post
         Array[Int]  read_counts_dedup               = rmdup_ubam.dedup_read_count_post
         Array[Int]  read_counts_prespades_subsample = spades.subsample_read_count
 

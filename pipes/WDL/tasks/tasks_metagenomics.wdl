@@ -643,13 +643,15 @@ task filter_bam_to_taxa {
     File           ncbi_taxonomy_db_tgz # nodes.dmp names.dmp
     Array[String]? taxonomic_names
     Array[Int]?    taxonomic_ids
-    Boolean?       withoutChildren=false
+    Boolean        withoutChildren=false
+    Boolean        exclude_taxa=false
+    String         out_filename_suffix = "filtered"
 
     Int?           machine_mem_gb
     String         docker="quay.io/broadinstitute/viral-classify"
   }
 
-  String         input_basename = basename(classified_bam, ".bam")
+  String out_basename = basename(classified_bam, ".bam") + "." + out_filename_suffix
 
   command {
     set -ex -o pipefail
@@ -657,10 +659,11 @@ task filter_bam_to_taxa {
       export TMPDIR=$(pwd)
     fi
 
-    # decompress DB to /mnt/db
+    # decompress taxonomy DB to CWD
     read_utils.py extract_tarball \
       ${ncbi_taxonomy_db_tgz} . \
       --loglevel=DEBUG
+    if [ -d "taxonomy" ]; then mv taxonomy/* .; fi
 
     TAX_NAMES="${sep=' ' taxonomic_names}"
     if [ -n "$TAX_NAMES" ]; then TAX_NAMES="--taxNames $TAX_NAMES"; fi
@@ -670,34 +673,39 @@ task filter_bam_to_taxa {
 
     metagenomics.py --version | tee VERSION
 
+    samtools view -c ${classified_bam} | tee classified_taxonomic_filter_read_count_pre &
+
     metagenomics.py filter_bam_to_taxa \
       ${classified_bam} \
       ${classified_reads_txt_gz} \
-      "${input_basename}_filtered.bam" \
+      "${out_basename}.bam" \
       taxonomy/nodes.dmp \
       taxonomy/names.dmp \
       $TAX_NAMES \
       $TAX_IDs \
+      ${true='--exclude' false='' exclude_taxa} \
       ${true='--without-children' false='' withoutChildren} \
+      --out_count COUNT \
       --loglevel=DEBUG
 
-      samtools view -c ${classified_bam} | tee classified_taxonomic_filter_read_count_pre
-      samtools view -c "${input_basename}_filtered.bam" | tee classified_taxonomic_filter_read_count_post
+    samtools view -c "${out_basename}.bam" | tee classified_taxonomic_filter_read_count_post
+    wait
   }
 
   output {
-    File    bam_filtered_to_taxa                        = "${input_basename}_filtered.bam"
+    File    bam_filtered_to_taxa                        = "${out_basename}.bam"
     Int     classified_taxonomic_filter_read_count_pre  = read_int("classified_taxonomic_filter_read_count_pre")
+    Int     reads_matching_taxa                         = read_int("COUNT")
     Int     classified_taxonomic_filter_read_count_post = read_int("classified_taxonomic_filter_read_count_post")
     String  viralngs_version                            = read_string("VERSION")
   }
 
   runtime {
     docker: "${docker}"
-    memory: select_first([machine_mem_gb, 4]) + " GB"
+    memory: select_first([machine_mem_gb, 7]) + " GB"
     disks: "local-disk 375 LOCAL"
-    cpu: 1
-    dx_instance_type: "mem1_ssd2_v2_x2"
+    cpu: 2
+    dx_instance_type: "mem1_ssd2_v2_x4"
   }
 
 }

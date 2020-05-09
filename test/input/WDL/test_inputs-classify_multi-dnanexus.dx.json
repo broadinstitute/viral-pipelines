@@ -1,0 +1,6 @@
+{
+	"stage-common.reads_bams": [
+        { "$dnanexus_link": { "project": "project-F8PQ6380xf5bK0Qk0YPjB17P", "id": "file-Bg535280kYGqbXJGYG23Z7Bx" } },
+        { "$dnanexus_link": { "project": "project-F8PQ6380xf5bK0Qk0YPjB17P", "id": "file-F8F2kVQ09y3Q9Qj14fF806q2" } }
+	]
+}
