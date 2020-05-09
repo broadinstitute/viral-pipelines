@@ -14,14 +14,15 @@ workflow classify_multi {
     input {
         Array[File]+ reads_bams
 
-        File spikein_db
-        File trim_clip_db
+        File  ncbi_taxdump_tgz
 
-        File kraken2_db_tgz
-        File krona_taxonomy_db_kraken2_tgz
-        File blast_db_tgz
-        File krona_taxonomy_db_blast_tgz
-        File ncbi_taxdump_tgz
+        File  spikein_db
+        File  trim_clip_db
+
+        File  kraken2_db_tgz
+        File  krona_taxonomy_db_kraken2_tgz
+        File? blast_db_tgz
+        File? krona_taxonomy_db_blast_tgz
     }
 
     parameter_meta {
@@ -97,11 +98,13 @@ workflow classify_multi {
                 trim_clip_db = trim_clip_db,
                 always_succeed = true
         }
-        call metagenomics.blastx as blastx {
-            input:
-                contigs_fasta = spades.contigs_fasta,
-                blast_db_tgz = blast_db_tgz,
-                krona_taxonomy_db_tgz = krona_taxonomy_db_blast_tgz
+        if(blast_db_tgz) {
+            call metagenomics.blastx as blastx {
+                input:
+                    contigs_fasta = spades.contigs_fasta,
+                    blast_db_tgz = blast_db_tgz,
+                    krona_taxonomy_db_tgz = krona_taxonomy_db_blast_tgz
+            }
         }
     }
 
@@ -139,10 +142,12 @@ workflow classify_multi {
             out_basename = "merged-kraken2.krona.html"
     }
 
-    call metagenomics.krona_merge as krona_merge_blastx {
-        input:
-            krona_reports = blastx.krona_report_html,
-            out_basename = "merged-spades-blastx.krona.html"
+    if(blast_db_tgz and krona_taxonomy_db_blast_tgz) {
+        call metagenomics.krona_merge as krona_merge_blastx {
+            input:
+                krona_reports = blastx.krona_report_html,
+                out_basename = "merged-spades-blastx.krona.html"
+        }
     }
 
     output {
@@ -161,12 +166,12 @@ workflow classify_multi {
         File        spikein_counts         = spike_summary.count_summary
         File        kraken2_merged_krona   = krona_merge_kraken2.krona_report_html
         File        kraken2_summary        = metag_summary_report.krakenuniq_aggregate_taxlevel_summary
-        File        blastx_merged_krona   = krona_merge_blastx.krona_report_html
+        File?       blastx_merged_krona   = krona_merge_blastx.krona_report_html
 
-        Array[File] kraken2_summary_reports = kraken2.kraken2_summary_report
-        Array[File] kraken2_krona_by_sample = kraken2.krona_report_html
-        Array[File] blastx_report_by_sample = blastx.blast_report
-        Array[File] blastx_krona_by_sample  = blastx.krona_report_html
+        Array[File]  kraken2_summary_reports = kraken2.kraken2_summary_report
+        Array[File]  kraken2_krona_by_sample = kraken2.krona_report_html
+        Array[File]? blastx_report_by_sample = blastx.blast_report
+        Array[File]? blastx_krona_by_sample  = blastx.krona_report_html
 
         String      kraken2_viral_classify_version = kraken2.viralngs_version[0]
         String      deplete_viral_classify_version    = deplete.viralngs_version[0]
