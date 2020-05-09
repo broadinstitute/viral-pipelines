@@ -12,9 +12,6 @@ workflow classify_multi {
 
         File spikein_db
         File trim_clip_db
-        Array[File]? bmtaggerDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
-        Array[File]? blastDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
-        Array[File]? bwaDbs
 
         File kraken2_db_tgz
         File krona_taxonomy_db_kraken2_tgz
