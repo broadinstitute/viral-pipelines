@@ -146,14 +146,14 @@ workflow classify_multi {
     call metagenomics.krona_merge as krona_merge_kraken2 {
         input:
             krona_reports = kraken2.krona_report_html,
-            out_basename = "merged-kraken2.krona.html"
+            out_basename = "merged-kraken2.krona"
     }
 
     if(defined(blast_db_tgz) && defined(krona_taxonomy_db_blast_tgz)) {
         call metagenomics.krona_merge as krona_merge_blastx {
             input:
                 krona_reports = select_all(blastx.krona_report_html),
-                out_basename = "merged-spades-blastx.krona.html"
+                out_basename = "merged-spades-blastx.krona"
         }
     }
 

@@ -1,6 +1,9 @@
 {
 	"stage-common.reads_bams": [
         { "$dnanexus_link": { "project": "project-F8PQ6380xf5bK0Qk0YPjB17P", "id": "file-Bg535280kYGqbXJGYG23Z7Bx" } },
-        { "$dnanexus_link": { "project": "project-F8PQ6380xf5bK0Qk0YPjB17P", "id": "file-F8F2kVQ09y3Q9Qj14fF806q2" } }
+        { "$dnanexus_link": { "project": "project-F8PQ6380xf5bK0Qk0YPjB17P", "id": "file-F8F2kVQ09y3Q9Qj14fF806q2" } },
+        { "$dnanexus_link": { "project": "project-F8PQ6380xf5bK0Qk0YPjB17P", "id": "file-FpqJ0b00qBKjk327JkkKqZGy" } },
+        { "$dnanexus_link": { "project": "project-F8PQ6380xf5bK0Qk0YPjB17P", "id": "file-FpqJ0Vj0qBKg2Qv9K0X1J8j8" } },
+        { "$dnanexus_link": { "project": "project-F8PQ6380xf5bK0Qk0YPjB17P", "id": "file-FpqJ0XQ0qBKzzQ92KyqP1ZVQ" } }
 	]
 }
