@@ -13,9 +13,6 @@ workflow assemble_refbased {
     }
 
     parameter_meta {
-        sample_name: {
-            description: "Base name of output files. The 'SM' field in BAM read group headers are also rewritten to this value. Avoid spaces and other filename-unfriendly characters."
-        }
         reads_unmapped_bams: {
             description: "Unaligned reads in BAM format",
             patterns: ["*.bam"]
@@ -44,7 +41,6 @@ workflow assemble_refbased {
     }
 
     input {
-        String          sample_name
         Array[File]+    reads_unmapped_bams
         File            reference_fasta
 
@@ -52,6 +48,8 @@ workflow assemble_refbased {
         Boolean?        skip_mark_dupes=false
         File?           trim_coords_bed
     }
+    
+    String sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
 
     scatter(reads_unmapped_bam in reads_unmapped_bams) {
         call assembly.align_reads as align_to_ref {
