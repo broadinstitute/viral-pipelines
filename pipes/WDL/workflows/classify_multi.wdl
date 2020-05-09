@@ -69,6 +69,10 @@ workflow classify_multi {
                 reads_bam = raw_reads,
                 ref_db = spikein_db
         }
+    }
+
+    scatter(raw_reads in reads_bams) {
+        # separate scatter blocks speeds up the gathers in DNAnexus and provides independent failure blocks
         call metagenomics.kraken2 as kraken2 {
             input:
                 reads_bam = raw_reads,
@@ -87,9 +91,12 @@ workflow classify_multi {
         call reports.fastqc as fastqc_cleaned {
             input: reads_bam = deplete.bam_filtered_to_taxa
         }
+    }
+
+    scatter(clean_reads in deplete.bam_filtered_to_taxa) {
         call read_utils.rmdup_ubam {
            input:
-                reads_unmapped_bam = deplete.bam_filtered_to_taxa
+                reads_unmapped_bam = clean_reads
         }
         call assembly.assemble as spades {
             input:
