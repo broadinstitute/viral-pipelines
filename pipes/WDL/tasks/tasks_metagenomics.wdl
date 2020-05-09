@@ -475,7 +475,7 @@ task blastx {
     }
     krona_taxonomy_db_tgz: {
       description: "Krona taxonomy database: a tarball containing a taxonomy.tab file as well as accession to taxid mapping (a kraken-based taxonomy database will not suffice).",
-      patterns: ["*.tab.zst", "*.tab.gz", "*.tab", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+      patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
     }
   }
 
@@ -679,8 +679,8 @@ task filter_bam_to_taxa {
       ${classified_bam} \
       ${classified_reads_txt_gz} \
       "${out_basename}.bam" \
-      taxonomy/nodes.dmp \
-      taxonomy/names.dmp \
+      nodes.dmp \
+      names.dmp \
       $TAX_NAMES \
       $TAX_IDs \
       ${true='--exclude' false='' exclude_taxa} \

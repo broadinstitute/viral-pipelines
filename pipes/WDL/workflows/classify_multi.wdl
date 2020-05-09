@@ -7,6 +7,10 @@ import "../tasks/tasks_assembly.wdl" as assembly
 import "../tasks/tasks_reports.wdl" as reports
 
 workflow classify_multi {
+    meta {
+         description: "Runs raw reads through taxonomic classification (Kraken2), human read depletion (based on Kraken2), de novo assembly (SPAdes), taxonomic classification of contigs (BLASTx), and FASTQC/multiQC of reads."
+    }
+
     input {
         Array[File]+ reads_bams
 
@@ -18,6 +22,41 @@ workflow classify_multi {
         File blast_db_tgz
         File krona_taxonomy_db_blast_tgz
         File ncbi_taxdump_tgz
+    }
+
+    parameter_meta {
+        reads_bams: {
+          description: "Reads to classify. May be unmapped or mapped or both, paired-end or single-end.",
+          patterns: ["*.bam"] }
+
+        spikein_db: {
+          description: "ERCC spike-in sequences",
+          patterns: ["*.fasta", "*.fasta.gz", "*.fasta.zst"]
+        }
+        trim_clip_db: {
+          description: "Adapter sequences to remove via trimmomatic prior to SPAdes assembly",
+          patterns: ["*.fasta", "*.fasta.gz", "*.fasta.zst"]
+        }
+        kraken2_db_tgz: {
+          description: "Pre-built Kraken database tarball containing three files: hash.k2d, opts.k2d, and taxo.k2d.",
+          patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+        }
+        krona_taxonomy_db_kraken2_tgz: {
+          description: "Krona taxonomy database containing a single file: taxonomy.tab, or possibly just a compressed taxonomy.tab",
+          patterns: ["*.tab.zst", "*.tab.gz", "*.tab", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+        }
+        blast_db_tgz: {
+          description: "Pre-built BLAST database tarball containing an indexed blast database named 'nr'",
+          patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+        }
+        krona_taxonomy_db_blast_tgz: {
+          description: "Krona taxonomy database: a tarball containing a taxonomy.tab file as well as accession to taxid mapping (a kraken-based taxonomy database will not suffice).",
+          patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+        }
+        ncbi_taxdump_tgz: {
+          description: "An NCBI taxdump.tar.gz file that contains, at the minimum, a nodes.dmp and names.dmp file.",
+          patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+        }
     }
 
     scatter(raw_reads in reads_bams) {
