@@ -91,9 +91,18 @@ workflow classify_multi {
         call reports.fastqc as fastqc_cleaned {
             input: reads_bam = deplete.bam_filtered_to_taxa
         }
+        call metagenomics.filter_bam_to_taxa as filter_acellular {
+            input:
+                classified_bam = raw_reads,
+                classified_reads_txt_gz = kraken2.kraken2_reads_report,
+                ncbi_taxonomy_db_tgz = ncbi_taxdump_tgz,
+                exclude_taxa = true,
+                taxonomic_names = ["Vertebrata", "other sequences", "Bacteria"],
+                out_filename_suffix = "acellular"
+        }
     }
 
-    scatter(clean_reads in deplete.bam_filtered_to_taxa) {
+    scatter(clean_reads in filter_acellular.bam_filtered_to_taxa) {
         call read_utils.rmdup_ubam {
            input:
                 reads_unmapped_bam = clean_reads

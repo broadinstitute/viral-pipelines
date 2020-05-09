@@ -663,8 +663,8 @@ task filter_bam_to_taxa {
       --loglevel=DEBUG
     if [ -d "taxonomy" ]; then mv taxonomy/* .; fi
 
-    TAX_NAMES="${sep=' ' taxonomic_names}"
-    if [ -n "$TAX_NAMES" ]; then TAX_NAMES="--taxNames $TAX_NAMES"; fi
+    TAX_NAMES="${sep='" "' taxonomic_names}"
+    if [ -n "$TAX_NAMES" ]; then TAX_NAMES="--taxNames \"$TAX_NAMES\""; fi
 
     TAX_IDs="${sep=' ' taxonomic_ids}"
     if [ -n "$TAX_IDs" ]; then TAX_IDs="--taxIDs $TAX_IDs"; fi
