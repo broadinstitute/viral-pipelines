@@ -85,7 +85,7 @@ workflow classify_multi {
                 classified_reads_txt_gz = kraken2.kraken2_reads_report,
                 ncbi_taxonomy_db_tgz = ncbi_taxdump_tgz,
                 exclude_taxa = true,
-                taxonomic_names = ["Mammalia"],
+                taxonomic_names = ["Vertebrata"],
                 out_filename_suffix = "hs_depleted"
         }
         call reports.fastqc as fastqc_cleaned {
