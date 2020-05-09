@@ -1,4 +1,4 @@
 broadinstitute/viral-core=v2.0.21
 broadinstitute/viral-assemble=v2.0.21.0
-broadinstitute/viral-classify=v2.0.21.2
+broadinstitute/viral-classify=dp-kraken
 broadinstitute/viral-phylo=v2.0.21.0
