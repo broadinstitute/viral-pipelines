@@ -146,6 +146,7 @@ workflow classify_multi {
     call metagenomics.krona as krona_merge_kraken2 {
         input:
             reports_txt_gz = kraken2.kraken2_summary_report,
+            krona_taxonomy_db_tgz = krona_taxonomy_db_kraken2_tgz,
             out_basename = "merged-kraken2.krona"
     }
 
