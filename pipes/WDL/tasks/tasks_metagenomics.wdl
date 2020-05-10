@@ -663,8 +663,10 @@ task filter_bam_to_taxa {
       --loglevel=DEBUG
     if [ -d "taxonomy" ]; then mv taxonomy/* .; fi
 
-    TAX_NAMES="${sep='" "' taxonomic_names}"
-    if [ -n "$TAX_NAMES" ]; then TAX_NAMES="--taxNames \"$TAX_NAMES\""; fi
+    touch taxfilterargs
+    TAXNAMELIST="${write_lines(select_first([taxonomic_names, []]))}"
+    if [ -n "$(cat $TAXNAMELIST)" ]; then echo "--taxNames" >> taxfilterargs; fi
+    cat $TAXNAMELIST >> taxfilterargs
 
     TAX_IDs="${sep=' ' taxonomic_ids}"
     if [ -n "$TAX_IDs" ]; then TAX_IDs="--taxIDs $TAX_IDs"; fi
@@ -673,13 +675,12 @@ task filter_bam_to_taxa {
 
     samtools view -c ${classified_bam} | tee classified_taxonomic_filter_read_count_pre &
 
-    metagenomics.py filter_bam_to_taxa \
+    cat taxfilterargs | xargs -d '\n' metagenomics.py filter_bam_to_taxa \
       ${classified_bam} \
       ${classified_reads_txt_gz} \
       "${out_basename}.bam" \
       nodes.dmp \
       names.dmp \
-      $TAX_NAMES \
       $TAX_IDs \
       ${true='--exclude' false='' exclude_taxa} \
       ${true='--without-children' false='' withoutChildren} \
