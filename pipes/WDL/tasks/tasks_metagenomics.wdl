@@ -641,6 +641,7 @@ task filter_bam_to_taxa {
     File           ncbi_taxonomy_db_tgz # nodes.dmp names.dmp
     Array[String]? taxonomic_names
     Array[Int]?    taxonomic_ids
+    Int?           minimum_hit_groups
     Boolean        withoutChildren=false
     Boolean        exclude_taxa=false
     String         out_filename_suffix = "filtered"
@@ -684,6 +685,7 @@ task filter_bam_to_taxa {
       $TAX_IDs \
       ${true='--exclude' false='' exclude_taxa} \
       ${true='--without-children' false='' withoutChildren} \
+      ${'--minimum_hit_groups=' + minimum_hit_groups} \
       --out_count COUNT \
       --loglevel=DEBUG
 
