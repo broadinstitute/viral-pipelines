@@ -145,14 +145,16 @@ jobs:
         - echo "Host github.com" > ~/.ssh/config
         - echo "  IdentityFile  $(pwd)/travis/github-deploy-id_rsa" >> ~/.ssh/config
       script:
+        - if [ -n "$TRAVIS_PULL_REQUEST" ]; then exit 0; fi
         - set -e
         - git clone git@github.com:broadinstitute/viral-ngs-staging.git
         - cd viral-ngs-staging
         - git checkout -b $TRAVIS_BRANCH
-        - mkdir -p pipes/WDL/flattened
-        - rm -rf pipes/WDL/flattened/*
-        - cp ../pipes/WDL/flattened/*.wdl pipes/WDL/flattened
-        - git commit -am "CI push github.com/broadinstitute/viral-pipelines:$( travis/list-docker-tags.sh | tail -1 )"
+        - rm -rf *; cp -a ../pipes ../travis/github-staging/* .
+        - echo "version: 1.2" > .dockstore.yml; echo "workflows:" >> .dockstore.yml
+        - for WDL in pipes/WDL/flattened/*.wdl; do echo " - name: $(basename $WDL .wdl)" >> .dockstore.yml ; echo "   subclass: WDL" >> .dockstore.yml ; echo "   primaryDescriptorPath: $WDL" >> .dockstore.yml ; done
+        - git add -A -f
+        - git commit -m "CI push github.com/broadinstitute/viral-pipelines:$( travis/list-docker-tags.sh | tail -1 )"
         - for TAG in $( travis/list-docker-tags.sh | cut -f 2 -d : ); do git tag $TAG; done
         - git push -f -u origin $TRAVIS_BRANCH
         - git push origin --tags
