@@ -156,6 +156,7 @@ workflow classify_multi {
         input:
             reports_txt_gz = kraken2.kraken2_summary_report,
             krona_taxonomy_db_tgz = krona_taxonomy_db_kraken2_tgz,
+            input_type = "kraken2",
             out_basename = "merged-kraken2.krona"
     }
 
