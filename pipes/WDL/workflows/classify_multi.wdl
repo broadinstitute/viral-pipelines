@@ -28,8 +28,8 @@ workflow classify_multi {
     parameter_meta {
         reads_bams: {
           description: "Reads to classify. May be unmapped or mapped or both, paired-end or single-end.",
-          patterns: ["*.bam"] }
-
+          patterns: ["*.bam"]
+        }
         spikein_db: {
           description: "ERCC spike-in sequences",
           patterns: ["*.fasta", "*.fasta.gz", "*.fasta.zst"]
