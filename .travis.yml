@@ -40,6 +40,7 @@ jobs:
         - conda install -y miniwdl shellcheck
       script:
         - set -e
+        - export PATH="$MINICONDA_DIR/bin:$PATH"
         - travis/version-wdl-runtimes.sh
         - miniwdl check pipes/WDL/workflows/*.wdl
 
@@ -88,6 +89,7 @@ jobs:
         - conda install -y miniwdl shellcheck jq
       script:
         - set -e
+        - export PATH="$MINICONDA_DIR/bin:$PATH"
         - travis/version-wdl-runtimes.sh
         - travis/tests-miniwdl.sh
 
