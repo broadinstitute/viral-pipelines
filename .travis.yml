@@ -40,9 +40,8 @@ jobs:
         - conda install -y miniwdl shellcheck
       script:
         - set -e
-        - export PATH="$MINICONDA_DIR/bin:$PATH"
         - travis/version-wdl-runtimes.sh
-        - miniwdl check pipes/WDL/workflows/*.wdl
+        - PATH="$MINICONDA_DIR/bin:$PATH" miniwdl check pipes/WDL/workflows/*.wdl
 
     - language: java
       jdk: openjdk11
@@ -89,9 +88,8 @@ jobs:
         - conda install -y miniwdl shellcheck jq
       script:
         - set -e
-        - export PATH="$MINICONDA_DIR/bin:$PATH"
         - travis/version-wdl-runtimes.sh
-        - travis/tests-miniwdl.sh
+        - PATH="$MINICONDA_DIR/bin:$PATH" travis/tests-miniwdl.sh
 
     - language: java
       jdk: openjdk11
@@ -146,7 +144,6 @@ jobs:
         - conda install -y miniwdl
         - travis/version-wdl-runtimes.sh
         - travis/flatten-wdls.sh
-        - #export $encrypted_fb18189f5cc1_key $encrypted_fb18189f5cc1_iv
         - travis/github-viral-ngs-staging.sh
       script:
         - if [ -n "$TRAVIS_PULL_REQUEST" ]; then exit 0; fi
