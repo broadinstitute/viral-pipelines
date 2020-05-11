@@ -144,7 +144,7 @@ task align_and_count {
   input {
     File    reads_bam
     File    ref_db
-    Int?    minScoreToFilter = 60
+    Int?    minScoreToFilter
     Int?    topNHits = 3
 
     Int?    machine_mem_gb
@@ -164,7 +164,7 @@ task align_and_count {
       ${reads_basename}.bam \
       ${ref_db} \
       --outStats ${reads_basename}.count.${ref_basename}.txt.unsorted \
-      --minScoreToFilter=${minScoreToFilter} \
+      ${'--minScoreToFilter=' + minScoreToFilter} \
       --loglevel=DEBUG
 
       sort -b -r -n -k3 ${reads_basename}.count.${ref_basename}.txt.unsorted > ${reads_basename}.count.${ref_basename}.txt
