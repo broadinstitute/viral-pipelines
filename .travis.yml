@@ -35,13 +35,12 @@ jobs:
         - TRAVIS_JOB=validate_wdl_miniwdl
       install:
         - set -e
-        - travis/install-conda.sh
-        - export PATH="$MINICONDA_DIR/bin:$PATH"
+        - source travis/install-conda.sh
         - conda install -y miniwdl shellcheck
       script:
         - set -e
         - travis/version-wdl-runtimes.sh
-        - PATH="$MINICONDA_DIR/bin:$PATH" miniwdl check pipes/WDL/workflows/*.wdl
+        - miniwdl check pipes/WDL/workflows/*.wdl
 
     - language: java
       jdk: openjdk11
@@ -83,13 +82,12 @@ jobs:
         - TRAVIS_JOB=test_miniwdl
       install:
         - set -e
-        - travis/install-conda.sh
-        - export PATH="$MINICONDA_DIR/bin:$PATH"
+        - source travis/install-conda.sh
         - conda install -y miniwdl shellcheck jq
       script:
         - set -e
         - travis/version-wdl-runtimes.sh
-        - PATH="$MINICONDA_DIR/bin:$PATH" travis/tests-miniwdl.sh
+        - travis/tests-miniwdl.sh
 
     - language: java
       jdk: openjdk11
