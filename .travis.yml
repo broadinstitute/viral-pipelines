@@ -130,6 +130,33 @@ jobs:
           on:
               all_branches: true
 
+    - language: python
+      stage: build
+      env:
+        - TRAVIS_JOB=deploy_github_staging
+      install:
+        - set -e
+        - source travis/install-conda.sh
+        - conda install -y miniwdl
+        - travis/version-wdl-runtimes.sh
+        - travis/flatten-wdls.sh
+        - openssl aes-256-cbc -K $encrypted_fb18189f5cc1_key -iv $encrypted_fb18189f5cc1_iv -in travis/github-deploy-id_rsa.enc -out travis/github-deploy-id_rsa -d
+        - chmod 400 travis/github-deploy-id_rsa
+        - echo "Host github.com" > ~/.ssh/config
+        - echo "  IdentityFile  $(pwd)/travis/github-deploy-id_rsa" >> ~/.ssh/config
+      script:
+        - set -e
+        - git clone git@github.com:broadinstitute/viral-ngs-staging.git
+        - cd viral-ngs-staging
+        - git checkout -b $TRAVIS_BRANCH
+        - mkdir -p pipes/WDL/flattened
+        - rm -rf pipes/WDL/flattened/*
+        - cp ../pipes/WDL/flattened/*.wdl pipes/WDL/flattened
+        - git commit -am "CI push github.com/broadinstitute/viral-pipelines:$( travis/list-docker-tags.sh | tail -1 )"
+        - for TAG in $( travis/list-docker-tags.sh | cut -f 2 -d : ); do git tag $TAG; done
+        - git push -f -u origin $TRAVIS_BRANCH
+        - git push origin --tags
+
     #- language: python
     #  stage: build
     #  env:
