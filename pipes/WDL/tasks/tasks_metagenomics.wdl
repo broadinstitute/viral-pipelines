@@ -598,7 +598,7 @@ task krona {
 
   runtime {
     docker: "${docker}"
-    memory: select_first([machine_mem_gb, 3]) + " GB"
+    memory: "3 GB"
     cpu: 1
     disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd2_v2_x2"
@@ -646,7 +646,6 @@ task filter_bam_to_taxa {
     Boolean        exclude_taxa=false
     String         out_filename_suffix = "filtered"
 
-    Int?           machine_mem_gb
     String         docker="quay.io/broadinstitute/viral-classify"
   }
 
@@ -703,7 +702,7 @@ task filter_bam_to_taxa {
 
   runtime {
     docker: "${docker}"
-    memory: select_first([machine_mem_gb, 7]) + " GB"
+    memory: "7 GB"
     disks: "local-disk 375 LOCAL"
     cpu: 2
     dx_instance_type: "mem1_ssd2_v2_x4"
