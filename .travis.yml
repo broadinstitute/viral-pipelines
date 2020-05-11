@@ -140,14 +140,11 @@ jobs:
         - conda install -y miniwdl
         - travis/version-wdl-runtimes.sh
         - travis/flatten-wdls.sh
-        - openssl aes-256-cbc -K $encrypted_fb18189f5cc1_key -iv $encrypted_fb18189f5cc1_iv -in travis/github-deploy-id_rsa.enc -out travis/github-deploy-id_rsa -d
-        - chmod 400 travis/github-deploy-id_rsa
-        - echo "Host github.com" > ~/.ssh/config
-        - echo "  IdentityFile  $(pwd)/travis/github-deploy-id_rsa" >> ~/.ssh/config
+        - #export $encrypted_fb18189f5cc1_key $encrypted_fb18189f5cc1_iv
+        - travis/github-viral-ngs-staging.sh
       script:
         - if [ -n "$TRAVIS_PULL_REQUEST" ]; then exit 0; fi
         - set -e
-        - git clone git@github.com:broadinstitute/viral-ngs-staging.git
         - cd viral-ngs-staging
         - git checkout -b $TRAVIS_BRANCH
         - rm -rf *; cp -a ../pipes ../travis/github-staging/* .
