@@ -115,8 +115,7 @@ jobs:
         - set -e
         - openssl aes-256-cbc -K $encrypted_6def3e87f286_key -iv $encrypted_6def3e87f286_iv -in travis/viral-ngs-wdl.json.enc -out travis/viral-ngs-wdl.json -d
         - export DEST_DIR=`travis/list-docker-tags.sh | tail -1 | sed 's/:/\//'`
-        - travis/install-conda.sh
-        - export PATH="$MINICONDA_DIR/bin:$PATH"
+        - source travis/install-conda.sh
         - conda install -y miniwdl
         - travis/version-wdl-runtimes.sh
         - travis/flatten-wdls.sh
@@ -137,8 +136,7 @@ jobs:
         - TRAVIS_JOB=deploy_github_staging
       install:
         - set -e
-        - travis/install-conda.sh
-        - export PATH="$MINICONDA_DIR/bin:$PATH"
+        - source travis/install-conda.sh
         - conda install -y miniwdl
         - travis/version-wdl-runtimes.sh
         - travis/flatten-wdls.sh
@@ -162,8 +160,7 @@ jobs:
     #    - TRAVIS_JOB=deploy_github
     #  before_deploy:
     #    - set -e
-    #    - travis/install-conda.sh
-    #    - export PATH="$MINICONDA_DIR/bin:$PATH"
+    #    - source travis/install-conda.sh
     #    - conda install -y miniwdl
     #    - travis/version-wdl-runtimes.sh
     #    - travis/flatten-wdls.sh
