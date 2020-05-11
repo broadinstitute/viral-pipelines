@@ -4,11 +4,12 @@ import "../tasks/tasks_nextstrain.wdl" as nextstrain
 
 workflow build_augur_tree {
     input {
-        Array[File] assembly_fastas # fasta header records need to be "|" delimited for each metadata value
-        File        metadata
-        String      virus
-        File        ref_fasta       # reference genome (often RefSeq)
-        File        genbank_gb      # Genbank file for amino acid annotations (same coord space as ref_fasta, typically RefSeq)
+        Array[File]     assembly_fastas # fasta header records need to be "|" delimited for each metadata value
+        File            metadata
+        String          virus
+        File            ref_fasta       # reference genome (often RefSeq)
+        File            genbank_gb      # Genbank file for amino acid annotations (same coord space as ref_fasta, typically RefSeq)
+        Array[String]?  ancestral_traits_to_infer
     }
     call nextstrain.concatenate {
         input:
@@ -33,11 +34,14 @@ workflow build_augur_tree {
             metadata       = metadata,
             basename       = virus
     }
-    call nextstrain.ancestral_traits {
-        input:
-            tree           = refine_augur_tree.tree_refined,
-            metadata       = metadata,
-            basename       = virus
+    if(defined(ancestral_traits_to_infer) && length(select_first([ancestral_traits_to_infer,[]]))>0) {
+        call nextstrain.ancestral_traits {
+            input:
+                tree           = refine_augur_tree.tree_refined,
+                metadata       = metadata,
+                columns        = select_first([ancestral_traits_to_infer,[]]),
+                basename       = virus
+        }
     }
     call nextstrain.ancestral_tree {
         input:
@@ -63,15 +67,15 @@ workflow build_augur_tree {
             basename       = virus
     }
     output {
-        File combined_assembly_fasta    = concatenate.combined
-        File augur_aligned_fasta        = augur_mafft_align.aligned_sequences
-        File raw_tree                   = draft_augur_tree.aligned_tree
-        File refined_tree               = refine_augur_tree.tree_refined
-        File branch_lengths             = refine_augur_tree.branch_lengths
-        File json_nt_muts               = ancestral_tree.nt_muts_json
-        File ancestral_sequences_fasta  = ancestral_tree.sequences
-        File json_aa_muts               = translate_augur_tree.aa_muts_json
-        File json_ancestral_traits      = ancestral_traits.node_data_json
-        File auspice_input_json         = export_auspice_json.virus_json
+        File  combined_assembly_fasta    = concatenate.combined
+        File  augur_aligned_fasta        = augur_mafft_align.aligned_sequences
+        File  raw_tree                   = draft_augur_tree.aligned_tree
+        File  refined_tree               = refine_augur_tree.tree_refined
+        File  branch_lengths             = refine_augur_tree.branch_lengths
+        File  json_nt_muts               = ancestral_tree.nt_muts_json
+        File  ancestral_sequences_fasta  = ancestral_tree.sequences
+        File  json_aa_muts               = translate_augur_tree.aa_muts_json
+        File? json_ancestral_traits      = ancestral_traits.node_data_json
+        File  auspice_input_json         = export_auspice_json.virus_json
     }
 }
