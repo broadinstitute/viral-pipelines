@@ -115,6 +115,7 @@ jobs:
         - pip3 install miniwdl
       script:
         - set -e -o pipefail
+        - export VERSION=$(travis/list-docker-tags.sh | cut -f 2 -d ":" | tail -1); echo "version - $VERSION"
         - eval `ssh-agent`
         - travis/version-wdl-runtimes.sh
         - travis/flatten-wdls.sh > /dev/null
@@ -126,8 +127,8 @@ jobs:
         - rm -rf *; cp -a ../pipes ../travis/github-staging/* .
         - ../travis/dockstoreyml.sh pipes/WDL/flattened/*.wdl > .dockstore.yml
         - git add -A -f
-        - git commit -q -m "CI push github.com/broadinstitute/viral-pipelines:$( ../travis/list-docker-tags.sh | tail -1 )"
-        - for TAG in $( ../travis/list-docker-tags.sh | cut -f 2 -d ":" | tail -1 ); do git tag $TAG; done
+        - git commit -q -m "CI push github.com/broadinstitute/viral-pipelines:$VERSION"
+        - for TAG in $VERSION; do git tag $TAG; done
         - git push -f -u origin $TRAVIS_BRANCH
         - git push origin --tags
 
