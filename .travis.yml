@@ -117,7 +117,8 @@ jobs:
         - set -e
         - travis/version-wdl-runtimes.sh
         - travis/flatten-wdls.sh
-        - travis/github-viral-ngs-staging.sh
+        #- travis/github-viral-ngs-staging.sh
+        - git clone git@github.com:broadinstitute/viral-ngs-staging.git
         - cd viral-ngs-staging
         - git checkout -b $TRAVIS_BRANCH
         - git remote -v
