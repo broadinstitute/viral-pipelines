@@ -122,7 +122,7 @@ jobs:
         - travis/flatten-wdls.sh > /dev/null
         - travis/github-viral-ngs-staging.sh
         - cd viral-ngs-staging
-        - git checkout -B $TRAVIS_BRANCH
+        - if [ -z "$TRAVIS_TAG" ]; then git checkout -B $TRAVIS_BRANCH; fi
         - git remote -v
         - ssh-add -l -E md5
         - rm -rf *; cp -a ../pipes ../travis/github-staging/* .
@@ -130,8 +130,8 @@ jobs:
         - git add -A -f
         - git commit -q -m "CI push github.com/broadinstitute/viral-pipelines:$VERSION"
         - git tag $VERSION
-        - git push -f -u origin $TRAVIS_BRANCH
         - git push origin --tags
+        - if [ -z "$TRAVIS_TAG" ]; then git push -f -u origin $TRAVIS_BRANCH; fi
 
     - language: python
       stage: build
