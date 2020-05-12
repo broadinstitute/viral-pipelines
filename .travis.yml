@@ -112,15 +112,15 @@ jobs:
       env:
         - TRAVIS_JOB=deploy_github_staging
       install:
-        - set -e
         - pip3 install miniwdl
+      script:
+        - set -e
         - travis/version-wdl-runtimes.sh
         - travis/flatten-wdls.sh
         - travis/github-viral-ngs-staging.sh
-      script:
-        - set -e
         - cd viral-ngs-staging
         - git checkout -b $TRAVIS_BRANCH
+        - git remote -v
         - rm -rf *; cp -a ../pipes ../travis/github-staging/* .
         - ../travis/dockstoreyml.sh pipes/WDL/flattened/*.wdl > .dockstore.yml
         - git add -A -f
