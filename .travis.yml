@@ -117,9 +117,11 @@ jobs:
         - travis/version-wdl-runtimes.sh
         - travis/flatten-wdls.sh
         - travis/github-viral-ngs-staging.sh
+        - echo checkpoint
       script:
+        - set -ex
+        - echo "tpr: $TRAVIS_PULL_REQUEST"
         - if [ -n "$TRAVIS_PULL_REQUEST" ]; then exit 0; fi
-        - set -e
         - cd viral-ngs-staging
         - git checkout -b $TRAVIS_BRANCH
         - rm -rf *; cp -a ../pipes ../travis/github-staging/* .
