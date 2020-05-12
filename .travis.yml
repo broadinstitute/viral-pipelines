@@ -114,25 +114,9 @@ jobs:
       install:
         - pip3 -q install miniwdl
       script:
-        - set -e -o pipefail
-        - if [ -n "$TRAVIS_PULL_REQUEST_BRANCH" ]; then exit 0; fi
-        - export VERSION=$(travis/list-docker-tags.sh | cut -f 2 -d ":" | tail -1); echo "version - $VERSION"
-        - eval `ssh-agent`
-        - travis/version-wdl-runtimes.sh
-        - travis/flatten-wdls.sh > /dev/null
         - travis/github-viral-ngs-staging.sh
-        - cd viral-ngs-staging
-        - if [ -z "$TRAVIS_TAG" ]; then git checkout -B $TRAVIS_BRANCH; fi
-        - ssh-add -l -E md5
-        - rm -rf *; cp -a ../pipes ../travis/github-staging/* .
-        - ../travis/dockstoreyml.sh pipes/WDL/flattened/*.wdl > .dockstore.yml
-        - git add -A -f
-        - git commit -q -m "CI push github.com/broadinstitute/viral-pipelines:$VERSION"
-        - git tag $VERSION
-        - git push origin --tags
-        - if [ -z "$TRAVIS_TAG" ]; then git push -f -u origin $TRAVIS_BRANCH; fi
       after_failure:
-        - sleep 5
+        - sleep 10
 
     - language: python
       stage: build
