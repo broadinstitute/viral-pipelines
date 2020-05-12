@@ -131,6 +131,8 @@ jobs:
         - git tag $VERSION
         - git push origin --tags
         - if [ -z "$TRAVIS_TAG" ]; then git push -f -u origin $TRAVIS_BRANCH; fi
+      after_failure:
+        - sleep 5
 
     - language: python
       stage: build
