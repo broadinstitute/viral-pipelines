@@ -38,7 +38,7 @@ jobs:
         - sudo apt-get update
         - sudo apt-get -y install shellcheck
       install:
-        - pip3 install miniwdl
+        - pip3 -q install miniwdl
       script:
         - travis/version-wdl-runtimes.sh
         - miniwdl check pipes/WDL/workflows/*.wdl
@@ -84,7 +84,7 @@ jobs:
         - sudo apt-get update
         - sudo apt-get -y install jq
       install:
-        - pip3 install miniwdl
+        - pip3 -q install miniwdl
       script:
         - travis/version-wdl-runtimes.sh
         - travis/tests-miniwdl.sh
@@ -112,7 +112,7 @@ jobs:
       env:
         - TRAVIS_JOB=deploy_github_staging
       install:
-        - pip3 install miniwdl
+        - pip3 -q install miniwdl
       script:
         - set -e -o pipefail
         - if [ -n "$TRAVIS_PULL_REQUEST_BRANCH" ]; then exit 0; fi
@@ -123,7 +123,6 @@ jobs:
         - travis/github-viral-ngs-staging.sh
         - cd viral-ngs-staging
         - if [ -z "$TRAVIS_TAG" ]; then git checkout -B $TRAVIS_BRANCH; fi
-        - git remote -v
         - ssh-add -l -E md5
         - rm -rf *; cp -a ../pipes ../travis/github-staging/* .
         - ../travis/dockstoreyml.sh pipes/WDL/flattened/*.wdl > .dockstore.yml
@@ -143,7 +142,7 @@ jobs:
         - set -e -o pipefail
         - openssl aes-256-cbc -K $encrypted_6def3e87f286_key -iv $encrypted_6def3e87f286_iv -in travis/viral-ngs-wdl.json.enc -out travis/viral-ngs-wdl.json -d
         - export DEST_DIR=`travis/list-docker-tags.sh | tail -1 | sed 's/:/\//'`
-        - pip3 install miniwdl
+        - pip3 -q install miniwdl
         - travis/version-wdl-runtimes.sh
         - travis/flatten-wdls.sh
       deploy:
@@ -164,7 +163,7 @@ jobs:
     #    - TRAVIS_JOB=deploy_github
     #  before_deploy:
     #    - set -e
-    #    - pip3 install miniwdl
+    #    - pip3 -q install miniwdl
     #    - travis/version-wdl-runtimes.sh
     #    - travis/flatten-wdls.sh
     #  deploy:
