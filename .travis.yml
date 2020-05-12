@@ -117,18 +117,15 @@ jobs:
         - travis/version-wdl-runtimes.sh
         - travis/flatten-wdls.sh
         - travis/github-viral-ngs-staging.sh
-        - echo checkpoint
       script:
-        - set -ex
-        - echo "tpr: $TRAVIS_PULL_REQUEST"
-        - if [ -n "$TRAVIS_PULL_REQUEST" ]; then exit 0; fi
+        - set -e
         - cd viral-ngs-staging
         - git checkout -b $TRAVIS_BRANCH
         - rm -rf *; cp -a ../pipes ../travis/github-staging/* .
         - travis/dockstoreyml.sh pipes/WDL/flattened/*.wdl > .dockstore.yml
         - git add -A -f
         - git commit -m "CI push github.com/broadinstitute/viral-pipelines:$( travis/list-docker-tags.sh | tail -1 )"
-        - for TAG in $( travis/list-docker-tags.sh | cut -f 2 -d : ); do git tag $TAG; done
+        - for TAG in $( travis/list-docker-tags.sh | cut -f 2 -d ":" ); do git tag $TAG; done
         - git push -f -u origin $TRAVIS_BRANCH
         - git push origin --tags
 
