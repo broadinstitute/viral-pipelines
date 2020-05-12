@@ -8,6 +8,5 @@ openssl aes-256-cbc \
 	-out travis/github-deploy-id_rsa \
 	-d
 chmod 400 travis/github-deploy-id_rsa
-eval `ssh-agent`
 ssh-add travis/github-deploy-id_rsa
 git clone git@github.com:broadinstitute/viral-ngs-staging.git

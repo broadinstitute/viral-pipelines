@@ -115,6 +115,7 @@ jobs:
         - pip3 install miniwdl
       script:
         - set -e -o pipefail
+        - eval `ssh-agent`
         - travis/version-wdl-runtimes.sh
         - travis/flatten-wdls.sh
         - travis/github-viral-ngs-staging.sh
