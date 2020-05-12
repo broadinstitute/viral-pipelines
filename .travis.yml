@@ -115,6 +115,7 @@ jobs:
         - pip3 install miniwdl
       script:
         - set -e -o pipefail
+        - if [ -n "$TRAVIS_PULL_REQUEST_BRANCH" ]; then exit 0; fi
         - export VERSION=$(travis/list-docker-tags.sh | cut -f 2 -d ":" | tail -1); echo "version - $VERSION"
         - eval `ssh-agent`
         - travis/version-wdl-runtimes.sh
