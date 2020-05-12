@@ -108,12 +108,14 @@ jobs:
 
     - language: python
       stage: build
+      python: "3.8"
       env:
         - TRAVIS_JOB=deploy_github_staging
       install:
         - set -e
-        - source travis/install-conda.sh
-        - conda install -y miniwdl
+        #- source travis/install-conda.sh
+        #- conda install -y miniwdl
+        - pip3 install miniwdl
         - travis/version-wdl-runtimes.sh
         - travis/flatten-wdls.sh
         - travis/github-viral-ngs-staging.sh
@@ -131,6 +133,7 @@ jobs:
 
     - language: python
       stage: build
+      python: "3.8"
       env:
         - TRAVIS_JOB=deploy_gcs
       script: skip
@@ -138,8 +141,9 @@ jobs:
         - set -e
         - openssl aes-256-cbc -K $encrypted_6def3e87f286_key -iv $encrypted_6def3e87f286_iv -in travis/viral-ngs-wdl.json.enc -out travis/viral-ngs-wdl.json -d
         - export DEST_DIR=`travis/list-docker-tags.sh | tail -1 | sed 's/:/\//'`
-        - source travis/install-conda.sh
-        - conda install -y miniwdl
+        #- source travis/install-conda.sh
+        #- conda install -y miniwdl
+        - pip3 install miniwdl
         - travis/version-wdl-runtimes.sh
         - travis/flatten-wdls.sh
       deploy:
