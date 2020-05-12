@@ -201,7 +201,7 @@ task ivar_trim {
       Int?    min_quality
 
       Int?    machine_mem_gb
-      String  docker="andersenlabapps/ivar:1.2.1"
+      String  docker="andersenlabapps/ivar"
     }
 
     String  bam_basename=basename(aligned_bam, ".bam")
