@@ -117,7 +117,7 @@ jobs:
         - set -e -o pipefail
         - eval `ssh-agent`
         - travis/version-wdl-runtimes.sh
-        - travis/flatten-wdls.sh
+        - travis/flatten-wdls.sh > /dev/null
         - travis/github-viral-ngs-staging.sh
         - cd viral-ngs-staging
         - git checkout -b $TRAVIS_BRANCH
@@ -128,7 +128,7 @@ jobs:
         - git add -A -f
         - git commit -q -m "CI push github.com/broadinstitute/viral-pipelines:$( ../travis/list-docker-tags.sh | tail -1 )"
         - for TAG in $( ../travis/list-docker-tags.sh | cut -f 2 -d ":" ); do git tag $TAG; done
-        - git push -f -u origin $TRAVIS_BRANCH
+        - git push -u origin $TRAVIS_BRANCH
         - git push origin --tags
 
     - language: python
