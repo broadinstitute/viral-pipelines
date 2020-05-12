@@ -28,7 +28,7 @@ if [ -z "$TRAVIS_PULL_REQUEST_BRANCH" ]; then
 	rm -rf *; cp -a ../pipes ../travis/github-staging/* .
 	../travis/dockstoreyml.sh pipes/WDL/flattened/*.wdl > .dockstore.yml
 	git add -A -f
-	git commit -q -m "CI push github.com/broadinstitute/viral-pipelines:$VERSION"
+	git diff-index --quiet HEAD || git commit -q -m "CI push github.com/broadinstitute/viral-pipelines:$VERSION"
 
 	git tag $VERSION
 	git push origin --tags
