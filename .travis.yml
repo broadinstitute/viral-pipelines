@@ -127,8 +127,8 @@ jobs:
         - ../travis/dockstoreyml.sh pipes/WDL/flattened/*.wdl > .dockstore.yml
         - git add -A -f
         - git commit -q -m "CI push github.com/broadinstitute/viral-pipelines:$( ../travis/list-docker-tags.sh | tail -1 )"
-        - for TAG in $( ../travis/list-docker-tags.sh | cut -f 2 -d ":" ); do git tag $TAG; done
-        - git push -u origin $TRAVIS_BRANCH
+        - for TAG in $( ../travis/list-docker-tags.sh | cut -f 2 -d ":" | tail -1 ); do git tag $TAG; done
+        - git push -f -u origin $TRAVIS_BRANCH
         - git push origin --tags
 
     - language: python
