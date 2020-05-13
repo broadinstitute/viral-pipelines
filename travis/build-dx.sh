@@ -24,15 +24,6 @@ for workflow in pipes/WDL/workflows/*.wdl; do
     workflow_name=`basename $workflow .wdl`
 	  echo "Building $workflow to DNAnexus: /build/$VERSION/$workflow_name"
 
-    test_input_json_wdl="test/input/WDL/test_inputs-$workflow_name-dnanexus.json"
-    if [ -f "$test_input_json_wdl" ]; then
-      CMD_INPUT="-inputs $test_input_json_wdl"
-      # blank this out until we're sure we want to test it this way...
-      CMD_INPUT=""
-    else
-      CMD_INPUT=""
-    fi
-
     defaults_json="pipes/dnax/dx-defaults-$workflow_name.json"
     if [ -f "$defaults_json" ]; then
       CMD_DEFAULTS="-defaults $defaults_json"
@@ -44,7 +35,8 @@ for workflow in pipes/WDL/workflows/*.wdl; do
     CMD_DEFAULTS+=" -extras $extras_json"
 
 	  dx_id=$(java -jar dxWDL.jar compile \
-      $workflow $CMD_INPUT $CMD_DEFAULTS -f -verbose \
+      $workflow $CMD_DEFAULTS -f -verbose \
+      -leaveWorkflowsOpen \
       -imports pipes/WDL/tasks/ \
       -project $DX_PROJECT \
       -destination /build/$VERSION/$workflow_name)
