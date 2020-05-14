@@ -72,38 +72,43 @@ task download_annotations {
 }
 
 task annot_transfer {
+  meta {
+    description: "Given a reference genome annotation in TBL format (e.g. from Genbank or RefSeq) and a multiple alignment of that reference to other genomes, produce new annotation files (TBL format with appropriate coordinate conversions) for each sequence in the multiple alignment. Resulting output can be fed to tbl2asn for Genbank submission."
+  }
+
   input {
-    Array[File]+ multi_aln_fasta
+    File         multi_aln_fasta
     File         reference_fasta
     Array[File]+ reference_feature_table
 
-    String       docker="quay.io/broadinstitute/viral-phylo"
+    String  docker="quay.io/broadinstitute/viral-phylo"
   }
 
-  Array[Int]   chr_nums=range(length(multi_aln_fasta))
-
   parameter_meta {
-    multi_aln_fasta:         { description: "fasta; multiple alignments of sample sequences for each chromosome" }
-    reference_fasta:         { description: "fasta; all chromosomes in one file" }
-    reference_feature_table: { description: "tbl; feature table corresponding to each chromosome in the alignment" }
+    multi_aln_fasta: {
+      description: "multiple alignment of sample sequences against a reference genome -- for a single chromosome",
+      patterns: ["*.fasta"]
+    }
+    reference_fasta: {
+      description: "Reference genome, all segments/chromosomes in one fasta file. Headers must be Genbank accessions.",
+      patterns: ["*.fasta"]
+    }
+    reference_feature_table: {
+      description: "NCBI Genbank feature tables, one file for each segment/chromosome described in reference_fasta.",
+      patterns: ["*.tbl"]
+    }
   }
 
   command {
-    set -ex -o pipefail
+    set -e
     ncbi.py --version | tee VERSION
-    echo ${sep=' ' multi_aln_fasta} > alignments.txt
-    echo ${sep=' ' reference_feature_table} > tbls.txt
-    for i in ${sep=' ' chr_nums}; do
-      _alignment_fasta=`cat alignments.txt | cut -f $(($i+1)) -d ' '`
-      _feature_tbl=`cat tbls.txt | cut -f $(($i+1)) -d ' '`
-      ncbi.py tbl_transfer_prealigned \
-          $_alignment_fasta \
-          ${reference_fasta} \
-          $_feature_tbl \
-          . \
-          --oob_clip \
-          --loglevel DEBUG
-    done
+    ncbi.py tbl_transfer_prealigned \
+        ${multi_aln_fasta} \
+        ${reference_fasta} \
+        ${sep=' ' reference_feature_table} \
+        . \
+        --oob_clip \
+        --loglevel DEBUG
   }
 
   output {
@@ -143,7 +148,8 @@ task prepare_genbank {
   parameter_meta {
     assemblies_fasta: {
       description: "Assembled genomes. One chromosome/segment per fasta file.",
-      patterns: ["*.fasta"] }
+      patterns: ["*.fasta"]
+    }
     annotations_tbl: {
       description: "Gene annotations in TBL format, one per fasta file. Filename basenames must match the assemblies_fasta basenames. These files are typically output from the ncbi.annot_transfer task.",
       patterns: ["*.tbl"]
@@ -161,9 +167,22 @@ task prepare_genbank {
       patterns: ["*.txt", "*.tsv"]
     }
     coverage_table: {
-      description: "A two column tab text file mapping sample IDs (first column) to average sequencing coverage (second column).",
+      description: "A two column tab text file mapping sample IDs (first column) to average sequencing coverage (second column, floating point number).",
       patterns: ["*.txt", "*.tsv"]
     }
+    sequencingTech: {
+      description: "The type of sequencer used to generate reads. NCBI has a controlled vocabulary for this value which can be found here: https://submit.ncbi.nlm.nih.gov/structcomment/nongenomes/"
+    }
+    organism: {
+      description: "The scientific name for the organism being submitted. This is typically the species name and should match the name given by the NCBI Taxonomy database. For more info, see: https://www.ncbi.nlm.nih.gov/Sequin/sequin.hlp.html#Organism"
+    }
+    molType: {
+      description: "The type of molecule being described. This defaults to 'viral cRNA' as this pipeline is most commonly used for viral submissions, but any value allowed by the INSDC controlled vocabulary may be used here. Valid values are described at http://www.insdc.org/controlled-vocabulary-moltype-qualifier"
+    }
+    comment: {
+      description: "Optional comments that can be displayed in the COMMENT section of the Genbank record. This may include any disclaimers about assembly quality or notes about pre-publication availability or requests to discuss pre-publication use with authors."
+    }
+
   }
 
   command {
