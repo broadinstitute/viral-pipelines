@@ -9,7 +9,7 @@ workflow build_augur_tree {
 
     input {
         Array[File]     assembly_fastas
-        File            sample_metadata
+        File            metadata
         String          virus
         File            ref_fasta
         File            genbank_gb
@@ -21,7 +21,7 @@ workflow build_augur_tree {
           description: "Set of assembled genomes to align and build trees. These must represent a single chromosome/segment of a genome only. Fastas may be one-sequence-per-individual or a concatenated multi-fasta (unaligned) or a mixture of the two. Fasta header records need to be pipe-delimited (|) for each metadata value.",
           patterns: ["*.fasta", "*.fa"]
         }
-        sample_metadata: {
+        metadata: {
           description: "Metadata in tab-separated text format. See https://nextstrain-augur.readthedocs.io/en/stable/faq/metadata.html for details.",
           patterns: ["*.txt", "*.tsv"]
         }
@@ -61,14 +61,14 @@ workflow build_augur_tree {
         input:
             raw_tree       = draft_augur_tree.aligned_tree,
             aligned_fasta  = augur_mafft_align.aligned_sequences,
-            metadata       = sample_metadata,
+            metadata       = metadata,
             basename       = virus
     }
     if(defined(ancestral_traits_to_infer) && length(select_first([ancestral_traits_to_infer,[]]))>0) {
         call nextstrain.ancestral_traits {
             input:
                 tree           = refine_augur_tree.tree_refined,
-                metadata       = sample_metadata,
+                metadata       = metadata,
                 columns        = select_first([ancestral_traits_to_infer,[]]),
                 basename       = virus
         }
@@ -89,7 +89,7 @@ workflow build_augur_tree {
     call nextstrain.export_auspice_json {
         input:
             refined_tree   = refine_augur_tree.tree_refined,
-            metadata       = sample_metadata,
+            metadata       = metadata,
             branch_lengths = refine_augur_tree.branch_lengths,
             traits         = ancestral_traits.node_data_json,
             nt_muts        = ancestral_tree.nt_muts_json,
