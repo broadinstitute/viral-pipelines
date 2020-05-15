@@ -11,4 +11,3 @@ Documentation for each workflow is provided here. Although there are many workfl
  - :doc:`genbank` (for NCBI Genbank submission)
 
 .. toctree::
-   :maxdepth: 1
