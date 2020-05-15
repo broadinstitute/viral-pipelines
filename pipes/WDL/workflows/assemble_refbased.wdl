@@ -14,7 +14,8 @@ workflow assemble_refbased {
 
     parameter_meta {
         sample_name: {
-            description: "Base name of output files. The 'SM' field in BAM read group headers are also rewritten to this value. Avoid spaces and other filename-unfriendly characters."
+            description: "Base name of output files. The 'SM' field in BAM read group headers are also rewritten to this value. Avoid spaces and other filename-unfriendly characters.",
+            category: "common"
         }
         reads_unmapped_bams: {
             description: "Unaligned reads in BAM format",
@@ -33,7 +34,8 @@ workflow assemble_refbased {
         }
         trim_coords_bed: {
             description: "optional primers to trim in reference coordinate space (0-based BED format)",
-            patterns: ["*.bed"]
+            patterns: ["*.bed"],
+            category: "common"
         }
 
 
