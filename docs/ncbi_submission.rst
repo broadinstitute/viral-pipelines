@@ -86,7 +86,7 @@ Set up the metadata file (aka Source Modifier Table)
 Prepare requisite input files for your submission batches
 ---------------------------------------------------------
 
-1. Stage the above files you've prepared and other requisite inputs into the environment you plan to execute the :doc:`genbank` WDL workflow. If that is Terra, push these files into the appropriate GCS bucket, if DNAnexus, drop your files there. If you plan to execute locally (e.g. ``miniwdl run https://storage.googleapis.com/viral-ngs-wdl/quay.io/broadinstitute/viral-pipelines/2.0.21.4/genbank.wdl``), move the files to an appropriate directory on your machine. The files you will need are the following:
+1. Stage the above files you've prepared and other requisite inputs into the environment you plan to execute the :doc:`genbank` WDL workflow. If that is Terra, push these files into the appropriate GCS bucket, if DNAnexus, drop your files there. If you plan to execute locally (e.g. with ``miniwdl run``), move the files to an appropriate directory on your machine. The files you will need are the following:
    a. The files you prepared above: the submission template (authors.sbt), the biosample map (biosample-map.txt), and the source modifier table (sample_meta.txt)
    #. All of the assemblies you want to submit. These should be in fasta files, one per genome. Multi-segment/multi-chromosome genomes (such as Lassa virus, Influenza A, etc) should contain all segments within one fasta file.
    #. Your reference genome, as a fasta file. Multi-segment/multi-chromosome genomes should contain all segments within one fasta file. The fasta sequence headers should be Genbank accession numbers.
