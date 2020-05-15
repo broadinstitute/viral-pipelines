@@ -43,24 +43,30 @@ workflow genbank {
         }
         biosampleMap: {
           description: "A two column tab text file mapping sample IDs (first column) to NCBI BioSample accession numbers (second column). These typically take the format 'SAMN****' and are obtained by registering your samples first at https://submit.ncbi.nlm.nih.gov/",
-          patterns: ["*.txt", "*.tsv"]
+          patterns: ["*.txt", "*.tsv"],
+          category: "common"
         }
         genbankSourceTable: {
           description: "A tab-delimited text file containing requisite metadata for Genbank (a 'source modifier table'). https://www.ncbi.nlm.nih.gov/WebSub/html/help/genbank-source-table.html",
-          patterns: ["*.txt", "*.tsv"]
+          patterns: ["*.txt", "*.tsv", "*.src"],
+          category: "common"
         }
         coverage_table: {
           description: "A two column tab text file mapping sample IDs (first column) to average sequencing coverage (second column, floating point number).",
-          patterns: ["*.txt", "*.tsv"]
+          patterns: ["*.txt", "*.tsv"],
+          category: "common"
         }
         sequencingTech: {
-          description: "The type of sequencer used to generate reads. NCBI has a controlled vocabulary for this value which can be found here: https://submit.ncbi.nlm.nih.gov/structcomment/nongenomes/"
+          description: "The type of sequencer used to generate reads. NCBI has a controlled vocabulary for this value which can be found here: https://submit.ncbi.nlm.nih.gov/structcomment/nongenomes/",
+          category: "common"
         }
         organism: {
-          description: "The scientific name for the organism being submitted. This is typically the species name and should match the name given by the NCBI Taxonomy database. For more info, see: https://www.ncbi.nlm.nih.gov/Sequin/sequin.hlp.html#Organism"
+          description: "The scientific name for the organism being submitted. This is typically the species name and should match the name given by the NCBI Taxonomy database. For more info, see: https://www.ncbi.nlm.nih.gov/Sequin/sequin.hlp.html#Organism",
+          category: "common"
         }
         molType: {
-          description: "The type of molecule being described. This defaults to 'viral cRNA' as this pipeline is most commonly used for viral submissions, but any value allowed by the INSDC controlled vocabulary may be used here. Valid values are described at http://www.insdc.org/controlled-vocabulary-moltype-qualifier"
+          description: "The type of molecule being described. This defaults to 'viral cRNA' as this pipeline is most commonly used for viral submissions, but any value allowed by the INSDC controlled vocabulary may be used here. Valid values are described at http://www.insdc.org/controlled-vocabulary-moltype-qualifier",
+          category: "common"
         }
         comment: {
           description: "Optional comments that can be displayed in the COMMENT section of the Genbank record. This may include any disclaimers about assembly quality or notes about pre-publication availability or requests to discuss pre-publication use with authors."
