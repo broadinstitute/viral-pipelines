@@ -1,8 +1,8 @@
 Submitting viral sequences to NCBI
 ==================================
 
-Step 1: Register your BioProject
---------------------------------
+Register your BioProject
+------------------------
 *If you want to add samples to an existing BioProject, skip to Step 2.*
 
 1. Go to: https://submit.ncbi.nlm.nih.gov and login (new users - create new login).
@@ -10,8 +10,8 @@ Step 1: Register your BioProject
 #. Follow the onscreen instructions and then click submit - you will receive a BioProject ID (``PRJNA###``) via email almost immediately.
 
 
-Step 2: Register your BioSamples
---------------------------------
+Register your BioSamples
+------------------------
 
 1. Go to: https://submit.ncbi.nlm.nih.gov and login.
 #. Go to the Submissions tab and select BioSample - click on New Submission.
@@ -20,8 +20,9 @@ Step 2: Register your BioSamples
 #. Follow template instructions (careful about date formatting) and submit as .txt file.
 #. You will receive BioSamples IDs (``SAMN####``) via email (often 1-2 days later).
 
-Step 3: Set up an NCBI author template
---------------------------------------
+
+Set up an NCBI author template
+------------------------------
 *If different author lists are used for different sets of samples, create a new .sbt file for each list*
 
 1. Go to: https://submit.ncbi.nlm.nih.gov/genbank/template/submission/ 
@@ -30,8 +31,9 @@ Step 3: Set up an NCBI author template
 #. Click "create template" which will download an .sbt file to your computer'
 #. Save file as "authors.sbt" or similar. If you have multiple author files, give each file a different name and prep your submissions as separate batches, one for each authors.sbt file.
 
-Step 4: Set up the BioSample map file
--------------------------------------
+
+Set up the BioSample map file
+-----------------------------
 
 1. Set up an Excel spreadsheet in exactly the format below:
 
@@ -58,8 +60,9 @@ Step 4: Set up the BioSample map file
 4. Save the file as as a tab delimited text file (e.g. "biosample-map.txt").
 5. If preparing the file on a Mac computer in Microsoft Excel (which saves tab files in a 20th-century era OS9 format), ensure that tabs and newlines are entered correctly by opening the file (via the command line) in an editor such as Nano and unchecking the [Mac-format] option (in Nano: edit the file, save the file, then click OPTION-M). You can also opt to create this file directly in a text editor, ensuring there is exactly one tab character between columns (i.e., sample<tab>BioSample in the first row). Command line converters such as ``mac2unix`` also work.
 
-Step 5: Set up the metadata file (aka Source Modifier Table)
-------------------------------------------------------------
+
+Set up the metadata file (aka Source Modifier Table)
+----------------------------------------------------
 1. Set up an Excel spreadsheet in exactly the format below
    a. This example shows sample2 as a 2-segmented virus.
    b. All data should be on the same line (there are 9 columns). Here they are shown as separate tables simply for space reasons.
@@ -79,19 +82,27 @@ Step 5: Set up the metadata file (aka Source Modifier Table)
 3. Save this table as sample_meta.txt. If you make the file in Excel, double check the date formatting is preserved when you save -- it should be dd-mmm-yyyy format.
 4. If preparing the file on a Mac computer in Microsoft Excel (which saves tab files in a 20th-century era OS9 format), ensure that tabs and newlines are entered correctly by opening the file (via the command line) in an editor such as Nano and unchecking the [Mac-format] option (in Nano: edit the file, save the file, then click OPTION-M). You can also opt to create this file directly in a text editor, ensuring there is exactly one tab character between columns (i.e., sample<tab>BioSample in the first row). Command line converters such as ``mac2unix`` also work.
 
-Step 6: Prepare requisite input files for your submission batches
------------------------------------------------------------------
 
-1. TO DO -- more description here (authors.sbt file, your biosample-map.txt file, and your sample_meta.txt)
+Prepare requisite input files for your submission batches
+---------------------------------------------------------
+
+1. Stage the above files you've prepared and other requisite inputs into the environment you plan to execute the :doc:`genbank` WDL workflow. If that is Terra, push these files into the appropriate GCS bucket, if DNAnexus, drop your files there. If you plan to execute locally (e.g. ``miniwdl run https://storage.googleapis.com/viral-ngs-wdl/quay.io/broadinstitute/viral-pipelines/2.0.21.4/genbank.wdl``), move the files to an appropriate directory on your machine. The files you will need are the following:
+   a. The files you prepared above: the submission template (authors.sbt), the biosample map (biosample-map.txt), and the source modifier table (sample_meta.txt)
+   #. All of the assemblies you want to submit. These should be in fasta files, one per genome. Multi-segment/multi-chromosome genomes (such as Lassa virus, Influenza A, etc) should contain all segments within one fasta file.
+   #. Your reference genome, as a fasta file. Multi-segment/multi-chromosome genomes should contain all segments within one fasta file. The fasta sequence headers should be Genbank accession numbers.
+   #. Your reference gene annotations, as a series of TBL files, one per segment/chromosome. These must correspond to the accessions in you reference genome.
+   #. A genome coverage table as a two-column tabular text file (optional, but helpful).
+   #. The organism name (which should match what NCBI taxonomy calls the species you are submitting for). This is a string input to the workflow, not a file.
+   #. The sequencing technology used. This is a string input, not a file.
 #. The reference genome you provide should be annotated in the way you want your genomes annotated on NCBI. If one doesn't exist, see the addendum below about creating your own feature list.
 #. Note that you will have to run the pipeline separately for each virus you are submitting AND separately for each author list.
 
-Step 7: Run the genbank submission pipeline
--------------------------------------------
 
-1. TO DO -- more description here -- <genbank>
-#. For each sample, you will see a .sqn, .gbf, .val, and .tbl file. You should also see an errorsummary.val file that you can use to check for annotation errors (or you can check the .val file for each sample individually). Ideally, your samples should be error-free before you submit them to NCBI. For an explanation of the cryptic error messages, see: https://www.ncbi.nlm.nih.gov/genbank/genome_validation/.
-#. TO DO -- moltype?
-#. Check your .gbf files for a preview of what your genbank entries will look like. Once you are happy with your files, zip up all of the .sqn files (for all of the samples you are submitting, regardless of author list or organism) and email the .zip file to gb-sub@ncbi.nlm.nih.gov.
+Run the genbank submission pipeline
+-----------------------------------
+
+1. Run the :doc:`genbank` WDL workflow. This performs the following steps: it aligns your assemblies against a Genbank reference sequence, transfers gene annotation from that Genbank reference into your assemblies' coordinate spaces, and then takes your genomes, the transferred annotations, and all of the sample metadata prepared above, and produces a zipped bundle that you send to NCBI. There are two zip bundles: ``sequins_only.zip`` is the file to email to NCBI. ``all_files.zip`` contains a full set of files for your inspection prior to submission.
+#. In the ``all_files.zip`` output, for each sample, you will see a ``.sqn``, ``.gbf``, ``.val``, and ``.tbl`` file. You should also see an ``errorsummary.val`` file that you can use to check for annotation errors (or you can check the ``.val`` file for each sample individually). Ideally, your samples should be error-free before you submit them to NCBI. For an explanation of the cryptic error messages, see: https://www.ncbi.nlm.nih.gov/genbank/genome_validation/.
+#. Note: we've recently had trouble running tbl2asn with a molType specified. TO DO: describe how to deal with this.
+#. Check your ``.gbf`` files for a preview of what your genbank entries will look like. Once you are happy with your files email the ``sequins_only.zip`` file to gb-sub@ncbi.nlm.nih.gov.
 #. It often takes 2-8 weeks to receive a response and accession numbers for your samples. Do follow up if you haven’t heard anything for a few weeks!
-

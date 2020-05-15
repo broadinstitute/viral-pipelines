@@ -6,13 +6,13 @@ import "../tasks/tasks_ncbi.wdl" as ncbi
 workflow genbank {
 
     meta {
-        description: "Prepare assemblies for Genbank submission. This includes annotation by simple coordinate transfer from Genbank annotations and a multiple alignment."
+        description: "Prepare assemblies for Genbank submission. This includes annotation by simple coordinate transfer from Genbank annotations and a multiple alignment. See https://viral-pipelines.readthedocs.io/en/latest/ncbi_submission.html for details."
     }
 
     input {
-        File          reference_fasta     # all sequences in one file
-        Array[File]+  reference_annot_tbl # for each seq in reference_fasta
-        Array[File]+  assemblies_fasta    # one per genome, all seqs in one file
+        File          reference_fasta
+        Array[File]+  reference_annot_tbl
+        Array[File]+  assemblies_fasta
 
         File          authors_sbt
         File?         biosampleMap
@@ -21,7 +21,7 @@ workflow genbank {
         String?       sequencingTech
         String?       comment
         String?       organism
-        String?       molType = "cRNA"
+        String?       molType
     }
 
     parameter_meta {

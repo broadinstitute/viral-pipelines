@@ -139,7 +139,7 @@ task prepare_genbank {
     String?      sequencingTech
     String?      comment
     String?      organism
-    String?      molType = "cRNA"
+    String?      molType
 
     Int?         machine_mem_gb
     String       docker="quay.io/broadinstitute/viral-phylo"
@@ -177,7 +177,7 @@ task prepare_genbank {
       description: "The scientific name for the organism being submitted. This is typically the species name and should match the name given by the NCBI Taxonomy database. For more info, see: https://www.ncbi.nlm.nih.gov/Sequin/sequin.hlp.html#Organism"
     }
     molType: {
-      description: "The type of molecule being described. This defaults to 'viral cRNA' as this pipeline is most commonly used for viral submissions, but any value allowed by the INSDC controlled vocabulary may be used here. Valid values are described at http://www.insdc.org/controlled-vocabulary-moltype-qualifier"
+      description: "The type of molecule being described. Any value allowed by the INSDC controlled vocabulary may be used here. Valid values are described at http://www.insdc.org/controlled-vocabulary-moltype-qualifier"
     }
     comment: {
       description: "Optional comments that can be displayed in the COMMENT section of the Genbank record. This may include any disclaimers about assembly quality or notes about pre-publication availability or requests to discuss pre-publication use with authors."
@@ -203,6 +203,10 @@ task prepare_genbank {
       echo "--organism" >> special_args
       echo "${organism}" >> special_args
     fi
+    if [ -n "${molType}" ]; then
+      echo "--mol_type" >> special_args
+      echo "${molType}" >> special_args
+    fi
     if [ -n "${coverage_table}" ]; then
       echo -e "sample\taln2self_cov_median" > coverage_table.txt
       cat ${coverage_table} >> coverage_table.txt
@@ -214,13 +218,12 @@ task prepare_genbank {
         ${authors_sbt} \
         ${sep=' ' assemblies_fasta} \
         . \
-        ${'--mol_type ' + molType} \
         ${'--biosample_map ' + biosampleMap} \
         ${'--master_source_table ' + genbankSourceTable} \
         --loglevel DEBUG
-    mv errorsummary.val errorsummary.val.txt # to keep it separate from the glob
     zip sequins_only.zip *.sqn
-    zip all_files.zip *.sqn *.cmt *.gbf *.src *.fsa *.val errorsummary.val.txt
+    zip all_files.zip *.sqn *.cmt *.gbf *.src *.fsa *.val
+    mv errorsummary.val errorsummary.val.txt # to keep it separate from the glob
   }
 
   output {
