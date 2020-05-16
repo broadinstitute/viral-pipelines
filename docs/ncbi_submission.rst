@@ -17,8 +17,11 @@ Register your BioSamples
 #. Go to the Submissions tab and select BioSample - click on New Submission.
 #. Follow instructions, selecting "batch submission type" where applicable.
 #. The metadata template to use is likely: "Pathogen affecting public health" (Pathogen.cl.1.0.xlsx).
-#. Follow template instructions to fill in the sheet. Pay particular attention to the Excel comments that are attached to each column header: they describe the intended content for these columns, the valid formatting, and controlled vocabulary. For example, "organism" should always match the long name that is given by the NCBI Taxonomy database for that species. Date fields seem to have multiple acceptable formats, but we prefer ISO8601 (YYYY-MM-DD) just to reduce ambiguity. Export to text and submit as .txt file.
-#. You will receive BioSamples IDs (``SAMN####``) via email (often 1-2 days later).
+#. Follow template instructions to fill in the sheet. Pay particular attention to the Excel comments that are attached to each column header: they describe the intended content for these columns, the valid formatting, and controlled vocabulary.
+   a. For example, "organism" should always match the long name that is given by the NCBI Taxonomy database for that species.
+   b. Date fields seem to have multiple acceptable formats, but we prefer ISO8601 (YYYY-MM-DD) just to reduce ambiguity.
+   c. You will likely need to duplicate your sample_name to the host_subject_id column (or something like it)--if you do not, then any samples that happen to have the same attribute values will trigger an error when trying to register new BioSamples because they look like duplicates. Assuming that your sample_names are one-to-one corresponding to a human patient, host_subject_id is probably the most appropriate place to duplicate the value in order to make all entries unique.
+#. Export to text and submit as .txt file. You will receive BioSamples IDs (``SAMN####``) via email (often 1-2 days later).
 #. If you wish to amend/correct any metadata in your submissions, you can always do so at a future time -- however, you will need BioSample IDs before any of the following steps, so it's best to register as soon as you have collection_date and sample_name for everything. This can be a super-set of anything you submit to NCBI in the future (Genbank or SRA), so we typically register BioSamples for every viral sample we *attempt* to sequence, regardless of whether we successfully sequenced it or not.
 
 
