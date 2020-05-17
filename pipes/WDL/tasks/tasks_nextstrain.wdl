@@ -434,7 +434,7 @@ task augur_import_beast {
         preemptible: 2
     }
     output {
-        File tree_newick    = "~{tree_basename}.tree"
+        File tree_newick    = "~{tree_basename}.nwk"
         File node_data_json = "~{tree_basename}.json"
     }
 }
