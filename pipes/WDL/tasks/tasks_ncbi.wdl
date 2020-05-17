@@ -1,5 +1,24 @@
 version 1.0
 
+task md5sum {
+  input {
+    File in_file
+  }
+  command {
+    md5sum ${in_file} | cut -f 1 | tee MD5
+  }
+  output {
+    String md5 = read_string("MD5")
+  }
+  runtime {
+    docker: "ubuntu"
+    memory: "1 GB"
+    cpu: 1
+    disks: "local-disk 100 HDD"
+    dx_instance_type: "mem1_ssd2_v2_x2"
+  }
+}
+
 task download_fasta {
   input {
     String         out_prefix
