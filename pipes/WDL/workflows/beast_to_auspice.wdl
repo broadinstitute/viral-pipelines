@@ -8,22 +8,13 @@ workflow beast_to_auspice {
     }
 
     input {
-        File            beast_mcc_tree
-        File            sample_metadata
-        String          virus
+        File    beast_mcc_tree
     }
 
     parameter_meta {
         beast_mcc_tree: {
           description: "A maximum clade credibility (MCC) tree (.tree file) that is output from a BEAST run.",
           patterns: ["*.tree"]
-        }
-        sample_metadata: {
-          description: "Metadata in tab-separated text format. See https://nextstrain-augur.readthedocs.io/en/stable/faq/metadata.html for details.",
-          patterns: ["*.txt", "*.tsv"]
-        }
-        virus: {
-          description: "A filename-friendly string that is used as a base for output file names."
         }
     }
 
@@ -34,7 +25,6 @@ workflow beast_to_auspice {
     call nextstrain.export_auspice_json {
         input:
             tree            = augur_import_beast.tree_newick,
-            metadata        = sample_metadata,
             node_data_jsons = [augur_import_beast.node_data_json]
     }
 

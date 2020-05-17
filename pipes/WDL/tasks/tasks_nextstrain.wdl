@@ -441,11 +441,11 @@ task augur_import_beast {
 
 task export_auspice_json {
     meta {
-        description: "export augur files to json suitable for auspice visualization. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/export.html"
+        description: "export augur files to json suitable for auspice visualization. The metadata tsv input is generally required unless the node_data_jsons comprehensively capture all of it. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/export.html"
     }
     input {
         File        auspice_config
-        File        metadata
+        File?       metadata
         File        tree
         Array[File] node_data_jsons
 
@@ -462,7 +462,7 @@ task export_auspice_json {
           NODE_DATA_FLAG="--node-data "
         fi
         augur export v2 --tree ~{tree} \
-            --metadata ~{metadata} \
+            ~{"--metadata " + metadata} \
             $NODE_DATA_FLAG ~{sep=' ' node_data_jsons}\
             --auspice-config ~{auspice_config} \
             ~{"--lat-longs " + lat_longs_tsv} \
