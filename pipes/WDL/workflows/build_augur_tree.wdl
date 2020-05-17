@@ -88,13 +88,13 @@ workflow build_augur_tree {
     }
     call nextstrain.export_auspice_json {
         input:
-            refined_tree   = refine_augur_tree.tree_refined,
-            metadata       = sample_metadata,
-            branch_lengths = refine_augur_tree.branch_lengths,
-            traits         = ancestral_traits.node_data_json,
-            nt_muts        = ancestral_tree.nt_muts_json,
-            aa_muts        = translate_augur_tree.aa_muts_json,
-            basename       = virus
+            tree            = refine_augur_tree.tree_refined,
+            metadata        = sample_metadata,
+            node_data_jsons = select_all([
+                                refine_augur_tree.branch_lengths,
+                                ancestral_traits.node_data_json,
+                                ancestral_tree.nt_muts_json,
+                                translate_augur_tree.aa_muts_json])
     }
 
     output {
