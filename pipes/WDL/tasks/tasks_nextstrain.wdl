@@ -106,6 +106,7 @@ task filter_subsample_sequences {
     }
     String in_basename = basename(sequences_fasta, ".fasta")
     command {
+        augur version > VERSION
         augur filter \
             --sequences ~{sequences_fasta} \
             --metadata ~{sample_metadata_tsv} \
@@ -133,6 +134,7 @@ task filter_subsample_sequences {
     }
     output {
         File filtered_fasta = "~{in_basename}.filtered.fasta"
+        String augur_version = read_string("VERSION")
     }
 }
 
@@ -153,6 +155,7 @@ task augur_mafft_align {
         String   docker = "nextstrain/base"
     }
     command {
+        augur version > VERSION
         augur align --sequences ~{sequences} \
             --reference-sequence ~{ref_fasta} \
             --output ~{basename}_aligned.fasta \
@@ -161,7 +164,7 @@ task augur_mafft_align {
             ~{true="--remove-reference" false="" remove_reference} \
             --debug \
             --nthreads auto
-        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MAX_RAM
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes
     }
     runtime {
         docker: docker
@@ -174,7 +177,7 @@ task augur_mafft_align {
     output {
         File aligned_sequences = "~{basename}_aligned.fasta"
         File align_troubleshoot = stdout()
-        File max_ram_usage_in_bytes = "MAX_RAM"
+        String augur_version = read_string("VERSION")
     }
 }
 
@@ -196,6 +199,7 @@ task draft_augur_tree {
         String   docker = "nextstrain/base"
     }
     command {
+        augur version > VERSION
         augur tree --alignment ~{aligned_fasta} \
             --output ~{basename}_raw_tree.nwk \
             --method ~{default="iqtree" method} \
@@ -215,6 +219,7 @@ task draft_augur_tree {
     }
     output {
         File aligned_tree = "~{basename}_raw_tree.nwk"
+        String augur_version = read_string("VERSION")
     }
 }
 
@@ -248,6 +253,7 @@ task refine_augur_tree {
         String   docker = "nextstrain/base"
     }
     command {
+        augur version > VERSION
         augur refine \
             --tree ~{raw_tree} \
             --alignment ~{aligned_fasta} \
@@ -282,6 +288,7 @@ task refine_augur_tree {
     output {
         File tree_refined  = "~{basename}_refined_tree.nwk"
         File branch_lengths = "~{basename}_branch_lengths.json"
+        String augur_version = read_string("VERSION")
     }
 }
 
@@ -303,6 +310,7 @@ task ancestral_traits {
         String   docker = "nextstrain/base"
     }
     command {
+        augur version > VERSION
         augur traits \
             --tree ~{tree} \
             --metadata ~{metadata} \
@@ -321,6 +329,7 @@ task ancestral_traits {
     }
     output {
         File node_data_json = "~{basename}_nodes.json"
+        String augur_version = read_string("VERSION")
     }
 }
 
@@ -344,6 +353,7 @@ task ancestral_tree {
         String   docker = "nextstrain/base"
     }
     command {
+        augur version > VERSION
         augur ancestral \
             --tree ~{refined_tree} \
             --alignment ~{aligned_fasta} \
@@ -367,6 +377,7 @@ task ancestral_tree {
     output {
         File nt_muts_json = "~{basename}_nt_muts.json"
         File sequences    = "~{basename}_ancestral_sequences.fasta"
+        String augur_version = read_string("VERSION")
     }
 }
 
@@ -388,6 +399,7 @@ task translate_augur_tree {
         String docker = "nextstrain/base"
     }
     command {
+        augur version > VERSION
         augur translate --tree ~{refined_tree} \
             --ancestral-sequences ~{nt_muts} \
             --reference-sequence ~{genbank_gb} \
@@ -406,6 +418,7 @@ task translate_augur_tree {
     }
     output {
         File aa_muts_json = "~{basename}_aa_muts.json"
+        String augur_version = read_string("VERSION")
     }
 }
 
@@ -426,6 +439,7 @@ task augur_import_beast {
     }
     String tree_basename = basename(beast_mcc_tree, ".tree")
     command {
+        augur version > VERSION
         augur import beast \
             --mcc "~{beast_mcc_tree}" \
             --output-tree "~{tree_basename}.nwk" \
@@ -446,6 +460,7 @@ task augur_import_beast {
     output {
         File tree_newick    = "~{tree_basename}.nwk"
         File node_data_json = "~{tree_basename}.json"
+        String augur_version = read_string("VERSION")
     }
 }
 
@@ -467,6 +482,7 @@ task export_auspice_json {
     }
     String out_basename = basename(basename(tree, ".nwk"), "_refined_tree")
     command {
+        augur version > VERSION
         NODE_DATA_FLAG=""
         if [ -n "~{sep=' ' node_data_jsons}" ]; then
           NODE_DATA_FLAG="--node-data "
@@ -489,5 +505,6 @@ task export_auspice_json {
     }
     output {
         File virus_json = "~{out_basename}_auspice.json"
+        String augur_version = read_string("VERSION")
     }
 }
