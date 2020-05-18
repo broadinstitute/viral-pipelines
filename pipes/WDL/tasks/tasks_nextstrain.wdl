@@ -493,7 +493,7 @@ task export_auspice_json {
         # --node-data
         if [ -n "~{sep=' ' node_data_jsons}" ]; then
             echo "--node-data" >> exportargs
-            echo "~{sep='\n' node_data_jsons}" >> exportargs
+            cat "~{write_lines(node_data_jsons)}" >> exportargs
         fi
 
         # --geo-resolutions
