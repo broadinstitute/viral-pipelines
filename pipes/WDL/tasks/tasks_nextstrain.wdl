@@ -523,7 +523,7 @@ task export_auspice_json {
         fi
         cat $VALS >> exportargs
 
-        cat exportargs | xargs -d '\n' augur export v2 \
+        cat exportargs | tr '\n' '\0' | xargs -0 -t '\n' augur export v2 \
             --tree ~{tree} \
             ~{"--metadata " + sample_metadata} \
             --auspice-config ~{auspice_config} \
