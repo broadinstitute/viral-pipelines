@@ -72,7 +72,7 @@ task deplete_taxa {
       $DBS_BMTAGGER $DBS_BLAST $DBS_BWA \
       ${'--chunkSize=' + query_chunk_size} \
       $TAGS_TO_CLEAR \
-      --JVMmemory="$mem_in_mb_50"m \
+      --JVMmemory="$mem_in_mb_75"m \
       --srprismMemory=$mem_in_mb_75 \
       --loglevel=DEBUG
 
