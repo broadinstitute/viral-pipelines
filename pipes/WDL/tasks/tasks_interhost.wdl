@@ -39,6 +39,7 @@ task multi_align_mafft_ref {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 28]) + " GB"
     cpu: 8
+    disks: "local-disk 200 HDD"
     dx_instance_type: "mem2_ssd1_v2_x8"
   }
 }
@@ -80,7 +81,51 @@ task multi_align_mafft {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 7]) + " GB"
     cpu: 8
+    disks: "local-disk 200 HDD"
     dx_instance_type: "mem1_ssd1_v2_x8"
+  }
+}
+
+task beast {
+  input {
+    File     beauti_xml
+
+    String   docker="quay.io/broadinstitute/beast-beagle-cuda"
+  }
+
+  # TO DO: parameterize gpuType and gpuCount
+
+  command {
+    set -e
+    beast -beagle_info
+    nvidia-smi
+    bash -c "sleep 60; nvidia-smi" &
+    beast \
+      -beagle_multipartition off \
+      -beagle_GPU -beagle_cuda -beagle_SSE \
+      -beagle_double -beagle_scaling always \
+      -beagle_order 1,2,3,4 \
+      ${beauti_xml}
+  }
+
+  output {
+    File        beast_log    = glob("*.log")[0]
+    Array[File] trees        = glob("*.trees")
+    File        beast_stdout = stdout()
+  }
+
+  runtime {
+    docker: "${docker}"
+    memory: "7 GB"
+    cpu:    4
+    disks: "local-disk 300 HDD"
+    bootDiskSizeGb: 50
+    gpu:              true                # dxWDL
+    acceleratorType:  "nvidia-tesla-k80"  # GCP PAPIv2
+    acceleratorCount: 4                   # GCP PAPIv2
+    gpuType:          "nvidia-tesla-k80"  # Terra
+    gpuCount:         4                   # Terra
+    nvidiaDriverVersion: "396.37"
   }
 }
 
@@ -111,7 +156,9 @@ task index_ref {
   }
   runtime {
     docker: "${docker}"
+    cpu: 2
     memory: select_first([machine_mem_gb, 4]) + " GB"
+    disks: "local-disk 100 HDD"
   }
 }
 
@@ -135,6 +182,8 @@ task trimal_clean_msa {
   runtime {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 7]) + " GB"
+    cpu: 4
+    disks: "local-disk 100 HDD"
     dx_instance_type: "mem1_ssd1_v2_x8"
   }
 }

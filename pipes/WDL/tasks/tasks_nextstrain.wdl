@@ -399,39 +399,75 @@ task translate_augur_tree {
     }
 }
 
-task export_auspice_json {
+task augur_import_beast {
     meta {
-        description: "export augur files to json suitable for auspice visualization. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/export.html"
+        description: "Import BEAST tree into files ready for augur export, including a Newick-formatted tree and node data in json format. See both https://nextstrain-augur.readthedocs.io/en/stable/faq/import-beast.html and https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/import.html for details."
     }
     input {
-        File   auspice_config
-        File   metadata
-        File   refined_tree
-        File?  branch_lengths
-        File?  traits
-        File?  nt_muts
-        File?  aa_muts
-        File?  lat_longs_tsv
-        File?  colors_tsv
-        String basename
+        File    beast_mcc_tree
+
+        Float?  most_recent_tip_date
+        String? tip_date_regex
+        String? tip_date_format
+        String? tip_date_delimiter
+
+        Int?    machine_mem_gb
+        String  docker = "nextstrain/base"
+    }
+    String tree_basename = basename(beast_mcc_tree, ".tree")
+    command {
+        augur import beast \
+            --mcc "~{beast_mcc_tree}" \
+            --output-tree "~{tree_basename}.nwk" \
+            --output-node-data "~{tree_basename}.json" \
+            ~{"--most-recent-tip-date " + most_recent_tip_date} \
+            ~{"--tip-date-regex " + tip_date_regex} \
+            ~{"--tip-date-format " + tip_date_format} \
+            ~{"--tip-date-delimeter " + tip_date_delimiter}
+    }
+    runtime {
+        docker: docker
+        memory: select_first([machine_mem_gb, 3]) + " GB"
+        cpu :   2
+        disks:  "local-disk 50 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+        preemptible: 2
+    }
+    output {
+        File tree_newick    = "~{tree_basename}.nwk"
+        File node_data_json = "~{tree_basename}.json"
+    }
+}
+
+task export_auspice_json {
+    meta {
+        description: "export augur files to json suitable for auspice visualization. The metadata tsv input is generally required unless the node_data_jsons comprehensively capture all of it. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/export.html"
+    }
+    input {
+        File        auspice_config
+        File?       metadata
+        File        tree
+        Array[File] node_data_jsons
+
+        File?       lat_longs_tsv
+        File?       colors_tsv
 
         Int?   machine_mem_gb
         String docker = "nextstrain/base"
     }
+    String out_basename = basename(basename(tree, ".nwk"), "_refined_tree")
     command {
-
         NODE_DATA_FLAG=""
-        if [[ -n "~{branch_lengths}" || -n "~{traits}" || -n "~{nt_muts}" || -n "~{aa_muts}" ]]; then
+        if [ -n "~{sep=' ' node_data_jsons}" ]; then
           NODE_DATA_FLAG="--node-data "
         fi
-
-        augur export v2 --tree ~{refined_tree} \
-            --metadata ~{metadata} \
-            $NODE_DATA_FLAG ~{sep=' ' select_all([branch_lengths,traits,nt_muts,aa_muts])}\
+        augur export v2 --tree ~{tree} \
+            ~{"--metadata " + metadata} \
+            $NODE_DATA_FLAG ~{sep=' ' node_data_jsons}\
             --auspice-config ~{auspice_config} \
             ~{"--lat-longs " + lat_longs_tsv} \
             ~{"--colors " + colors_tsv} \
-            --output ~{basename}_auspice.json
+            --output ~{out_basename}_auspice.json
     }
     runtime {
         docker: docker
@@ -442,6 +478,6 @@ task export_auspice_json {
         preemptible: 2
     }
     output {
-        File virus_json = "~{basename}_auspice.json"
+        File virus_json = "~{out_basename}_auspice.json"
     }
 }
