@@ -470,7 +470,7 @@ task export_auspice_json {
     }
     input {
         File        auspice_config
-        File?       metadata
+        File?       sample_metadata
         File        tree
         Array[File] node_data_jsons
 

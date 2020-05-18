@@ -89,7 +89,7 @@ workflow build_augur_tree {
     call nextstrain.export_auspice_json {
         input:
             tree            = refine_augur_tree.tree_refined,
-            metadata        = sample_metadata,
+            sample_metadata = sample_metadata,
             node_data_jsons = select_all([
                                 refine_augur_tree.branch_lengths,
                                 ancestral_traits.node_data_json,
