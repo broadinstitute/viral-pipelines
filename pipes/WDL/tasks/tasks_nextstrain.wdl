@@ -525,7 +525,7 @@ task export_auspice_json {
 
         cat exportargs | xargs -d '\n' augur export v2 \
             --tree ~{tree} \
-            ~{"--metadata " + metadata} \
+            ~{"--metadata " + sample_metadata} \
             --auspice-config ~{auspice_config} \
             ~{"--lat-longs " + lat_longs_tsv} \
             ~{"--colors " + colors_tsv} \
