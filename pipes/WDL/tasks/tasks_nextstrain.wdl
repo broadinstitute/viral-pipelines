@@ -474,8 +474,13 @@ task export_auspice_json {
         File        tree
         Array[File] node_data_jsons
 
-        File?       lat_longs_tsv
-        File?       colors_tsv
+        File?          lat_longs_tsv
+        File?          colors_tsv
+        Array[String]? geo_resolutions
+        Array[String]? color_by_metadata
+        File?          description_md
+        Array[String]? maintainers
+        String?        title
 
         Int?   machine_mem_gb
         String docker = "nextstrain/base"
@@ -483,16 +488,48 @@ task export_auspice_json {
     String out_basename = basename(basename(tree, ".nwk"), "_refined_tree")
     command {
         augur version > VERSION
-        NODE_DATA_FLAG=""
+        touch exportargs
+
+        # --node-data
         if [ -n "~{sep=' ' node_data_jsons}" ]; then
-          NODE_DATA_FLAG="--node-data "
+            echo "--node-data" >> exportargs
+            echo "~{sep='\n' node_data_jsons}" >> exportargs
         fi
-        augur export v2 --tree ~{tree} \
+
+        # --geo-resolutions
+        VALS="~{write_lines(select_first([geo_resolutions, []]))}"
+        if [ -n "$(cat $VALS)" ]; then
+            echo "--geo-resolutions" >> exportargs;
+        fi
+        cat $VALS >> exportargs
+
+        # --color-by-metadata
+        VALS="~{write_lines(select_first([color_by_metadata, []]))}"
+        if [ -n "$(cat $VALS)" ]; then
+            echo "--color-by-metadata" >> exportargs;
+        fi
+        cat $VALS >> exportargs
+
+        # --title
+        if [ -n "~{title}" ]; then
+            echo "--title" >> exportargs
+            echo "~{title}" >> exportargs
+        fi
+
+        # --maintainers
+        VALS="~{write_lines(select_first([maintainers, []]))}"
+        if [ -n "$(cat $VALS)" ]; then
+            echo "--maintainers" >> exportargs;
+        fi
+        cat $VALS >> exportargs
+
+        cat exportargs | xargs -d '\n' augur export v2 \
+            --tree ~{tree} \
             ~{"--metadata " + metadata} \
-            $NODE_DATA_FLAG ~{sep=' ' node_data_jsons}\
             --auspice-config ~{auspice_config} \
             ~{"--lat-longs " + lat_longs_tsv} \
             ~{"--colors " + colors_tsv} \
+            ~{"--description_md " + description_md} \
             --output ~{out_basename}_auspice.json
     }
     runtime {
