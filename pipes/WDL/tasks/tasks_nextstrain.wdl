@@ -74,7 +74,7 @@ task filter_subsample_sequences {
     }
     input {
         File     sequences_fasta
-        File     metadata_tsv
+        File     sample_metadata_tsv
 
         Int?     sequences_per_group
         String?  group_by
@@ -94,11 +94,21 @@ task filter_subsample_sequences {
         Int?     machine_mem_gb
         String   docker = "nextstrain/base"
     }
+    parameter_meta {
+        sequences_fasta: {
+          description: "Set of sequences in fasta format to subsample using augur filter. These must represent a single chromosome/segment of a genome only.",
+          patterns: ["*.fasta", "*.fa"]
+        }
+        sample_metadata_tsv: {
+          description: "Metadata in tab-separated text format. See https://nextstrain-augur.readthedocs.io/en/stable/faq/metadata.html for details.",
+          patterns: ["*.txt", "*.tsv"]
+        }
+    }
     String in_basename = basename(sequences_fasta, ".fasta")
     command {
         augur filter \
             --sequences ~{sequences_fasta} \
-            --metadata ~{metadata_tsv} \
+            --metadata ~{sample_metadata_tsv} \
             ~{"--min-date " + min_date} \
             ~{"--max-date " + max_date} \
             ~{"--min-length " + min_length} \
