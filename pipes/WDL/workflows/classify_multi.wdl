@@ -112,6 +112,7 @@ workflow classify_multi {
                 assembler = "spades",
                 reads_unmapped_bam = rmdup_ubam.dedup_bam,
                 trim_clip_db = trim_clip_db,
+                spades_min_contig_len = 800,
                 always_succeed = true
         }
         if(defined(blast_db_tgz) && defined(krona_taxonomy_db_blast_tgz)) {
