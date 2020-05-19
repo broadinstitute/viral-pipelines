@@ -11,7 +11,7 @@ workflow genbank {
 
     input {
         File          reference_fasta
-        Array[File]+  reference_annot_tbl
+        File          reference_annot_tbl
         Array[File]+  assemblies_fasta
 
         File          authors_sbt
@@ -34,7 +34,7 @@ workflow genbank {
           patterns: ["*.fasta"]
         }
         reference_annot_tbl: {
-          description: "NCBI Genbank feature tables, one file for each segment/chromosome described in reference_fasta.",
+          description: "NCBI Genbank feature table, all segments/chromosomes concatenated in one TBL file, with accession numbers in the entries corresponding exactly to those in reference_fasta.",
           patterns: ["*.tbl"]
         }
         authors_sbt: {
@@ -74,16 +74,10 @@ workflow genbank {
 
     }
 
-    call interhost.multi_align_mafft_ref as mafft {
-        input:
-            reference_fasta = reference_fasta,
-            assemblies_fasta = assemblies_fasta
-    }
-
-    scatter(alignment_by_chr in mafft.alignments_by_chr) {
-        call ncbi.annot_transfer as annot {
+    scatter(assembly in assemblies_fasta) {
+        call ncbi.align_and_annot_transfer_single as annot {
             input:
-                multi_aln_fasta = alignment_by_chr,
+                genome_fasta = assembly,
                 reference_fasta = reference_fasta,
                 reference_feature_table = reference_annot_tbl
         }
@@ -92,7 +86,7 @@ workflow genbank {
     call ncbi.prepare_genbank as prep_genbank {
         input:
             assemblies_fasta = assemblies_fasta,
-            annotations_tbl = flatten(annot.transferred_feature_tables),
+            annotations_tbl = annot.transferred_feature_table,
             authors_sbt = authors_sbt,
             biosampleMap = biosampleMap,
             genbankSourceTable = genbankSourceTable,
@@ -108,8 +102,7 @@ workflow genbank {
         File        archive_zip    = prep_genbank.archive_zip
         File        errorSummary   = prep_genbank.errorSummary
 
-        Array[File] alignments_by_chr          = mafft.alignments_by_chr
-        Array[File] transferred_feature_tables = flatten(annot.transferred_feature_tables)
+        Array[File] transferred_feature_tables = annot.transferred_feature_table
         Array[File] genbank_preview_files      = prep_genbank.genbank_preview_files
         Array[File] validation_files           = prep_genbank.validation_files
 

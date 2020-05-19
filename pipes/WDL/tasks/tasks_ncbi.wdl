@@ -143,6 +143,62 @@ task annot_transfer {
   }
 }
 
+task align_and_annot_transfer_single {
+  meta {
+    description: "Given a reference genome annotation in TBL format (e.g. from Genbank or RefSeq) and new genome not in Genbank, produce new annotation files (TBL format with appropriate coordinate conversions) for the new genome. Resulting output can be fed to tbl2asn for Genbank submission."
+  }
+
+  input {
+    File         genome_fasta
+    File         reference_fasta
+    File         reference_feature_table
+
+    String  docker="quay.io/broadinstitute/viral-phylo"
+  }
+
+  parameter_meta {
+    genome_fasta: {
+      description: "New genome, all segments/chromosomes in one fasta file. Must contain the same number of sequences as reference_fasta",
+      patterns: ["*.fasta"]
+    }
+    reference_fasta: {
+      description: "Reference genome, all segments/chromosomes in one fasta file. Headers must be Genbank accessions.",
+      patterns: ["*.fasta"]
+    }
+    reference_feature_table: {
+      description: "NCBI Genbank feature table, all segments/chromosomes concatenated in one TBL file, with accession numbers in the entries corresponding exactly to those in reference_fasta.",
+      patterns: ["*.tbl"]
+    }
+  }
+  String out_basename = basename(genome_fasta, ".fasta")
+
+  command {
+    set -e
+    ncbi.py --version | tee VERSION
+    ncbi.py tbl_transfer \
+        "${reference_fasta}" \
+        "${reference_feature_table}" \
+        "${genome_fasta}" \
+        "${out_basename}.tbl" \
+        --oob_clip \
+        --loglevel DEBUG
+  }
+
+  output {
+    File        transferred_feature_table  = "${out_basename}.tbl"
+    String      viralngs_version           = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "${docker}"
+    memory: "15 GB"
+    cpu: 4
+    dx_instance_type: "mem2_ssd1_v2_x4"
+    preemptible: 2
+  }
+}
+
+
 task prepare_genbank {
   meta {
     description: "this task runs NCBI's tbl2asn"
