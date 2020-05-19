@@ -209,7 +209,7 @@ task merge_vcfs_bcftools {
     # tabix index input vcfs (must be gzipped)
     parallel -I ,, \
       "tabix -p vcf ,," \
-      ::: "${sep=' ' in_vcfs}"
+      ::: "${sep=' ' in_vcfs_gz}"
 
     # see: https://samtools.github.io/bcftools/bcftools.html#merge
     # --merge snps allows snps to be merged to multi-allelic (multi-ALT) records, all other records are listed separately
@@ -272,14 +272,14 @@ task merge_vcfs_gatk {
     # tabix index input vcfs (must be gzipped)
     parallel -I ,, \
       "tabix -p vcf ,," \
-      ::: "${sep=' ' in_vcfs}"
+      ::: "${sep=' ' in_vcfs_gz}"
 
     # index reference to create .fai and .dict indices
     samtools faidx "${in_ref_fasta}"
     picard CreateSequenceDictionary R="${in_ref_fasta}" O=$(basename $(basename "${in_ref_fasta}" .fasta) .fa).dict
 
     # store input vcf file paths in file
-    for invcf in $(echo "${sep=' ' in_vcfs}"); do 
+    for invcf in $(echo "${sep=' ' in_vcfs_gz}"); do 
       echo "$invcf" > input_vcfs.list
     done
 
