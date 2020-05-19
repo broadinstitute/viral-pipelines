@@ -275,8 +275,8 @@ task merge_vcfs_gatk {
       ::: "${sep=' ' in_vcfs_gz}"
 
     # index reference to create .fai and .dict indices
-    samtools faidx "${in_ref_fasta}"
-    picard CreateSequenceDictionary R="${in_ref_fasta}" O=$(basename $(basename "${in_ref_fasta}" .fasta) .fa).dict
+    samtools faidx "${ref_fasta}"
+    picard CreateSequenceDictionary R="${ref_fasta}" O=$(basename $(basename "${ref_fasta}" .fasta) .fa).dict
 
     # store input vcf file paths in file
     for invcf in $(echo "${sep=' ' in_vcfs_gz}"); do 
