@@ -220,13 +220,7 @@ task merge_vcfs_bcftools {
     --output ${output_prefix}.vcf.gz \
     --output-type z \
     --threads "$(nproc --all)" \
-    ${sep=' ' in_vcfs}
-
-    # currently unused additional params
-    # ${'--regions=' + regions}
-    # ${'--filter-logic=' + filter_logic}
-    # ${'--info-rules=' + info_rules}
-    # ${'--apply-filters=' + apply_filters}
+    ${sep=' ' in_vcfs_gz}
 
     # tabix index the vcf to create .tbi file
     tabix -p vcf ${output_prefix}.vcf.gz
