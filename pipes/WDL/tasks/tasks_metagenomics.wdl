@@ -80,8 +80,8 @@ task krakenuniq {
     metagenomics.py krakenuniq \
       $DB_DIR/krakenuniq \
       ${sep=' ' reads_unmapped_bam} \
-      --outReads `cat $OUT_READS` \
-      --outReport `cat $OUT_REPORTS` \
+      --outReads $(cat $OUT_READS) \
+      --outReport $(cat $OUT_REPORTS) \
       --loglevel=DEBUG
 
     wait # for krona_taxonomy_db_tgz to download and extract
@@ -99,7 +99,7 @@ task krakenuniq {
         --sample_name ,, \
         --noRank --noHits --inputType krakenuniq \
         --loglevel=DEBUG" \
-      ::: `cat $OUT_BASENAME`
+      ::: $(cat $OUT_BASENAME)
 
     # merge all krona reports
     ktImportKrona -o krakenuniq.krona.combined.html *.krakenuniq-krona.html
@@ -506,7 +506,7 @@ task blastx {
       -db $DB_DIR/blast/nr \
       -out "${out_basename}.blastx.contigs.txt" \
       -outfmt 7 \
-      -num_threads `nproc`
+      -num_threads $(nproc)
 
     wait # for krona_taxonomy_db_tgz to download and extract
 
