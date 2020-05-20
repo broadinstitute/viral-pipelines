@@ -207,11 +207,11 @@ Seq-submit ::= {
             postal-code "02142" } } ,
       date
         std {
-          year 2018 ,
-          month 4 ,
-          day 2 } } ,
+          year 2019 ,
+          month 1 ,
+          day 1 } } ,
     subtype new ,
-    tool "tbl2asn 25.6 - LINUX UNIX" } ,
+    tool "tbl2asn 25.7 - LINUX UNIX" } ,
   data
     entrys {
       set {
@@ -373,11 +373,7 @@ Seq-submit ::= {
                                 initials "C.T." } } } } ,
                     title "Lassa virus outbreak genomics and epidemiology from
  Nigeria" } } } ,
-              comment "Pre-publication data release by the African Centers of
- Excellence for Genomics of Infectious Diseases (ACEGID): Redeemer's
- University Nigeria, Irrua Specialist Teaching Hospital, and Broad Institute
- of Harvard and MIT. Please contact BioProject authors for appropriate data
- use prior to publication." ,
+              comment "this is only a test -- DO NOT SUBMIT to NCBI" ,
               user {
                 type
                   str "DBLink" ,
@@ -432,22 +428,22 @@ Seq-submit ::= {
                     label
                       str "month" ,
                     data
-                      int 4 } ,
+                      int 1 } ,
                   {
                     label
                       str "day" ,
                     data
-                      int 2 } ,
+                      int 1 } ,
                   {
                     label
                       str "year" ,
                     data
-                      int 2018 } } } ,
+                      int 2019 } } } ,
               create-date
                 std {
-                  year 2018 ,
-                  month 4 ,
-                  day 2 } } ,
+                  year 2019 ,
+                  month 1 ,
+                  day 1 } } ,
             seq-set {
               seq {
                 id {
@@ -469,8 +465,7 @@ Seq-submit ::= {
                         label
                           str "Assembly Method" ,
                         data
-                          str "github.com/broadinstitute/viral-ngs v.
- v1.19.3-2-g1271307" } ,
+                          str "placeholder assembly software v. 5.4.3.2.1" } ,
                       {
                         label
                           str "Assembly Name" ,
@@ -485,8 +480,7 @@ Seq-submit ::= {
                         label
                           str "Sequencing Technology" ,
                         data
-                          str "Illumina MiSeq and MiSeq FGx (Redeemer's
- University Nigeria)" } ,
+                          str "Illumina MiSeq" } ,
                       {
                         label
                           str "StructuredCommentSuffix" ,

@@ -1,4 +1,4 @@
-LOCUS       LASV_NGA_2018_0026-2    3279 bp    cRNA    linear       02-APR-2018
+LOCUS       LASV_NGA_2018_0026-2    3279 bp    cRNA    linear       01-JAN-2019
 DEFINITION  Lassa mammarenavirus isolate Lassa
             virus/H.sapiens-wt/NGA/2018/ISTH_0026 segment S glycoprotein
             precursor (GPC) and nucleoprotein (NP) genes.
@@ -23,22 +23,16 @@ REFERENCE   2  (bases 1 to 3279)
             Yozwiak,N., Amao,A., Nosamiefan,I., Birren,B.W., Park,D.J.,
             Folarin,O., Okokhere,P., Sabeti,P.C. and Happi,C.T.
   TITLE     Direct Submission
-  JOURNAL   Submitted (02-APR-2018) Infectious Disease Program, Broad Institute
+  JOURNAL   Submitted (01-JAN-2019) Infectious Disease Program, Broad Institute
             of Harvard and MIT, 75 Ames St, Cambridge, Massachusetts 02142,
             United States of America
-COMMENT     Pre-publication data release by the African Centers of Excellence
-            for Genomics of Infectious Diseases (ACEGID): Redeemer's University
-            Nigeria, Irrua Specialist Teaching Hospital, and Broad Institute of
-            Harvard and MIT. Please contact BioProject authors for appropriate
-            data use prior to publication.
+COMMENT     this is only a test -- DO NOT SUBMIT to NCBI.
             
             ##Genome-Assembly-Data-START##
-            Assembly Method       :: github.com/broadinstitute/viral-ngs v.
-                                     v1.19.3-2-g1271307
+            Assembly Method       :: placeholder assembly software v. 5.4.3.2.1
             Assembly Name         :: LASV_NGA_2018_0026-2
             Genome Coverage       :: 6.0x
-            Sequencing Technology :: Illumina MiSeq and MiSeq FGx (Redeemer's
-                                     University Nigeria)
+            Sequencing Technology :: Illumina MiSeq
             ##Genome-Assembly-Data-END##
 FEATURES             Location/Qualifiers
      source          1..3279

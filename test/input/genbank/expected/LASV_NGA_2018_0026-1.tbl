@@ -7,7 +7,7 @@
 <6841	401	gene
 			gene	L
 <6841	401	CDS
-			note sequencing did not capture complete CDS
+			note	sequencing did not capture complete CDS
 			product	polymerase
 			transl_table	1
 
