@@ -21,7 +21,7 @@ workflow genbank {
         String?       sequencingTech
         String?       comment
         String?       organism
-        String?       molType
+        String?       molType='cRNA'
     }
 
     parameter_meta {
@@ -65,7 +65,7 @@ workflow genbank {
           category: "common"
         }
         molType: {
-          description: "The type of molecule being described. This defaults to 'viral cRNA' as this pipeline is most commonly used for viral submissions, but any value allowed by the INSDC controlled vocabulary may be used here. Valid values are described at http://www.insdc.org/controlled-vocabulary-moltype-qualifier",
+          description: "The type of molecule being described. This defaults to 'cRNA' as this pipeline is most commonly used for viral submissions, but any value allowed by the INSDC controlled vocabulary may be used here. Valid values are described at http://www.insdc.org/controlled-vocabulary-moltype-qualifier",
           category: "common"
         }
         comment: {
