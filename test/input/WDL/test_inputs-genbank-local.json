@@ -1,6 +1,5 @@
 {
   "genbank.molType": "cRNA",
-  "genbank.genbankSourceTable": "test/input/genbank/genbank-sample_meta_src-lasv-2018-RUN1_v2.txt",
   "genbank.coverage_table": "test/input/genbank/coverage_report-RUN1-workflow.txt",
   "genbank.reference_feature_tables": [
     "test/input/genbank/KM821997.1.tbl",
@@ -8,7 +7,8 @@
   ],
   "genbank.organism": "Lassa mammarenavirus",
   "genbank.sequencingTech": "Illumina MiSeq",
-  "genbank.biosampleMap": "test/input/genbank//biosample-map-lasv-2018-RUN1.txt",
+  "genbank.taxid": 11620,
+  "genbank.biosample_attributes": "test/input/genbank/sars-cov-2_attributes_updated.txt",
   "genbank.prep_genbank.assembly_method": "placeholder assembly software",
   "genbank.prep_genbank.assembly_method_version": "5.4.3.2.1",
   "genbank.comment": "this is only a test -- DO NOT SUBMIT to NCBI",

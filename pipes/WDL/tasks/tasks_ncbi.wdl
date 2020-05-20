@@ -199,6 +199,32 @@ task align_and_annot_transfer_single {
   }
 }
 
+task biosample_to_genbank {
+  meta {
+    description: "Prepares two input metadata files for Genbank submission based on a BioSample registration attributes table (attributes.tsv) since all of the necessary values are there. This produces both a Genbank Source Modifier Table and a BioSample ID map file that can be fed into the prepare_genbank task."
+  }
+  input {
+    File  biosample_attributes
+    Int   num_segments=1
+    Int   taxid
+  }
+  String base = basename(biosample_attributes, ".txt")
+  command {
+    set -ex -o pipefail
+    ncbi.py --version | tee VERSION
+    ncbi.py biosample_to_genbank \
+        "${biosample_attributes}" \
+        ${num_segments} \
+        ${taxid} \
+        "${base}".genbank.src \
+        "${base}".biosample.map.txt \
+        --loglevel DEBUG
+  }
+  output {
+    File genbank_source_modifier_table = "${base}.genbank.src"
+    File biosample_map                 = "${base}.biosample.map.txt"
+  }
+}
 
 task prepare_genbank {
   meta {
