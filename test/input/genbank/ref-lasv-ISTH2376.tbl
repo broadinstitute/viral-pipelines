@@ -1,0 +1,28 @@
+>Feature gb|KM821997.1|
+76	375	gene
+			gene	Z
+76	375	CDS
+			product	Z protein
+			transl_table	1
+			protein_id	gb|AIT17574.1|
+7132	470	gene
+			gene	L
+7132	470	CDS
+			product	polymerase
+			transl_table	1
+			protein_id	gb|AIT17575.1|
+
+>Feature gb|KM821998.1|
+59	1531	gene
+			gene	GPC
+59	1531	CDS
+			product	glycoprotein precursor
+			transl_table	1
+			protein_id	gb|AIT17576.1|
+3308	1599	gene
+			gene	NP
+3308	1599	CDS
+			product	nucleoprotein
+			transl_table	1
+			protein_id	gb|AIT17577.1|
+
