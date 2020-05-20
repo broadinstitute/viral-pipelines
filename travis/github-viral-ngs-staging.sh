@@ -30,7 +30,7 @@ if [ -z "$TRAVIS_PULL_REQUEST_BRANCH" ]; then
 	git add -A -f
 	git diff-index --quiet HEAD || git commit -q -m "CI push github.com/broadinstitute/viral-pipelines:$VERSION"
 
-	if [[ "$TRAVIS_BRANCH" == "master" ]]; then
+	if [ "$TRAVIS_BRANCH" = "master" -o -n "$TRAVIS_TAG" ]; then
 		# for dockstore, don't bother tagging every branch commit that is non-master -- just git push the branch instead
 		git tag $VERSION
 		git push origin --tags
