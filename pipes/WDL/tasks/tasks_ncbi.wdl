@@ -150,8 +150,8 @@ task align_and_annot_transfer_single {
 
   input {
     File         genome_fasta
-    File         reference_fasta
-    File         reference_feature_table
+    Array[File]+ reference_fastas
+    Array[File]+ reference_feature_tables
 
     String  docker="quay.io/broadinstitute/viral-phylo"
   }
@@ -161,32 +161,33 @@ task align_and_annot_transfer_single {
       description: "New genome, all segments/chromosomes in one fasta file. Must contain the same number of sequences as reference_fasta",
       patterns: ["*.fasta"]
     }
-    reference_fasta: {
-      description: "Reference genome, all segments/chromosomes in one fasta file. Headers must be Genbank accessions.",
+    reference_fastas: {
+      description: "Reference genome, each segment/chromosome in a separate fasta file, in the exact same count and order as the segments/chromosomes described in genome_fasta. Headers must be Genbank accessions.",
       patterns: ["*.fasta"]
     }
-    reference_feature_table: {
-      description: "NCBI Genbank feature table, all segments/chromosomes concatenated in one TBL file, with accession numbers in the entries corresponding exactly to those in reference_fasta.",
+    reference_feature_tables: {
+      description: "NCBI Genbank feature table, each segment/chromosome in a separate TBL file, in the exact same count and order as the segments/chromosomes described in genome_fasta and reference_fastas. Accession numbers in the TBL files must correspond exactly to those in reference_fasta.",
       patterns: ["*.tbl"]
     }
   }
-  String out_basename = basename(genome_fasta, ".fasta")
 
   command {
     set -e
     ncbi.py --version | tee VERSION
-    ncbi.py tbl_transfer \
-        "${reference_fasta}" \
-        "${reference_feature_table}" \
+    mkdir -p out
+    ncbi.py tbl_transfer_multichr \
         "${genome_fasta}" \
-        "${out_basename}.tbl" \
+        out \
+        --ref_fastas ${sep=' ' reference_fastas} \
+        --ref_tbls ${sep=' ' reference_feature_tables} \
         --oob_clip \
         --loglevel DEBUG
   }
 
   output {
-    File        transferred_feature_table  = "${out_basename}.tbl"
-    String      viralngs_version           = read_string("VERSION")
+    Array[File]+ genome_per_chr_tbls   = glob("out/*.tbl")
+    Array[File]+ genome_per_chr_fastas = glob("out/*.fasta")
+    String       viralngs_version      = read_string("VERSION")
   }
 
   runtime {

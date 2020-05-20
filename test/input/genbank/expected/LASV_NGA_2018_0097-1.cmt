@@ -1,0 +1,6 @@
+StructuredCommentPrefix	##Genome-Assembly-Data-START##
+Assembly Method	github.com/broadinstitute/viral-ngs v. v1.19.3-2-g1271307
+Assembly Name	LASV_NGA_2018_0097-1
+Genome Coverage	1264.0x
+Sequencing Technology	Illumina MiSeq and MiSeq FGx (Redeemer's University Nigeria)
+StructuredCommentSuffix	##Genome-Assembly-Data-END##

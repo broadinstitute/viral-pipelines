@@ -10,8 +10,8 @@ workflow genbank {
     }
 
     input {
-        File          reference_fasta
-        File          reference_annot_tbl
+        Array[File]+  reference_fastas
+        Array[File]+  reference_feature_tables
         Array[File]+  assemblies_fasta
 
         File          authors_sbt
@@ -29,12 +29,12 @@ workflow genbank {
           description: "Genomes to prepare for Genbank submission. One file per genome: all segments/chromosomes included in one file. All fasta files must contain exactly the same number of sequences as reference_fasta (which must equal the number of files in reference_annot_tbl).",
           patterns: ["*.fasta"]
         }
-        reference_fasta: {
-          description: "Reference genome, all segments/chromosomes in one fasta file. Headers must be Genbank accessions.",
+        reference_fastas: {
+          description: "Reference genome, each segment/chromosome in a separate fasta file, in the exact same count and order as the segments/chromosomes described in genome_fasta. Headers must be Genbank accessions.",
           patterns: ["*.fasta"]
         }
-        reference_annot_tbl: {
-          description: "NCBI Genbank feature table, all segments/chromosomes concatenated in one TBL file, with accession numbers in the entries corresponding exactly to those in reference_fasta.",
+        reference_feature_tables: {
+          description: "NCBI Genbank feature table, each segment/chromosome in a separate TBL file, in the exact same count and order as the segments/chromosomes described in genome_fasta and reference_fastas. Accession numbers in the TBL files must correspond exactly to those in reference_fasta.",
           patterns: ["*.tbl"]
         }
         authors_sbt: {
@@ -78,15 +78,15 @@ workflow genbank {
         call ncbi.align_and_annot_transfer_single as annot {
             input:
                 genome_fasta = assembly,
-                reference_fasta = reference_fasta,
-                reference_feature_table = reference_annot_tbl
+                reference_fastas = reference_fastas,
+                reference_feature_tables = reference_feature_tables
         }
     }
  
     call ncbi.prepare_genbank as prep_genbank {
         input:
             assemblies_fasta = assemblies_fasta,
-            annotations_tbl = annot.transferred_feature_table,
+            annotations_tbl = flatten(annot.genome_per_chr_tbls),
             authors_sbt = authors_sbt,
             biosampleMap = biosampleMap,
             genbankSourceTable = genbankSourceTable,
@@ -102,7 +102,7 @@ workflow genbank {
         File        archive_zip    = prep_genbank.archive_zip
         File        errorSummary   = prep_genbank.errorSummary
 
-        Array[File] transferred_feature_tables = annot.transferred_feature_table
+        Array[File] transferred_annot_tbls = flatten(annot.genome_per_chr_tbls)
         Array[File] genbank_preview_files      = prep_genbank.genbank_preview_files
         Array[File] validation_files           = prep_genbank.validation_files
 

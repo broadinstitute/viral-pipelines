@@ -1,0 +1,13 @@
+WARNING: valid [SEQ_FEAT.CDShasTooManyXs] CDS translation consists of more than 50% X residues FEATURE: CDS: polymerase [lcl|LASV_NGA_2018_0026-1:c>6841-401] [lcl|LASV_NGA_2018_0026-1: raw, rna len= 6841] -> [lcl|LASV_NGA_2018_0026-1_2]
+WARNING: valid [SEQ_INST.InternalNsInSeqRaw] Run of 751 Ns in raw sequence starting at base 723 BIOSEQ: lcl|LASV_NGA_2018_0026-1: raw, rna len= 6841
+WARNING: valid [SEQ_INST.InternalNsInSeqRaw] Run of 782 Ns in raw sequence starting at base 1908 BIOSEQ: lcl|LASV_NGA_2018_0026-1: raw, rna len= 6841
+WARNING: valid [SEQ_INST.InternalNsInSeqRaw] Run of 539 Ns in raw sequence starting at base 2785 BIOSEQ: lcl|LASV_NGA_2018_0026-1: raw, rna len= 6841
+WARNING: valid [SEQ_INST.InternalNsInSeqRaw] Run of 398 Ns in raw sequence starting at base 3892 BIOSEQ: lcl|LASV_NGA_2018_0026-1: raw, rna len= 6841
+WARNING: valid [SEQ_INST.InternalNsInSeqRaw] Run of 383 Ns in raw sequence starting at base 4514 BIOSEQ: lcl|LASV_NGA_2018_0026-1: raw, rna len= 6841
+WARNING: valid [SEQ_INST.InternalNsInSeqRaw] Run of 203 Ns in raw sequence starting at base 5160 BIOSEQ: lcl|LASV_NGA_2018_0026-1: raw, rna len= 6841
+WARNING: valid [SEQ_INST.InternalNsInSeqRaw] Run of 122 Ns in raw sequence starting at base 5567 BIOSEQ: lcl|LASV_NGA_2018_0026-1: raw, rna len= 6841
+WARNING: valid [SEQ_INST.InternalNsInSeqRaw] Run of 219 Ns in raw sequence starting at base 5836 BIOSEQ: lcl|LASV_NGA_2018_0026-1: raw, rna len= 6841
+WARNING: valid [SEQ_INST.InternalNsInSeqRaw] Run of 392 Ns in raw sequence starting at base 6207 BIOSEQ: lcl|LASV_NGA_2018_0026-1: raw, rna len= 6841
+WARNING: valid [SEQ_FEAT.FeatureIsMostlyNs] Feature contains more than 50% Ns FEATURE: Gene: L [lcl|LASV_NGA_2018_0026-1:c>6841-401] [lcl|LASV_NGA_2018_0026-1: raw, rna len= 6841]
+WARNING: valid [SEQ_FEAT.FeatureIsMostlyNs] Feature contains more than 50% Ns FEATURE: CDS: polymerase [lcl|LASV_NGA_2018_0026-1:c>6841-401] [lcl|LASV_NGA_2018_0026-1: raw, rna len= 6841] -> [lcl|LASV_NGA_2018_0026-1_2]
+WARNING: valid [SEQ_INST.HighNContentPercent] Sequence contains 58 percent Ns BIOSEQ: lcl|LASV_NGA_2018_0026-1: raw, rna len= 6841
