@@ -106,7 +106,7 @@ workflow genbank {
         Array[File] genbank_preview_files      = prep_genbank.genbank_preview_files
         Array[File] validation_files           = prep_genbank.validation_files
 
-        String      viral_phylo_version = annot.viralngs_version
+        String      viral_phylo_version = prep_genbank.viralngs_version
     }
 
 }
