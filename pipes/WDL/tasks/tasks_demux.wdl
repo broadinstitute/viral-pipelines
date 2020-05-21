@@ -67,7 +67,7 @@ task illumina_demux {
     set -ex -o pipefail
 
     # find N% memory
-    mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 85`
+    mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 85)
 
     if [ -z "$TMPDIR" ]; then
       export TMPDIR=$(pwd)
@@ -237,7 +237,7 @@ task illumina_demux {
         ,,_fastqc.html \
         --out_zip ,,_fastqc.zip \
         --threads $num_fastqc_threads" \
-      ::: `cat $OUT_BASENAMES`
+      ::: $(cat $OUT_BASENAMES)
   }
 
   output {

@@ -44,8 +44,8 @@ task deplete_taxa {
     fi
 
     # find memory thresholds
-    mem_in_mb_50=`/opt/viral-ngs/source/docker/calc_mem.py mb 50`
-    mem_in_mb_75=`/opt/viral-ngs/source/docker/calc_mem.py mb 75`
+    mem_in_mb_50=$(/opt/viral-ngs/source/docker/calc_mem.py mb 50)
+    mem_in_mb_75=$(/opt/viral-ngs/source/docker/calc_mem.py mb 75)
 
     # bmtagger and blast db args
     DBS_BMTAGGER="${sep=' ' bmtaggerDbs}"
@@ -121,7 +121,7 @@ task filter_to_taxon {
     taxon_filter.py --version | tee VERSION
 
     # find 90% memory
-    mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 90`
+    mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
 
     if [[ "${error_on_reads_in_neg_control}" == "true" ]]; then
       ERROR_ON_NEG_CONTROL_ARGS="--errorOnReadsInNegControl"
@@ -210,7 +210,7 @@ task merge_one_per_sample {
     read_utils.py --version | tee VERSION
 
     # find 90% memory
-    mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 90`
+    mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
 
     read_utils.py merge_bams \
       "${sep=' ' inputBams}" \
