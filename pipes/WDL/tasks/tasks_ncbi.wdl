@@ -143,6 +143,97 @@ task annot_transfer {
   }
 }
 
+task align_and_annot_transfer_single {
+  meta {
+    description: "Given a reference genome annotation in TBL format (e.g. from Genbank or RefSeq) and new genome not in Genbank, produce new annotation files (TBL format with appropriate coordinate conversions) for the new genome. Resulting output can be fed to tbl2asn for Genbank submission."
+  }
+
+  input {
+    File         genome_fasta
+    Array[File]+ reference_fastas
+    Array[File]+ reference_feature_tables
+
+    String  docker="quay.io/broadinstitute/viral-phylo"
+  }
+
+  parameter_meta {
+    genome_fasta: {
+      description: "New genome, all segments/chromosomes in one fasta file. Must contain the same number of sequences as reference_fasta",
+      patterns: ["*.fasta"]
+    }
+    reference_fastas: {
+      description: "Reference genome, each segment/chromosome in a separate fasta file, in the exact same count and order as the segments/chromosomes described in genome_fasta. Headers must be Genbank accessions.",
+      patterns: ["*.fasta"]
+    }
+    reference_feature_tables: {
+      description: "NCBI Genbank feature table, each segment/chromosome in a separate TBL file, in the exact same count and order as the segments/chromosomes described in genome_fasta and reference_fastas. Accession numbers in the TBL files must correspond exactly to those in reference_fasta.",
+      patterns: ["*.tbl"]
+    }
+  }
+
+  command {
+    set -e
+    ncbi.py --version | tee VERSION
+    mkdir -p out
+    ncbi.py tbl_transfer_multichr \
+        "${genome_fasta}" \
+        out \
+        --ref_fastas ${sep=' ' reference_fastas} \
+        --ref_tbls ${sep=' ' reference_feature_tables} \
+        --oob_clip \
+        --loglevel DEBUG
+  }
+
+  output {
+    Array[File]+ genome_per_chr_tbls   = glob("out/*.tbl")
+    Array[File]+ genome_per_chr_fastas = glob("out/*.fasta")
+    String       viralngs_version      = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "${docker}"
+    memory: "15 GB"
+    cpu: 4
+    dx_instance_type: "mem2_ssd1_v2_x4"
+    preemptible: 1
+  }
+}
+
+task biosample_to_genbank {
+  meta {
+    description: "Prepares two input metadata files for Genbank submission based on a BioSample registration attributes table (attributes.tsv) since all of the necessary values are there. This produces both a Genbank Source Modifier Table and a BioSample ID map file that can be fed into the prepare_genbank task."
+  }
+  input {
+    File  biosample_attributes
+    Int   num_segments=1
+    Int   taxid
+
+    String  docker="quay.io/broadinstitute/viral-phylo"
+  }
+  String base = basename(biosample_attributes, ".txt")
+  command {
+    set -ex -o pipefail
+    ncbi.py --version | tee VERSION
+    ncbi.py biosample_to_genbank \
+        "${biosample_attributes}" \
+        ${num_segments} \
+        ${taxid} \
+        "${base}".genbank.src \
+        "${base}".biosample.map.txt \
+        --loglevel DEBUG
+  }
+  output {
+    File genbank_source_modifier_table = "${base}.genbank.src"
+    File biosample_map                 = "${base}.biosample.map.txt"
+  }
+  runtime {
+    docker: "${docker}"
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task prepare_genbank {
   meta {
     description: "this task runs NCBI's tbl2asn"

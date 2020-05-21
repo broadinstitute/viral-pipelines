@@ -1,0 +1,6 @@
+StructuredCommentPrefix	##Genome-Assembly-Data-START##
+Assembly Method	placeholder assembly software v. 5.4.3.2.1
+Assembly Name	LASV_NGA_2018_0026-2
+Genome Coverage	6.0x
+Sequencing Technology	Illumina MiSeq
+StructuredCommentSuffix	##Genome-Assembly-Data-END##

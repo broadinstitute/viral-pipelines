@@ -353,8 +353,8 @@ task MultiQC {
   }
 
   runtime {
-    memory: "2 GB"
-    cpu: 1
+    memory: "3 GB"
+    cpu: 2
     docker: "${docker}"
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x2"

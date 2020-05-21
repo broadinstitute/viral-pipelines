@@ -8,7 +8,7 @@ cd workflows
 
 for workflow in ../pipes/WDL/workflows/*.wdl; do
 	workflow_name=$(basename $workflow .wdl)
-	input_json="test/input/WDL/test_inputs-$workflow_name-local.json"
+	input_json="test/input/WDL/cromwell-local/test_inputs-$workflow_name-local.json"
 	if [ -f $input_json ]; then
 		date
 		echo "Executing $workflow_name using Cromwell on local instance"

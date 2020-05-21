@@ -1,0 +1,139 @@
+LOCUS       LASV_NGA_2018_0541-2    3275 bp    cRNA    linear       01-JAN-2019
+DEFINITION  Lassa mammarenavirus isolate Lassa
+            virus/H.sapiens-wt/NGA/2018/ISTH_0541 segment S glycoprotein
+            precursor (GPC) and nucleoprotein (NP) genes.
+ACCESSION   
+VERSION
+DBLINK      BioProject: PRJNA436552
+            BioSample: SAMN08765782
+KEYWORDS    .
+SOURCE      Lassa mammarenavirus
+  ORGANISM  Lassa mammarenavirus
+            Unclassified.
+REFERENCE   1  (bases 1 to 3275)
+  AUTHORS   Odia,I., Ehaine,P., Oguzie,J.U., Siddle,K.J., Mehta,S.,
+            Barnes,K.M., Winnicki,S.M., Brehio,P., Shah,R., Chak,B.,
+            Yozwiak,N., Amao,A., Nosamiefan,I., Birren,B.W., Park,D.J.,
+            Folarin,O., Okokhere,P., Sabeti,P.C. and Happi,C.T.
+  TITLE     Lassa virus outbreak genomics and epidemiology from Nigeria
+  JOURNAL   Unpublished
+REFERENCE   2  (bases 1 to 3275)
+  AUTHORS   Odia,I., Ehaine,P., Oguzie,J.U., Siddle,K.J., Mehta,S.,
+            Barnes,K.M., Winnicki,S.M., Brehio,P., Shah,R., Chak,B.,
+            Yozwiak,N., Amao,A., Nosamiefan,I., Birren,B.W., Park,D.J.,
+            Folarin,O., Okokhere,P., Sabeti,P.C. and Happi,C.T.
+  TITLE     Direct Submission
+  JOURNAL   Submitted (01-JAN-2019) Infectious Disease Program, Broad Institute
+            of Harvard and MIT, 75 Ames St, Cambridge, Massachusetts 02142,
+            United States of America
+COMMENT     this is only a test -- DO NOT SUBMIT to NCBI.
+            
+            ##Genome-Assembly-Data-START##
+            Assembly Method       :: placeholder assembly software v. 5.4.3.2.1
+            Assembly Name         :: LASV_NGA_2018_0541-2
+            Genome Coverage       :: 29x
+            Sequencing Technology :: Illumina MiSeq
+            ##Genome-Assembly-Data-END##
+FEATURES             Location/Qualifiers
+     source          1..3275
+                     /organism="Lassa mammarenavirus"
+                     /mol_type="viral cRNA"
+                     /isolate="Lassa virus/H.sapiens-wt/NGA/2018/ISTH_0541
+                     segment S glycoprotein precursor (GPC) and nucleoprotein
+                     (NP) genes"
+                     /isolation_source="blood plasma"
+                     /host="Homo sapiens"
+                     /db_xref="taxon:11620"
+                     /country="Nigeria"
+                     /collection_date="02-Jan-2018"
+                     /collected_by="Irrua Specialist Teaching Hospital"
+     gene            <1..1470
+                     /gene="GPC"
+     CDS             <1..1470
+                     /gene="GPC"
+                     /note="sequencing did not capture complete CDS"
+                     /codon_start=1
+                     /product="glycoprotein precursor"
+                     /translation="GQIITFFQEVPHVIEEVMNIVLIALSLLAILKGIYNVATCGLFG
+                     LVSFLLLCGRSCSTTYKGVYELQTLELDMASLNMTMPLSCTKNNSHHYIMVGNETGLE
+                     LTLTNTSIINHKFCNLSDAHKKNLYDHALMSIISTFHLSIPNFNQYEAMSCDFNGGKI
+                     SVQYNLSHTYAVDAANHCGTIANGVLQTFMRMAWGGSYIALDSGKGSWDCIMTSYQYL
+                     IIQNTTWEDHCQFSRPSPIGYLGLLSQRTRDIYISRRLLGTFTWTLSDSEGNETPGGY
+                     CLTRWMLIEAELKCFGNTAVAKCNEKHDEEFCDMLRLFDFNKQAIRRLKTEAQMSIQL
+                     INKAVNALINDQLIMKNHLRDIMGIPYCNYSKYWYLNHTVTGKTSLPRCWLVSNGSYL
+                     NETHFSDDIEQQADNMITELLQKEYIERQGKTPLGLVDLFVFSTSFYLISIFLHLVKI
+                     PTHRHITGKPCPKPHRLNHMGICSCGLYKHPGVPVKWKR"
+     gene            complement(1538..3247)
+                     /gene="NP"
+     CDS             complement(1538..3247)
+                     /gene="NP"
+                     /codon_start=1
+                     /product="nucleoprotein"
+                     /translation="MSASKEVKSFLWTQSLRRELSGYCSSIKLQVVKDAQALLHGLDF
+                     SEVSNVQRLMRKQKRDDSDLKRLRDLNQAVNNLVELKSTQQKSILRVGTLTSDDLLTL
+                     AADLEKLKSKVIRTERPLSSGVYMGNLSTQQLEQRRALLNMIGMVGGAQGTQPGRDGV
+                     VRVWDVKNPDLLNNQFGTMPSLTLACLTKQGQVDLNDAVLALTDLGLIYTAKYPNSSD
+                     LDRLSQSHPILNMVDTKKSSLNISGYNFSLGAAVKAGACMLDGGNMLETIKVTPQTMD
+                     GILKSILKVKRSLGMFVSDTPGERNPYENILYKICLSGDGWPYIASRTSIVGRAWENT
+                     TVDLESDGKPQKVGVAGSNKSLQSAGFPTGLTYSQLMTLKDSMMQLDPSAKTWIDIEG
+                     RPEDPVEIALYQPMSGCYIHFFREPTDLKQFKQDAKFSHGIDVADLFPAQPGLTSAVI
+                     EALPRNMVLTCQGSDDIKRLLDSQGRRDIKLIDIALSKADSRRFENAVWDQCKDLCHM
+                     HTGVVVEKKKRGGKEEITPHCALMDCIMYDAAVSGGLNIPVLRAVLPRDMVFRTSSPK
+                     VVL"
+ORIGIN      
+        1 ggacaaatca taacattctt ccaggaagta cctcatgtca tagaggaagt gatgaacatt
+       61 gtcctgattg ctctcagcct tctggcaata ctgaaaggga tctacaatgt tgctacctgt
+      121 ggcctctttg gattggtgtc ctttctcctc ttatgtggta gatcatgctc aacaacttac
+      181 aagggtgttt atgagttaca aactctagag ctagacatgg caagccttaa tatgacaatg
+      241 cccttgtctt gcacgaagaa caactcccac cattacatca tggttggaaa tgagactggc
+      301 ctggagctga ctctaacaaa tacaagcatt atcaaccaca agttttgtaa cctttctgat
+      361 gcacataaaa agaatctcta cgaccatgct ctaatgagta tcatctcaac cttccactta
+      421 tccattccca actttaatca atatgaagcg atgagttgtg acttcaatgg gggtaagata
+      481 agtgtccagt acaaccttag ccacacttat gctgtcgatg cagctaacca ctgtgggacc
+      541 attgccaatg gcgttcttca gacttttatg aggatggctt ggggtggcag ttacatagca
+      601 cttgattccg gaaaggggag ctgggattgc ataatgactt cctatcaata cttgataatc
+      661 caaaacacca cttgggaaga tcactgccag ttttctcgcc cgtcccccat cggttatctg
+      721 gggctgctgt cacaaaggac cagggacatt tacatcagtc ggagacttct tgggactttt
+      781 acttggactc tctctgactc tgaaggcaat gaaacaccgg gtgggtattg tctaacaaga
+      841 tggatgctga ttgaggccga gttgaagtgc tttgggaaca cagcagttgc aaaatgcaat
+      901 gaaaaacatg atgaagagtt ttgtgacatg ttaagattgt ttgactttaa caaacaagcc
+      961 ataaggaggt tgaagacaga agcacagatg agtattcaac tgataaacaa agcagtgaac
+     1021 gcactgatca atgaccagct aattatgaag aatcatttga gagacatcat gggaattcct
+     1081 tactgcaatt acagcaagta ttggtacctg aatcacactg taacagggaa gacatcgttg
+     1141 ccaagatgct ggcttgtgtc aaatggttcc tacttgaatg agacacattt ttctgatgac
+     1201 attgaacaac aagcagacaa catgataaca gaactgttgc aaaaggagta catagaaaga
+     1261 caagggaaaa cacccttagg gttagtagat ctttttgtct tcagcaccag cttttatctt
+     1321 attagcatct tcctccacct ggttaaaatc ccaacccaca gacatatcac aggaaaaccc
+     1381 tgccctaaac cacacagact caaccatatg ggcatatgct catgtggtct gtacaaacat
+     1441 cctggtgtgc cagtcaagtg gaaaagatag aagacagacc cacccatggg cccccgtgac
+     1501 ccaccgccga aaggcggtgg gtcacggggg cgtccattta caggacgacc ttggggcttg
+     1561 aggttctaaa caccatgtct ctggggagaa ctgctcttaa aactggtata ttgagccctc
+     1621 ctgacacagc tgcatcatac attatgcagt ccattaaagc acagtgcggg gtaatttcct
+     1681 ccttgcctcc tcttttcttc ttttcgacaa ccactccagt gtgcatatgg catagatctt
+     1741 tgcactgatc ccaaacagca ttctcaaatc tcctagagtc agccttgctc agtgcaatgt
+     1801 caataagctt tatgtccctt cttccttggg agtccaagag tctcttaata tcatctgaac
+     1861 cttgacaggt cagcaccata ttgcgaggga gggcttcaat gactgcactg gtcaaaccag
+     1921 gttgagcagg gaagagatct gccacatcaa tcccatgaga aaatttggca tcttgcttga
+     1981 actgtttcaa atctgttggt tctctgaaga aatgtatgta acagcccgac ataggttggt
+     2041 aaagagctat ttccacaggg tcttctggac gaccttcaat gtctatccag gtcttggcac
+     2101 ttgggtcaag ctgcatcatt gagtctttaa gtgtcatcaa ctgagaatag gtcagccctg
+     2161 ttggaaaccc tgctgactgt aaagacttgt tggacccggc aacacctact ttttgtggtt
+     2221 tcccatctga ctcgagatcc accgtagtgt tctcccaagc tctacccaca atagaagtcc
+     2281 ttgaagctat gtaaggccag ccgtcaccgg aaaggcagat cttgtaaagt atgttctcgt
+     2341 aagggttcct ctcaccaggt gtatctgaaa caaacattcc caaagatctc ttcaccttta
+     2401 aaatagactt caagatacca tccattgtct ggggtgtaac ctttatggtc tccaacatgt
+     2461 tccccccatc aagcatacag gctccagctt tcactgcagc acctaagctg aaattataac
+     2521 cagaaatgtt caaagagctc ttcttagtgt ccaccatatt cagtatagga tggctttggg
+     2581 aaagtctgtc caggtcggag ctatttgggt acttagctgt gtatattaga cccaggtctg
+     2641 ttagtgctaa gacagcatca ttcaaatcaa cttgaccttg tttggtgaga catgctaatg
+     2701 tcagactagg catagtgcca aactgattgt tcaaaagatc cgggttcttg acgtcccata
+     2761 ccctaacaac cccgtctctt ccaggttggg tgccctgagc cccaccaacc atgcctatca
+     2821 tgttcagcag tgctcttctt tgctcaagtt gctgtgtgct caaattcccc atataaacac
+     2881 ctgagcttag tggcctttct gttctaatga ccttcgactt tagtttctct aagtcagctg
+     2941 ccaatgtcag caagtcatct gaggttaaag tcccaactct caagatgctc ttttgttgtg
+     3001 tcgatttgag ttctacaaga ttgttgacag cctgatttaa atctctgaga cgtttcaggt
+     3061 cactatcatc cctcttttgt ttgcgcatta agcgttgcac attactgact tcagaaaagt
+     3121 caagaccatg aaggagagcc tgagcatcct taacaacttg aagttttatg ctggagcaat
+     3181 aacctgaaag ctccctcctc aatgactgtg tccagagaaa tgacttcact tccttagaag
+     3241 cactcatctt ggtctggaca cttagggatt tactg
+//
