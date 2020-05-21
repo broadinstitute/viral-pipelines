@@ -8,7 +8,7 @@
   "genbank.organism": "Lassa mammarenavirus",
   "genbank.sequencingTech": "Illumina MiSeq",
   "genbank.taxid": 11620,
-  "genbank.biosample_attributes": "test/input/genbank/sars-cov-2_attributes_updated.txt",
+  "genbank.biosample_attributes": "test/input/genbank/biosample-attributes-lasv.txt",
   "genbank.prep_genbank.assembly_method": "placeholder assembly software",
   "genbank.prep_genbank.assembly_method_version": "5.4.3.2.1",
   "genbank.comment": "this is only a test -- DO NOT SUBMIT to NCBI",
