@@ -207,6 +207,8 @@ task biosample_to_genbank {
     File  biosample_attributes
     Int   num_segments=1
     Int   taxid
+
+    String  docker="quay.io/broadinstitute/viral-phylo"
   }
   String base = basename(biosample_attributes, ".txt")
   command {
@@ -223,6 +225,13 @@ task biosample_to_genbank {
   output {
     File genbank_source_modifier_table = "${base}.genbank.src"
     File biosample_map                 = "${base}.biosample.map.txt"
+  }
+  runtime {
+    docker: "${docker}"
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible: 1
   }
 }
 
