@@ -20,7 +20,7 @@ Register your BioSamples
 #. Follow template instructions to fill in the sheet. Pay particular attention to the Excel comments that are attached to each column header: they describe the intended content for these columns, the valid formatting, and controlled vocabulary.
 
    a. For example, "organism" should always match the long name that is given by the NCBI Taxonomy database for that species.
-   b. Date fields seem to have multiple acceptable formats, but we prefer ISO8601 (YYYY-MM-DD) just to reduce ambiguity.
+   b. Date fields seem to have multiple acceptable formats, but we prefer ISO8601 (YYYY-MM-DD) just to reduce ambiguity. Note that this format will trigger a warning when uploading, if you don't have HH:MM time values as well (it will suggest an edit for you).
    c. You will likely need to duplicate your sample_name to the host_subject_id column (or something like it)--if you do not, then any samples that happen to have the same attribute values will trigger an error when trying to register new BioSamples because they look like duplicates. Assuming that your sample_names are one-to-one corresponding to a human patient, host_subject_id is probably the most appropriate place to duplicate the value in order to make all entries unique.
    d. Populate the isolate column using the naming convention you want to apply to this organism (most viral species have a specific, structured naming convention you should follow). Our workflow will re-use this value for the Genbank record name.
 
