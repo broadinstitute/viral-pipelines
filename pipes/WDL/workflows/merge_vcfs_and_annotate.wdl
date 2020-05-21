@@ -25,7 +25,7 @@ workflow merge_vcfs_and_annotate {
     }
     call intrahost.annotate_vcf_snpeff as annotate_vcf {
         input:
-            ref_fasta = reference_fasta
+            ref_fasta = reference_fasta,
             in_vcf    = merge_vcfs.merged_vcf_gz
     }
     output {
