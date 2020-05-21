@@ -195,7 +195,7 @@ task align_and_annot_transfer_single {
     memory: "15 GB"
     cpu: 4
     dx_instance_type: "mem2_ssd1_v2_x4"
-    preemptible: 2
+    preemptible: 1
   }
 }
 
@@ -231,7 +231,6 @@ task biosample_to_genbank {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
-    preemptible: 1
   }
 }
 
