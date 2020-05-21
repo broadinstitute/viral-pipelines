@@ -115,4 +115,71 @@ task isnvs_vcf {
   }
 }
 
+task annotate_vcf_snpeff {
+  input {
+    File           in_vcf
+    File           ref_fasta
 
+    Array[String]? snpEffRef
+    String?        emailAddress
+
+    Int?           machine_mem_gb
+    String         docker="quay.io/broadinstitute/viral-phylo"
+
+    String         output_basename = basename(basename(in_vcf, ".gz"), ".vcf")
+  }
+
+  parameter_meta {
+    in_vcf:             { description: "input VCF to annotate with snpEff", patterns: ["*.vcf","*.vcf.gz"]}
+    ref_fasta:          { description: "The sequence containing the accession to use for annotation; only used if snpEffRef is not provided.", patterns: ["*.fasta","*.fa"] }
+    snpEffRef:          { description: "list of accessions to build/find snpEff database. If this is not provided, the ID from the reference fasta will be used (it must be a GenBank accession)" }
+    emailAddress:       { description: "email address passed to NCBI if we need to download reference sequences" }
+  }
+
+  command {
+    set -ex -o pipefail
+
+    intrahost.py --version | tee VERSION
+
+    providedSnpRefAccessions="${sep=' ' snpEffRef}"
+    if [ -n "$providedSnpRefAccessions" ]; then 
+      snpRefAccessions="$providedSnpRefAccessions";
+    else
+      snpRefAccessions="$(python -c "from Bio import SeqIO; print(' '.join(list(s.id for s in SeqIO.parse('${ref_fasta}', 'fasta'))))")"
+    fi
+    echo "snpRefAccessions: $snpRefAccessions"
+
+    if (file "${in_vcf}" | grep -q "gzip" ) ; then
+      echo "${in_vcf} is already compressed"
+    else
+      echo "${in_vcf} is not compressed; gzipping..."
+      bgzip "${in_vcf}"
+    fi
+    echo "Creating vcf index"
+    tabix -p vcf "${in_vcf}"
+        
+    interhost.py snpEff \
+        "${in_vcf}" \
+        $snpRefAccessions \
+        "${output_basename}.annot.vcf.gz" \
+        ${'--emailAddress=' + emailAddress}
+
+    intrahost.py iSNV_table \
+        "${output_basename}.annot.vcf.gz" \
+        "${output_basename}.annot.txt.gz"
+
+    tabix -p vcf "${output_basename}.annot.vcf.gz"
+  }
+
+  output {
+    File        annot_vcf_gz      = "${output_basename}.annot.vcf.gz"
+    File        annot_vcf_gz_tbi  = "${output_basename}.annot.vcf.gz.tbi"
+    File        annot_txt_gz      = "${output_basename}.annot.txt.gz"
+    String      viralngs_version  = read_string("VERSION")
+  }
+  runtime {
+    docker: "${docker}"
+    memory: select_first([machine_mem_gb, 4]) + " GB"
+    dx_instance_type: "mem1_ssd1_v2_x4"
+  }
+}
