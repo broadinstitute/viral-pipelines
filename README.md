@@ -17,7 +17,7 @@ Workflows are written in [WDL](https://github.com/openwdl/wdl) format. This is a
 
 Workflows from this repository are continuously deployed to [Dockstore](https://dev.dockstore.net/organizations/BroadInstitute/collections/pgs), a GA4GH Tool Repository Service. They can then be easily imported to any bioinformatic compute platform that utilizes the TRS API and understands WDL (this includes Terra, DNAnexus, DNAstack, etc).
 
-Flattened workflows are also continuously deployed to a GCS bucket: [gs://viral-ngs-wdl](https://console.cloud.google.com/storage/browser/viral-ngs-wdl?forceOnBucketsSortingFiltering=false&organizationId=548622027621&project=gcid-viral-seq) and can be downloaded for local use.
+Flattened workflows are also continuously deployed to a staging github repo [viral-ngs-staging](https://github.com/broadinstitute/viral-ngs-staging/) and a GCS bucket: [gs://viral-ngs-wdl](https://console.cloud.google.com/storage/browser/viral-ngs-wdl?forceOnBucketsSortingFiltering=false&organizationId=548622027621&project=gcid-viral-seq) and can be downloaded for local use.
 
 Workflows are also available in the [Terra featured workspace](https://app.terra.bio/#workspaces/pathogen-genomic-surveillance/COVID-19).
 
@@ -31,7 +31,7 @@ The easiest way to get started is on a single, Docker-capable machine (your lapt
 For example, to list the inputs for the assemble_refbased workflow:
 
 ```
-miniwdl run https://storage.googleapis.com/viral-ngs-wdl/quay.io/broadinstitute/viral-pipelines/2.0.21.3/assemble_refbased.wdl
+miniwdl run https://raw.githubusercontent.com/broadinstitute/viral-ngs-staging/master/pipes/WDL/workflows/assemble_refbased.wdl
 ```
 
 This will emit:
@@ -52,7 +52,7 @@ outputs:
 To then execute this workflow on your local machine, invoke it with like this:
 ```
 miniwdl run \
-  https://storage.googleapis.com/viral-ngs-wdl/quay.io/broadinstitute/viral-pipelines/2.0.21.3/assemble_refbased.wdl \
+  https://raw.githubusercontent.com/broadinstitute/viral-ngs-staging/master/pipes/WDL/workflows/assemble_refbased.wdl \
   reads_unmapped_bams=PatientA_library1.bam \
   reads_unmapped_bams=PatientA_library2.bam \
   reference_fasta=/refs/NC_045512.2.fasta \
