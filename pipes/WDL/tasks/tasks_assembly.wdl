@@ -355,10 +355,19 @@ task refine_assembly_with_aligned_reads {
 
       Boolean? mark_duplicates=false
       Float?   major_cutoff=0.5
-      Int?     min_coverage=2
+      Int?     min_coverage=3
 
       Int?     machine_mem_gb
       String   docker="quay.io/broadinstitute/viral-assemble"
+    }
+
+    parameter_meta {
+      major_cutoff: {
+        description: "If the major allele is present at a frequency higher than this cutoff, we will call an unambiguous base at that position.  If it is equal to or below this cutoff, we will call an ambiguous base representing all possible alleles at that position."
+      }
+      min_coverage: {
+        description: "Minimum read coverage required to call a position unambiguous."
+      }
     }
 
     command {
