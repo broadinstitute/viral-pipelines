@@ -9,6 +9,8 @@ import "../tasks/tasks_reports.wdl" as reports
 workflow classify_multi {
     meta {
          description: "Runs raw reads through taxonomic classification (Kraken2), human read depletion (based on Kraken2), de novo assembly (SPAdes), taxonomic classification of contigs (BLASTx), and FASTQC/multiQC of reads."
+         author: "Broad Viral Genomics"
+         email:  "viral-ngs@broadinstitute.org"
     }
 
     input {

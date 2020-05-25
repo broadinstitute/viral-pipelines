@@ -7,6 +7,8 @@ workflow genbank {
 
     meta {
         description: "Prepare assemblies for Genbank submission. This includes annotation by simple coordinate transfer from Genbank annotations and a multiple alignment. See https://viral-pipelines.readthedocs.io/en/latest/ncbi_submission.html for details."
+        author: "Broad Viral Genomics"
+        email:  "viral-ngs@broadinstitute.org"
     }
 
     input {
