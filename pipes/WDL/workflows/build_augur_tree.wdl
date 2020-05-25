@@ -5,6 +5,8 @@ import "../tasks/tasks_nextstrain.wdl" as nextstrain
 workflow build_augur_tree {
     meta {
         description: "Align assemblies, build trees, and convert to json representation suitable for Nextstrain visualization. See https://nextstrain.org/docs/getting-started/ and https://nextstrain-augur.readthedocs.io/en/stable/"
+        author: "Broad Viral Genomics"
+        email:  "viral-ngs@broadinstitute.org"
     }
 
     input {

@@ -8,7 +8,7 @@ workflow assemble_refbased {
 
     meta {
         description: "Reference-based microbial consensus calling. Aligns short reads to a singular reference genome, calls a new consensus sequence, and emits: new assembly, reads aligned to provided reference, reads aligned to new assembly, various figures of merit, plots, and QC metrics. The user may provide unaligned reads spread across multiple input files and this workflow will parallelize alignment per input file before merging results prior to consensus calling."
-        author: "Viral Genomics"
+        author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
     }
 
