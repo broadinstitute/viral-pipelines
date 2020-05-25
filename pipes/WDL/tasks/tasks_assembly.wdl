@@ -302,9 +302,9 @@ task align_reads {
       samtools view -H -b "${reads_unmapped_bam}" > "${sample_name}.all.bam"
       samtools view -H -b "${reads_unmapped_bam}" > "${sample_name}.mapped.bam"
 
+      samtools index "${sample_name}.all.bam" "${sample_name}.all.bai"
+      samtools index "${sample_name}.mapped.bam" "${sample_name}.mapped.bai"
     fi
-
-    samtools index "${sample_name}.mapped.bam" "${sample_name}.mapped.bai"
 
     # collect figures of merit
     grep -v '^>' assembly.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
