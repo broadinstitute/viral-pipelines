@@ -298,13 +298,13 @@ task align_reads {
         --loglevel=DEBUG
 
     else
-      # handle special case of empty reference fasta -- emit empty bams
+      # handle special case of empty reference fasta -- emit empty bams (with original bam headers)
       samtools view -H -b "${reads_unmapped_bam}" > "${sample_name}.all.bam"
       samtools view -H -b "${reads_unmapped_bam}" > "${sample_name}.mapped.bam"
 
     fi
 
-    samtools index ${sample_name}.mapped.bam
+    samtools index "${sample_name}.mapped.bam" "${sample_name}.mapped.bai"
 
     # collect figures of merit
     grep -v '^>' assembly.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
