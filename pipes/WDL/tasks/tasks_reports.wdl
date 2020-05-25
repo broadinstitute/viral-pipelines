@@ -49,6 +49,7 @@ task plot_coverage {
     fi
 
     # collect figures of merit
+    set +o pipefail # grep will exit 1 if it fails to find the pattern
     samtools view -H ${aligned_reads_bam} | perl -n -e'/^@SQ.*LN:(\d+)/ && print "$1\n"' |  python -c "import sys; print(sum(int(x) for x in sys.stdin))" | tee assembly_length
     # report only primary alignments 260=exclude unaligned reads and secondary mappings
     samtools view -h -F 260 ${aligned_reads_bam} | samtools flagstat - | tee ${sample_name}.flagstat.txt

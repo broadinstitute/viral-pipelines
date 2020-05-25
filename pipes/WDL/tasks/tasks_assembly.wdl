@@ -265,7 +265,7 @@ task align_reads {
   }
   
   command {
-    set -ex -o pipefail
+    set -ex # do not set pipefail, since grep exits 1 if it can't find the pattern
 
     read_utils.py --version | tee VERSION
 
@@ -404,9 +404,10 @@ task refine_assembly_with_aligned_reads {
         file_utils.py rename_fasta_sequences \
           refined.fasta "${sample_name}.fasta" "${sample_name}"
 
-      # collect figures of merit
-      grep -v '^>' refined.fasta | tr -d '\n' | wc -c | tee assembly_length
-      grep -v '^>' refined.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
+        # collect figures of merit
+        set +o pipefail # grep will exit 1 if it fails to find the pattern
+        grep -v '^>' refined.fasta | tr -d '\n' | wc -c | tee assembly_length
+        grep -v '^>' refined.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
     }
 
     output {
@@ -570,6 +571,7 @@ task refine_2x_and_plot {
           --loglevel=DEBUG
 
         # collect figures of merit
+        set +o pipefail # grep will exit 1 if it fails to find the pattern
         grep -v '^>' ${sample_name}.fasta | tr -d '\n' | wc -c | tee assembly_length
         grep -v '^>' ${sample_name}.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
         samtools view -c ${sample_name}.mapped.bam | tee reads_aligned
