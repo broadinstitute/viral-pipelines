@@ -297,14 +297,14 @@ task align_reads {
         ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
         --loglevel=DEBUG
 
-      samtools index ${sample_name}.mapped.bam
-
     else
       # handle special case of empty reference fasta -- emit empty bams
       samtools view -H -b "${reads_unmapped_bam}" > "${sample_name}.all.bam"
       samtools view -H -b "${reads_unmapped_bam}" > "${sample_name}.mapped.bam"
 
     fi
+
+    samtools index ${sample_name}.mapped.bam
 
     # collect figures of merit
     grep -v '^>' assembly.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
