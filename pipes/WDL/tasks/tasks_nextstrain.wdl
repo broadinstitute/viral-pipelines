@@ -200,7 +200,7 @@ task draft_augur_tree {
     }
     command {
         augur version > VERSION
-        augur tree --alignment ~{aligned_fasta} \
+        AUGUR_RECURSION_LIMIT=10000 augur tree --alignment ~{aligned_fasta} \
             --output ~{basename}_raw_tree.nwk \
             --method ~{default="iqtree" method} \
             --substitution-model ~{default="GTR" substitution_model} \
@@ -254,7 +254,7 @@ task refine_augur_tree {
     }
     command {
         augur version > VERSION
-        augur refine \
+        AUGUR_RECURSION_LIMIT=10000 augur refine \
             --tree ~{raw_tree} \
             --alignment ~{aligned_fasta} \
             --metadata ~{metadata} \
@@ -311,7 +311,7 @@ task ancestral_traits {
     }
     command {
         augur version > VERSION
-        augur traits \
+        AUGUR_RECURSION_LIMIT=10000 augur traits \
             --tree ~{tree} \
             --metadata ~{metadata} \
             --columns ~{sep=" " columns} \
@@ -354,7 +354,7 @@ task ancestral_tree {
     }
     command {
         augur version > VERSION
-        augur ancestral \
+        AUGUR_RECURSION_LIMIT=10000 augur ancestral \
             --tree ~{refined_tree} \
             --alignment ~{aligned_fasta} \
             --output-node-data ~{basename}_nt_muts.json \
@@ -400,7 +400,7 @@ task translate_augur_tree {
     }
     command {
         augur version > VERSION
-        augur translate --tree ~{refined_tree} \
+        AUGUR_RECURSION_LIMIT=10000 augur translate --tree ~{refined_tree} \
             --ancestral-sequences ~{nt_muts} \
             --reference-sequence ~{genbank_gb} \
             ~{"--vcf-reference-output " + vcf_reference_output} \
@@ -438,7 +438,7 @@ task assign_clades_to_nodes {
     String out_basename = basename(basename(tree_nwk, ".nwk"), "_refined_tree")
     command {
         augur version > VERSION
-        augur clades \
+        AUGUR_RECURSION_LIMIT=10000 augur clades \
         --tree ~{tree_nwk} \
         --mutations ~{nt_muts_json} ~{aa_muts_json} \
         --reference ~{ref_fasta} \
@@ -477,7 +477,7 @@ task augur_import_beast {
     String tree_basename = basename(beast_mcc_tree, ".tree")
     command {
         augur version > VERSION
-        augur import beast \
+        AUGUR_RECURSION_LIMIT=10000 augur import beast \
             --mcc "~{beast_mcc_tree}" \
             --output-tree "~{tree_basename}.nwk" \
             --output-node-data "~{tree_basename}.json" \
@@ -560,14 +560,14 @@ task export_auspice_json {
         fi
         cat $VALS >> exportargs
 
-        cat exportargs | tr '\n' '\0' | xargs -0 -t augur export v2 \
+        (export AUGUR_RECURSION_LIMIT=10000; cat exportargs | tr '\n' '\0' | xargs -0 -t augur export v2 \
             --tree ~{tree} \
             ~{"--metadata " + sample_metadata} \
             --auspice-config ~{auspice_config} \
             ~{"--lat-longs " + lat_longs_tsv} \
             ~{"--colors " + colors_tsv} \
             ~{"--description_md " + description_md} \
-            --output ~{out_basename}_auspice.json
+            --output ~{out_basename}_auspice.json)
     }
     runtime {
         docker: docker
