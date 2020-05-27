@@ -92,10 +92,10 @@ workflow build_augur_tree {
     if(defined(clades_tsv)) && length(select_first([clades_tsv,[]]))>0) {
         call nextstrain.assign_clades_to_nodes {
             input:
-                tree_nwk     = refine_augur_tree.tree_refined
-                nt_muts_json = ancestral_tree.nt_muts_json
-                aa_muts_json = translate_augur_tree.aa_muts_json
-                ref_fasta    = ref_fasta
+                tree_nwk     = refine_augur_tree.tree_refined,
+                nt_muts_json = ancestral_tree.nt_muts_json,
+                aa_muts_json = translate_augur_tree.aa_muts_json,
+                ref_fasta    = ref_fasta,
                 clades_tsv   = clades_tsv
         }
     }
