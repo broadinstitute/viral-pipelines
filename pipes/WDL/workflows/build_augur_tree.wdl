@@ -44,7 +44,7 @@ workflow build_augur_tree {
         }
         clades_tsv: {
           description: "A TSV file containing clade mutation positions in four columns: [clade  gene    site    alt]; see: https://nextstrain.org/docs/tutorials/defining-clades",
-          patterns: ["*.tsv"]
+          patterns: ["*.tsv", "*.txt"]
         }
     }
 
