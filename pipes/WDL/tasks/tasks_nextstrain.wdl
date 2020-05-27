@@ -422,6 +422,43 @@ task translate_augur_tree {
     }
 }
 
+task assign_clades_to_nodes {
+    meta {
+        description: "Assign taxonomic clades to tree nodes based on mutation information"
+    }
+    input {
+        File tree_nwk
+        File nt_muts_json
+        File aa_muts_json
+        File ref_fasta
+        File clades_tsv
+
+        Int?   machine_mem_gb
+        String docker = "nextstrain/base"
+    }
+    String out_basename = basename(basename(tree_nwk, ".nwk"), "_refined_tree")
+    command {
+        augur clades \
+        --tree ~{tree_nwk} \
+        --mutations ~{nt_muts_json} ~{aa_muts_json} \
+        --reference ~{ref_fasta} \
+        --clades ~{clades_tsv} \
+        --output-node-data ~{out_basename}_node-clade-assignments.json
+    }
+    runtime {
+        docker: docker
+        memory: select_first([machine_mem_gb, 3]) + " GB"
+        cpu :   2
+        disks:  "local-disk 50 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+        preemptible: 2
+    }
+    output {
+        File node_clade_data_json = "~{out_basename}_node-clade-assignments.json"
+        String augur_version      = read_string("VERSION")
+    }
+}
+
 task augur_import_beast {
     meta {
         description: "Import BEAST tree into files ready for augur export, including a Newick-formatted tree and node data in json format. See both https://nextstrain-augur.readthedocs.io/en/stable/faq/import-beast.html and https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/import.html for details."
