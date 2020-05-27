@@ -433,11 +433,11 @@ task assign_clades_to_nodes {
         File ref_fasta
         File clades_tsv
 
-        Int?   machine_mem_gb
         String docker = "nextstrain/base"
     }
     String out_basename = basename(basename(tree_nwk, ".nwk"), "_refined_tree")
     command {
+        augur version > VERSION
         augur clades \
         --tree ~{tree_nwk} \
         --mutations ~{nt_muts_json} ~{aa_muts_json} \
@@ -447,7 +447,7 @@ task assign_clades_to_nodes {
     }
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 3]) + " GB"
+        memory: "3 GB"
         cpu :   2
         disks:  "local-disk 50 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
