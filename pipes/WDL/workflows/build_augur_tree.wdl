@@ -100,7 +100,7 @@ workflow build_augur_tree {
                 nt_muts_json = ancestral_tree.nt_muts_json,
                 aa_muts_json = translate_augur_tree.aa_muts_json,
                 ref_fasta    = ref_fasta,
-                clades_tsv   = clades_tsv
+                clades_tsv   = select_first([clades_tsv])
         }
     }
     call nextstrain.export_auspice_json {
