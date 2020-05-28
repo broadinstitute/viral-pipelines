@@ -55,8 +55,8 @@ workflow build_augur_tree {
     }
     call nextstrain.filter_subsample_sequences {
             input:
-                sequences_fasta = concatenate.combined,
-                metadata_tsv    = sample_metadata
+                sequences_fasta     = concatenate.combined,
+                sample_metadata_tsv = sample_metadata
     }
     call nextstrain.augur_mafft_align {
         input:
