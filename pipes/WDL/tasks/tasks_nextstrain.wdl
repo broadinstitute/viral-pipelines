@@ -152,6 +152,7 @@ task augur_mafft_align {
         Boolean  remove_reference = true
 
         Int?     machine_mem_gb
+        Int?     disk_space_gb = 750
         String   docker = "nextstrain/base"
     }
     command {
@@ -170,7 +171,7 @@ task augur_mafft_align {
         docker: docker
         memory: select_first([machine_mem_gb, 104]) + " GB"
         cpu :   16
-        disks:  "local-disk 375 LOCAL"
+        disks:  "local-disk ${disk_space_gb} LOCAL"
         preemptible: 2
         dx_instance_type: "mem3_ssd2_v2_x16"
     }
@@ -196,6 +197,7 @@ task draft_augur_tree {
         String?  tree_builder_args
 
         Int?     machine_mem_gb
+        Int?     disk_space_gb = 750
         String   docker = "nextstrain/base"
     }
     command {
@@ -213,7 +215,7 @@ task draft_augur_tree {
         docker: docker
         memory: select_first([machine_mem_gb, 30]) + " GB"
         cpu :   16
-        disks:  "local-disk 375 LOCAL"
+        disks:  "local-disk ${disk_space_gb} LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x16"
         preemptible: 2
     }
@@ -250,6 +252,7 @@ task refine_augur_tree {
         File?    vcf_reference
 
         Int?     machine_mem_gb
+        Int?     disk_space_gb = 750
         String   docker = "nextstrain/base"
     }
     command {
@@ -281,7 +284,7 @@ task refine_augur_tree {
         docker: docker
         memory: select_first([machine_mem_gb, 30]) + " GB"
         cpu :   16
-        disks: "local-disk 375 LOCAL"
+        disks: "local-disk ${disk_space_gb} LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x16"
         preemptible: 2
     }
