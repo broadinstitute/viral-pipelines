@@ -171,7 +171,7 @@ task augur_mafft_align {
         memory: select_first([machine_mem_gb, 104]) + " GB"
         cpu :   16
         disks:  "local-disk 375 LOCAL"
-        preemptible: 2
+        preemptible: 0
         dx_instance_type: "mem3_ssd2_v2_x16"
     }
     output {
@@ -215,7 +215,7 @@ task draft_augur_tree {
         cpu :   16
         disks:  "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x16"
-        preemptible: 2
+        preemptible: 0
     }
     output {
         File aligned_tree = "~{basename}_raw_tree.nwk"
@@ -283,7 +283,7 @@ task refine_augur_tree {
         cpu :   16
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x16"
-        preemptible: 2
+        preemptible: 0
     }
     output {
         File tree_refined  = "~{basename}_refined_tree.nwk"
