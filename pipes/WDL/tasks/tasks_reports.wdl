@@ -191,22 +191,20 @@ task align_and_count_summary {
   input {
     Array[File]+  counts_txt
 
+    String?       output_prefix="count_summary"
+
     String        docker="quay.io/broadinstitute/viral-core"
   }
 
   command {
     set -ex -o pipefail
 
-    mkdir spike_summaries
-    cp ${sep=' ' counts_txt} spike_summaries/
-
     reports.py --version | tee VERSION
-    reports.py aggregate_spike_count spike_summaries/ count_summary.tsv \
-      --loglevel=DEBUG
+    reports.py aggregate_alignment_counts ${sep=' ' counts_txt} "${output_prefix}".tsv --loglevel=DEBUG
   }
 
   output {
-    File   count_summary    = "count_summary.tsv"
+    File   count_summary    = "${output_prefix}.tsv"
     String viralngs_version = read_string("VERSION")
   }
 
