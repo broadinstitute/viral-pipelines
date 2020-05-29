@@ -53,9 +53,14 @@ workflow build_augur_tree {
             infiles     = assembly_fastas,
             output_name = "all_samples_combined_assembly.fasta"
     }
+    call nextstrain.filter_subsample_sequences {
+            input:
+                sequences_fasta     = concatenate.combined,
+                sample_metadata_tsv = sample_metadata
+    }
     call nextstrain.augur_mafft_align {
         input:
-            sequences = concatenate.combined,
+            sequences = filter_subsample_sequences.filtered_fasta,
             ref_fasta = ref_fasta,
             basename  = virus
     }
