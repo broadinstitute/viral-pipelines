@@ -197,11 +197,8 @@ task align_and_count_summary {
   command {
     set -ex -o pipefail
 
-    mkdir spike_summaries
-    cp ${sep=' ' counts_txt} spike_summaries/
-
     reports.py --version | tee VERSION
-    reports.py aggregate_spike_count spike_summaries/ count_summary.tsv \
+    reports.py aggregate_alignment_counts ${sep=' ' counts_txt} count_summary.tsv \
       --loglevel=DEBUG
   }
 
