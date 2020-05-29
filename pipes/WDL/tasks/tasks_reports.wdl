@@ -191,6 +191,8 @@ task align_and_count_summary {
   input {
     Array[File]+  counts_txt
 
+    String?       output_prefix="count_summary"
+
     String        docker="quay.io/broadinstitute/viral-core"
   }
 
@@ -203,7 +205,7 @@ task align_and_count_summary {
   }
 
   output {
-    File   count_summary    = "count_summary.tsv"
+    File   count_summary    = "${output_prefix}.tsv"
     String viralngs_version = read_string("VERSION")
   }
 
