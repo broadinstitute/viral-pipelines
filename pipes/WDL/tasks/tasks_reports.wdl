@@ -200,8 +200,7 @@ task align_and_count_summary {
     set -ex -o pipefail
 
     reports.py --version | tee VERSION
-    reports.py aggregate_alignment_counts ${sep=' ' counts_txt} "${output_prefix}.tsv" \
-      --loglevel=DEBUG
+    reports.py aggregate_alignment_counts ${sep=' ' counts_txt} "${output_prefix}".tsv --loglevel=DEBUG
   }
 
   output {
