@@ -26,7 +26,7 @@ workflow align_and_count_multiple_report {
     }
 
     scatter(raw_reads in reads_unmapped_bams) {
-        call reports.align_and_count{
+        call reports.align_and_count {
             input:
                 reads_bam = raw_reads,
                 ref_db    = ref_db
