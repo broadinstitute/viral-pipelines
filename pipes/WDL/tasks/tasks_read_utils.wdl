@@ -109,7 +109,7 @@ task rmdup_ubam {
     memory: select_first([machine_mem_gb, 7]) + " GB"
     cpu:    2
     disks:  "local-disk 375 LOCAL"
-    dx_instance_type: "mem1_ssd1_v2_x2"
+    dx_instance_type: "mem2_ssd1_v2_x2"
   }
 }
 
