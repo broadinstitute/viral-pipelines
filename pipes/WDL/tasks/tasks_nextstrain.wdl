@@ -123,6 +123,8 @@ task filter_subsample_sequences {
             ~{"--exclude-where " + exclude_where} \
             ~{"--include-where " + include_where} \
             --output "~{in_basename}.filtered.fasta"
+        cat ~{sequences_fasta} | grep \> | wc -l > IN_COUNT
+        cat ~{in_basename}.filtered.fasta | grep \> | wc -l > OUT_COUNT
     }
     runtime {
         docker: docker
@@ -133,8 +135,10 @@ task filter_subsample_sequences {
         preemptible: 1
     }
     output {
-        File filtered_fasta = "~{in_basename}.filtered.fasta"
-        String augur_version = read_string("VERSION")
+        File   filtered_fasta = "~{in_basename}.filtered.fasta"
+        String augur_version  = read_string("VERSION")
+        Int    sequences_in   = read_int("IN_COUNT")
+        Int    sequences_out  = read_int("OUT_COUNT")
     }
 }
 
