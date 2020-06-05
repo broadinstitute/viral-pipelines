@@ -70,25 +70,27 @@ for workflow in pipes/WDL/workflows/*.wdl; do
   fi
 done
 
-# Special case: run test for the demux_launcher native applet (which invokes
-# the demux_plus WDL workflow)
-demux_launcher_id=$(grep demux_launcher $COMPILE_SUCCESS | cut -f 2)
-
 # only run demux_plus if this is on master or tagged branch
 if [ "$TRAVIS_BRANCH" = "master" -o -n "$TRAVIS_TAG" ]; then
-  demux_workflow_id=$(grep demux_plus $COMPILE_SUCCESS | cut -f 2)
+  demux_name="demux_plus"
 else
   # otherwise just run the (faster) demux_only
-  demux_workflow_id=$(grep demux_only $COMPILE_SUCCESS | cut -f 2)
+  demux_name="demux_only"
 fi
+
+# Special case: run test for the demux_(plus|only)_launcher native applet (which invokes
+# the demux_(plus|only) WDL workflow)
+demux_launcher_id=$(grep ${demux_name}_launcher $COMPILE_SUCCESS | cut -f 2)
+
+demux_workflow_id=$(grep ${demux_name} $COMPILE_SUCCESS | cut -f 2)
 
 timeout_args=$(dx_run_timeout_args $demux_workflow_id $demux_launcher_id)
 dx_job_id=$(dx run \
   $demux_launcher_id -y --brief \
   -i upload_sentinel_record=record-Bv8qkgQ0jy198GK0QVz2PV8Y \
   -i demux_workflow_id=${demux_workflow_id} \
-  --name "$VERSION demux_launcher" \
-  -i folder=/tests/$VERSION/demux_launcher \
+  --name "$VERSION ${demux_name}_launcher" \
+  -i folder=/tests/$VERSION/${demux_name}_launcher \
   --extra-args $timeout_args \
   )
 echo "Launched demux_launcher as $dx_job_id"
