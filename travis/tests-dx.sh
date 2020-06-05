@@ -73,11 +73,20 @@ done
 # Special case: run test for the demux_launcher native applet (which invokes
 # the demux_plus WDL workflow)
 demux_launcher_id=$(grep demux_launcher $COMPILE_SUCCESS | cut -f 2)
-demux_plus_workflow_id=$(grep demux_plus $COMPILE_SUCCESS | cut -f 2)
-timeout_args=$(dx_run_timeout_args $demux_plus_workflow_id $demux_launcher_id)
+
+# only run demux_plus if this is on master or tagged branch
+if [ "$TRAVIS_BRANCH" = "master" -o -n "$TRAVIS_TAG" ]; then
+  demux_workflow_id=$(grep demux_plus $COMPILE_SUCCESS | cut -f 2)
+else
+  # otherwise just run the (faster) demux_only
+  demux_workflow_id=$(grep demux_only $COMPILE_SUCCESS | cut -f 2)
+fi
+
+timeout_args=$(dx_run_timeout_args $demux_workflow_id $demux_launcher_id)
 dx_job_id=$(dx run \
   $demux_launcher_id -y --brief \
   -i upload_sentinel_record=record-Bv8qkgQ0jy198GK0QVz2PV8Y \
+  -i demux_workflow_id=${demux_workflow_id} \
   --name "$VERSION demux_launcher" \
   -i folder=/tests/$VERSION/demux_launcher \
   --extra-args $timeout_args \
