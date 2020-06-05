@@ -54,6 +54,7 @@ done
 pushd pipes/dnax/dx-launcher
 cp consolidate_run_tarballs.yml consolidate_run_tarballs_dxapp.yml
 dx_id=$(./dx-yml-build consolidate_run_tarballs_dxapp.yml -a --destination /build/$VERSION/ | jq -r ".id")
+popd
 echo -e "consolidate_run_tarballs\t$dx_id" >> $COMPILE_SUCCESS
 
 # Special case: build demux launchers (native DNAnexus applets), embedding the
@@ -61,7 +62,8 @@ echo -e "consolidate_run_tarballs\t$dx_id" >> $COMPILE_SUCCESS
 demux_workflows_to_build="demux_plus demux_only"
 for wf_name in $(echo "${demux_workflows_to_build}"); do
   echo "Building applet ${wf_name...}"
-  demux_workflow_id=$(grep "${wf_name}" $COMPILE_SUCCESS | cut -f 2)  
+  demux_workflow_id=$(grep "${wf_name}" $COMPILE_SUCCESS | cut -f 2)
+  pushd pipes/dnax/dx-launcher
   sed "s/DEFAULT_DEMUX_WORKFLOW_ID/$demux_workflow_id/" demux_launcher.yml \
     | sed "s/DEFAULT_DEMUX_WORKFLOW_NAME/${wf_name}_launcher/" \
     | sed "s/DEFAULT_CONSOLIDATE_RUN_TARBALLS_APPLET_ID/$dx_id/" > "${wf_name}_dxapp.yml"
