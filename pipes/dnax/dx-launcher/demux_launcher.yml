@@ -1,8 +1,8 @@
 # DNAnexus applet to build with dx-yml-build which can be found here:
 # https://gist.githubusercontent.com/mlin/3cce81f54a640c3f62a2725acbc98283/raw/e071dfe1989c31f6267334106115620770e6d21c/dx-yml-build
 # To build, save this file as dxapp.yml and run that script alongside.
-name: demux_launcher
-title: demux_launcher
+name: DEFAULT_DEMUX_WORKFLOW_NAME
+title: DEFAULT_DEMUX_WORKFLOW_NAME
 dxapi: 1.0.0
 version: 0.0.1
 description: Launches demux/demux-plus workflow on each lane of a sequencing run, given the incremental uploader sentinel record.
