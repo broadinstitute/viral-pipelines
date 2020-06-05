@@ -80,21 +80,21 @@ fi
 
 # Special case: run test for the demux_(plus|only)_launcher native applet (which invokes
 # the demux_(plus|only) WDL workflow)
-demux_launcher_id=$(grep ${demux_name}_launcher $COMPILE_SUCCESS | cut -f 2)
+demux_launcher_id=$(grep "${demux_name}_launcher" $COMPILE_SUCCESS | cut -f 2)
 
-demux_workflow_id=$(grep ${demux_name} $COMPILE_SUCCESS | cut -f 2)
+demux_workflow_id=$(grep "${demux_name}" $COMPILE_SUCCESS | cut -f 2)
 
-timeout_args=$(dx_run_timeout_args $demux_workflow_id $demux_launcher_id)
-dx_job_id=$(dx run \
-  $demux_launcher_id -y --brief \
+timeout_args=$(dx_run_timeout_args $demux_workflow_id $demux_launcher_id )
+dx_job_id=$(dx run $demux_launcher_id \
+  -y --brief \
   -i upload_sentinel_record=record-Bv8qkgQ0jy198GK0QVz2PV8Y \
   -i demux_workflow_id=${demux_workflow_id} \
   --name "$VERSION ${demux_name}_launcher" \
   -i folder=/tests/$VERSION/${demux_name}_launcher \
   --extra-args $timeout_args \
   )
-echo "Launched demux_launcher as $dx_job_id"
-echo -e "demux_launcher\t$demux_launcher_id\t$dx_job_id" >> $TEST_LAUNCH_ALL
+echo "Launched ${demux_name}_launcher as $dx_job_id"
+echo -e "${demux_name}_launcher\t$demux_launcher_id\t$dx_job_id" >> $TEST_LAUNCH_ALL
 
 # the presence of this file in the project denotes all tests launched
 dx upload --brief --no-progress --destination /build/$VERSION/ $TEST_LAUNCH_ALL
