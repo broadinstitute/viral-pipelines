@@ -5,14 +5,20 @@
 #
 # Requires PyYAML (apt-get install python-yaml OR pip install pyyaml)
 
-import os, sys
+import os, sys, shutil
 import yaml, json
 
-with open('dxapp.yml') as infile:
+app_yaml_path=sys.argv[1]
+app_basename=os.path.splitext(os.path.basename(app_yaml_path))[0]
+
+output_json_filename=app_basename+'.json'
+
+with open(app_yaml_path) as infile:
     data = yaml.load(infile)
-    data["00COMMENT"] = "This dxapp.json has been generated from dxapp.yml automatically using dx-yml-build"
-    with open('dxapp.json', 'w') as outfile:
+    data["00COMMENT"] = "This {}.json has been generated from {} automatically using dx-yml-build".format(app_basename,app_yaml_path)
+    with open(output_json_filename, 'w') as outfile:
         json.dump(data, outfile, sort_keys=True, indent=2)
         outfile.write('\n')
 
-os.execvp("dx", ["dx", "build"] + sys.argv[1:])
+shutil.copy2(output_json_filename,"dxapp.json")
+os.execvp("dx", ["dx", "build"] + sys.argv[2:])
