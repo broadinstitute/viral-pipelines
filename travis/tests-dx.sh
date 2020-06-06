@@ -81,9 +81,9 @@ fi
 set -x
 # Special case: run test for the demux_(plus|only)_launcher native applet (which invokes
 # the demux_(plus|only) WDL workflow)
-demux_launcher_id=$(grep "${demux_name}_launcher" $COMPILE_SUCCESS | cut -f 2)
+demux_launcher_id=$(grep "^${demux_name}_launcher\s" $COMPILE_SUCCESS | cut -f 2)
 
-demux_workflow_id=$(grep "${demux_name}" $COMPILE_SUCCESS | cut -f 2)
+demux_workflow_id=$(grep "^${demux_name}\s" $COMPILE_SUCCESS | cut -f 2)
 
 timeout_args=$(dx_run_timeout_args $demux_workflow_id $demux_launcher_id)
 dx_job_id=$(dx run "${demux_launcher_id}" \
