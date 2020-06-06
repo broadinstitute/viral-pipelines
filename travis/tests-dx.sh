@@ -78,7 +78,6 @@ else
   demux_name="demux_only"
 fi
 
-set -x
 # Special case: run test for the demux_(plus|only)_launcher native applet (which invokes
 # the demux_(plus|only) WDL workflow)
 demux_launcher_id=$(grep "^${demux_name}_launcher\s" $COMPILE_SUCCESS | cut -f 2)
@@ -99,4 +98,3 @@ echo -e "${demux_name}_launcher\t$demux_launcher_id\t$dx_job_id" >> $TEST_LAUNCH
 
 # the presence of this file in the project denotes all tests launched
 dx upload --brief --no-progress --destination /build/$VERSION/ $TEST_LAUNCH_ALL
-set +x
