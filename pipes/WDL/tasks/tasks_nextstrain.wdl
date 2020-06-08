@@ -186,6 +186,37 @@ task augur_mafft_align {
     }
 }
 
+task augur_mask_sites {
+    meta {
+        description: "Mask unwanted positions from alignment. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/mask.html"
+    }
+    input {
+        File     sequences
+        File?    mask_bed
+
+        String   docker = "nextstrain/base"
+    }
+    String basename = basename(sequences, '.fasta')
+    command {
+        augur version > VERSION
+        augur mask --sequences ~{sequences} \
+            --mask ~{select_first([mask_bed, "/dev/null"])} \
+            --output ~{basename}_masked.fasta
+    }
+    runtime {
+        docker: docker
+        memory: "3 GB"
+        cpu :   2
+        disks:  "local-disk 100 HDD"
+        preemptible: 2
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+    output {
+        File masked_sequences = "~{basename}_masked.fasta"
+        String augur_version = read_string("VERSION")
+    }
+}
+
 task draft_augur_tree {
     meta {
         description: "Build a tree using a variety of methods. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/tree.html"

@@ -64,15 +64,19 @@ workflow build_augur_tree {
             ref_fasta = ref_fasta,
             basename  = virus
     }
+    call nextstrain.augur_mask_sites {
+        input:
+            sequences = augur_mafft_align.aligned_sequences
+    }
     call nextstrain.draft_augur_tree {
         input:
-            aligned_fasta  = augur_mafft_align.aligned_sequences,
+            aligned_fasta  = augur_mask_sites.masked_sequences,
             basename       = virus
     }
     call nextstrain.refine_augur_tree {
         input:
             raw_tree       = draft_augur_tree.aligned_tree,
-            aligned_fasta  = augur_mafft_align.aligned_sequences,
+            aligned_fasta  = augur_mask_sites.masked_sequences,
             metadata       = sample_metadata,
             basename       = virus
     }
@@ -88,7 +92,7 @@ workflow build_augur_tree {
     call nextstrain.ancestral_tree {
         input:
             refined_tree   = refine_augur_tree.tree_refined,
-            aligned_fasta  = augur_mafft_align.aligned_sequences,
+            aligned_fasta  = augur_mask_sites.masked_sequences,
             basename       = virus
     }
     call nextstrain.translate_augur_tree {
@@ -123,6 +127,7 @@ workflow build_augur_tree {
     output {
         File  combined_assembly_fasta    = concatenate.combined
         File  augur_aligned_fasta        = augur_mafft_align.aligned_sequences
+        File  masked_fasta        = augur_mask_sites.masked_sequences
         File  raw_tree                   = draft_augur_tree.aligned_tree
         File  refined_tree               = refine_augur_tree.tree_refined
         File  branch_lengths             = refine_augur_tree.branch_lengths
