@@ -1,0 +1,63 @@
+>Feature gb|MN908947.3|
+1	265	5'UTR
+266	21555	gene
+			gene	orf1ab
+266	13468	CDS
+13468	21555
+			product	orf1ab polyprotein
+			prot_desc	pp1ab
+			protein_id	gb|QHD43415.1|
+			note	translated by -1 ribosomal frameshift
+			ribosomal_slippage
+			exception	ribosomal slippage
+21563	25384	gene
+			gene	S
+21563	25384	CDS
+			product	surface glycoprotein
+			protein_id	gb|QHD43416.1|
+			note	structural protein
+25393	26220	gene
+			gene	ORF3a
+25393	26220	CDS
+			product	ORF3a protein
+			protein_id	gb|QHD43417.1|
+26245	26472	gene
+			gene	E
+26245	26472	CDS
+			product	envelope protein
+			protein_id	gb|QHD43418.1|
+			note	structural protein; E protein
+26523	27191	gene
+			gene	M
+26523	27191	CDS
+			product	membrane glycoprotein
+			protein_id	gb|QHD43419.1|
+			note	structural protein
+27202	27387	gene
+			gene	ORF6
+27202	27387	CDS
+			product	ORF6 protein
+			protein_id	gb|QHD43420.1|
+27394	27759	gene
+			gene	ORF7a
+27394	27759	CDS
+			product	ORF7a protein
+			protein_id	gb|QHD43421.1|
+27894	28259	gene
+			gene	ORF8
+27894	28259	CDS
+			product	ORF8 protein
+			protein_id	gb|QHD43422.1|
+28274	29533	gene
+			gene	N
+28274	29533	CDS
+			product	nucleocapsid phosphoprotein
+			protein_id	gb|QHD43423.2|
+			note	structural protein
+29558	29674	gene
+			gene	ORF10
+29558	29674	CDS
+			product	ORF10 protein
+			protein_id	gb|QHI42199.1|
+29675	29903	3'UTR
+

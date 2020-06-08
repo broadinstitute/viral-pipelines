@@ -1,8 +1,8 @@
 # DNAnexus applet to build with dx-yml-build which can be found here:
 # https://gist.githubusercontent.com/mlin/3cce81f54a640c3f62a2725acbc98283/raw/e071dfe1989c31f6267334106115620770e6d21c/dx-yml-build
 # To build, save this file as dxapp.yml and run that script alongside.
-name: demux_launcher
-title: demux_launcher
+name: DEFAULT_DEMUX_WORKFLOW_NAME
+title: DEFAULT_DEMUX_WORKFLOW_NAME
 dxapi: 1.0.0
 version: 0.0.1
 description: Launches demux/demux-plus workflow on each lane of a sequencing run, given the incremental uploader sentinel record.
@@ -102,46 +102,37 @@ runSpec:
       max_records_in_ram=2000000
       if [ "$total_tile_count" -le 50 ]; then 
           tar_consolidation_instance_size="mem1_ssd1_x4"
-          demux_instance_type="mem1_ssd1_x4"
-          demux_threads=$(echo "$demux_instance_type" | cut -dx -f2)
+          demux_instance_type="mem2_ssd1_x8"
           echo "Detected $total_tile_count tiles, interpreting as MiSeq run, executing on a $demux_instance_type machine."
       elif [ "$total_tile_count" -le 150 ]; then
           tar_consolidation_instance_size="mem1_ssd2_x4"
-          demux_instance_type="mem1_ssd2_x4"
-          demux_threads=$(echo "$demux_instance_type" | cut -dx -f2)
+          demux_instance_type="mem1_ssd2_x16"
           echo "Detected $total_tile_count tiles, interpreting as HiSeq2k run, executing on a $demux_instance_type machine."
       elif [ "$total_tile_count" -le 288 ]; then
-          # increase the number of reads in ram per-tile for NextSeq, since the tiles are larger
-          # without this setting, reads will spill to disk and may read the limit
-          # on the number of files that can be opened
-          max_reads_in_ram_per_tile=1500000
-          max_records_in_ram=2000000
+          tar_consolidation_instance_size="mem1_ssd2_x4"
+          demux_instance_type="mem1_ssd1_x32"
           echo "Detected $total_tile_count tiles, interpreting as NextSeq (mid-output) run."
+      elif [ "$total_tile_count" -le 624 ]; then
+          tar_consolidation_instance_size="mem1_ssd1_x32"
+          demux_instance_type="mem3_ssd1_x32"
+          echo "Detected $total_tile_count tiles, interpreting as NovaSeq SP run, executing on a $demux_instance_type machine."
       elif [ "$total_tile_count" -le 864 ]; then
-          # increase the number of reads in ram per-tile for NextSeq, since the tiles are larger
-          # without this setting, reads will spill to disk and may read the limit
-          # on the number of files that can be opened
-          max_reads_in_ram_per_tile=200000 # reduce the number of reads per tile since the NovaSeq has so many
-          max_records_in_ram=1500000
+          tar_consolidation_instance_size="mem1_ssd2_x16"
+          demux_instance_type="mem1_ssd1_x32"
           echo "Detected $total_tile_count tiles, interpreting as NextSeq (high-output) run."
       elif [ "$total_tile_count" -le 896 ]; then
           tar_consolidation_instance_size="mem1_ssd1_x32"
-          demux_instance_type="mem1_ssd1_x32"
-          demux_threads=$(echo "$demux_instance_type" | cut -dx -f2)
+          demux_instance_type="mem3_ssd1_x32"
           echo "Detected $total_tile_count tiles, interpreting as HiSeq4k run, executing on a $demux_instance_type machine."
       elif [ "$total_tile_count" -le 1408 ]; then
           tar_consolidation_instance_size="mem1_ssd2_x36"
-          demux_instance_type="mem1_ssd2_x36"
-          min_base_quality=20
-          max_reads_in_ram_per_tile=750000
-          demux_threads=20 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
+          demux_instance_type="mem3_ssd2_v2_x32"
           echo "Detected $total_tile_count tiles, interpreting as NovaSeq run, executing on a $demux_instance_type machine."
           echo "  **Note: Q20 threshold used since NovaSeq with RTA3 writes only four Q-score values: 2, 12, 23, and 37.**"
           echo "    See: https://www.illumina.com/content/dam/illumina-marketing/documents/products/appnotes/novaseq-hiseq-q30-app-note-770-2017-010.pdf"
       elif [ "$total_tile_count" -gt 1408 ]; then
           tar_consolidation_instance_size="mem1_ssd2_x36"
-          demux_instance_type="mem1_ssd2_x36"
-          demux_threads=$(echo "$demux_instance_type" | cut -dx -f2)
+          demux_instance_type="mem3_ssd2_v2_x32"
           echo "Tile count: $total_tile_count tiles, (unknown instrument type), executing on a $demux_instance_type machine."
       fi
       echo "For detailed information on instance types, see:"
@@ -177,7 +168,7 @@ runSpec:
         fi
         for i in $(seq "$lane_count"); do
           folder2=$(printf "%s/%s/reads/L%d" "$folder" "$run_id" $i)
-          runcmd="dx run $demux_workflow_id -i stage-0.flowcell_tgz=$run_tarball -i illumina_demux.lane=$i -i illumina_demux.maxReadsInRamPerTile=$max_reads_in_ram_per_tile -i illumina_demux.maxRecordsInRam=$max_records_in_ram -i illumina_demux.minimumBaseQuality=$min_base_quality -i illumina_demux.threads=$demux_threads $sequencing_center_input --folder $folder2 --instance-type illumina_demux=$demux_instance_type --name demux:$run_id:L$i -y --brief"
+          runcmd="dx run $demux_workflow_id -i stage-0.flowcell_tgz=$run_tarball -i illumina_demux.lane=$i $sequencing_center_input --folder $folder2 --instance-type illumina_demux=$demux_instance_type --name demux:$run_id:L$i -y --brief"
           echo "$runcmd"
           set +x
           if [ -n "$api_token" ]; then

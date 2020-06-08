@@ -1,0 +1,5 @@
+{
+  "assemble_refbased.reads_unmapped_bams": ["test/input/G5012.3.testreads.bam"],
+  "assemble_refbased.reference_fasta": "test/input/ebov-makona.fasta",
+  "assemble_refbased.sample_name": "G5012.3"
+}

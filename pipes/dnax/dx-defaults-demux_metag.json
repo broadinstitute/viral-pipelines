@@ -1,0 +1,21 @@
+{
+  "demux_metag.spikein_db":
+    "dx://file-FZY2v7Q0xf5VBy5FFY3z5fz7",
+
+  "demux_metag.bwaDbs": [
+    "dx://file-Fg2p9b00xf5zx8VB8BYyJj0g",
+    "dx://file-F8BjgXj09y3gkfZGPPQZbZkK"
+  ],
+
+  "demux_metag.trim_clip_db":
+    "dx://file-BXF0vYQ0QyBF509G9J12g927",
+
+  "demux_metag.kraken2_db_tgz":
+    "dx://file-Fq1ZPzQ0GY2bkq6K8KKk82G3",
+  "demux_metag.krona_taxonomy_db_kraken2_tgz":
+    "dx://file-Fpp14j00xf5Xjq665v8v93z8",
+  "demux_metag.blast_db_tgz":
+    "dx://file-Fpp4Z780xf5qk1qB4fb8yPkQ",
+  "demux_metag.krona_taxonomy_db_blast_tgz":
+    "dx://file-Fpp14jj0xf5bYPKQ5J13JJpX"
+}

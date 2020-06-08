@@ -1,0 +1,680 @@
+Seq-submit ::= {
+  sub {
+    contact {
+      contact {
+        name
+          name {
+            last "Park" ,
+            first "Daniel" ,
+            middle "" ,
+            initials "" ,
+            suffix "" ,
+            title "" } ,
+        affil
+          std {
+            affil "Broad Institute of Harvard and MIT" ,
+            div "Infectious Disease Program" ,
+            city "Cambridge" ,
+            sub "Massachusetts" ,
+            country "United States of America" ,
+            street "75 Ames St" ,
+            email "dpark@broadinstitute.org" ,
+            phone "6177148526" ,
+            postal-code "02142" } } } ,
+    cit {
+      authors {
+        names
+          std {
+            {
+              name
+                name {
+                  last "Odia" ,
+                  first "Ikponmwosa" ,
+                  middle "" ,
+                  initials "" ,
+                  suffix "" ,
+                  title "" } } ,
+            {
+              name
+                name {
+                  last "Ehaine" ,
+                  first "Philomena" ,
+                  middle "" ,
+                  initials "" ,
+                  suffix "" ,
+                  title "" } } ,
+            {
+              name
+                name {
+                  last "Oguzie" ,
+                  first "Judith" ,
+                  middle "" ,
+                  initials "U." ,
+                  suffix "" ,
+                  title "" } } ,
+            {
+              name
+                name {
+                  last "Siddle" ,
+                  first "Katherine" ,
+                  middle "" ,
+                  initials "J." ,
+                  suffix "" ,
+                  title "" } } ,
+            {
+              name
+                name {
+                  last "Mehta" ,
+                  first "Samar" ,
+                  middle "" ,
+                  initials "" ,
+                  suffix "" ,
+                  title "" } } ,
+            {
+              name
+                name {
+                  last "Barnes" ,
+                  first "Kayla" ,
+                  middle "" ,
+                  initials "M." ,
+                  suffix "" ,
+                  title "" } } ,
+            {
+              name
+                name {
+                  last "Winnicki" ,
+                  first "Sarah" ,
+                  middle "" ,
+                  initials "M." ,
+                  suffix "" ,
+                  title "" } } ,
+            {
+              name
+                name {
+                  last "Brehio" ,
+                  first "Patrick" ,
+                  middle "" ,
+                  initials "" ,
+                  suffix "" ,
+                  title "" } } ,
+            {
+              name
+                name {
+                  last "Shah" ,
+                  first "Rickey" ,
+                  middle "" ,
+                  initials "R." ,
+                  suffix "" ,
+                  title "" } } ,
+            {
+              name
+                name {
+                  last "Chak" ,
+                  first "Bridget" ,
+                  middle "" ,
+                  initials "" ,
+                  suffix "" ,
+                  title "" } } ,
+            {
+              name
+                name {
+                  last "Yozwiak" ,
+                  first "Nathan" ,
+                  middle "" ,
+                  initials "" ,
+                  suffix "" ,
+                  title "" } } ,
+            {
+              name
+                name {
+                  last "Amao" ,
+                  first "Adebayo" ,
+                  middle "" ,
+                  initials "" ,
+                  suffix "" ,
+                  title "" } } ,
+            {
+              name
+                name {
+                  last "Nosamiefan" ,
+                  first "Iguosadolo" ,
+                  middle "" ,
+                  initials "" ,
+                  suffix "" ,
+                  title "" } } ,
+            {
+              name
+                name {
+                  last "Birren" ,
+                  first "Bruce" ,
+                  middle "" ,
+                  initials "W." ,
+                  suffix "" ,
+                  title "" } } ,
+            {
+              name
+                name {
+                  last "Park" ,
+                  first "Daniel" ,
+                  middle "" ,
+                  initials "J." ,
+                  suffix "" ,
+                  title "" } } ,
+            {
+              name
+                name {
+                  last "Folarin" ,
+                  first "Onikepe" ,
+                  middle "" ,
+                  initials "" ,
+                  suffix "" ,
+                  title "" } } ,
+            {
+              name
+                name {
+                  last "Okokhere" ,
+                  first "Peter" ,
+                  middle "" ,
+                  initials "" ,
+                  suffix "" ,
+                  title "" } } ,
+            {
+              name
+                name {
+                  last "Sabeti" ,
+                  first "Pardis" ,
+                  middle "" ,
+                  initials "C." ,
+                  suffix "" ,
+                  title "" } } ,
+            {
+              name
+                name {
+                  last "Happi" ,
+                  first "Christian" ,
+                  middle "" ,
+                  initials "T." ,
+                  suffix "" ,
+                  title "" } } } ,
+        affil
+          std {
+            affil "Broad Institute of Harvard and MIT" ,
+            div "Infectious Disease Program" ,
+            city "Cambridge" ,
+            sub "Massachusetts" ,
+            country "United States of America" ,
+            street "75 Ames St" ,
+            postal-code "02142" } } ,
+      date
+        std {
+          year 2019 ,
+          month 1 ,
+          day 1 } } ,
+    subtype new ,
+    tool "tbl2asn 25.7 - LINUX UNIX" } ,
+  data
+    entrys {
+      set {
+        class genbank ,
+        seq-set {
+          set {
+            class nuc-prot ,
+            descr {
+              source {
+                org {
+                  taxname "Lassa mammarenavirus" ,
+                  db {
+                    {
+                      db "taxon" ,
+                      tag
+                        id 11620 } } ,
+                  orgname {
+                    mod {
+                      {
+                        subtype isolate ,
+                        subname "Lassa virus/H.sapiens-wt/NGA/2018/ISTH_0097
+ segment S glycoprotein precursor (GPC) and nucleoprotein (NP) genes" } ,
+                      {
+                        subtype nat-host ,
+                        subname "Homo sapiens" } } } } ,
+                subtype {
+                  {
+                    subtype country ,
+                    name "Nigeria" } ,
+                  {
+                    subtype isolation-source ,
+                    name "blood plasma" } ,
+                  {
+                    subtype collection-date ,
+                    name "15-Jan-2018" } ,
+                  {
+                    subtype collected-by ,
+                    name "Irrua Specialist Teaching Hospital" } } } ,
+              pub {
+                pub {
+                  gen {
+                    cit "Unpublished" ,
+                    authors {
+                      names
+                        std {
+                          {
+                            name
+                              name {
+                                last "Odia" ,
+                                first "Ikponmwosa" ,
+                                initials "I." } } ,
+                          {
+                            name
+                              name {
+                                last "Ehaine" ,
+                                first "Philomena" ,
+                                initials "P." } } ,
+                          {
+                            name
+                              name {
+                                last "Oguzie" ,
+                                first "Judith" ,
+                                initials "J.U." } } ,
+                          {
+                            name
+                              name {
+                                last "Siddle" ,
+                                first "Katherine" ,
+                                initials "K.J." } } ,
+                          {
+                            name
+                              name {
+                                last "Mehta" ,
+                                first "Samar" ,
+                                initials "S." } } ,
+                          {
+                            name
+                              name {
+                                last "Barnes" ,
+                                first "Kayla" ,
+                                initials "K.M." } } ,
+                          {
+                            name
+                              name {
+                                last "Winnicki" ,
+                                first "Sarah" ,
+                                initials "S.M." } } ,
+                          {
+                            name
+                              name {
+                                last "Brehio" ,
+                                first "Patrick" ,
+                                initials "P." } } ,
+                          {
+                            name
+                              name {
+                                last "Shah" ,
+                                first "Rickey" ,
+                                initials "R." } } ,
+                          {
+                            name
+                              name {
+                                last "Chak" ,
+                                first "Bridget" ,
+                                initials "B." } } ,
+                          {
+                            name
+                              name {
+                                last "Yozwiak" ,
+                                first "Nathan" ,
+                                initials "N." } } ,
+                          {
+                            name
+                              name {
+                                last "Amao" ,
+                                first "Adebayo" ,
+                                initials "A." } } ,
+                          {
+                            name
+                              name {
+                                last "Nosamiefan" ,
+                                first "Iguosadolo" ,
+                                initials "I." } } ,
+                          {
+                            name
+                              name {
+                                last "Birren" ,
+                                first "Bruce" ,
+                                initials "B.W." } } ,
+                          {
+                            name
+                              name {
+                                last "Park" ,
+                                first "Daniel" ,
+                                initials "D.J." } } ,
+                          {
+                            name
+                              name {
+                                last "Folarin" ,
+                                first "Onikepe" ,
+                                initials "O." } } ,
+                          {
+                            name
+                              name {
+                                last "Okokhere" ,
+                                first "Peter" ,
+                                initials "P." } } ,
+                          {
+                            name
+                              name {
+                                last "Sabeti" ,
+                                first "Pardis" ,
+                                initials "P.C." } } ,
+                          {
+                            name
+                              name {
+                                last "Happi" ,
+                                first "Christian" ,
+                                initials "C.T." } } } } ,
+                    title "Lassa virus outbreak genomics and epidemiology from
+ Nigeria" } } } ,
+              comment "this is only a test -- DO NOT SUBMIT to NCBI" ,
+              user {
+                type
+                  str "DBLink" ,
+                data {
+                  {
+                    label
+                      str "BioSample" ,
+                    num 1 ,
+                    data
+                      strs {
+                        "SAMN08765788" } } ,
+                  {
+                    label
+                      str "BioProject" ,
+                    num 1 ,
+                    data
+                      strs {
+                        "PRJNA436552" } } } } ,
+              user {
+                type
+                  str "Submission" ,
+                data {
+                  {
+                    label
+                      str "AdditionalComment" ,
+                    data
+                      str "ALT EMAIL:dpark@broadinstitute.org" } } } ,
+              user {
+                type
+                  str "Submission" ,
+                data {
+                  {
+                    label
+                      str "AdditionalComment" ,
+                    data
+                      str "Submission Title:None" } } } ,
+              user {
+                type
+                  str "NcbiCleanup" ,
+                data {
+                  {
+                    label
+                      str "method" ,
+                    data
+                      str "SeriousSeqEntryCleanup" } ,
+                  {
+                    label
+                      str "version" ,
+                    data
+                      int 8 } ,
+                  {
+                    label
+                      str "month" ,
+                    data
+                      int 1 } ,
+                  {
+                    label
+                      str "day" ,
+                    data
+                      int 1 } ,
+                  {
+                    label
+                      str "year" ,
+                    data
+                      int 2019 } } } ,
+              create-date
+                std {
+                  year 2019 ,
+                  month 1 ,
+                  day 1 } } ,
+            seq-set {
+              seq {
+                id {
+                  local
+                    str "LASV_NGA_2018_0097-2" } ,
+                descr {
+                  molinfo {
+                    biomol cRNA } ,
+                  user {
+                    type
+                      str "StructuredComment" ,
+                    data {
+                      {
+                        label
+                          str "StructuredCommentPrefix" ,
+                        data
+                          str "##Genome-Assembly-Data-START##" } ,
+                      {
+                        label
+                          str "Assembly Method" ,
+                        data
+                          str "placeholder assembly software v. 5.4.3.2.1" } ,
+                      {
+                        label
+                          str "Assembly Name" ,
+                        data
+                          str "LASV_NGA_2018_0097-2" } ,
+                      {
+                        label
+                          str "Genome Coverage" ,
+                        data
+                          str "3099.5x" } ,
+                      {
+                        label
+                          str "Sequencing Technology" ,
+                        data
+                          str "Illumina MiSeq" } ,
+                      {
+                        label
+                          str "StructuredCommentSuffix" ,
+                        data
+                          str "##Genome-Assembly-Data-END##" } } } } ,
+                inst {
+                  repr raw ,
+                  mol rna ,
+                  length 3390 ,
+                  seq-data
+                    iupacna "AGGCATTTAGGATTGCGCTTTTAGAGATCTTTGTGTGAGTGGGCTTCAT
+CAAGCCATGGGACAAATCATAACATTTTTCCAGGAAGTACCTCATGTCATAGAGGAAGTGATGAACATTGTCCTGATT
+GCTCTTAGCCTTCTGGCAATATTGAAAGGGATCTACAATGTTGCTACCTGTGGCCTCTTTGGATTGGTGTCCTTTCTC
+CTCTTGTGCGGAAGATCATGCTCGACAACCTACAAGGGCGTTTATGAGCTACAAACCCTAGAGCTAGACATGGCTAGC
+CTTAATATGACAATGCCTTTATCTTGCACGAAGAACAACAGCCATCATTACATCATGGTCGGAAATGAGACTGGCTTG
+GAGCTGACTTTAACAAATACAAGTATCATCAACCACAAGTTTTGTAACCTTTCTGATGCACATAAAAAGAATCTTTAT
+GACCATGCTTTAATGAGTATCATCTCAACCTTCCACTTATCCATTCCCAACTTTAATCAGTATGAAGCAATGAGTTGT
+GACTTCAATGGAGGAAAGATAAGTGTTCAGTACAACCTCAGCCACACTTATGCTGTAGATGCAGCTAACCACTGTGGA
+ACCATTGCCAATGGTGTTCTTCAGACTTTTATGAGGATGGCTTGGGGTGGCAGTTACATAGCACTTGATTCCGGAAAG
+GGGAGTTGGGACTGCATAATGACTTCCTACCAATATTTGATAATCCAAAACACCACTTGGGAAGATCATTGCCAATTT
+TCTCGCCCATCCCCTATCGGTTATCTGGGGCTACTGTCACAAAGGACCAGGGATATTTACATCAGCCGAAGGCTTCTT
+GGAACCTTTACTTGGACTCTCTCTGATTCTGAAGGTAATGAAACACCGGGTGGGTATTGTCTAACAAGATGGATGTTG
+ATTGAGGCCGAGCTGAAATGCTTTGGGAACACAGCAGTTGCGAAGTGCAATGAGAAACACGATGAGGAGTTTTGTGAC
+ATGTTAAGGTTGTTTGACTTTAACAAACAAGCTATAAGGAGGCTGAAGACGGAAGCACAGATGAGCATTCAACTGATA
+AACAAAGCAGTAAACGCACTAATCAATGACCAACTGATCATGAAGAATCATTTGAGAGATATCATGGGAATTCCCTAC
+TGCAATTACAGCAAATACTGGTATCTAAATCATACTGTGACAGGGAGGACATCACTGCCAAGATGCTGGCTTGTGTCA
+AATGGTTCCTACCTGAATGAGACACATTTTTCTGATGACATTGAACAACAAGCAGACAACATGATAACAGAACTGTTG
+CAAAAGGAGTACATAGAGAGGCAAGGGAAAACACCCTTAGGGTTAGTAGATCTTTTTGTCTTCAGCACTAGCTTTTAT
+CTCATTAGCATCTTCCTCCACCTGATTAAAATCCCAACCCATAGACATGTCATAGGGAAACCCTGCCCTAAACCACAC
+AGACTCAACCACATGGGCATATGCTCATGTGGTCTATACAAACATCCTGGTGTACCAGTTAAGTGGAAAAGATAGAAG
+ACAGACCCACTCATGGGCCCCCGTGACCCACCGCCGAAAGGCGGTGGGTCACGGGGGCGTCCATTTACAGGACGACCT
+TGGGGCTTGAGGTTCTAAACACCATGTCTCTGGGGAGAACTGCTCTTAAAACTGGTATATTAAGTCCTCCTGACACAG
+CTGCATCATACATTATGCAATCCATTAAAGCACAGTGCGGGGTAATTTCTTCTTTGCCTCCTCTTTTCTTCTTTTCGA
+CAACCACTCCAGTATGCATATGGCATAGATCTTTGCATTGATCCCAAACAGCATTTTCAAATCTCCTAGAGTCAGCCT
+TGCTCAGTGAAATGTCAATAAGTTTTATGTCTCTTCTCCCTTGGGAGTCTAAGAGTCTCTTAATGTCATCTGAGCCTT
+GACAGGTCAGTACCATATTGCGAGGGAGAGCTTCTATGACTGCACTAGTCAAACCAGGTTGAGCAGGGAAAAGATCTG
+CTACATCAATCCCATGAGAATATTTGGCATCCTGCTTGAATTGTTTCAAGTCTGTTGGTTCTCTGAAGAAGTGTATGT
+AACAGCCTGACATAGGTTGGTAAAGAGCTATTTCCACAGGGTCTTCTGGACGACCTTCAATGTCTATCCAGGTCTTGG
+CACTTGGGTCAAGCTGCATCATTGAGTCTTTGAGTGTCATCAACTGAGAATAGGTCAGCCCTGTTGGGAACCCTGCTG
+ACTGTAAAGACTTGTTGGACCCAGCTGTGCCCACTTTTTGTGGTTTTCCATCTGACTCGAGATCCACAGTGGTATTCT
+CCCAAGCTCTACCCACAATGGAAGTCCTTGAAGCTATGTAGGGCCAGCCGTCACCAGAAAGACAGATTTTGTAAAGTA
+TGTTCTCATAAGGGTTCCTCTCACCAGGTGTATCTGAAACAAACATTCCTAAGGATTTTTTCACCTTTAAAATAGACT
+TCAAGATGCCATCCATTGTCTGAGGTGTAACCTTGATGGTCTCCAACATGTTTCCCCCATCAAGCATACAAGCTCCGG
+CTTTCACTGCAGCTCCTAAGCTGAAGTTGTAACCAGAAATGTTCAAGGAGCTCTTCTTAGTGTCCACCATATTCAGTA
+TAGGATGGCTTTGGGAAAGTCTGTCTAGGTCAGAGCTATTTGGGTATTTGGCTGTGTATATCAGACCTAGGTCTGTTA
+GTGCCAGGACGGCATCATTCAGATCAACTTGACCTTGTTTGGTGAGACATGCTAATGTCAAACTAGGCATGGTGCCGA
+ACTGGTTGTTCAAAAGATCCGGATTCTTAACATCCCACACCCTAACAACTCCGTCTCTTCCAGGTTGGGTGCCCTGAG
+TCCCGCCAACCATGCCTATCATGTTCAGCAATGCTCTTCTTTGCTCAAGCTGTTGTGTACTCAAATTCCCCATGTAAA
+CACCTGAGCTCAGTGGCCTTTCTGTCCTAATGACCTTCGACTTTAGTTTCTCTAAGTCAGCTGCCAATGTCAGCAGGT
+CATCTGAAGTCAAGGTCCCAACTCTCAGGATACTCTTCTGTTGTGTTGACTTGAGTTCAACAAGATTGTTGACAGCCT
+GATTTAGATCTCTGAGACGTTTCAGATCACTATCATCCCTTTTTTGTTTGCGCATTAAACGCTGCACATTGCTGACTT
+CAGAAAAATCAAGACCATGAAGGAGAGCCTGAGCATCTTTAACAACCTGAAGCTTTATACTGGAACAATAACCTGAAA
+GTTCCCTCCTTAATGATTGTGTCCAGAGAAATGACTTCACTTCCTTGGAAGCACTCATCTTGGTCTGGACACCTAGAG
+ATTTACTGGTTGAAAGTATTACAAAGTAAGTCAATGAAAAGCGCAATCCAATAGCCTAGGATCCA" } ,
+                annot {
+                  {
+                    data
+                      ftable {
+                        {
+                          data
+                            gene {
+                              locus "GPC" } ,
+                          location
+                            int {
+                              from 55 ,
+                              to 1527 ,
+                              strand plus ,
+                              id
+                                local
+                                  str "LASV_NGA_2018_0097-2" } } ,
+                        {
+                          data
+                            gene {
+                              locus "NP" } ,
+                          location
+                            int {
+                              from 1595 ,
+                              to 3304 ,
+                              strand minus ,
+                              id
+                                local
+                                  str "LASV_NGA_2018_0097-2" } } } } } } ,
+              seq {
+                id {
+                  local
+                    str "LASV_NGA_2018_0097-2_1" } ,
+                descr {
+                  title "glycoprotein precursor [Lassa mammarenavirus]" ,
+                  molinfo {
+                    biomol peptide ,
+                    tech concept-trans } } ,
+                inst {
+                  repr raw ,
+                  mol aa ,
+                  length 490 ,
+                  seq-data
+                    ncbieaa "MGQIITFFQEVPHVIEEVMNIVLIALSLLAILKGIYNVATCGLFGLVSF
+LLLCGRSCSTTYKGVYELQTLELDMASLNMTMPLSCTKNNSHHYIMVGNETGLELTLTNTSIINHKFCNLSDAHKKNL
+YDHALMSIISTFHLSIPNFNQYEAMSCDFNGGKISVQYNLSHTYAVDAANHCGTIANGVLQTFMRMAWGGSYIALDSG
+KGSWDCIMTSYQYLIIQNTTWEDHCQFSRPSPIGYLGLLSQRTRDIYISRRLLGTFTWTLSDSEGNETPGGYCLTRWM
+LIEAELKCFGNTAVAKCNEKHDEEFCDMLRLFDFNKQAIRRLKTEAQMSIQLINKAVNALINDQLIMKNHLRDIMGIP
+YCNYSKYWYLNHTVTGRTSLPRCWLVSNGSYLNETHFSDDIEQQADNMITELLQKEYIERQGKTPLGLVDLFVFSTSF
+YLISIFLHLIKIPTHRHVIGKPCPKPHRLNHMGICSCGLYKHPGVPVKWKR" } ,
+                annot {
+                  {
+                    data
+                      ftable {
+                        {
+                          data
+                            prot {
+                              name {
+                                "glycoprotein precursor" } } ,
+                          location
+                            int {
+                              from 0 ,
+                              to 489 ,
+                              id
+                                local
+                                  str "LASV_NGA_2018_0097-2_1" } } } } } } ,
+              seq {
+                id {
+                  local
+                    str "LASV_NGA_2018_0097-2_2" } ,
+                descr {
+                  title "nucleoprotein [Lassa mammarenavirus]" ,
+                  molinfo {
+                    biomol peptide ,
+                    tech concept-trans } } ,
+                inst {
+                  repr raw ,
+                  mol aa ,
+                  length 569 ,
+                  seq-data
+                    ncbieaa "MSASKEVKSFLWTQSLRRELSGYCSSIKLQVVKDAQALLHGLDFSEVSN
+VQRLMRKQKRDDSDLKRLRDLNQAVNNLVELKSTQQKSILRVGTLTSDDLLTLAADLEKLKSKVIRTERPLSSGVYMG
+NLSTQQLEQRRALLNMIGMVGGTQGTQPGRDGVVRVWDVKNPDLLNNQFGTMPSLTLACLTKQGQVDLNDAVLALTDL
+GLIYTAKYPNSSDLDRLSQSHPILNMVDTKKSSLNISGYNFSLGAAVKAGACMLDGGNMLETIKVTPQTMDGILKSIL
+KVKKSLGMFVSDTPGERNPYENILYKICLSGDGWPYIASRTSIVGRAWENTTVDLESDGKPQKVGTAGSNKSLQSAGF
+PTGLTYSQLMTLKDSMMQLDPSAKTWIDIEGRPEDPVEIALYQPMSGCYIHFFREPTDLKQFKQDAKYSHGIDVADLF
+PAQPGLTSAVIEALPRNMVLTCQGSDDIKRLLDSQGRRDIKLIDISLSKADSRRFENAVWDQCKDLCHMHTGVVVEKK
+KRGGKEEITPHCALMDCIMYDAAVSGGLNIPVLRAVLPRDMVFRTSSPKVVL" } ,
+                annot {
+                  {
+                    data
+                      ftable {
+                        {
+                          data
+                            prot {
+                              name {
+                                "nucleoprotein" } } ,
+                          location
+                            int {
+                              from 0 ,
+                              to 568 ,
+                              id
+                                local
+                                  str "LASV_NGA_2018_0097-2_2" } } } } } } } ,
+            annot {
+              {
+                data
+                  ftable {
+                    {
+                      data
+                        cdregion {
+                          frame one ,
+                          code {
+                            id 1 } } ,
+                      product
+                        whole
+                          local
+                            str "LASV_NGA_2018_0097-2_1" ,
+                      location
+                        int {
+                          from 55 ,
+                          to 1527 ,
+                          strand plus ,
+                          id
+                            local
+                              str "LASV_NGA_2018_0097-2" } } ,
+                    {
+                      data
+                        cdregion {
+                          frame one ,
+                          code {
+                            id 1 } } ,
+                      product
+                        whole
+                          local
+                            str "LASV_NGA_2018_0097-2_2" ,
+                      location
+                        int {
+                          from 1595 ,
+                          to 3304 ,
+                          strand minus ,
+                          id
+                            local
+                              str "LASV_NGA_2018_0097-2" } } } } } } } } } }

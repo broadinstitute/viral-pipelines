@@ -16,3 +16,5 @@ Contents
    
    description
    pipes-wdl
+   ncbi_submission
+   workflows

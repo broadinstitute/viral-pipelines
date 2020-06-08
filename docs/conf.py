@@ -15,6 +15,8 @@
 
 import sys
 import os
+import subprocess
+import wdl_aid
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -23,26 +25,33 @@ sys.path.insert(0, os.path.dirname(os.path.abspath('.')))
 
 # -- Mock out the heavyweight pip packages, esp those that require C ----
 import mock
-MOCK_MODULES = ['scipy', 'pysam', 'Bio', 'Bio.AlignIO', 'Bio.Alphabet',
-                'Bio.Alphabet.IUPAC', 'Bio.SeqIO', 'Bio.Data.IUPACData',
-                'Bio.Seq', 'Bio.SeqRecord', 'pybedtools', 'pybedtools.BedTool',
-                'arrow']
+MOCK_MODULES = []
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
 
-    # -- Obtain GIT version --
-import subprocess
-
-
+# -- Obtain GIT version --
 def _git_version():
     cmd = ['git', 'describe', '--tags', '--always']  # omit "--dirty" from doc build
     out = subprocess.check_output(cmd)
     if type(out) != str:
         out = out.decode('utf-8')
     return out.strip()
-
-
 __version__ = _git_version()
+
+
+# -- make docs per workflow
+def _make_wdl_markdowns():
+    wf_dir = '../pipes/WDL/workflows'
+    workflows = os.listdir(wf_dir)
+    with open('workflows.rst', 'a') as outf:
+        for wf in sorted(workflows):
+            fname_base = os.path.basename(wf)
+            if fname_base.endswith('.wdl'):
+                fname_base = fname_base[:-4]
+                subprocess.check_call(['wdl-aid', '-o', fname_base+'.md', os.path.join(wf_dir, wf)])
+                outf.write("   {}\n".format(fname_base))
+        outf.write("\n")
+_make_wdl_markdowns()
 
 # -- General configuration ------------------------------------------------
 
@@ -52,13 +61,13 @@ __version__ = _git_version()
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.imgmath', 'sphinxarg.ext',]
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.imgmath', 'sphinxarg.ext', 'recommonmark']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
 # The suffix of source filenames.
-source_suffix = '.rst'
+source_suffix = ['.rst', '.md']
 
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
@@ -68,7 +77,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'viral-ngs'
-copyright = '2015, Broad Institute Viral Genomics'
+copyright = '2014, Broad Institute Viral Genomics'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

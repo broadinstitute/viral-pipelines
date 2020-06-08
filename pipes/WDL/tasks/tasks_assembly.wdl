@@ -1,26 +1,30 @@
+version 1.0
+
 task assemble {
-    File     reads_unmapped_bam
-    File     trim_clip_db
+    input {
+      File     reads_unmapped_bam
+      File     trim_clip_db
 
-    Int?     trinity_n_reads=250000
-    Int?     spades_n_reads=10000000
-    Int?     spades_min_contig_len=0
+      Int?     trinity_n_reads=250000
+      Int?     spades_n_reads=10000000
+      Int?     spades_min_contig_len=0
 
-    String?  assembler="trinity"  # trinity, spades, or trinity-spades
-    Boolean? always_succeed=false
+      String?  assembler="trinity"  # trinity, spades, or trinity-spades
+      Boolean? always_succeed=false
 
-    # do this in two steps in case the input doesn't actually have "taxfilt" in the name
-    String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
+      # do this in two steps in case the input doesn't actually have "taxfilt" in the name
+      String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
 
-    String?  docker="quay.io/broadinstitute/viral-assemble"
-
+      Int?     machine_mem_gb
+      String   docker="quay.io/broadinstitute/viral-assemble"
+    }
 
     command {
         set -ex -o pipefail
 
         # find 90% memory
-        mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 90`
-        mem_in_gb=`/opt/viral-ngs/source/docker/calc_mem.py gb 90`
+        mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
+        mem_in_gb=$(/opt/viral-ngs/source/docker/calc_mem.py gb 90)
 
         assembly.py --version | tee VERSION
 
@@ -30,7 +34,7 @@ task assemble {
             ${trim_clip_db} \
             ${sample_name}.assembly1-${assembler}.fasta \
             ${'--n_reads=' + trinity_n_reads} \
-     	      ${true='--alwaysSucceed' false="" always_succeed} \
+            ${true='--alwaysSucceed' false="" always_succeed} \
             --JVMmemory "$mem_in_mb"m \
             --outReads=${sample_name}.subsamp.bam \
             --loglevel=DEBUG
@@ -41,7 +45,7 @@ task assemble {
             ${trim_clip_db} \
             ${sample_name}.assembly1-${assembler}.fasta \
             ${'--nReads=' + spades_n_reads} \
-	          ${true="--alwaysSucceed" false="" always_succeed} \
+            ${true="--alwaysSucceed" false="" always_succeed} \
             ${'--minContigLen=' + spades_min_contig_len} \
             --memLimitGb $mem_in_gb \
             --outReads=${sample_name}.subsamp.bam \
@@ -55,7 +59,7 @@ task assemble {
             ${'--n_reads=' + trinity_n_reads} \
             --JVMmemory "$mem_in_mb"m \
             --outReads=${sample_name}.subsamp.bam \
-     	      ${true='--always_succeed' false='' always_succeed} \
+            ${true='--always_succeed' false='' always_succeed} \
             --loglevel=DEBUG
           assembly.py assemble_spades \
             ${reads_unmapped_bam} \
@@ -63,7 +67,7 @@ task assemble {
             ${sample_name}.assembly1-${assembler}.fasta \
             --contigsUntrusted=${sample_name}.assembly1-trinity.fasta \
             ${'--nReads=' + spades_n_reads} \
-     	      ${true='--alwaysSucceed' false='' always_succeed} \
+            ${true='--alwaysSucceed' false='' always_succeed} \
             ${'--minContigLen=' + spades_min_contig_len} \
             --memLimitGb $mem_in_gb \
             --loglevel=DEBUG
@@ -85,38 +89,42 @@ task assemble {
 
     runtime {
         docker: "${docker}"
-        memory: "15 GB"
+        memory: select_first([machine_mem_gb, 15]) + " GB"
         cpu: 4
+        disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
     }
 
 }
 
 task scaffold {
-    File         contigs_fasta
-    File         reads_bam
-    Array[File]+ reference_genome_fasta
+    input {
+      File         contigs_fasta
+      File         reads_bam
+      Array[File]+ reference_genome_fasta
 
-    String?      aligner
-    Float?       min_length_fraction
-    Float?       min_unambig
-    Int?         replace_length=55
+      String?      aligner
+      Float?       min_length_fraction
+      Float?       min_unambig
+      Int?         replace_length=55
 
-    Int?         nucmer_max_gap
-    Int?         nucmer_min_match
-    Int?         nucmer_min_cluster
-    Float?       scaffold_min_pct_contig_aligned
+      Int?         nucmer_max_gap
+      Int?         nucmer_min_match
+      Int?         nucmer_min_cluster
+      Float?       scaffold_min_pct_contig_aligned
 
-    String?      docker="quay.io/broadinstitute/viral-assemble"
+      Int?         machine_mem_gb
+      String       docker="quay.io/broadinstitute/viral-assemble"
 
-    # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
-    String       sample_name = basename(basename(basename(contigs_fasta, ".fasta"), ".assembly1-trinity"), ".assembly1-spades")
+      # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
+      String       sample_name = basename(basename(basename(contigs_fasta, ".fasta"), ".assembly1-trinity"), ".assembly1-spades")
+    }
 
     command {
         set -ex -o pipefail
 
         # find 90% memory
-        mem_in_gb=`/opt/viral-ngs/source/docker/calc_mem.py gb 90`
+        mem_in_gb=$(/opt/viral-ngs/source/docker/calc_mem.py gb 90)
 
         assembly.py --version | tee VERSION
 
@@ -173,36 +181,289 @@ task scaffold {
 
     runtime {
         docker: "${docker}"
-        memory: "15 GB"
+        memory: select_first([machine_mem_gb, 15]) + " GB"
         cpu: 4
+        disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
     }
 }
 
-task refine {
-    File    assembly_fasta
-    File    reads_unmapped_bam
+task ivar_trim {
+    meta {
+      description: "this runs ivar trim on aligned reads, which results in soft-clipping of alignments"
+    }
 
-    File?   novocraft_license
+    input {
+      File    aligned_bam
+      File?   trim_coords_bed
+      Int?    min_keep_length
+      Int?    sliding_window
+      Int?    min_quality
 
-    String? novoalign_options="-r Random -l 40 -g 40 -x 20 -t 100"
-    Float?  major_cutoff=0.5
-    Int?    min_coverage=1
+      Int?    machine_mem_gb
+      String  docker="andersenlabapps/ivar"
+    }
 
-    String? docker="quay.io/broadinstitute/viral-assemble"
+    String  bam_basename=basename(aligned_bam, ".bam")
 
-    String  assembly_basename=basename(basename(assembly_fasta, ".fasta"), ".scaffold")
+    parameter_meta {
+      aligned_bam:     { description: "aligned reads in BAM format", patterns: ["*.bam"] }
+      trim_coords_bed: { description: "optional primers to trim in reference coordinate space (0-based BED format)", patterns: ["*.bed"] }
+      min_keep_length: { description: "Minimum length of read to retain after trimming (Default: 30)" }
+      sliding_window:  { description: "Width of sliding window for quality trimming (Default: 4)" }
+      min_quality:     { description: "Minimum quality threshold for sliding window to pass (Default: 20)" }
+    }
+
+    command {
+        set -ex -o pipefail
+        ivar version | head -1 | tee VERSION
+        ivar trim -e \
+          ${'-b ' + trim_coords_bed} \
+          ${'-m ' + min_keep_length} \
+          ${'-s ' + sliding_window} \
+          ${'-q ' + min_quality} \
+          -i ${aligned_bam} -p trim
+        samtools sort -@ $(nproc) -m 1000M -o ${bam_basename}.trimmed.bam trim.bam
+    }
+
+    output {
+        File   aligned_trimmed_bam = "${bam_basename}.trimmed.bam"
+        String ivar_version        = read_string("VERSION")
+    }
+
+    runtime {
+        docker: "${docker}"
+        memory: select_first([machine_mem_gb, 7]) + " GB"
+        cpu: 4
+        disks: "local-disk 375 LOCAL"
+        dx_instance_type: "mem1_ssd1_v2_x4"
+    }
+}
+
+task align_reads {
+  meta {
+    description: "Align unmapped reads to a reference genome, either using novoalign (default) or bwa. Produces an aligned bam file (including all unmapped reads), an aligned-only bam file, both sorted and indexed, along with samtools flagstat output, fastqc stats (on mapped only reads), and some basic figures of merit."
+  }
+
+  input {
+    File     reference_fasta
+    File     reads_unmapped_bam
+
+    File?    novocraft_license
+
+    String?  aligner="novoalign" # novoalign or bwa
+    String?  aligner_options
+    Boolean? skip_mark_dupes=false
+
+    String   docker="quay.io/broadinstitute/viral-core"
+
+    String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
+  }
+
+  parameter_meta {
+    aligner: { description: "Short read aligner to use: novoalign or bwa. (Default: novoalign)" }
+  }
+  
+  command {
+    set -ex # do not set pipefail, since grep exits 1 if it can't find the pattern
+
+    read_utils.py --version | tee VERSION
+
+    cp ${reference_fasta} assembly.fasta
+    grep -v '^>' assembly.fasta | tr -d '\n' | wc -c | tee assembly_length
+
+    if [ "$(cat assembly_length)" != "0" ]; then
+
+      # only perform the following if the reference is non-empty
+
+      if [ "${aligner}" == "novoalign" ]; then
+        read_utils.py novoindex \
+          assembly.fasta \
+          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
+          --loglevel=DEBUG
+      fi
+      read_utils.py index_fasta_picard assembly.fasta --loglevel=DEBUG
+      read_utils.py index_fasta_samtools assembly.fasta --loglevel=DEBUG
+
+      read_utils.py align_and_fix \
+        ${reads_unmapped_bam} \
+        assembly.fasta \
+        --outBamAll "${sample_name}.all.bam" \
+        --outBamFiltered "${sample_name}.mapped.bam" \
+        --aligner ${aligner} \
+        ${'--aligner_options "' + aligner_options + '"'} \
+        ${true='--skipMarkDupes' false="" skip_mark_dupes} \
+        --JVMmemory=3g \
+        ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
+        --loglevel=DEBUG
+
+    else
+      # handle special case of empty reference fasta -- emit empty bams (with original bam headers)
+      samtools view -H -b "${reads_unmapped_bam}" > "${sample_name}.all.bam"
+      samtools view -H -b "${reads_unmapped_bam}" > "${sample_name}.mapped.bam"
+
+      samtools index "${sample_name}.all.bam" "${sample_name}.all.bai"
+      samtools index "${sample_name}.mapped.bam" "${sample_name}.mapped.bai"
+    fi
+
+    # collect figures of merit
+    grep -v '^>' assembly.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
+    samtools view -c ${reads_unmapped_bam} | tee reads_provided
+    samtools view -c ${sample_name}.mapped.bam | tee reads_aligned
+    # report only primary alignments 260=exclude unaligned reads and secondary mappings
+    samtools view -h -F 260 ${sample_name}.all.bam | samtools flagstat - | tee ${sample_name}.all.bam.flagstat.txt
+    grep properly ${sample_name}.all.bam.flagstat.txt | cut -f 1 -d ' ' | tee read_pairs_aligned
+    samtools view ${sample_name}.mapped.bam | cut -f10 | tr -d '\n' | wc -c | tee bases_aligned
+    python -c "print (float("$(cat bases_aligned)")/"$(cat assembly_length_unambiguous)") if "$(cat assembly_length_unambiguous)">0 else print(0)" > mean_coverage
+
+    # fastqc mapped bam
+    reports.py fastqc ${sample_name}.mapped.bam ${sample_name}.mapped_fastqc.html --out_zip ${sample_name}.mapped_fastqc.zip
+  }
+
+  output {
+    File   aligned_bam                   = "${sample_name}.all.bam"
+    File   aligned_bam_idx               = "${sample_name}.all.bai"
+    File   aligned_bam_flagstat          = "${sample_name}.all.bam.flagstat.txt"
+    File   aligned_only_reads_bam        = "${sample_name}.mapped.bam"
+    File   aligned_only_reads_bam_idx    = "${sample_name}.mapped.bai"
+    File   aligned_only_reads_fastqc     = "${sample_name}.mapped_fastqc.html"
+    File   aligned_only_reads_fastqc_zip = "${sample_name}.mapped_fastqc.zip"
+    Int    reads_provided                = read_int("reads_provided")
+    Int    reads_aligned                 = read_int("reads_aligned")
+    Int    read_pairs_aligned            = read_int("read_pairs_aligned")
+    Int    bases_aligned                 = read_int("bases_aligned")
+    Float  mean_coverage                 = read_float("mean_coverage")
+    String viralngs_version              = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "${docker}"
+    memory: "7 GB"
+    cpu: 8
+    disks: "local-disk 375 LOCAL"
+    dx_instance_type: "mem1_ssd1_v2_x8"
+    preemptible: 1
+  }
+}
+
+task refine_assembly_with_aligned_reads {
+    meta {
+      description: "This step refines/polishes a genome based on short read alignments, producing a new consensus genome. Uses GATK3 Unified Genotyper to produce new consensus. Produces new genome (fasta), variant calls (VCF), and figures of merit."
+    }
+
+    input {
+      File     reference_fasta
+      File     reads_aligned_bam
+      String   sample_name
+
+      Boolean? mark_duplicates=false
+      Float?   major_cutoff=0.5
+      Int?     min_coverage=3
+
+      Int?     machine_mem_gb
+      String   docker="quay.io/broadinstitute/viral-assemble"
+    }
+
+    parameter_meta {
+      major_cutoff: {
+        description: "If the major allele is present at a frequency higher than this cutoff, we will call an unambiguous base at that position.  If it is equal to or below this cutoff, we will call an ambiguous base representing all possible alleles at that position."
+      }
+      min_coverage: {
+        description: "Minimum read coverage required to call a position unambiguous."
+      }
+    }
 
     command {
         set -ex -o pipefail
 
         # find 90% memory
-        mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 90`
+        mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
+
+        assembly.py --version | tee VERSION
+
+        if [ ${true='true' false='false' mark_duplicates} == "true" ]; then
+          read_utils.py mkdup_picard \
+            ${reads_aligned_bam} \
+            temp_markdup.bam \
+            --JVMmemory "$mem_in_mb"m \
+            --loglevel=DEBUG
+        else
+          ln -s ${reads_aligned_bam} temp_markdup.bam
+        fi
+        samtools index -@ $(nproc) temp_markdup.bam temp_markdup.bai
+
+        ln -s ${reference_fasta} assembly.fasta
+        assembly.py refine_assembly \
+          assembly.fasta \
+          temp_markdup.bam \
+          refined.fasta \
+          --already_realigned_bam=temp_markdup.bam \
+          --outVcf ${sample_name}.sites.vcf.gz \
+          --min_coverage ${min_coverage} \
+          --major_cutoff ${major_cutoff} \
+          --JVMmemory "$mem_in_mb"m \
+          --loglevel=DEBUG
+
+        file_utils.py rename_fasta_sequences \
+          refined.fasta "${sample_name}.fasta" "${sample_name}"
+
+        # collect figures of merit
+        set +o pipefail # grep will exit 1 if it fails to find the pattern
+        grep -v '^>' refined.fasta | tr -d '\n' | wc -c | tee assembly_length
+        grep -v '^>' refined.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
+    }
+
+    output {
+        File   refined_assembly_fasta       = "${sample_name}.fasta"
+        File   sites_vcf_gz                 = "${sample_name}.sites.vcf.gz"
+        Int    assembly_length              = read_int("assembly_length")
+        Int    assembly_length_unambiguous  = read_int("assembly_length_unambiguous")
+        String viralngs_version             = read_string("VERSION")
+    }
+
+    runtime {
+        docker: "${docker}"
+        memory: select_first([machine_mem_gb, 7]) + " GB"
+        cpu: 8
+        disks: "local-disk 375 LOCAL"
+        dx_instance_type: "mem1_ssd1_v2_x8"
+    }
+}
+
+task refine {
+    meta {
+      description: "This step refines/polishes a genome based on unmapped short reads, aligning them (with either novoalign or bwa), and producing a new consensus genome. Uses GATK3 Unified Genotyper to produce new consensus. Produces new genome (fasta), variant calls (VCF), and figures of merit."
+    }
+
+    input {
+      File    assembly_fasta
+      File    reads_unmapped_bam
+
+      File?   novocraft_license
+
+      String? novoalign_options="-r Random -l 40 -g 40 -x 20 -t 100"
+      Float?  major_cutoff=0.5
+      Int?    min_coverage=1
+
+      Int?    machine_mem_gb
+      String  docker="quay.io/broadinstitute/viral-assemble"
+
+      String  assembly_basename=basename(basename(assembly_fasta, ".fasta"), ".scaffold")
+    }
+
+    command {
+        set -ex -o pipefail
+
+        # find 90% memory
+        mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
 
         assembly.py --version | tee VERSION
 
         ln -s ${assembly_fasta} assembly.fasta
-        read_utils.py novoindex assembly.fasta --loglevel=DEBUG
+        read_utils.py novoindex \
+        assembly.fasta \
+        ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
+        --loglevel=DEBUG
 
         assembly.py refine_assembly \
           assembly.fasta \
@@ -213,6 +474,7 @@ task refine {
           --major_cutoff ${major_cutoff} \
           --novo_params="${novoalign_options}" \
           --JVMmemory "$mem_in_mb"m \
+          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
           --loglevel=DEBUG
     }
 
@@ -224,52 +486,55 @@ task refine {
 
     runtime {
         docker: "${docker}"
-        memory: "7 GB"
+        memory: select_first([machine_mem_gb, 7]) + " GB"
         cpu: 8
+        disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
     }
 }
 
 
 task refine_2x_and_plot {
-    # This combined task exists just to streamline the two calls to
-    # assembly.refine and one call to reports.plot_coverage that almost
-    # every assembly workflow uses. It saves on instance spin up and
-    # docker pull times, file staging time, and all steps contained
-    # here have similar hardware requirements. It is also extremely
-    # rare for analyses to branch off of intermediate products between
-    # these three steps.
-    # The more atomic WDL tasks are still available for custom workflows.
-    File    assembly_fasta
-    File    reads_unmapped_bam
+    meta {
+      description: "This combined task exists just to streamline the two calls to assembly.refine and one call to reports.plot_coverage that many denovo assembly workflows use. It saves on instance spin up and docker pull times, file staging time, and all steps contained here have similar hardware requirements. The more atomic WDL tasks are still available for custom workflows (see refine, refine_assembly_with_aligned_reads, align_reads, etc)."
+    }
 
-    File?   novocraft_license
+    input {
+      File    assembly_fasta
+      File    reads_unmapped_bam
 
-    String? refine1_novoalign_options="-r Random -l 30 -g 40 -x 20 -t 502"
-    Float?  refine1_major_cutoff=0.5
-    Int?    refine1_min_coverage=2
+      File?   novocraft_license
 
-    String? refine2_novoalign_options="-r Random -l 40 -g 40 -x 20 -t 100"
-    Float?  refine2_major_cutoff=0.5
-    Int?    refine2_min_coverage=3
+      String? refine1_novoalign_options="-r Random -l 30 -g 40 -x 20 -t 502"
+      Float?  refine1_major_cutoff=0.5
+      Int?    refine1_min_coverage=2
 
-    String? plot_coverage_novoalign_options="-r Random -l 40 -g 40 -x 20 -t 100 -k"
+      String? refine2_novoalign_options="-r Random -l 40 -g 40 -x 20 -t 100"
+      Float?  refine2_major_cutoff=0.5
+      Int?    refine2_min_coverage=3
 
-    String? docker="quay.io/broadinstitute/viral-assemble"
+      String? plot_coverage_novoalign_options="-r Random -l 40 -g 40 -x 20 -t 100 -k"
 
-    # do this in two steps in case the input doesn't actually have "cleaned" in the name
-    String  sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
+      Int?    machine_mem_gb
+      String  docker="quay.io/broadinstitute/viral-assemble"
+
+      # do this in two steps in case the input doesn't actually have "cleaned" in the name
+      String  sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
+    }
 
     command {
         set -ex -o pipefail
 
         # find 90% memory
-        mem_in_mb=`/opt/viral-ngs/source/docker/calc_mem.py mb 90`
+        mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
 
         assembly.py --version | tee VERSION
 
         ln -s ${assembly_fasta} assembly.fasta
-        read_utils.py novoindex assembly.fasta --loglevel=DEBUG
+        read_utils.py novoindex \
+        assembly.fasta \
+        ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
+        --loglevel=DEBUG
 
         # refine 1
         assembly.py refine_assembly \
@@ -281,6 +546,7 @@ task refine_2x_and_plot {
           --major_cutoff ${refine1_major_cutoff} \
           --novo_params="${refine1_novoalign_options}" \
           --JVMmemory "$mem_in_mb"m \
+          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
           --loglevel=DEBUG
 
         # refine 2
@@ -292,6 +558,7 @@ task refine_2x_and_plot {
           --min_coverage ${refine2_min_coverage} \
           --major_cutoff ${refine2_major_cutoff} \
           --novo_params="${refine2_novoalign_options}" \
+          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
           --JVMmemory "$mem_in_mb"m \
           --loglevel=DEBUG
 
@@ -303,9 +570,11 @@ task refine_2x_and_plot {
           --outBamFiltered ${sample_name}.mapped.bam \
           --aligner_options "${plot_coverage_novoalign_options}" \
           --JVMmemory "$mem_in_mb"m \
+          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
           --loglevel=DEBUG
 
         # collect figures of merit
+        set +o pipefail # grep will exit 1 if it fails to find the pattern
         grep -v '^>' ${sample_name}.fasta | tr -d '\n' | wc -c | tee assembly_length
         grep -v '^>' ${sample_name}.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
         samtools view -c ${sample_name}.mapped.bam | tee reads_aligned
@@ -314,16 +583,17 @@ task refine_2x_and_plot {
         grep properly ${sample_name}.all.bam.flagstat.txt | cut -f 1 -d ' ' | tee read_pairs_aligned
         samtools view ${sample_name}.mapped.bam | cut -f10 | tr -d '\n' | wc -c | tee bases_aligned
         #echo $(( $(cat bases_aligned) / $(cat assembly_length) )) | tee mean_coverage
-        python -c "print (float("`cat bases_aligned`")/"`cat assembly_length`") if "`cat assembly_length`">0 else 0" > mean_coverage
+        python -c "print (float("$(cat bases_aligned)")/"$(cat assembly_length)") if "$(cat assembly_length)">0 else print(0)" > mean_coverage
 
         # fastqc mapped bam
-        reports.py fastqc ${sample_name}.mapped.bam ${sample_name}.mapped_fastqc.html
+        reports.py fastqc ${sample_name}.mapped.bam ${sample_name}.mapped_fastqc.html --out_zip ${sample_name}.mapped_fastqc.zip
 
         # plot coverage
         if [ $(cat reads_aligned) != 0 ]; then
           reports.py plot_coverage \
             ${sample_name}.mapped.bam \
             ${sample_name}.coverage_plot.pdf \
+            --outSummary "${sample_name}.coverage_plot.txt" \
             --plotFormat pdf \
             --plotWidth 1100 \
             --plotHeight 850 \
@@ -331,36 +601,38 @@ task refine_2x_and_plot {
             --plotTitle "${sample_name} coverage plot" \
             --loglevel=DEBUG
         else
-          touch ${sample_name}.coverage_plot.pdf
+          touch ${sample_name}.coverage_plot.pdf ${sample_name}.coverage_plot.txt
         fi
     }
 
     output {
-        File refine1_sites_vcf_gz        = "${sample_name}.refine1.pre_fasta.vcf.gz"
-        File refine1_assembly_fasta      = "${sample_name}.refine1.fasta"
-        File refine2_sites_vcf_gz        = "${sample_name}.refine2.pre_fasta.vcf.gz"
-        File final_assembly_fasta        = "${sample_name}.fasta"
-        File aligned_bam                 = "${sample_name}.all.bam"
-        File aligned_bam_idx             = "${sample_name}.all.bai"
-        File aligned_bam_flagstat        = "${sample_name}.all.bam.flagstat.txt"
-        File aligned_only_reads_bam      = "${sample_name}.mapped.bam"
-        File aligned_only_reads_bam_idx  = "${sample_name}.mapped.bai"
-        File aligned_only_reads_fastqc   = "${sample_name}.mapped_fastqc.html"
-        File coverage_plot               = "${sample_name}.coverage_plot.pdf"
-        Int  assembly_length             = read_int("assembly_length")
-        Int  assembly_length_unambiguous = read_int("assembly_length_unambiguous")
-        Int  reads_aligned               = read_int("reads_aligned")
-        Int  read_pairs_aligned          = read_int("read_pairs_aligned")
-        Int  bases_aligned               = read_int("bases_aligned")
-        Float mean_coverage              = read_float("mean_coverage")
-        String viralngs_version          = read_string("VERSION")
+        File refine1_sites_vcf_gz          = "${sample_name}.refine1.pre_fasta.vcf.gz"
+        File refine1_assembly_fasta        = "${sample_name}.refine1.fasta"
+        File refine2_sites_vcf_gz          = "${sample_name}.refine2.pre_fasta.vcf.gz"
+        File final_assembly_fasta          = "${sample_name}.fasta"
+        File aligned_bam                   = "${sample_name}.all.bam"
+        File aligned_bam_idx               = "${sample_name}.all.bai"
+        File aligned_bam_flagstat          = "${sample_name}.all.bam.flagstat.txt"
+        File aligned_only_reads_bam        = "${sample_name}.mapped.bam"
+        File aligned_only_reads_bam_idx    = "${sample_name}.mapped.bai"
+        File aligned_only_reads_fastqc     = "${sample_name}.mapped_fastqc.html"
+        File aligned_only_reads_fastqc_zip = "${sample_name}.mapped_fastqc.zip"
+        File coverage_plot                 = "${sample_name}.coverage_plot.pdf"
+        File coverage_tsv                  = "${sample_name}.coverage_plot.txt"
+        Int  assembly_length               = read_int("assembly_length")
+        Int  assembly_length_unambiguous   = read_int("assembly_length_unambiguous")
+        Int  reads_aligned                 = read_int("reads_aligned")
+        Int  read_pairs_aligned            = read_int("read_pairs_aligned")
+        Int  bases_aligned                 = read_int("bases_aligned")
+        Float mean_coverage                = read_float("mean_coverage")
+        String viralngs_version            = read_string("VERSION")
     }
 
     runtime {
         docker: "${docker}"
-        memory: "7 GB"
+        memory: select_first([machine_mem_gb, 7]) + " GB"
         cpu: 8
+        disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
     }
 }
-

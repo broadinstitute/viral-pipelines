@@ -1,0 +1,15 @@
+{
+  "classify_multi.spikein_db":
+    "dx://file-FZY2v7Q0xf5VBy5FFY3z5fz7",
+
+  "classify_multi.trim_clip_db":
+    "dx://file-BXF0vYQ0QyBF509G9J12g927",
+
+  "classify_multi.kraken2_db_tgz":
+    "dx://file-Fq1ZPzQ0GY2bkq6K8KKk82G3",
+  "classify_multi.krona_taxonomy_db_kraken2_tgz":
+    "dx://file-Fpp14j00xf5Xjq665v8v93z8",
+
+  "classify_multi.ncbi_taxdump_tgz":
+    "dx://file-FppzzVj0xf5zfvpg44fY1V93"
+}

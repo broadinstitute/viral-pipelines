@@ -1,0 +1,2 @@
+ERROR: valid [SEQ_FEAT.NoStop] Missing stop codon FEATURE: CDS: Z protein [lcl|LASV_NGA_2018_0541-1:8-307] [lcl|LASV_NGA_2018_0541-1: raw, rna len= 7092] -> [lcl|LASV_NGA_2018_0541-1_1]
+WARNING: valid [SEQ_INST.TrailingX] Sequence ends in 2 trailing Xs BIOSEQ: lcl|LASV_NGA_2018_0541-1_1: raw, aa len= 100
