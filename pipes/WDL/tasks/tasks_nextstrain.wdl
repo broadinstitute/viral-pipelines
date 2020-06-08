@@ -199,9 +199,14 @@ task augur_mask_sites {
     String basename = basename(sequences, '.fasta')
     command {
         augur version > VERSION
-        augur mask --sequences ~{sequences} \
-            --mask ~{select_first([mask_bed, "/dev/null"])} \
-            --output ~{basename}_masked.fasta
+        BEDFILE=~{select_first([mask_bed, "/dev/null"])}
+        if [ -s "$BEDFILE" ]; then
+            augur mask --sequences ~{sequences} \
+                --mask "$BEDFILE" \
+                --output "~{basename}_masked.fasta"
+        else
+            cp "~{sequences}" "~{basename}_masked.fasta"
+        fi
     }
     runtime {
         docker: docker
