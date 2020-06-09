@@ -2,7 +2,6 @@
 set -e  # intentionally allow for pipe failures below
 
 mkdir -p workflows
-cp *.jar pipes/WDL/workflows/*.wdl pipes/WDL/tasks/*.wdl workflows
 cp -r test workflows/
 cd workflows
 
@@ -13,7 +12,8 @@ for workflow in ../pipes/WDL/workflows/*.wdl; do
 		date
 		echo "Executing $workflow_name using Cromwell on local instance"
 		# the "cat" is to allow a pipe failure (otherwise it halts because of set -e)
-		java -jar cromwell.jar run \
+		java -Dconfig.file=../pipes/cromwell/cromwell.local-travis.conf \
+			-jar ../cromwell.jar run \
 			$workflow_name.wdl \
 			-i $input_json | tee cromwell.out
 		if [ ${PIPESTATUS[0]} -gt 0 ]; then
