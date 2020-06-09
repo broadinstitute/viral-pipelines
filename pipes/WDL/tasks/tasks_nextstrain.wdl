@@ -104,7 +104,7 @@ task filter_subsample_sequences {
           patterns: ["*.txt", "*.tsv"]
         }
     }
-    String out_fname = sub(sub(sequences_fasta, ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
+    String out_fname = sub(sub(basename(sequences_fasta), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
     command {
         augur version > VERSION
         augur filter \
@@ -203,7 +203,7 @@ task augur_mask_sites {
           patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
         }
     }
-    String out_fname = sub(sub(sequences, ".vcf", ".masked.vcf"), ".fasta$", ".masked.fasta")
+    String out_fname = sub(sub(basename(sequences), ".vcf", ".masked.vcf"), ".fasta$", ".masked.fasta")
     command {
         augur version > VERSION
         BEDFILE=~{select_first([mask_bed, "/dev/null"])}
