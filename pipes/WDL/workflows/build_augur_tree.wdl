@@ -70,15 +70,15 @@ workflow build_augur_tree {
     }
     call nextstrain.draft_augur_tree {
         input:
-            aligned_fasta  = augur_mask_sites.masked_sequences,
-            basename       = virus
+            msa_or_vcf = augur_mask_sites.masked_sequences,
+            basename   = virus
     }
     call nextstrain.refine_augur_tree {
         input:
-            raw_tree       = draft_augur_tree.aligned_tree,
-            aligned_fasta  = augur_mask_sites.masked_sequences,
-            metadata       = sample_metadata,
-            basename       = virus
+            raw_tree    = draft_augur_tree.aligned_tree,
+            msa_or_vcf  = augur_mask_sites.masked_sequences,
+            metadata    = sample_metadata,
+            basename    = virus
     }
     if(defined(ancestral_traits_to_infer) && length(select_first([ancestral_traits_to_infer,[]]))>0) {
         call nextstrain.ancestral_traits {
@@ -91,9 +91,9 @@ workflow build_augur_tree {
     }
     call nextstrain.ancestral_tree {
         input:
-            refined_tree   = refine_augur_tree.tree_refined,
-            aligned_fasta  = augur_mask_sites.masked_sequences,
-            basename       = virus
+            refined_tree  = refine_augur_tree.tree_refined,
+            msa_or_vcf    = augur_mask_sites.masked_sequences,
+            basename      = virus
     }
     call nextstrain.translate_augur_tree {
         input:

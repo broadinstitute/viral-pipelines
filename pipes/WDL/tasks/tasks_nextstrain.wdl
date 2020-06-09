@@ -96,15 +96,15 @@ task filter_subsample_sequences {
     }
     parameter_meta {
         sequences_fasta: {
-          description: "Set of sequences in fasta format to subsample using augur filter. These must represent a single chromosome/segment of a genome only.",
-          patterns: ["*.fasta", "*.fa"]
+          description: "Set of sequences (unaligned fasta or aligned fasta -- one sequence per genome) or variants (vcf format) to subsample using augur filter.",
+          patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
         }
         sample_metadata_tsv: {
           description: "Metadata in tab-separated text format. See https://nextstrain-augur.readthedocs.io/en/stable/faq/metadata.html for details.",
           patterns: ["*.txt", "*.tsv"]
         }
     }
-    String in_basename = basename(sequences_fasta, ".fasta")
+    String out_fname = sub(sub(sequences_fasta, ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
     command {
         augur version > VERSION
         augur filter \
@@ -122,23 +122,24 @@ task filter_subsample_sequences {
             ~{"--subsample-seed " + subsample_seed} \
             ~{"--exclude-where " + exclude_where} \
             ~{"--include-where " + include_where} \
-            --output "~{in_basename}.filtered.fasta"
-        cat ~{sequences_fasta} | grep \> | wc -l > IN_COUNT
-        cat ~{in_basename}.filtered.fasta | grep \> | wc -l > OUT_COUNT
+            --output "~{out_fname}" | tee STDOUT
+        #cat ~{sequences_fasta} | grep \> | wc -l > IN_COUNT
+        grep "sequences were dropped during filtering" STDOUT | cut -f 1 -d ' ' > DROP_COUNT
+        grep "sequences have been written out to" STDOUT | cut -f 1 -d ' ' > OUT_COUNT
     }
     runtime {
         docker: docker
-        memory: "4 GB"
-        cpu :   2
-        disks:  "local-disk 375 LOCAL"
+        memory: "3 GB"
+        cpu :   1
+        disks:  "local-disk 100 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 1
     }
     output {
-        File   filtered_fasta = "~{in_basename}.filtered.fasta"
-        String augur_version  = read_string("VERSION")
-        Int    sequences_in   = read_int("IN_COUNT")
-        Int    sequences_out  = read_int("OUT_COUNT")
+        File   filtered_fasta    = out_fname
+        String augur_version     = read_string("VERSION")
+        Int    sequences_dropped = read_int("DROP_COUNT")
+        Int    sequences_out     = read_int("OUT_COUNT")
     }
 }
 
@@ -188,7 +189,7 @@ task augur_mafft_align {
 
 task augur_mask_sites {
     meta {
-        description: "Mask unwanted positions from alignment. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/mask.html"
+        description: "Mask unwanted positions from alignment or SNP table. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/mask.html"
     }
     input {
         File     sequences
@@ -196,16 +197,22 @@ task augur_mask_sites {
 
         String   docker = "nextstrain/base"
     }
-    String basename = basename(sequences, '.fasta')
+    parameter_meta {
+        sequences: {
+          description: "Set of alignments (fasta format) or variants (vcf format) to mask.",
+          patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
+        }
+    }
+    String out_fname = sub(sub(sequences, ".vcf", ".masked.vcf"), ".fasta$", ".masked.fasta")
     command {
         augur version > VERSION
         BEDFILE=~{select_first([mask_bed, "/dev/null"])}
         if [ -s "$BEDFILE" ]; then
             augur mask --sequences ~{sequences} \
                 --mask "$BEDFILE" \
-                --output "~{basename}_masked.fasta"
+                --output "~{out_fname}"
         else
-            cp "~{sequences}" "~{basename}_masked.fasta"
+            cp "~{sequences}" "~{out_fname}"
         fi
     }
     runtime {
@@ -217,17 +224,17 @@ task augur_mask_sites {
         dx_instance_type: "mem1_ssd1_v2_x2"
     }
     output {
-        File masked_sequences = "~{basename}_masked.fasta"
-        String augur_version = read_string("VERSION")
+        File masked_sequences = out_fname
+        String augur_version  = read_string("VERSION")
     }
 }
 
 task draft_augur_tree {
     meta {
-        description: "Build a tree using a variety of methods. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/tree.html"
+        description: "Build a tree using iqTree. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/tree.html"
     }
     input {
-        File     aligned_fasta
+        File     msa_or_vcf
         String   basename
 
         String   method = "iqtree"
@@ -240,9 +247,15 @@ task draft_augur_tree {
         Int?     disk_space_gb = 750
         String   docker = "nextstrain/base"
     }
+    parameter_meta {
+        msa_or_vcf: {
+          description: "Set of alignments (fasta format) or variants (vcf format) to construct a tree from using augur tree (iqTree).",
+          patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
+        }
+    }
     command {
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur tree --alignment ~{aligned_fasta} \
+        AUGUR_RECURSION_LIMIT=10000 augur tree --alignment ~{msa_or_vcf} \
             --output ~{basename}_raw_tree.nwk \
             --method ~{default="iqtree" method} \
             --substitution-model ~{default="GTR" substitution_model} \
@@ -267,11 +280,11 @@ task draft_augur_tree {
 
 task refine_augur_tree {
     meta {
-        description: "Refine an initial tree using sequence metadata. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/refine.html"
+        description: "Refine an initial tree using sequence metadata and Treetime. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/refine.html"
     }
     input {
         File     raw_tree
-        File     aligned_fasta
+        File     msa_or_vcf
         File     metadata
         String   basename
 
@@ -295,11 +308,17 @@ task refine_augur_tree {
         Int?     disk_space_gb = 750
         String   docker = "nextstrain/base"
     }
+    parameter_meta {
+        msa_or_vcf: {
+          description: "Set of alignments (fasta format) or variants (vcf format) to use to guide Treetime.",
+          patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
+        }
+    }
     command {
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur refine \
             --tree ~{raw_tree} \
-            --alignment ~{aligned_fasta} \
+            --alignment ~{msa_or_vcf} \
             --metadata ~{metadata} \
             --output-tree ~{basename}_refined_tree.nwk \
             --output-node-data ~{basename}_branch_lengths.json \
@@ -382,7 +401,7 @@ task ancestral_tree {
     }
     input {
         File     refined_tree
-        File     aligned_fasta
+        File     msa_or_vcf
         String   basename
 
         String   inference = "joint"
@@ -395,11 +414,17 @@ task ancestral_tree {
         Int?     machine_mem_gb
         String   docker = "nextstrain/base"
     }
+    parameter_meta {
+        msa_or_vcf: {
+          description: "Set of alignments (fasta format) or variants (vcf format) to use to guide Treetime.",
+          patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
+        }
+    }
     command {
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur ancestral \
             --tree ~{refined_tree} \
-            --alignment ~{aligned_fasta} \
+            --alignment ~{msa_or_vcf} \
             --output-node-data ~{basename}_nt_muts.json \
             ~{"--vcf-reference " + vcf_reference} \
             ~{"--output-vcf " + output_vcf} \
