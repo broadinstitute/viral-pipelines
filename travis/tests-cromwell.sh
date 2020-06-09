@@ -14,7 +14,7 @@ for workflow in ../pipes/WDL/workflows/*.wdl; do
 		# the "cat" is to allow a pipe failure (otherwise it halts because of set -e)
 		java -Dconfig.file=../pipes/cromwell/cromwell.local-travis.conf \
 			-jar ../cromwell.jar run \
-			$workflow_name.wdl \
+			../pipes/WDL/workflows/$workflow_name.wdl \
 			-i $input_json | tee cromwell.out
 		if [ ${PIPESTATUS[0]} -gt 0 ]; then
 			echo "error running $workflow_name"
