@@ -170,7 +170,6 @@ task augur_mafft_align {
             ~{true="--remove-reference" false="" remove_reference} \
             --debug \
             --nthreads auto
-        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes
     }
     runtime {
         docker: docker
@@ -181,8 +180,9 @@ task augur_mafft_align {
         dx_instance_type: "mem3_ssd2_v2_x16"
     }
     output {
-        File aligned_sequences = "~{basename}_aligned.fasta"
-        File align_troubleshoot = stdout()
+        File   aligned_sequences = "~{basename}_aligned.fasta"
+        File   align_troubleshoot = stdout()
+        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
         String augur_version = read_string("VERSION")
     }
 }
@@ -224,7 +224,8 @@ task augur_mask_sites {
         dx_instance_type: "mem1_ssd1_v2_x2"
     }
     output {
-        File masked_sequences = out_fname
+        File   masked_sequences = out_fname
+        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
         String augur_version  = read_string("VERSION")
     }
 }
@@ -263,6 +264,8 @@ task draft_augur_tree {
             ~{"--vcf-reference " + vcf_reference} \
             ~{"--tree-builder-args " + tree_builder_args} \
             --nthreads auto
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
     }
     runtime {
         docker: docker
@@ -273,7 +276,10 @@ task draft_augur_tree {
         preemptible: 0
     }
     output {
-        File aligned_tree = "~{basename}_raw_tree.nwk"
+        File   aligned_tree = "~{basename}_raw_tree.nwk"
+        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
+        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
+        Int    cpu_load_15min = ceil(read_float("LOAD_15M"))
         String augur_version = read_string("VERSION")
     }
 }
@@ -338,6 +344,8 @@ task refine_augur_tree {
             ~{true="--keep-polytomies" false="" keep_polytomies} \
             ~{true="--date-confidence" false="" date_confidence} \
             ~{"--vcf-reference " + vcf_reference}
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
     }
     runtime {
         docker: docker
@@ -348,8 +356,11 @@ task refine_augur_tree {
         preemptible: 0
     }
     output {
-        File tree_refined  = "~{basename}_refined_tree.nwk"
-        File branch_lengths = "~{basename}_branch_lengths.json"
+        File   tree_refined  = "~{basename}_refined_tree.nwk"
+        File   branch_lengths = "~{basename}_branch_lengths.json"
+        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
+        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
+        Int    cpu_load_15min = ceil(read_float("LOAD_15M"))
         String augur_version = read_string("VERSION")
     }
 }
@@ -390,7 +401,8 @@ task ancestral_traits {
         preemptible: 2
     }
     output {
-        File node_data_json = "~{basename}_nodes.json"
+        File   node_data_json = "~{basename}_nodes.json"
+        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
         String augur_version = read_string("VERSION")
     }
 }
@@ -433,6 +445,8 @@ task ancestral_tree {
             --inference ~{default="joint" inference} \
             ~{true="--keep-ambiguous" false="" keep_ambiguous} \
             ~{true="--infer-ambiguous" false="" infer_ambiguous}
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
     }
     runtime {
         docker: docker
@@ -443,8 +457,11 @@ task ancestral_tree {
         preemptible: 2
     }
     output {
-        File nt_muts_json = "~{basename}_nt_muts.json"
-        File sequences    = "~{basename}_ancestral_sequences.fasta"
+        File   nt_muts_json = "~{basename}_nt_muts.json"
+        File   sequences    = "~{basename}_ancestral_sequences.fasta"
+        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
+        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
+        Int    cpu_load_15min = ceil(read_float("LOAD_15M"))
         String augur_version = read_string("VERSION")
     }
 }
@@ -485,7 +502,8 @@ task translate_augur_tree {
         preemptible: 2
     }
     output {
-        File aa_muts_json = "~{basename}_aa_muts.json"
+        File   aa_muts_json = "~{basename}_aa_muts.json"
+        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
         String augur_version = read_string("VERSION")
     }
 }
@@ -522,7 +540,8 @@ task assign_clades_to_nodes {
         preemptible: 2
     }
     output {
-        File node_clade_data_json = "~{out_basename}_node-clade-assignments.json"
+        File   node_clade_data_json = "~{out_basename}_node-clade-assignments.json"
+        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
         String augur_version      = read_string("VERSION")
     }
 }
@@ -563,8 +582,9 @@ task augur_import_beast {
         preemptible: 2
     }
     output {
-        File tree_newick    = "~{tree_basename}.nwk"
-        File node_data_json = "~{tree_basename}.json"
+        File   tree_newick    = "~{tree_basename}.nwk"
+        File   node_data_json = "~{tree_basename}.json"
+        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
         String augur_version = read_string("VERSION")
     }
 }
@@ -646,7 +666,8 @@ task export_auspice_json {
         preemptible: 2
     }
     output {
-        File virus_json = "~{out_basename}_auspice.json"
+        File   virus_json = "~{out_basename}_auspice.json"
+        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
         String augur_version = read_string("VERSION")
     }
 }
