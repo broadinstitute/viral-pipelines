@@ -2,7 +2,7 @@ version 1.0
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 
-workflow beast_to_auspice {
+workflow augur_from_beast_mcc {
     meta {
         description: "Visualize BEAST output with Nextstrain. This workflow converts a BEAST MCC tree (.tree file) into an Auspice v2 json file. See https://nextstrain-augur.readthedocs.io/en/stable/faq/import-beast.html for details."
         author: "Broad Viral Genomics"
