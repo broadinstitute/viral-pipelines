@@ -170,6 +170,7 @@ task augur_mafft_align {
             ~{true="--remove-reference" false="" remove_reference} \
             --debug \
             --nthreads auto
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
         docker: docker
@@ -182,7 +183,7 @@ task augur_mafft_align {
     output {
         File   aligned_sequences = "~{basename}_aligned.fasta"
         File   align_troubleshoot = stdout()
-        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         String augur_version = read_string("VERSION")
     }
 }
@@ -214,6 +215,7 @@ task augur_mask_sites {
         else
             cp "~{sequences}" "~{out_fname}"
         fi
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
         docker: docker
@@ -225,7 +227,7 @@ task augur_mask_sites {
     }
     output {
         File   masked_sequences = out_fname
-        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         String augur_version  = read_string("VERSION")
     }
 }
@@ -266,6 +268,7 @@ task draft_augur_tree {
             --nthreads auto
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
         docker: docker
@@ -277,7 +280,7 @@ task draft_augur_tree {
     }
     output {
         File   aligned_tree = "~{basename}_raw_tree.nwk"
-        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
         Int    cpu_load_15min = ceil(read_float("LOAD_15M"))
         String augur_version = read_string("VERSION")
@@ -346,6 +349,7 @@ task refine_augur_tree {
             ~{"--vcf-reference " + vcf_reference}
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
         docker: docker
@@ -358,7 +362,7 @@ task refine_augur_tree {
     output {
         File   tree_refined  = "~{basename}_refined_tree.nwk"
         File   branch_lengths = "~{basename}_branch_lengths.json"
-        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
         Int    cpu_load_15min = ceil(read_float("LOAD_15M"))
         String augur_version = read_string("VERSION")
@@ -391,6 +395,7 @@ task ancestral_traits {
             --output-node-data "~{basename}_nodes.json" \
             ~{"--weights " + weights} \
             ~{true="--confidence" false="" confidence}
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
         docker: docker
@@ -402,7 +407,7 @@ task ancestral_traits {
     }
     output {
         File   node_data_json = "~{basename}_nodes.json"
-        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         String augur_version = read_string("VERSION")
     }
 }
@@ -447,6 +452,7 @@ task ancestral_tree {
             ~{true="--infer-ambiguous" false="" infer_ambiguous}
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
         docker: docker
@@ -459,7 +465,7 @@ task ancestral_tree {
     output {
         File   nt_muts_json = "~{basename}_nt_muts.json"
         File   sequences    = "~{basename}_ancestral_sequences.fasta"
-        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
         Int    cpu_load_15min = ceil(read_float("LOAD_15M"))
         String augur_version = read_string("VERSION")
@@ -492,6 +498,7 @@ task translate_augur_tree {
             ~{"--vcf-reference " + vcf_reference} \
             ~{"--genes " + genes} \
             --output-node-data ~{basename}_aa_muts.json
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
         docker: docker
@@ -503,7 +510,7 @@ task translate_augur_tree {
     }
     output {
         File   aa_muts_json = "~{basename}_aa_muts.json"
-        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         String augur_version = read_string("VERSION")
     }
 }
@@ -530,6 +537,7 @@ task assign_clades_to_nodes {
         --reference ~{ref_fasta} \
         --clades ~{clades_tsv} \
         --output-node-data ~{out_basename}_node-clade-assignments.json
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
         docker: docker
@@ -541,7 +549,7 @@ task assign_clades_to_nodes {
     }
     output {
         File   node_clade_data_json = "~{out_basename}_node-clade-assignments.json"
-        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         String augur_version      = read_string("VERSION")
     }
 }
@@ -572,6 +580,7 @@ task augur_import_beast {
             ~{"--tip-date-regex " + tip_date_regex} \
             ~{"--tip-date-format " + tip_date_format} \
             ~{"--tip-date-delimeter " + tip_date_delimiter}
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
     }
     runtime {
         docker: docker
@@ -656,6 +665,7 @@ task export_auspice_json {
             ~{"--colors " + colors_tsv} \
             ~{"--description " + description_md} \
             --output ~{out_basename}_auspice.json)
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
         docker: docker
@@ -667,7 +677,7 @@ task export_auspice_json {
     }
     output {
         File   virus_json = "~{out_basename}_auspice.json"
-        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         String augur_version = read_string("VERSION")
     }
 }
