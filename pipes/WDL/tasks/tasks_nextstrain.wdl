@@ -96,15 +96,15 @@ task filter_subsample_sequences {
     }
     parameter_meta {
         sequences_fasta: {
-          description: "Set of sequences in fasta format to subsample using augur filter. These must represent a single chromosome/segment of a genome only.",
-          patterns: ["*.fasta", "*.fa"]
+          description: "Set of sequences (unaligned fasta or aligned fasta -- one sequence per genome) or variants (vcf format) to subsample using augur filter.",
+          patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
         }
         sample_metadata_tsv: {
           description: "Metadata in tab-separated text format. See https://nextstrain-augur.readthedocs.io/en/stable/faq/metadata.html for details.",
           patterns: ["*.txt", "*.tsv"]
         }
     }
-    String in_basename = basename(sequences_fasta, ".fasta")
+    String out_fname = sub(sub(basename(sequences_fasta), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
     command {
         augur version > VERSION
         augur filter \
@@ -122,23 +122,24 @@ task filter_subsample_sequences {
             ~{"--subsample-seed " + subsample_seed} \
             ~{"--exclude-where " + exclude_where} \
             ~{"--include-where " + include_where} \
-            --output "~{in_basename}.filtered.fasta"
-        cat ~{sequences_fasta} | grep \> | wc -l > IN_COUNT
-        cat ~{in_basename}.filtered.fasta | grep \> | wc -l > OUT_COUNT
+            --output "~{out_fname}" | tee STDOUT
+        #cat ~{sequences_fasta} | grep \> | wc -l > IN_COUNT
+        grep "sequences were dropped during filtering" STDOUT | cut -f 1 -d ' ' > DROP_COUNT
+        grep "sequences have been written out to" STDOUT | cut -f 1 -d ' ' > OUT_COUNT
     }
     runtime {
         docker: docker
-        memory: "4 GB"
-        cpu :   2
-        disks:  "local-disk 375 LOCAL"
+        memory: "3 GB"
+        cpu :   1
+        disks:  "local-disk 100 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 1
     }
     output {
-        File   filtered_fasta = "~{in_basename}.filtered.fasta"
-        String augur_version  = read_string("VERSION")
-        Int    sequences_in   = read_int("IN_COUNT")
-        Int    sequences_out  = read_int("OUT_COUNT")
+        File   filtered_fasta    = out_fname
+        String augur_version     = read_string("VERSION")
+        Int    sequences_dropped = read_int("DROP_COUNT")
+        Int    sequences_out     = read_int("OUT_COUNT")
     }
 }
 
@@ -169,7 +170,7 @@ task augur_mafft_align {
             ~{true="--remove-reference" false="" remove_reference} \
             --debug \
             --nthreads auto
-        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
         docker: docker
@@ -180,18 +181,63 @@ task augur_mafft_align {
         dx_instance_type: "mem3_ssd2_v2_x16"
     }
     output {
-        File aligned_sequences = "~{basename}_aligned.fasta"
-        File align_troubleshoot = stdout()
+        File   aligned_sequences = "~{basename}_aligned.fasta"
+        File   align_troubleshoot = stdout()
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         String augur_version = read_string("VERSION")
+    }
+}
+
+task augur_mask_sites {
+    meta {
+        description: "Mask unwanted positions from alignment or SNP table. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/mask.html"
+    }
+    input {
+        File     sequences
+        File?    mask_bed
+
+        String   docker = "nextstrain/base"
+    }
+    parameter_meta {
+        sequences: {
+          description: "Set of alignments (fasta format) or variants (vcf format) to mask.",
+          patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
+        }
+    }
+    String out_fname = sub(sub(basename(sequences), ".vcf", ".masked.vcf"), ".fasta$", ".masked.fasta")
+    command {
+        augur version > VERSION
+        BEDFILE=~{select_first([mask_bed, "/dev/null"])}
+        if [ -s "$BEDFILE" ]; then
+            augur mask --sequences ~{sequences} \
+                --mask "$BEDFILE" \
+                --output "~{out_fname}"
+        else
+            cp "~{sequences}" "~{out_fname}"
+        fi
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
+    }
+    runtime {
+        docker: docker
+        memory: "3 GB"
+        cpu :   2
+        disks:  "local-disk 100 HDD"
+        preemptible: 2
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+    output {
+        File   masked_sequences = out_fname
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
+        String augur_version  = read_string("VERSION")
     }
 }
 
 task draft_augur_tree {
     meta {
-        description: "Build a tree using a variety of methods. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/tree.html"
+        description: "Build a tree using iqTree. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/tree.html"
     }
     input {
-        File     aligned_fasta
+        File     msa_or_vcf
         String   basename
 
         String   method = "iqtree"
@@ -204,9 +250,15 @@ task draft_augur_tree {
         Int?     disk_space_gb = 750
         String   docker = "nextstrain/base"
     }
+    parameter_meta {
+        msa_or_vcf: {
+          description: "Set of alignments (fasta format) or variants (vcf format) to construct a tree from using augur tree (iqTree).",
+          patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
+        }
+    }
     command {
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur tree --alignment ~{aligned_fasta} \
+        AUGUR_RECURSION_LIMIT=10000 augur tree --alignment ~{msa_or_vcf} \
             --output ~{basename}_raw_tree.nwk \
             --method ~{default="iqtree" method} \
             --substitution-model ~{default="GTR" substitution_model} \
@@ -214,6 +266,9 @@ task draft_augur_tree {
             ~{"--vcf-reference " + vcf_reference} \
             ~{"--tree-builder-args " + tree_builder_args} \
             --nthreads auto
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
         docker: docker
@@ -224,18 +279,21 @@ task draft_augur_tree {
         preemptible: 0
     }
     output {
-        File aligned_tree = "~{basename}_raw_tree.nwk"
+        File   aligned_tree = "~{basename}_raw_tree.nwk"
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
+        Int    cpu_load_15min = ceil(read_float("LOAD_15M"))
         String augur_version = read_string("VERSION")
     }
 }
 
 task refine_augur_tree {
     meta {
-        description: "Refine an initial tree using sequence metadata. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/refine.html"
+        description: "Refine an initial tree using sequence metadata and Treetime. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/refine.html"
     }
     input {
         File     raw_tree
-        File     aligned_fasta
+        File     msa_or_vcf
         File     metadata
         String   basename
 
@@ -259,11 +317,17 @@ task refine_augur_tree {
         Int?     disk_space_gb = 750
         String   docker = "nextstrain/base"
     }
+    parameter_meta {
+        msa_or_vcf: {
+          description: "Set of alignments (fasta format) or variants (vcf format) to use to guide Treetime.",
+          patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
+        }
+    }
     command {
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur refine \
             --tree ~{raw_tree} \
-            --alignment ~{aligned_fasta} \
+            --alignment ~{msa_or_vcf} \
             --metadata ~{metadata} \
             --output-tree ~{basename}_refined_tree.nwk \
             --output-node-data ~{basename}_branch_lengths.json \
@@ -283,6 +347,9 @@ task refine_augur_tree {
             ~{true="--keep-polytomies" false="" keep_polytomies} \
             ~{true="--date-confidence" false="" date_confidence} \
             ~{"--vcf-reference " + vcf_reference}
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
         docker: docker
@@ -293,8 +360,11 @@ task refine_augur_tree {
         preemptible: 0
     }
     output {
-        File tree_refined  = "~{basename}_refined_tree.nwk"
-        File branch_lengths = "~{basename}_branch_lengths.json"
+        File   tree_refined  = "~{basename}_refined_tree.nwk"
+        File   branch_lengths = "~{basename}_branch_lengths.json"
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
+        Int    cpu_load_15min = ceil(read_float("LOAD_15M"))
         String augur_version = read_string("VERSION")
     }
 }
@@ -325,6 +395,7 @@ task ancestral_traits {
             --output-node-data "~{basename}_nodes.json" \
             ~{"--weights " + weights} \
             ~{true="--confidence" false="" confidence}
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
         docker: docker
@@ -335,7 +406,8 @@ task ancestral_traits {
         preemptible: 2
     }
     output {
-        File node_data_json = "~{basename}_nodes.json"
+        File   node_data_json = "~{basename}_nodes.json"
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         String augur_version = read_string("VERSION")
     }
 }
@@ -346,7 +418,7 @@ task ancestral_tree {
     }
     input {
         File     refined_tree
-        File     aligned_fasta
+        File     msa_or_vcf
         String   basename
 
         String   inference = "joint"
@@ -359,11 +431,17 @@ task ancestral_tree {
         Int?     machine_mem_gb
         String   docker = "nextstrain/base"
     }
+    parameter_meta {
+        msa_or_vcf: {
+          description: "Set of alignments (fasta format) or variants (vcf format) to use to guide Treetime.",
+          patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
+        }
+    }
     command {
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur ancestral \
             --tree ~{refined_tree} \
-            --alignment ~{aligned_fasta} \
+            --alignment ~{msa_or_vcf} \
             --output-node-data ~{basename}_nt_muts.json \
             ~{"--vcf-reference " + vcf_reference} \
             ~{"--output-vcf " + output_vcf} \
@@ -372,6 +450,9 @@ task ancestral_tree {
             --inference ~{default="joint" inference} \
             ~{true="--keep-ambiguous" false="" keep_ambiguous} \
             ~{true="--infer-ambiguous" false="" infer_ambiguous}
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
         docker: docker
@@ -382,8 +463,11 @@ task ancestral_tree {
         preemptible: 2
     }
     output {
-        File nt_muts_json = "~{basename}_nt_muts.json"
-        File sequences    = "~{basename}_ancestral_sequences.fasta"
+        File   nt_muts_json = "~{basename}_nt_muts.json"
+        File   sequences    = "~{basename}_ancestral_sequences.fasta"
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
+        Int    cpu_load_15min = ceil(read_float("LOAD_15M"))
         String augur_version = read_string("VERSION")
     }
 }
@@ -414,6 +498,7 @@ task translate_augur_tree {
             ~{"--vcf-reference " + vcf_reference} \
             ~{"--genes " + genes} \
             --output-node-data ~{basename}_aa_muts.json
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
         docker: docker
@@ -424,7 +509,8 @@ task translate_augur_tree {
         preemptible: 2
     }
     output {
-        File aa_muts_json = "~{basename}_aa_muts.json"
+        File   aa_muts_json = "~{basename}_aa_muts.json"
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         String augur_version = read_string("VERSION")
     }
 }
@@ -451,6 +537,7 @@ task assign_clades_to_nodes {
         --reference ~{ref_fasta} \
         --clades ~{clades_tsv} \
         --output-node-data ~{out_basename}_node-clade-assignments.json
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
         docker: docker
@@ -461,7 +548,8 @@ task assign_clades_to_nodes {
         preemptible: 2
     }
     output {
-        File node_clade_data_json = "~{out_basename}_node-clade-assignments.json"
+        File   node_clade_data_json = "~{out_basename}_node-clade-assignments.json"
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         String augur_version      = read_string("VERSION")
     }
 }
@@ -492,6 +580,7 @@ task augur_import_beast {
             ~{"--tip-date-regex " + tip_date_regex} \
             ~{"--tip-date-format " + tip_date_format} \
             ~{"--tip-date-delimeter " + tip_date_delimiter}
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
     }
     runtime {
         docker: docker
@@ -502,8 +591,9 @@ task augur_import_beast {
         preemptible: 2
     }
     output {
-        File tree_newick    = "~{tree_basename}.nwk"
-        File node_data_json = "~{tree_basename}.json"
+        File   tree_newick    = "~{tree_basename}.nwk"
+        File   node_data_json = "~{tree_basename}.json"
+        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
         String augur_version = read_string("VERSION")
     }
 }
@@ -575,6 +665,7 @@ task export_auspice_json {
             ~{"--colors " + colors_tsv} \
             ~{"--description " + description_md} \
             --output ~{out_basename}_auspice.json)
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
         docker: docker
@@ -585,7 +676,8 @@ task export_auspice_json {
         preemptible: 2
     }
     output {
-        File virus_json = "~{out_basename}_auspice.json"
+        File   virus_json = "~{out_basename}_auspice.json"
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         String augur_version = read_string("VERSION")
     }
 }

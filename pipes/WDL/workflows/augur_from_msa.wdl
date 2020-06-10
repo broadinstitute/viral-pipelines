@@ -2,15 +2,15 @@ version 1.0
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 
-workflow build_augur_tree {
+workflow augur_from_msa {
     meta {
-        description: "Align assemblies, build trees, and convert to json representation suitable for Nextstrain visualization. See https://nextstrain.org/docs/getting-started/ and https://nextstrain-augur.readthedocs.io/en/stable/"
+        description: "Build trees, and convert to json representation suitable for Nextstrain visualization. See https://nextstrain.org/docs/getting-started/ and https://nextstrain-augur.readthedocs.io/en/stable/"
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
     }
 
     input {
-        Array[File]     assembly_fastas
+        File            msa_or_vcf
         File            sample_metadata
         String          virus
         File            ref_fasta
@@ -20,9 +20,9 @@ workflow build_augur_tree {
     }
 
     parameter_meta {
-        assembly_fastas: {
-          description: "Set of assembled genomes to align and build trees. These must represent a single chromosome/segment of a genome only. Fastas may be one-sequence-per-individual or a concatenated multi-fasta (unaligned) or a mixture of the two. Fasta header records need to be pipe-delimited (|) for each metadata value.",
-          patterns: ["*.fasta", "*.fa"]
+        msa_or_vcf: {
+          description: "Multiple sequence alignment (aligned fasta) or variants (vcf format).",
+          patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
         }
         sample_metadata: {
           description: "Metadata in tab-separated text format. See https://nextstrain-augur.readthedocs.io/en/stable/faq/metadata.html for details.",
@@ -48,25 +48,9 @@ workflow build_augur_tree {
         }
     }
 
-    call nextstrain.concatenate {
-        input:
-            infiles     = assembly_fastas,
-            output_name = "all_samples_combined_assembly.fasta"
-    }
-    call nextstrain.filter_subsample_sequences {
-            input:
-                sequences_fasta     = concatenate.combined,
-                sample_metadata_tsv = sample_metadata
-    }
-    call nextstrain.augur_mafft_align {
-        input:
-            sequences = filter_subsample_sequences.filtered_fasta,
-            ref_fasta = ref_fasta,
-            basename  = virus
-    }
     call nextstrain.augur_mask_sites {
         input:
-            sequences = augur_mafft_align.aligned_sequences
+            sequences = msa_or_vcf
     }
     call nextstrain.draft_augur_tree {
         input:
@@ -125,8 +109,6 @@ workflow build_augur_tree {
     }
 
     output {
-        File  combined_assembly_fasta    = concatenate.combined
-        File  augur_aligned_fasta        = augur_mafft_align.aligned_sequences
         File  masked_fasta               = augur_mask_sites.masked_sequences
         File  raw_tree                   = draft_augur_tree.aligned_tree
         File  refined_tree               = refine_augur_tree.tree_refined
