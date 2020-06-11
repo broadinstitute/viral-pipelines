@@ -196,6 +196,30 @@ task augur_mafft_align {
     }
 }
 
+task snp_sites {
+    input {
+        File   msa_fasta
+        String docker = "quay.io/biocontainers/snp-sites:2.5.1--hed695b0_0"
+    }
+    String out_basename = basename(msa_fasta, ".fasta")
+    command {
+        snp-sites -V > VERSION
+        snp-sites -v -o ~{out_basename}.vcf ~{msa_fasta}
+    }
+    runtime {
+        docker: docker
+        memory: "1 GB"
+        cpu :   1
+        disks:  "local-disk 50 HDD"
+        preemptible: 0
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+    output {
+        File   snps_vcf = "~{out_basename}.vcf"
+        String snp_sites_version = read_string("VERSION")
+    }
+}
+
 task augur_mask_sites {
     meta {
         description: "Mask unwanted positions from alignment or SNP table. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/mask.html"
