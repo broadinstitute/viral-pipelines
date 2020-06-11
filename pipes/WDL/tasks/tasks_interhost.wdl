@@ -90,7 +90,6 @@ task beast {
   input {
     File     beauti_xml
 
-    String?  dx_job_timeout="48H"
     String   docker="quay.io/broadinstitute/beast-beagle-cuda"
   }
 
@@ -122,7 +121,7 @@ task beast {
     disks: "local-disk 300 HDD"
     bootDiskSizeGb: 50
     gpu:                 true                # dxWDL
-    dx_timeout:          "${dx_job_timeout}" # dxWDL
+    dx_timeout:          "72H"               # dxWDL
     acceleratorType:     "nvidia-tesla-k80"  # GCP PAPIv2
     acceleratorCount:    4                   # GCP PAPIv2
     gpuType:             "nvidia-tesla-k80"  # Terra
