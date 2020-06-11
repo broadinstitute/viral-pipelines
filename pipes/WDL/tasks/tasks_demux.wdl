@@ -239,6 +239,10 @@ task illumina_demux {
         --out_zip ,,_fastqc.zip \
         --threads $num_fastqc_threads" \
       ::: $(cat $OUT_BASENAMES)
+
+    cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+    cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+    cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
   }
 
   output {
@@ -249,6 +253,9 @@ task illumina_demux {
     File        unmatched_reads_bam      = "unmatched/Unmatched.bam"
     Array[File] raw_reads_fastqc         = glob("*_fastqc.html")
     Array[File] raw_reads_fastqc_zip     = glob("*_fastqc.zip")
+    Int         max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
+    Int         runtime_sec = ceil(read_float("UPTIME_SEC"))
+    Int         cpu_load_15min = ceil(read_float("LOAD_15M"))
     String      viralngs_version         = read_string("VERSION")
   }
 

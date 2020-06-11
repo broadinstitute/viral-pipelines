@@ -242,7 +242,7 @@ task ivar_trim {
 
 task align_reads {
   meta {
-    description: "Align unmapped reads to a reference genome, either using novoalign (default) or bwa. Produces an aligned bam file (including all unmapped reads), an aligned-only bam file, both sorted and indexed, along with samtools flagstat output, fastqc stats (on mapped only reads), and some basic figures of merit."
+    description: "Align unmapped reads to a reference genome, either using novoalign (default), minimap2, or bwa. Produces an aligned bam file (including all unmapped reads), an aligned-only bam file, both sorted and indexed, along with samtools flagstat output, fastqc stats (on mapped only reads), and some basic figures of merit."
   }
 
   input {
@@ -251,7 +251,7 @@ task align_reads {
 
     File?    novocraft_license
 
-    String?  aligner="novoalign" # novoalign or bwa
+    String?  aligner="novoalign"
     String?  aligner_options
     Boolean? skip_mark_dupes=false
 
@@ -261,7 +261,7 @@ task align_reads {
   }
 
   parameter_meta {
-    aligner: { description: "Short read aligner to use: novoalign or bwa. (Default: novoalign)" }
+    aligner: { description: "Short read aligner to use: novoalign, minimap2, or bwa. (Default: novoalign)" }
   }
   
   command {
