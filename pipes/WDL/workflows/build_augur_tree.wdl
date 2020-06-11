@@ -64,6 +64,10 @@ workflow build_augur_tree {
             ref_fasta = ref_fasta,
             basename  = virus
     }
+    call nextstrain.snp_sites {
+        input:
+            msa_fasta = augur_mafft_align.aligned_sequences
+    }
     call nextstrain.augur_mask_sites {
         input:
             sequences = augur_mafft_align.aligned_sequences
@@ -125,17 +129,12 @@ workflow build_augur_tree {
     }
 
     output {
-        File  combined_assembly_fasta    = concatenate.combined
-        File  augur_aligned_fasta        = augur_mafft_align.aligned_sequences
-        File  masked_fasta               = augur_mask_sites.masked_sequences
-        File  raw_tree                   = draft_augur_tree.aligned_tree
-        File  refined_tree               = refine_augur_tree.tree_refined
-        File  branch_lengths             = refine_augur_tree.branch_lengths
-        File  json_nt_muts               = ancestral_tree.nt_muts_json
-        File  ancestral_sequences_fasta  = ancestral_tree.sequences
-        File  json_aa_muts               = translate_augur_tree.aa_muts_json
-        File? node_clade_data_json       = assign_clades_to_nodes.node_clade_data_json
-        File? json_ancestral_traits      = ancestral_traits.node_data_json
-        File  auspice_input_json         = export_auspice_json.virus_json
+        File  combined_assemblies = concatenate.combined
+        File  multiple_alignment  = augur_mafft_align.aligned_sequences
+        File  unmasked_snps       = snp_sites.snps_vcf
+        File  masked_alignment    = augur_mask_sites.masked_sequences
+        File  ml_tree             = draft_augur_tree.aligned_tree
+        File  time_tree           = refine_augur_tree.tree_refined
+        File  auspice_input_json  = export_auspice_json.virus_json
     }
 }

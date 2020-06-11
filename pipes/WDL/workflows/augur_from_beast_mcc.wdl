@@ -32,7 +32,6 @@ workflow augur_from_beast_mcc {
 
     output {
         File  beast_mcc_tree_newick      = augur_import_beast.tree_newick
-        File  node_data_json             = augur_import_beast.node_data_json
         File  auspice_input_json         = export_auspice_json.virus_json
     }
 }
