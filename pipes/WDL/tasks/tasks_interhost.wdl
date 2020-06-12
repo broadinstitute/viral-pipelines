@@ -121,7 +121,7 @@ task beast {
     disks: "local-disk 300 HDD"
     bootDiskSizeGb: 50
     gpu:                 true                # dxWDL
-    dx_timeout:          "240H"              # dxWDL
+    dx_timeout:          "40H"              # dxWDL
     acceleratorType:     "nvidia-tesla-k80"  # GCP PAPIv2
     acceleratorCount:    4                   # GCP PAPIv2
     gpuType:             "nvidia-tesla-k80"  # Terra
