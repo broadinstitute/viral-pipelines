@@ -386,9 +386,9 @@ task refine_augur_tree {
     runtime {
         docker: docker
         memory: "13 GB"
-        cpu :   2
+        cpu :   4
         disks:  "local-disk 100 HDD"
-        dx_instance_type: "mem3_ssd1_v2_x2"
+        dx_instance_type: "mem1_ssd1_v2_x4"
         preemptible: 0
     }
     output {
@@ -453,7 +453,7 @@ task ancestral_tree {
         description: "Infer ancestral sequences based on a tree. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/ancestral.html"
     }
     input {
-        File     refined_tree
+        File     tree
         File     msa_or_vcf
 
         String   inference = "joint"
@@ -475,7 +475,7 @@ task ancestral_tree {
     command {
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur ancestral \
-            --tree ~{refined_tree} \
+            --tree ~{tree} \
             --alignment ~{msa_or_vcf} \
             --output-node-data ~{out_basename}_nt_muts.json \
             ~{"--vcf-reference " + vcf_reference} \
@@ -492,9 +492,9 @@ task ancestral_tree {
     runtime {
         docker: docker
         memory: "13 GB"
-        cpu :   2
+        cpu :   4
         disks:  "local-disk 50 HDD"
-        dx_instance_type: "mem3_ssd1_v2_x2"
+        dx_instance_type: "mem1_ssd1_v2_x4"
         preemptible: 1
     }
     output {
@@ -656,7 +656,7 @@ task export_auspice_json {
 
         String docker = "nextstrain/base"
     }
-    String out_basename = basename(basename(tree, ".nwk"), "_refined_tree")
+    String out_basename = basename(basename(tree, ".nwk"), "_timetree")
     command {
         augur version > VERSION
         touch exportargs

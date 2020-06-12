@@ -92,8 +92,8 @@ workflow build_augur_tree {
     }
     call nextstrain.ancestral_tree {
         input:
-            refined_tree  = refine_augur_tree.tree_refined,
-            msa_or_vcf    = augur_mask_sites.masked_sequences
+            tree        = refine_augur_tree.tree_refined,
+            msa_or_vcf  = augur_mask_sites.masked_sequences
     }
     call nextstrain.translate_augur_tree {
         input:
