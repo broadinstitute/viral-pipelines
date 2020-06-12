@@ -126,7 +126,7 @@ task filter_subsample_sequences {
         grep "sequences were dropped during filtering" STDOUT | cut -f 1 -d ' ' > DROP_COUNT
         grep "sequences have been written out to" STDOUT | cut -f 1 -d ' ' > OUT_COUNT
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
-        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        cat /proc/loadavg > CPU_LOAD
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
@@ -144,7 +144,7 @@ task filter_subsample_sequences {
         Int    sequences_out     = read_int("OUT_COUNT")
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        Float  cpu_load_15min = read_float("LOAD_15M")
+        String cpu_load = read_string("CPU_LOAD")
     }
 }
 
@@ -176,7 +176,7 @@ task augur_mafft_align {
             --debug \
             --nthreads auto
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
-        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        cat /proc/loadavg > CPU_LOAD
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
@@ -191,7 +191,7 @@ task augur_mafft_align {
         File   aligned_sequences = "~{basename}_aligned.fasta"
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        Float  cpu_load_15min = read_float("LOAD_15M")
+        String cpu_load = read_string("CPU_LOAD")
         String augur_version = read_string("VERSION")
     }
 }
@@ -248,7 +248,7 @@ task augur_mask_sites {
             cp "~{sequences}" "~{out_fname}"
         fi
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
-        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        cat /proc/loadavg > CPU_LOAD
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
@@ -263,7 +263,7 @@ task augur_mask_sites {
         File   masked_sequences = out_fname
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        Float  cpu_load_15min = read_float("LOAD_15M")
+        String cpu_load = read_string("CPU_LOAD")
         String augur_version  = read_string("VERSION")
     }
 }
@@ -301,7 +301,7 @@ task draft_augur_tree {
             ~{"--tree-builder-args " + tree_builder_args} \
             --nthreads auto
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
-        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        cat /proc/loadavg > CPU_LOAD
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
@@ -316,7 +316,7 @@ task draft_augur_tree {
         File   aligned_tree = "~{out_basename}_~{method}.nwk"
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        Float  cpu_load_15min = read_float("LOAD_15M")
+        String cpu_load = read_string("CPU_LOAD")
         String augur_version = read_string("VERSION")
     }
 }
@@ -380,7 +380,7 @@ task refine_augur_tree {
             ~{true="--date-confidence" false="" date_confidence} \
             ~{"--vcf-reference " + vcf_reference}
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
-        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        cat /proc/loadavg > CPU_LOAD
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
@@ -396,7 +396,7 @@ task refine_augur_tree {
         File   branch_lengths = "~{out_basename}_branch_lengths.json"
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        Float  cpu_load_15min = read_float("LOAD_15M")
+        String cpu_load = read_string("CPU_LOAD")
         String augur_version = read_string("VERSION")
     }
 }
@@ -428,7 +428,7 @@ task ancestral_traits {
             ~{"--sampling-bias-correction " + sampling_bias_correction} \
             ~{true="--confidence" false="" confidence}
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
-        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        cat /proc/loadavg > CPU_LOAD
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
@@ -443,7 +443,7 @@ task ancestral_traits {
         File   node_data_json = "~{out_basename}_ancestral_traits.json"
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        Float  cpu_load_15min = read_float("LOAD_15M")
+        String cpu_load = read_string("CPU_LOAD")
         String augur_version = read_string("VERSION")
     }
 }
@@ -486,7 +486,7 @@ task ancestral_tree {
             ~{true="--keep-ambiguous" false="" keep_ambiguous} \
             ~{true="--infer-ambiguous" false="" infer_ambiguous}
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
-        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        cat /proc/loadavg > CPU_LOAD
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
@@ -502,7 +502,7 @@ task ancestral_tree {
         File   sequences    = "~{out_basename}_ancestral_sequences.fasta"
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        Float  cpu_load_15min = read_float("LOAD_15M")
+        String cpu_load = read_string("CPU_LOAD")
         String augur_version = read_string("VERSION")
     }
 }
@@ -615,7 +615,7 @@ task augur_import_beast {
             ~{"--tip-date-format " + tip_date_format} \
             ~{"--tip-date-delimeter " + tip_date_delimiter}
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
-        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        cat /proc/loadavg > CPU_LOAD
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
@@ -631,7 +631,7 @@ task augur_import_beast {
         File   node_data_json = "~{tree_basename}.json"
         Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        Float  cpu_load_15min = read_float("LOAD_15M")
+        String cpu_load = read_string("CPU_LOAD")
         String augur_version = read_string("VERSION")
     }
 }
@@ -703,7 +703,7 @@ task export_auspice_json {
             ~{"--description " + description_md} \
             --output ~{out_basename}_auspice.json)
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
-        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        cat /proc/loadavg > CPU_LOAD
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
@@ -718,7 +718,7 @@ task export_auspice_json {
         File   virus_json = "~{out_basename}_auspice.json"
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        Float  cpu_load_15min = read_float("LOAD_15M")
+        String cpu_load = read_string("CPU_LOAD")
         String augur_version = read_string("VERSION")
     }
 }
