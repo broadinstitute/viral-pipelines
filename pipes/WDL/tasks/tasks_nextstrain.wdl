@@ -144,7 +144,7 @@ task filter_subsample_sequences {
         Int    sequences_out     = read_int("OUT_COUNT")
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        Int    cpu_load_15min = ceil(read_float("LOAD_15M"))
+        Float  cpu_load_15min = read_float("LOAD_15M")
     }
 }
 
@@ -191,7 +191,7 @@ task augur_mafft_align {
         File   aligned_sequences = "~{basename}_aligned.fasta"
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        Int    cpu_load_15min = ceil(read_float("LOAD_15M"))
+        Float  cpu_load_15min = read_float("LOAD_15M")
         String augur_version = read_string("VERSION")
     }
 }
@@ -263,7 +263,7 @@ task augur_mask_sites {
         File   masked_sequences = out_fname
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        Int    cpu_load_15min = ceil(read_float("LOAD_15M"))
+        Float  cpu_load_15min = read_float("LOAD_15M")
         String augur_version  = read_string("VERSION")
     }
 }
@@ -274,7 +274,6 @@ task draft_augur_tree {
     }
     input {
         File     msa_or_vcf
-        String   basename
 
         String   method = "iqtree"
         String   substitution_model = "GTR"
@@ -290,11 +289,12 @@ task draft_augur_tree {
           patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
         }
     }
+    String out_basename = basename(basename(basename(msa_or_vcf, '.gz'), '.vcf'), '.fasta')
     command {
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur tree --alignment ~{msa_or_vcf} \
-            --output ~{basename}_raw_tree.nwk \
-            --method ~{default="iqtree" method} \
+            --output ~{out_basename}_~{method}.nwk \
+            --method ~{method} \
             --substitution-model ~{default="GTR" substitution_model} \
             ~{"--exclude-sites " + exclude_sites} \
             ~{"--vcf-reference " + vcf_reference} \
@@ -313,10 +313,10 @@ task draft_augur_tree {
         preemptible: 0
     }
     output {
-        File   aligned_tree = "~{basename}_raw_tree.nwk"
+        File   aligned_tree = "~{out_basename}_~{method}.nwk"
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        Int    cpu_load_15min = ceil(read_float("LOAD_15M"))
+        Float  cpu_load_15min = read_float("LOAD_15M")
         String augur_version = read_string("VERSION")
     }
 }
@@ -329,7 +329,6 @@ task refine_augur_tree {
         File     raw_tree
         File     msa_or_vcf
         File     metadata
-        String   basename
 
         Int?     gen_per_year
         Float?   clock_rate
@@ -355,14 +354,15 @@ task refine_augur_tree {
           patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
         }
     }
+    String out_basename = basename(basename(basename(msa_or_vcf, '.gz'), '.vcf'), '.fasta')
     command {
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur refine \
             --tree ~{raw_tree} \
             --alignment ~{msa_or_vcf} \
             --metadata ~{metadata} \
-            --output-tree ~{basename}_refined_tree.nwk \
-            --output-node-data ~{basename}_branch_lengths.json \
+            --output-tree ~{out_basename}_timetree.nwk \
+            --output-node-data ~{out_basename}_branch_lengths.json \
             --timetree \
             ~{"--clock-rate " + clock_rate} \
             ~{"--clock-std-dev " + clock_std_dev} \
@@ -392,11 +392,11 @@ task refine_augur_tree {
         preemptible: 0
     }
     output {
-        File   tree_refined  = "~{basename}_refined_tree.nwk"
-        File   branch_lengths = "~{basename}_branch_lengths.json"
+        File   tree_refined  = "~{out_basename}_timetree.nwk"
+        File   branch_lengths = "~{out_basename}_branch_lengths.json"
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        Int    cpu_load_15min = ceil(read_float("LOAD_15M"))
+        Float  cpu_load_15min = read_float("LOAD_15M")
         String augur_version = read_string("VERSION")
     }
 }
@@ -408,8 +408,7 @@ task ancestral_traits {
     input {
         File           tree
         File           metadata
-        Array[String]+ columns
-        String         basename
+        Array[String]  columns
 
         Boolean        confidence = true
         File?          weights
@@ -417,13 +416,14 @@ task ancestral_traits {
 
         String   docker = "nextstrain/base"
     }
+    String out_basename = basename(tree, '.nwk')
     command {
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur traits \
             --tree ~{tree} \
             --metadata ~{metadata} \
             --columns ~{sep=" " columns} \
-            --output-node-data "~{basename}_nodes.json" \
+            --output-node-data "~{out_basename}_ancestral_traits.json" \
             ~{"--weights " + weights} \
             ~{"--sampling-bias-correction " + sampling_bias_correction} \
             ~{true="--confidence" false="" confidence}
@@ -440,10 +440,10 @@ task ancestral_traits {
         preemptible: 1
     }
     output {
-        File   node_data_json = "~{basename}_nodes.json"
+        File   node_data_json = "~{out_basename}_ancestral_traits.json"
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        Int    cpu_load_15min = ceil(read_float("LOAD_15M"))
+        Float  cpu_load_15min = read_float("LOAD_15M")
         String augur_version = read_string("VERSION")
     }
 }
@@ -455,7 +455,6 @@ task ancestral_tree {
     input {
         File     refined_tree
         File     msa_or_vcf
-        String   basename
 
         String   inference = "joint"
         Boolean  keep_ambiguous = false
@@ -472,15 +471,16 @@ task ancestral_tree {
           patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
         }
     }
+    String out_basename = basename(basename(basename(msa_or_vcf, '.gz'), '.vcf'), '.fasta')
     command {
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur ancestral \
             --tree ~{refined_tree} \
             --alignment ~{msa_or_vcf} \
-            --output-node-data ~{basename}_nt_muts.json \
+            --output-node-data ~{out_basename}_nt_muts.json \
             ~{"--vcf-reference " + vcf_reference} \
             ~{"--output-vcf " + output_vcf} \
-            --output-sequences ~{basename}_ancestral_sequences.fasta \
+            --output-sequences ~{out_basename}_ancestral_sequences.fasta \
             ~{true="--keep-overhangs" false="" keep_overhangs} \
             --inference ~{default="joint" inference} \
             ~{true="--keep-ambiguous" false="" keep_ambiguous} \
@@ -498,11 +498,11 @@ task ancestral_tree {
         preemptible: 1
     }
     output {
-        File   nt_muts_json = "~{basename}_nt_muts.json"
-        File   sequences    = "~{basename}_ancestral_sequences.fasta"
+        File   nt_muts_json = "~{out_basename}_nt_muts.json"
+        File   sequences    = "~{out_basename}_ancestral_sequences.fasta"
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        Int    cpu_load_15min = ceil(read_float("LOAD_15M"))
+        Float  cpu_load_15min = read_float("LOAD_15M")
         String augur_version = read_string("VERSION")
     }
 }
@@ -512,8 +512,7 @@ task translate_augur_tree {
         description: "export augur files to json suitable for auspice visualization. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/translate.html"
     }
     input {
-        String basename
-        File   refined_tree
+        File   tree
         File   nt_muts
         File   genbank_gb
 
@@ -523,15 +522,16 @@ task translate_augur_tree {
 
         String docker = "nextstrain/base"
     }
+    String out_basename = basename(tree, '.nwk')
     command {
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur translate --tree ~{refined_tree} \
+        AUGUR_RECURSION_LIMIT=10000 augur translate --tree ~{tree} \
             --ancestral-sequences ~{nt_muts} \
             --reference-sequence ~{genbank_gb} \
             ~{"--vcf-reference-output " + vcf_reference_output} \
             ~{"--vcf-reference " + vcf_reference} \
             ~{"--genes " + genes} \
-            --output-node-data ~{basename}_aa_muts.json
+            --output-node-data ~{out_basename}_aa_muts.json
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
@@ -543,7 +543,7 @@ task translate_augur_tree {
         preemptible: 1
     }
     output {
-        File   aa_muts_json = "~{basename}_aa_muts.json"
+        File   aa_muts_json = "~{out_basename}_aa_muts.json"
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         String augur_version = read_string("VERSION")
     }
@@ -562,7 +562,7 @@ task assign_clades_to_nodes {
 
         String docker = "nextstrain/base"
     }
-    String out_basename = basename(basename(tree_nwk, ".nwk"), "_refined_tree")
+    String out_basename = basename(basename(tree_nwk, ".nwk"), "_timetree")
     command {
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur clades \
@@ -631,7 +631,7 @@ task augur_import_beast {
         File   node_data_json = "~{tree_basename}.json"
         Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        Int    cpu_load_15min = ceil(read_float("LOAD_15M"))
+        Float  cpu_load_15min = read_float("LOAD_15M")
         String augur_version = read_string("VERSION")
     }
 }
@@ -718,7 +718,7 @@ task export_auspice_json {
         File   virus_json = "~{out_basename}_auspice.json"
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        Int    cpu_load_15min = ceil(read_float("LOAD_15M"))
+        Float  cpu_load_15min = read_float("LOAD_15M")
         String augur_version = read_string("VERSION")
     }
 }
