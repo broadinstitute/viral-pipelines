@@ -433,8 +433,8 @@ task ancestral_traits {
     }
     runtime {
         docker: docker
-        memory: "2 GB"
-        cpu :   1
+        memory: "3 GB"
+        cpu :   4
         disks:  "local-disk 50 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 1
