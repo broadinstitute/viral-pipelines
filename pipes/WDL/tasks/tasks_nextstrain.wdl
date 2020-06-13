@@ -132,9 +132,9 @@ task filter_subsample_sequences {
     runtime {
         docker: docker
         memory: "3 GB"
-        cpu :   1
+        cpu :   4
         disks:  "local-disk 100 HDD"
-        dx_instance_type: "mem1_ssd1_v2_x2"
+        dx_instance_type: "mem1_ssd1_v2_x4"
         preemptible: 1
     }
     output {
@@ -253,11 +253,11 @@ task augur_mask_sites {
     }
     runtime {
         docker: docker
-        memory: "2 GB"
-        cpu :   1
+        memory: "3 GB"
+        cpu :   4
         disks:  "local-disk 100 HDD"
         preemptible: 1
-        dx_instance_type: "mem1_ssd1_v2_x2"
+        dx_instance_type: "mem1_ssd1_v2_x4"
     }
     output {
         File   masked_sequences = out_fname
@@ -385,10 +385,10 @@ task refine_augur_tree {
     }
     runtime {
         docker: docker
-        memory: "13 GB"
+        memory: "25 GB"
         cpu :   4
         disks:  "local-disk 100 HDD"
-        dx_instance_type: "mem1_ssd1_v2_x4"
+        dx_instance_type: "mem3_ssd1_v2_x4"
         preemptible: 0
     }
     output {
@@ -491,10 +491,10 @@ task ancestral_tree {
     }
     runtime {
         docker: docker
-        memory: "13 GB"
+        memory: "20 GB"
         cpu :   4
         disks:  "local-disk 50 HDD"
-        dx_instance_type: "mem1_ssd1_v2_x4"
+        dx_instance_type: "mem3_ssd1_v2_x4"
         preemptible: 1
     }
     output {
