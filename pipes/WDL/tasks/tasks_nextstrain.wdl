@@ -105,6 +105,7 @@ task filter_subsample_sequences {
     }
     String out_fname = sub(sub(basename(sequences_fasta), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
     command {
+        set -e
         augur version > VERSION
         augur filter \
             --sequences ~{sequences_fasta} \
@@ -166,6 +167,7 @@ task augur_mafft_align {
         String   docker = "nextstrain/base"
     }
     command {
+        set -e
         augur version > VERSION
         augur align --sequences ~{sequences} \
             --reference-sequence ~{ref_fasta} \
@@ -238,6 +240,7 @@ task augur_mask_sites {
     }
     String out_fname = sub(sub(basename(sequences), ".vcf", ".masked.vcf"), ".fasta$", ".masked.fasta")
     command {
+        set -e
         augur version > VERSION
         BEDFILE=~{select_first([mask_bed, "/dev/null"])}
         if [ -s "$BEDFILE" ]; then
@@ -291,6 +294,7 @@ task draft_augur_tree {
     }
     String out_basename = basename(basename(basename(msa_or_vcf, '.gz'), '.vcf'), '.fasta')
     command {
+        set -e
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur tree --alignment ~{msa_or_vcf} \
             --output ~{out_basename}_~{method}.nwk \
@@ -356,6 +360,7 @@ task refine_augur_tree {
     }
     String out_basename = basename(basename(basename(msa_or_vcf, '.gz'), '.vcf'), '.fasta')
     command {
+        set -e
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur refine \
             --tree ~{raw_tree} \
@@ -418,6 +423,7 @@ task ancestral_traits {
     }
     String out_basename = basename(tree, '.nwk')
     command {
+        set -e
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur traits \
             --tree ~{tree} \
@@ -473,6 +479,7 @@ task ancestral_tree {
     }
     String out_basename = basename(basename(basename(msa_or_vcf, '.gz'), '.vcf'), '.fasta')
     command {
+        set -e
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur ancestral \
             --tree ~{tree} \
@@ -524,6 +531,7 @@ task translate_augur_tree {
     }
     String out_basename = basename(tree, '.nwk')
     command {
+        set -e
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur translate --tree ~{tree} \
             --ancestral-sequences ~{nt_muts} \
@@ -564,6 +572,7 @@ task assign_clades_to_nodes {
     }
     String out_basename = basename(basename(tree_nwk, ".nwk"), "_timetree")
     command {
+        set -e
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur clades \
         --tree ~{tree_nwk} \
@@ -605,6 +614,7 @@ task augur_import_beast {
     }
     String tree_basename = basename(beast_mcc_tree, ".tree")
     command {
+        set -e
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur import beast \
             --mcc "~{beast_mcc_tree}" \
@@ -629,7 +639,7 @@ task augur_import_beast {
     output {
         File   tree_newick    = "~{tree_basename}.nwk"
         File   node_data_json = "~{tree_basename}.json"
-        Int    max_ram_gb = ceil(read_float("/sys/fs/cgroup/memory/memory.max_usage_in_bytes")/1000000000)
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
         String cpu_load = read_string("CPU_LOAD")
         String augur_version = read_string("VERSION")
@@ -658,6 +668,7 @@ task export_auspice_json {
     }
     String out_basename = basename(basename(tree, ".nwk"), "_timetree")
     command {
+        set -e -o pipefail
         augur version > VERSION
         touch exportargs
 
