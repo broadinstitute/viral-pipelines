@@ -204,7 +204,7 @@ task snp_sites {
     String out_basename = basename(msa_fasta, ".fasta")
     command {
         snp-sites -V > VERSION
-        snp-sites -v -o ~{out_basename}.vcf ~{msa_fasta}
+        snp-sites -v -c -o ~{out_basename}.vcf ~{msa_fasta}
     }
     runtime {
         docker: docker
@@ -434,7 +434,7 @@ task ancestral_traits {
     runtime {
         docker: docker
         memory: "3 GB"
-        cpu :   4
+        cpu :   2
         disks:  "local-disk 50 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 1
@@ -495,7 +495,7 @@ task ancestral_tree {
         cpu :   4
         disks:  "local-disk 50 HDD"
         dx_instance_type: "mem3_ssd1_v2_x4"
-        preemptible: 1
+        preemptible: 0
     }
     output {
         File   nt_muts_json = "~{out_basename}_nt_muts.json"
@@ -570,7 +570,7 @@ task assign_clades_to_nodes {
         --mutations ~{nt_muts_json} ~{aa_muts_json} \
         --reference ~{ref_fasta} \
         --clades ~{clades_tsv} \
-        --output-node-data ~{out_basename}_node-clade-assignments.json
+        --output-node-data ~{out_basename}_clades.json
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
