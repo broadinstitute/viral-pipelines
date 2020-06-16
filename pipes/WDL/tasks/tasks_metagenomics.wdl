@@ -421,7 +421,7 @@ task build_kraken2_db {
       ${'--kmerLen=' + kmerLen} \
       ${'--minimizerLen=' + minimizerLen} \
       ${'--minimizerSpaces=' + minimizerSpaces} \
-      ${'--maxDbSize=' + maxDbSize}
+      ${'--maxDbSize=' + maxDbSize} \
       --loglevel=DEBUG
     tar -c -C $DB_DIR . | zstd ${"-" + zstd_compression_level} > "kraken2-${db_basename}.tar.zst" &
 
