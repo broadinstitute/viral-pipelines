@@ -162,8 +162,6 @@ task augur_mafft_align {
         Boolean  fill_gaps = true
         Boolean  remove_reference = true
 
-        Int?     machine_mem_gb
-        Int?     disk_space_gb = 750
         String   docker = "nextstrain/base"
     }
     command {
@@ -183,9 +181,9 @@ task augur_mafft_align {
     }
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 208]) + " GB"
-        cpu :   32
-        disks:  "local-disk ${disk_space_gb} LOCAL"
+        memory: "180 GB"
+        cpu :   64
+        disks:  "local-disk 750 LOCAL"
         preemptible: 0
         dx_instance_type: "mem3_ssd2_v2_x32"
     }
@@ -310,8 +308,8 @@ task draft_augur_tree {
     }
     runtime {
         docker: docker
-        memory: "16 GB"
-        cpu :   32
+        memory: "32 GB"
+        cpu :   64
         disks:  "local-disk 750 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x36"
         preemptible: 0
