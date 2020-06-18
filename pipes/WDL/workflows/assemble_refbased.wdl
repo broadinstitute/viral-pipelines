@@ -25,6 +25,9 @@ workflow assemble_refbased {
             description: "Reference genome to align reads to.",
             patterns: ["*.fasta"]
         }
+        aligner: {
+            description: "Read aligner software to use. Options: novoalign, bwa, minimap2"
+        }
         novocraft_license: {
             description: "The default Novoalign short read aligner is a commercially licensed software that is available in a much slower, single-threaded version for free. If you have a paid license file, provide it here to run in multi-threaded mode. If this is omitted, it will run in single-threaded mode.",
             patterns: ["*.lic"]
@@ -50,10 +53,22 @@ workflow assemble_refbased {
         Array[File]+    reads_unmapped_bams
         File            reference_fasta
 
+        String          aligner="novoalign"
         File?           novocraft_license
         Boolean?        skip_mark_dupes=false
         File?           trim_coords_bed
     }
+
+    Map[String,String] align_to_ref_options = {
+                            "novoalign": "-r Random -l 40 -g 40 -x 20 -t 501 -k",
+                            "bwa": "-k 12 -B 1",
+                            "minimap2": ""
+                            }
+    Map[String,String] align_to_self_options = {
+                            "novoalign": "-r Random -l 40 -g 40 -x 20 -t 100",
+                            "bwa": "",
+                            "minimap2": ""
+                            }
 
     scatter(reads_unmapped_bam in reads_unmapped_bams) {
         call assembly.align_reads as align_to_ref {
@@ -62,9 +77,8 @@ workflow assemble_refbased {
                 reads_unmapped_bam = reads_unmapped_bam,
                 novocraft_license  = novocraft_license,
                 skip_mark_dupes    = skip_mark_dupes,
-                aligner_options    = "-r Random -l 40 -g 40 -x 20 -t 501 -k"
-                ## (for bwa) -- aligner_options = "-k 12 -B 1"
-                ## (for novoalign) -- aligner_options = "-r Random -l 40 -g 40 -x 20 -t 501 -k"
+                aligner            = aligner,
+                aligner_options    = align_to_ref_options[aligner]
         }
         call assembly.ivar_trim {
             input:
@@ -100,9 +114,8 @@ workflow assemble_refbased {
                 reads_unmapped_bam = reads_unmapped_bam,
                 novocraft_license  = novocraft_license,
                 skip_mark_dupes    = skip_mark_dupes,
-                aligner_options    = "-r Random -l 40 -g 40 -x 20 -t 100"
-                ## (for bwa) -- aligner_options = "-k 12 -B 1"
-                ## (for novoalign) -- aligner_options = "-r Random -l 40 -g 40 -x 20 -t 501 -k"
+                aligner            = aligner,
+                aligner_options    = align_to_self_options[aligner]
         }
     }
 
