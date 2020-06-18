@@ -12,7 +12,6 @@ workflow augur_from_msa {
     input {
         File            msa_or_vcf
         File            sample_metadata
-        String          virus
         File            ref_fasta
         File            genbank_gb
         File?           clades_tsv
@@ -27,9 +26,6 @@ workflow augur_from_msa {
         sample_metadata: {
           description: "Metadata in tab-separated text format. See https://nextstrain-augur.readthedocs.io/en/stable/faq/metadata.html for details.",
           patterns: ["*.txt", "*.tsv"]
-        }
-        virus: {
-          description: "A filename-friendly string that is used as a base for output file names."
         }
         ref_fasta: {
           description: "A reference assembly (not included in assembly_fastas) to align assembly_fastas against. Typically from NCBI RefSeq or similar.",
@@ -54,37 +50,32 @@ workflow augur_from_msa {
     }
     call nextstrain.draft_augur_tree {
         input:
-            msa_or_vcf = augur_mask_sites.masked_sequences,
-            basename   = virus
+            msa_or_vcf = augur_mask_sites.masked_sequences
     }
     call nextstrain.refine_augur_tree {
         input:
             raw_tree    = draft_augur_tree.aligned_tree,
             msa_or_vcf  = augur_mask_sites.masked_sequences,
-            metadata    = sample_metadata,
-            basename    = virus
+            metadata    = sample_metadata
     }
     if(defined(ancestral_traits_to_infer) && length(select_first([ancestral_traits_to_infer,[]]))>0) {
         call nextstrain.ancestral_traits {
             input:
                 tree           = refine_augur_tree.tree_refined,
                 metadata       = sample_metadata,
-                columns        = select_first([ancestral_traits_to_infer,[]]),
-                basename       = virus
+                columns        = select_first([ancestral_traits_to_infer,[]])
         }
     }
     call nextstrain.ancestral_tree {
         input:
-            refined_tree  = refine_augur_tree.tree_refined,
-            msa_or_vcf    = augur_mask_sites.masked_sequences,
-            basename      = virus
+            tree        = refine_augur_tree.tree_refined,
+            msa_or_vcf  = augur_mask_sites.masked_sequences
     }
     call nextstrain.translate_augur_tree {
         input:
-            basename       = virus,
-            refined_tree   = refine_augur_tree.tree_refined,
-            nt_muts        = ancestral_tree.nt_muts_json,
-            genbank_gb     = genbank_gb
+            tree        = refine_augur_tree.tree_refined,
+            nt_muts     = ancestral_tree.nt_muts_json,
+            genbank_gb  = genbank_gb
     }
     if(defined(clades_tsv)) {
         call nextstrain.assign_clades_to_nodes {
