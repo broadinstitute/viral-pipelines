@@ -120,11 +120,13 @@ task beast {
     cpu:    4
     disks: "local-disk 300 HDD"
     bootDiskSizeGb: 50
-    gpu:              true                # dxWDL
-    acceleratorType:  "nvidia-tesla-k80"  # GCP PAPIv2
-    acceleratorCount: 4                   # GCP PAPIv2
-    gpuType:          "nvidia-tesla-k80"  # Terra
-    gpuCount:         4                   # Terra
+    gpu:                 true                # dxWDL
+    dx_timeout:          "40H"               # dxWDL
+    dx_instance_type:    "mem1_ssd1_gpu2_x8" # dxWDL
+    acceleratorType:     "nvidia-tesla-k80"  # GCP PAPIv2
+    acceleratorCount:    4                   # GCP PAPIv2
+    gpuType:             "nvidia-tesla-k80"  # Terra
+    gpuCount:            4                   # Terra
     nvidiaDriverVersion: "396.37"
   }
 }
