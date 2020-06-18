@@ -198,7 +198,7 @@ task ivar_trim {
       File?   trim_coords_bed
       Int?    min_keep_length
       Int?    sliding_window
-      Int?    min_quality
+      Int?    min_quality=1
 
       Int?    machine_mem_gb
       String  docker="andersenlabapps/ivar"
@@ -217,13 +217,18 @@ task ivar_trim {
     command {
         set -ex -o pipefail
         ivar version | head -1 | tee VERSION
-        ivar trim -e \
-          ${'-b ' + trim_coords_bed} \
-          ${'-m ' + min_keep_length} \
-          ${'-s ' + sliding_window} \
-          ${'-q ' + min_quality} \
-          -i ${aligned_bam} -p trim
-        samtools sort -@ $(nproc) -m 1000M -o ${bam_basename}.trimmed.bam trim.bam
+        if [ -f "${trim_coords_bed}" ]; then
+          ivar trim -e \
+            ${'-b ' + trim_coords_bed} \
+            ${'-m ' + min_keep_length} \
+            ${'-s ' + sliding_window} \
+            ${'-q ' + min_quality} \
+            -i ${aligned_bam} -p trim
+          samtools sort -@ $(nproc) -m 1000M -o ${bam_basename}.trimmed.bam trim.bam
+        else
+          echo "skipping ivar trim"
+          cp "${aligned_bam}" "${bam_basename}.trimmed.bam"
+        fi
     }
 
     output {
