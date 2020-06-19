@@ -215,7 +215,6 @@ task ivar_trim {
     }
 
     command {
-        set -ex -o pipefail
         ivar version | head -1 | tee VERSION
         if [ -f "${trim_coords_bed}" ]; then
           ivar trim -e \
@@ -256,7 +255,7 @@ task align_reads {
 
     File?    novocraft_license
 
-    String?  aligner="novoalign"
+    String   aligner="minimap2"
     String?  aligner_options
     Boolean? skip_mark_dupes=false
 
@@ -311,6 +310,8 @@ task align_reads {
       samtools index "${sample_name}.mapped.bam" "${sample_name}.mapped.bai"
     fi
 
+    cat /proc/loadavg > CPU_LOAD
+
     # collect figures of merit
     grep -v '^>' assembly.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
     samtools view -c ${reads_unmapped_bam} | tee reads_provided
@@ -323,6 +324,9 @@ task align_reads {
 
     # fastqc mapped bam
     reports.py fastqc ${sample_name}.mapped.bam ${sample_name}.mapped_fastqc.html --out_zip ${sample_name}.mapped_fastqc.zip
+
+    cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+    cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
   }
 
   output {
@@ -336,8 +340,11 @@ task align_reads {
     Int    reads_provided                = read_int("reads_provided")
     Int    reads_aligned                 = read_int("reads_aligned")
     Int    read_pairs_aligned            = read_int("read_pairs_aligned")
-    Int    bases_aligned                 = read_int("bases_aligned")
+    Float  bases_aligned                 = read_float("bases_aligned")
     Float  mean_coverage                 = read_float("mean_coverage")
+    Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
+    Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
+    String cpu_load = read_string("CPU_LOAD")
     String viralngs_version              = read_string("VERSION")
   }
 
@@ -628,7 +635,7 @@ task refine_2x_and_plot {
         Int  assembly_length_unambiguous   = read_int("assembly_length_unambiguous")
         Int  reads_aligned                 = read_int("reads_aligned")
         Int  read_pairs_aligned            = read_int("read_pairs_aligned")
-        Int  bases_aligned                 = read_int("bases_aligned")
+        Float bases_aligned                 = read_float("bases_aligned")
         Float mean_coverage                = read_float("mean_coverage")
         String viralngs_version            = read_string("VERSION")
     }

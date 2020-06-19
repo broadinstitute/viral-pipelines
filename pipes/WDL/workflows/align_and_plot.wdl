@@ -29,7 +29,7 @@ workflow align_and_plot {
         Int    reads_provided                = align.reads_provided
         Int    reads_aligned                 = align.reads_aligned
         Int    read_pairs_aligned            = align.read_pairs_aligned
-        Int    bases_aligned                 = align.bases_aligned
+        Float  bases_aligned                 = align.bases_aligned
         Float  mean_coverage                 = align.mean_coverage
         String align_viral_core_version      = align.viralngs_version
         File   coverage_plot                 = plot_coverage.coverage_plot

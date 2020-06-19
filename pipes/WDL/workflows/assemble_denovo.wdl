@@ -163,7 +163,7 @@ workflow assemble_denovo {
     File aligned_only_reads_fastqc     = refine_2x_and_plot.aligned_only_reads_fastqc
     File coverage_tsv                  = refine_2x_and_plot.coverage_tsv
     Int  read_pairs_aligned            = refine_2x_and_plot.read_pairs_aligned
-    Int  bases_aligned                 = refine_2x_and_plot.bases_aligned
+    Float bases_aligned                 = refine_2x_and_plot.bases_aligned
 
     String? deplete_viral_classify_version  = deplete_taxa.viralngs_version
     String? taxfilt_viral_classify_version  = filter_to_taxon.viralngs_version
