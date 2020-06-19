@@ -367,7 +367,7 @@ task tsv_join {
     String         join_type="inner"
     String         out_basename
 
-    String         docker="jdkelley/csvkit"
+    String         docker="stratdat/csvkit"
   }
 
   command {
@@ -408,7 +408,7 @@ task tsv_stack {
   input {
     Array[File]+   input_tsvs
     String         out_basename
-    String         docker="jdkelley/csvkit"
+    String         docker="stratdat/csvkit"
   }
 
   command {
@@ -464,6 +464,7 @@ task compare_two_genomes {
     docker: "${docker}"
     disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible: 1
   }
 }
 
