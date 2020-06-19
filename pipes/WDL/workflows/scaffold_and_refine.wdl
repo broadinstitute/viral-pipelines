@@ -41,7 +41,7 @@ workflow scaffold_and_refine {
     File aligned_only_reads_fastqc     = refine_2x_and_plot.aligned_only_reads_fastqc
     File coverage_tsv                  = refine_2x_and_plot.coverage_tsv
     Int  read_pairs_aligned            = refine_2x_and_plot.read_pairs_aligned
-    Int  bases_aligned                 = refine_2x_and_plot.bases_aligned
+    Float bases_aligned                 = refine_2x_and_plot.bases_aligned
 
     String scaffold_viral_assemble_version = scaffold.viralngs_version
     String refine_viral_assemble_version   = refine_2x_and_plot.viralngs_version
