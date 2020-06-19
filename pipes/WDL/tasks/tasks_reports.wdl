@@ -64,7 +64,7 @@ task plot_coverage {
     Int    assembly_length               = read_int("assembly_length")
     Int    reads_aligned                 = read_int("reads_aligned")
     Int    read_pairs_aligned            = read_int("read_pairs_aligned")
-    Float  bases_aligned                 = read_int("bases_aligned")
+    Float  bases_aligned                 = read_float("bases_aligned")
     Float  mean_coverage                 = read_float("mean_coverage")
     String viralngs_version              = read_string("VERSION")
   }
