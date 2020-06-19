@@ -256,7 +256,7 @@ task align_reads {
 
     File?    novocraft_license
 
-    String?  aligner="novoalign"
+    String   aligner="minimap2"
     String?  aligner_options
     Boolean? skip_mark_dupes=false
 

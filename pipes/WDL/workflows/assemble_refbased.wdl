@@ -7,7 +7,7 @@ import "../tasks/tasks_read_utils.wdl" as read_utils
 workflow assemble_refbased {
 
     meta {
-        description: "Reference-based microbial consensus calling. Aligns short reads to a singular reference genome, calls a new consensus sequence, and emits: new assembly, reads aligned to provided reference, reads aligned to new assembly, various figures of merit, plots, and QC metrics. The user may provide unaligned reads spread across multiple input files and this workflow will parallelize alignment per input file before merging results prior to consensus calling."
+        description: "Reference-based microbial consensus calling. Aligns NGS reads to a singular reference genome, calls a new consensus sequence, and emits: new assembly, reads aligned to provided reference, reads aligned to new assembly, various figures of merit, plots, and QC metrics. The user may provide unaligned reads spread across multiple input files and this workflow will parallelize alignment per input file before merging results prior to consensus calling."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
     }
@@ -26,7 +26,7 @@ workflow assemble_refbased {
             patterns: ["*.fasta"]
         }
         aligner: {
-            description: "Read aligner software to use. Options: novoalign, bwa, minimap2"
+            description: "Read aligner software to use. Options: novoalign, bwa, minimap2. Minimap2 can automatically handle Illumina, PacBio, or Oxford Nanopore reads as long as the 'PL' field in the BAM read group header is set properly (novoalign and bwa are Illumina-only)."
         }
         novocraft_license: {
             description: "The default Novoalign short read aligner is a commercially licensed software that is available in a much slower, single-threaded version for free. If you have a paid license file, provide it here to run in multi-threaded mode. If this is omitted, it will run in single-threaded mode.",
@@ -53,7 +53,7 @@ workflow assemble_refbased {
         Array[File]+    reads_unmapped_bams
         File            reference_fasta
 
-        String          aligner="novoalign"
+        String          aligner="minimap2"
         File?           novocraft_license
         Boolean?        skip_mark_dupes=false
         File?           trim_coords_bed
