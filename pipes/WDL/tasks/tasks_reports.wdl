@@ -387,6 +387,7 @@ task tsv_join {
       -c ${sep=',' id_columns} \
       $JOIN_TYPE \
       ${sep=' ' input_tsvs} \
+      | tr , '\t' \
       > ${out_basename}.txt
   }
 
@@ -413,6 +414,7 @@ task tsv_stack {
   command {
     csvstack -t --filenames \
       ${sep=' ' input_tsvs} \
+      | tr , '\t' \
       > ${out_basename}.txt
   }
 
@@ -442,9 +444,7 @@ task compare_two_genomes {
   command {
     set -ex -o pipefail
     assembly.py --version | tee VERSION
-    assembly.py alignment_summary "${genome_one}" "${genome_two}" --outfileName report.txt --printCounts --loglevel=DEBUG
-    echo -e "id\t$(cat report.txt | head -1)" > "${out_basename}".txt
-    echo -e "${out_basename}\t$(cat report.txt | tail -1)" >> "${out_basename}".txt
+    assembly.py alignment_summary "${genome_one}" "${genome_two}" --outfileName "${out_basename}.txt" --printCounts --loglevel=DEBUG
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     cat /proc/loadavg > CPU_LOAD
     cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
