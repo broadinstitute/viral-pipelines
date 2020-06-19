@@ -359,3 +359,112 @@ task MultiQC {
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
+
+task tsv_join {
+  input {
+    Array[File]+   input_tsvs
+    Array[String]+ id_columns
+    String         join_type="inner"
+    String         out_basename
+
+    String         docker="jdkelley/csvkit"
+  }
+
+  command {
+    if [ "${join_type}" = "inner" ]; then
+      JOIN_TYPE=""
+    elif [ "${join_type}" = "outer" ]; then
+      JOIN_TYPE="--${join_type}"
+    elif [ "${join_type}" = "left" ]; then
+      JOIN_TYPE="--${join_type}"
+    elif [ "${join_type}" = "right" ]; then
+      JOIN_TYPE="--${join_type}"
+    else
+      echo "unrecognized join_type ${join_type}"
+      exit 1
+    fi
+    csvjoin -t -y 0 -I \
+      -c ${sep=',' id_columns} \
+      $JOIN_TYPE \
+      ${sep=' ' input_tsvs} \
+      > ${out_basename}.txt
+  }
+
+  output {
+    File   out_tsv = "${out_basename}.txt"
+  }
+
+  runtime {
+    memory: "1 GB"
+    cpu: 1
+    docker: "${docker}"
+    disks: "local-disk 50 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
+task tsv_stack {
+  input {
+    Array[File]+   input_tsvs
+    String         out_basename
+    String         docker="jdkelley/csvkit"
+  }
+
+  command {
+    csvstack -t --filenames \
+      ${sep=' ' input_tsvs} \
+      > ${out_basename}.txt
+  }
+
+  output {
+    File   out_tsv = "${out_basename}.txt"
+  }
+
+  runtime {
+    memory: "1 GB"
+    cpu: 1
+    docker: "${docker}"
+    disks: "local-disk 50 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+
+}
+
+task compare_two_genomes {
+  input {
+    File          genome_one
+    File          genome_two
+    String        out_basename
+
+    String        docker="quay.io/broadinstitute/viral-assemble"
+  }
+
+  command {
+    set -ex -o pipefail
+    assembly.py --version | tee VERSION
+    assembly.py alignment_summary "${genome_one}" "${genome_two}" --outfileName report.txt --printCounts --loglevel=DEBUG
+    echo -e "id\t$(cat report.txt | head -1)" > "${out_basename}".txt
+    echo -e "${out_basename}\t$(cat report.txt | tail -1)" >> "${out_basename}".txt
+    cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+    cat /proc/loadavg > CPU_LOAD
+    cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
+  }
+
+  output {
+    File   comparison_table = "${out_basename}.txt"
+    Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
+    Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
+    String cpu_load = read_string("CPU_LOAD")
+    String viralngs_version = read_string("VERSION")
+  }
+
+  runtime {
+    memory: "3 GB"
+    cpu: 2
+    docker: "${docker}"
+    disks: "local-disk 50 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
+
