@@ -340,7 +340,7 @@ task align_reads {
     Int    reads_provided                = read_int("reads_provided")
     Int    reads_aligned                 = read_int("reads_aligned")
     Int    read_pairs_aligned            = read_int("read_pairs_aligned")
-    Int    bases_aligned                 = read_int("bases_aligned")
+    Float  bases_aligned                 = read_int("bases_aligned")
     Float  mean_coverage                 = read_float("mean_coverage")
     Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
     Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
@@ -635,7 +635,7 @@ task refine_2x_and_plot {
         Int  assembly_length_unambiguous   = read_int("assembly_length_unambiguous")
         Int  reads_aligned                 = read_int("reads_aligned")
         Int  read_pairs_aligned            = read_int("read_pairs_aligned")
-        Int  bases_aligned                 = read_int("bases_aligned")
+        Float bases_aligned                 = read_int("bases_aligned")
         Float mean_coverage                = read_float("mean_coverage")
         String viralngs_version            = read_string("VERSION")
     }

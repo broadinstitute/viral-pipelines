@@ -150,14 +150,14 @@ workflow assemble_refbased {
         File   align_to_ref_merged_coverage_tsv             = plot_ref_coverage.coverage_tsv
         Int    align_to_ref_merged_reads_aligned            = plot_ref_coverage.reads_aligned
         Int    align_to_ref_merged_read_pairs_aligned       = plot_ref_coverage.read_pairs_aligned
-        Int    align_to_ref_merged_bases_aligned            = plot_ref_coverage.bases_aligned
+        Float  align_to_ref_merged_bases_aligned            = plot_ref_coverage.bases_aligned
 
         File   align_to_self_merged_aligned_only_bam   = merge_align_to_self.out_bam
         File   align_to_self_merged_coverage_plot      = plot_self_coverage.coverage_plot
         File   align_to_self_merged_coverage_tsv       = plot_self_coverage.coverage_tsv
         Int    align_to_self_merged_reads_aligned      = plot_self_coverage.reads_aligned
         Int    align_to_self_merged_read_pairs_aligned = plot_self_coverage.read_pairs_aligned
-        Int    align_to_self_merged_bases_aligned      = plot_self_coverage.bases_aligned
+        Float  align_to_self_merged_bases_aligned      = plot_self_coverage.bases_aligned
         Float  align_to_self_merged_mean_coverage            = plot_self_coverage.mean_coverage
 
         String align_to_ref_viral_core_version = align_to_ref.viralngs_version[0]
