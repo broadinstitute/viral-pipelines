@@ -687,6 +687,7 @@ task run_discordance {
           -Ov -o everything.vcf
 
         # tally outputs
+        set +o pipefail # to handle empty grep
         cat everything.vcf | bcftools filter -i 'MAC=0' | grep -v '^#' | wc -l | tee num_concordant
         cat everything.vcf | bcftools filter -i 'MAC>0' > "${out_basename}.discordant.vcf"
         cat "${out_basename}.discordant.vcf" | bcftools filter -i 'TYPE="snp"' | grep -v '^#' | wc -l | tee num_discordant_snps
