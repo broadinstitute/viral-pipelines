@@ -669,12 +669,12 @@ task run_discordance {
 
         # create 2-col table with read group ids in both cols
         python3 <<CODE
-          import tools.samtools
-          header = tools.samtools.SamtoolsTool().getHeader("${reads_aligned_bam}")
-          rgids = [[x[3:] for x in h if x.startswith('ID:')][0] for h in header if h[0]=='@RG']
-          with open('readgroups.txt', 'wt') as outf:
-            for rg in rgids:
-              outf.write(rg+'\t'+rg+'\n')
+        import tools.samtools
+        header = tools.samtools.SamtoolsTool().getHeader("${reads_aligned_bam}")
+        rgids = [[x[3:] for x in h if x.startswith('ID:')][0] for h in header if h[0]=='@RG']
+        with open('readgroups.txt', 'wt') as outf:
+          for rg in rgids:
+            outf.write(rg+'\t'+rg+'\n')
         CODE
 
         # bcftools call snps while treating each RG as a separate sample
