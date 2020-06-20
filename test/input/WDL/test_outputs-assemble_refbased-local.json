@@ -7,5 +7,7 @@
   "assemble_refbased.align_to_self_merged_reads_aligned": 18409,
   "assemble_refbased.reference_genome_length": 18959,
   "assemble_refbased.assembly_length_unambiguous": 18889,
-  "assemble_refbased.assembly_length": 18889
+  "assemble_refbased.assembly_length": 18889,
+  "assemble_refbased.replicate_discordant_indels": 0,
+  "assemble_refbased.replicate_discordant_snps": 0
 }
