@@ -185,6 +185,36 @@ task align_and_count {
   }
 }
 
+task align_and_count_summary {
+  input {
+    Array[File]+  counts_txt
+
+    String?       output_prefix="count_summary"
+
+    String        docker="quay.io/broadinstitute/viral-core"
+  }
+
+  command {
+    set -ex -o pipefail
+
+    reports.py --version | tee VERSION
+    reports.py aggregate_alignment_counts ${sep=' ' counts_txt} "${output_prefix}".tsv --loglevel=DEBUG
+  }
+
+  output {
+    File   count_summary    = "${output_prefix}.tsv"
+    String viralngs_version = read_string("VERSION")
+  }
+
+  runtime {
+    memory: "3 GB"
+    cpu: 2
+    docker: "${docker}"
+    disks: "local-disk 50 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task aggregate_metagenomics_reports {
   input {
     Array[File]+ kraken_summary_reports 
