@@ -58,9 +58,10 @@ workflow demux_plus {
             reads_unmapped_bam = illumina_demux.raw_reads_unaligned_bams
     }
 
-    call reports.align_and_count_summary as spike_summary {
+    call reports.tsv_stack as spike_summary {
         input:
-            counts_txt = spikein.report
+            input_tsvs   = spikein.report,
+            out_basename = "spikein_summary"
     }
 
     call reports.aggregate_metagenomics_reports as metag_summary_report {
@@ -83,7 +84,7 @@ workflow demux_plus {
 
         File        multiqc_report_raw     = multiqc_raw.multiqc_report
         File        multiqc_report_cleaned = multiqc_cleaned.multiqc_report
-        File        spikein_counts         = spike_summary.count_summary
+        File        spikein_counts         = spike_summary.out_tsv
         File        metagenomics_krona     = krakenuniq.krona_report_merged_html
         File        metagenomics_summary   = metag_summary_report.krakenuniq_aggregate_taxlevel_summary
         Array[File] krakenuniq_classified_reads = krakenuniq.krakenuniq_classified_reads

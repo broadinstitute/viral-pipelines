@@ -33,20 +33,20 @@ workflow align_and_count_multiple_report {
         }
     }
 
-    call reports.align_and_count_summary {
+    call reports.tsv_stack as align_and_count_summary {
         input:
-            counts_txt = align_and_count.report
+            input_tsvs   = align_and_count.report,
+            out_basename = "count_summary"
     }
 
-    call reports.align_and_count_summary as align_and_count_summary_top_hits {
+    call reports.tsv_stack as align_and_count_summary_top_hits {
         input:
-            counts_txt    = align_and_count.report_top_hits,
-            output_prefix = "count_summary_top_hits"
+            input_tsvs   = align_and_count.report_top_hits,
+            out_basename = "count_summary_top_hits"
     }
 
     output {
-        File report               = align_and_count_summary.count_summary
-        File report_top_hits      = align_and_count_summary_top_hits.count_summary
-        String viral_core_version = align_and_count_summary.viralngs_version
+        File report               = align_and_count_summary.out_tsv
+        File report_top_hits      = align_and_count_summary_top_hits.out_tsv
     }
 }
