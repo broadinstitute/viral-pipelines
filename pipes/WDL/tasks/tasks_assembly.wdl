@@ -679,10 +679,10 @@ task run_discordance {
 
         # bcftools call snps while treating each RG as a separate sample
         bcftools mpileup \
-          -G readgroups.txt -d 10000 -Ou \
+          -G readgroups.txt -d 10000 -a "FORMAT/AD" -q 1 -m 2 -Ou \
           -f "${reference_fasta}" "${reads_aligned_bam}" \
           | bcftools call \
-          -m -P 0 --ploidy 1 \
+          -m --ploidy 1 \
           --threads `nproc` \
           -Ov -o everything.vcf
 
