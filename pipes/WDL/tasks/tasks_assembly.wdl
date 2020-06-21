@@ -419,6 +419,11 @@ task refine_assembly_with_aligned_reads {
         file_utils.py rename_fasta_sequences \
           refined.fasta "${sample_name}.fasta" "${sample_name}"
 
+        # collect variant counts
+        bcftools filter -e "FMT/DP<${min_coverage}" -S . "${sample_name}.sites.vcf.gz" -Ou | bcftools filter -i "AC>1" -Ou > "${sample_name}.diffs.vcf"
+        bcftools filter -i 'TYPE="snp"'  "${sample_name}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_snps
+        bcftools filter -i 'TYPE!="snp"' "${sample_name}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_indels
+
         # collect figures of merit
         set +o pipefail # grep will exit 1 if it fails to find the pattern
         grep -v '^>' refined.fasta | tr -d '\n' | wc -c | tee assembly_length
@@ -430,6 +435,8 @@ task refine_assembly_with_aligned_reads {
         File   sites_vcf_gz                 = "${sample_name}.sites.vcf.gz"
         Int    assembly_length              = read_int("assembly_length")
         Int    assembly_length_unambiguous  = read_int("assembly_length_unambiguous")
+        Int    dist_to_ref_snps             = read_int("num_snps")
+        Int    dist_to_ref_indels           = read_int("num_indels")
         String viralngs_version             = read_string("VERSION")
     }
 
