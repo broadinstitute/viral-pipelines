@@ -150,6 +150,8 @@ workflow assemble_refbased {
         Int    replicate_concordant_sites  = run_discordance.concordant_sites
         Int    replicate_discordant_snps   = run_discordance.discordant_snps
         Int    replicate_discordant_indels = run_discordance.discordant_indels
+        Int    num_read_groups             = run_discordance.num_read_groups
+        Int    num_libraries               = run_discordance.num_libraries
         File   replicate_discordant_vcf    = run_discordance.discordant_sites_vcf
 
         Array[File]   align_to_ref_per_input_aligned_flagstat = align_to_ref.aligned_bam_flagstat

@@ -9,5 +9,7 @@
   "assemble_refbased.assembly_length_unambiguous": 18889,
   "assemble_refbased.assembly_length": 18889,
   "assemble_refbased.replicate_discordant_indels": 0,
-  "assemble_refbased.replicate_discordant_snps": 0
+  "assemble_refbased.replicate_discordant_snps": 0,
+  "assemble_refbased.num_read_groups": 8,
+  "assemble_refbased.num_libraries": 2
 }
