@@ -147,9 +147,14 @@ workflow assemble_refbased {
         Int    reference_genome_length      = plot_ref_coverage.assembly_length
         Float  assembly_mean_coverage       = plot_ref_coverage.mean_coverage
 
+        Int    dist_to_ref_snps   = call_consensus.dist_to_ref_snps
+        Int    dist_to_ref_indels = call_consensus.dist_to_ref_indels
+
         Int    replicate_concordant_sites  = run_discordance.concordant_sites
         Int    replicate_discordant_snps   = run_discordance.discordant_snps
         Int    replicate_discordant_indels = run_discordance.discordant_indels
+        Int    num_read_groups             = run_discordance.num_read_groups
+        Int    num_libraries               = run_discordance.num_libraries
         File   replicate_discordant_vcf    = run_discordance.discordant_sites_vcf
 
         Array[File]   align_to_ref_per_input_aligned_flagstat = align_to_ref.aligned_bam_flagstat
