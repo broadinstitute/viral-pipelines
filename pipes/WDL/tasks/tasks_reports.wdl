@@ -145,7 +145,6 @@ task align_and_count {
   input {
     File    reads_bam
     File    ref_db
-    Int?    minScoreToFilter
     Int?    topNHits = 3
 
     Int?    machine_mem_gb
@@ -161,11 +160,10 @@ task align_and_count {
     read_utils.py --version | tee VERSION
 
     ln -s ${reads_bam} ${reads_basename}.bam
-    read_utils.py bwamem_idxstats \
+    read_utils.py minimap2_idxstats \
       ${reads_basename}.bam \
       ${ref_db} \
       --outStats ${reads_basename}.count.${ref_basename}.txt.unsorted \
-      ${'--minScoreToFilter=' + minScoreToFilter} \
       --loglevel=DEBUG
 
       sort -b -r -n -k3 ${reads_basename}.count.${ref_basename}.txt.unsorted > ${reads_basename}.count.${ref_basename}.txt
@@ -179,7 +177,7 @@ task align_and_count {
   }
 
   runtime {
-    memory: select_first([machine_mem_gb, 7]) + " GB"
+    memory: select_first([machine_mem_gb, 3]) + " GB"
     cpu: 4
     docker: "${docker}"
     disks: "local-disk 375 LOCAL"
@@ -367,7 +365,7 @@ task tsv_join {
     String         join_type="inner"
     String         out_basename
 
-    String         docker="stratdat/csvkit"
+    String         docker="quay.io/broadinstitute/viral-core"
   }
 
   command {
@@ -408,7 +406,7 @@ task tsv_stack {
   input {
     Array[File]+   input_tsvs
     String         out_basename
-    String         docker="stratdat/csvkit"
+    String         docker="quay.io/broadinstitute/viral-core"
   }
 
   command {

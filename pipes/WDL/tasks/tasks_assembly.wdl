@@ -648,3 +648,70 @@ task refine_2x_and_plot {
         dx_instance_type: "mem1_ssd1_v2_x8"
     }
 }
+
+task run_discordance {
+    meta {
+      description: "This step evaluates discordance between sequencing runs of the same sample. The input is a merged, aligned BAM file for a single sample. If multiple runs (read groups) exist, we split the aligned reads by read group and separately evaluate consensus calls per read group using bcftools mpileup and call. A VCF is emitted that describes variation between runs."
+    }
+
+    input {
+      File     reads_aligned_bam
+      File     reference_fasta
+      String   out_basename = "run"
+
+      String   docker="quay.io/broadinstitute/viral-core"
+    }
+
+    command {
+        set -ex -o pipefail
+
+        read_utils.py --version | tee VERSION
+
+        # create 2-col table with read group ids in both cols
+        python3 <<CODE
+        import tools.samtools
+        header = tools.samtools.SamtoolsTool().getHeader("${reads_aligned_bam}")
+        rgids = [[x[3:] for x in h if x.startswith('ID:')][0] for h in header if h[0]=='@RG']
+        with open('readgroups.txt', 'wt') as outf:
+          for rg in rgids:
+            outf.write(rg+'\t'+rg+'\n')
+        CODE
+
+        # bcftools call snps while treating each RG as a separate sample
+        bcftools mpileup \
+          -G readgroups.txt -d 10000 -a "FORMAT/DP,FORMAT/AD" \
+          -q 1 -m 2 -Ou \
+          -f "${reference_fasta}" "${reads_aligned_bam}" \
+          | bcftools call \
+          -P 0 -m --ploidy 1 \
+          --threads $(nproc) \
+          -Ov -o everything.vcf
+
+        # mask all GT calls when less than 3 reads
+        cat everything.vcf | bcftools filter -e 'FMT/DP<3' -S . > filtered.vcf
+        cat filtered.vcf | bcftools filter -i 'MAC>0' > "${out_basename}.discordant.vcf"
+
+        # tally outputs
+        set +o pipefail # to handle empty grep
+        cat filtered.vcf | bcftools filter -i 'MAC=0' | grep -v '^#' | wc -l | tee num_concordant
+        cat "${out_basename}.discordant.vcf" | bcftools filter -i 'TYPE="snp"' | grep -v '^#' | wc -l | tee num_discordant_snps
+        cat "${out_basename}.discordant.vcf" | bcftools filter -i 'TYPE!="snp"' | grep -v '^#' | wc -l | tee num_discordant_indels
+    }
+
+    output {
+        File   discordant_sites_vcf = "${out_basename}.discordant.vcf"
+        Int    concordant_sites  = read_int("num_concordant")
+        Int    discordant_snps   = read_int("num_discordant_snps")
+        Int    discordant_indels = read_int("num_discordant_indels")
+        String viralngs_version  = read_string("VERSION")
+    }
+
+    runtime {
+        docker: "${docker}"
+        memory: "3 GB"
+        cpu: 2
+        disks: "local-disk 100 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+        preemptible: 1
+    }
+}

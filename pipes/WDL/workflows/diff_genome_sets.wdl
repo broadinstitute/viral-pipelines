@@ -21,7 +21,7 @@ workflow diff_genome_sets {
     call reports.tsv_stack {
         input:
             input_tsvs = compare_two_genomes.comparison_table,
-            out_basename = "diff_genome_sets.txt"
+            out_basename = "diff_genome_sets"
     }
 
     output {

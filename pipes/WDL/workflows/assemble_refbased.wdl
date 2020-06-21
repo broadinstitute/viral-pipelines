@@ -94,6 +94,13 @@ workflow assemble_refbased {
             out_basename        = "${sample_name}.align_to_ref.trimmed"
     }
 
+    call assembly.run_discordance {
+        input:
+            reads_aligned_bam = merge_align_to_ref.out_bam,
+            reference_fasta   = reference_fasta,
+            out_basename      = sample_name
+    }
+
     call reports.plot_coverage as plot_ref_coverage {
         input:
             aligned_reads_bam   = merge_align_to_ref.out_bam,
@@ -139,6 +146,11 @@ workflow assemble_refbased {
         Int    assembly_length_unambiguous  = call_consensus.assembly_length_unambiguous
         Int    reference_genome_length      = plot_ref_coverage.assembly_length
         Float  assembly_mean_coverage       = plot_ref_coverage.mean_coverage
+
+        Int    replicate_concordant_sites  = run_discordance.concordant_sites
+        Int    replicate_discordant_snps   = run_discordance.discordant_snps
+        Int    replicate_discordant_indels = run_discordance.discordant_indels
+        File   replicate_discordant_vcf    = run_discordance.discordant_sites_vcf
 
         Array[File]   align_to_ref_per_input_aligned_flagstat = align_to_ref.aligned_bam_flagstat
         Array[Int]    align_to_ref_per_input_reads_provided   = align_to_ref.reads_provided
