@@ -679,17 +679,21 @@ task run_discordance {
 
         # bcftools call snps while treating each RG as a separate sample
         bcftools mpileup \
-          -G readgroups.txt -d 10000 -a "FORMAT/AD" -q 1 -m 2 -Ou \
+          -G readgroups.txt -d 10000 -a "FORMAT/DP,FORMAT/AD" \
+          -q 1 -m 2 -Ou \
           -f "${reference_fasta}" "${reads_aligned_bam}" \
           | bcftools call \
-          -m --ploidy 1 \
-          --threads `nproc` \
+          -P 0 -m --ploidy 1 \
+          --threads $(nproc) \
           -Ov -o everything.vcf
+
+        # mask all GT calls when less than 3 reads
+        cat everything.vcf | bcftools filter -e 'FMT/DP<3' -S . > filtered.vcf
+        cat filtered.vcf | bcftools filter -i 'MAC>0' > "${out_basename}.discordant.vcf"
 
         # tally outputs
         set +o pipefail # to handle empty grep
-        cat everything.vcf | bcftools filter -i 'MAC=0' | grep -v '^#' | wc -l | tee num_concordant
-        cat everything.vcf | bcftools filter -i 'MAC>0' > "${out_basename}.discordant.vcf"
+        cat filtered.vcf | bcftools filter -i 'MAC=0' | grep -v '^#' | wc -l | tee num_concordant
         cat "${out_basename}.discordant.vcf" | bcftools filter -i 'TYPE="snp"' | grep -v '^#' | wc -l | tee num_discordant_snps
         cat "${out_basename}.discordant.vcf" | bcftools filter -i 'TYPE!="snp"' | grep -v '^#' | wc -l | tee num_discordant_indels
     }
