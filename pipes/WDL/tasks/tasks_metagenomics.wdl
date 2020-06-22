@@ -313,7 +313,7 @@ task kraken2 {
   output {
     File    kraken2_reads_report   = "${out_basename}.kraken2.reads.txt.gz"
     File    kraken2_summary_report = "${out_basename}.kraken2.report.txt"
-#    File    krona_report_html      = "${out_basename}.kraken2.krona.html"
+    File    krona_report_html      = "${out_basename}.kraken2.krona.html"
     String  viralngs_version       = read_string("VERSION")
   }
 
