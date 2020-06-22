@@ -296,16 +296,16 @@ task kraken2 {
 #           --outReports "${out_basename}".kraken2.report.txt
 
 
-    wait # for krona_taxonomy_db_tgz to download and extract
-    pigz "${out_basename}".kraken2.reads.txt &
-
-    metagenomics.py krona \
-      "${out_basename}".kraken2.report.txt \
-      $DB_DIR/krona \
-      "${out_basename}".kraken2.krona.html \
-      --sample_name "${out_basename}" \
-      --noRank --noHits --inputType kraken2 \
-      --loglevel=DEBUG
+#     wait # for krona_taxonomy_db_tgz to download and extract
+#     pigz "${out_basename}".kraken2.reads.txt &
+# 
+#     metagenomics.py krona \
+#       "${out_basename}".kraken2.report.txt \
+#       $DB_DIR/krona \
+#       "${out_basename}".kraken2.krona.html \
+#       --sample_name "${out_basename}" \
+#       --noRank --noHits --inputType kraken2 \
+#       --loglevel=DEBUG
 
     wait # pigz reads.txt
   }
@@ -313,7 +313,7 @@ task kraken2 {
   output {
     File    kraken2_reads_report   = "${out_basename}.kraken2.reads.txt.gz"
     File    kraken2_summary_report = "${out_basename}.kraken2.report.txt"
-    File    krona_report_html      = "${out_basename}.kraken2.krona.html"
+#    File    krona_report_html      = "${out_basename}.kraken2.krona.html"
     String  viralngs_version       = read_string("VERSION")
   }
 
