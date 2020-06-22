@@ -278,7 +278,7 @@ task kraken2 {
           --output "${out_basename}".kraken2.reads.txt \
           --report "${out_basename}".kraken2.report.txt \
           ${"--confidence " + confidence_threshold} \
-          ${"--min_base_qual " + min_base_qual} \
+          ${"--min_base_qual " + min_base_qual}
     fi
     
        # from metagenomics.py:
@@ -296,16 +296,16 @@ task kraken2 {
 #           --outReports "${out_basename}".kraken2.report.txt
 
 
-#     wait # for krona_taxonomy_db_tgz to download and extract
-#     pigz "${out_basename}".kraken2.reads.txt &
-# 
-#     metagenomics.py krona \
-#       "${out_basename}".kraken2.report.txt \
-#       $DB_DIR/krona \
-#       "${out_basename}".kraken2.krona.html \
-#       --sample_name "${out_basename}" \
-#       --noRank --noHits --inputType kraken2 \
-#       --loglevel=DEBUG
+    wait # for krona_taxonomy_db_tgz to download and extract
+    pigz "${out_basename}".kraken2.reads.txt &
+
+    metagenomics.py krona \
+      "${out_basename}".kraken2.report.txt \
+      $DB_DIR/krona \
+      "${out_basename}".kraken2.krona.html \
+      --sample_name "${out_basename}" \
+      --noRank --noHits --inputType kraken2 \
+      --loglevel=DEBUG
 
     wait # pigz reads.txt
   }
