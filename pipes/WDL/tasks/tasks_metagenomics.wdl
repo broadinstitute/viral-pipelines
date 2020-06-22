@@ -272,8 +272,29 @@ task kraken2 {
           ${"--min_base_qual " + min_base_qual} \
           --loglevel=DEBUG
     else # fasta input file: call kraken2 directly
-        kraken2 --db $DB_DIR/kraken2 ${reads_bam} --output "${out_basename}".kraken2.reads.txt --report --outReports "${out_basename}".kraken2.report.txt
+        kraken2 \
+          --db $DB_DIR/kraken2 \
+          ${reads_bam} \
+          --output "${out_basename}".kraken2.reads.txt \
+          --report "${out_basename}".kraken2.report.txt \
+          ${"--confidence " + confidence_threshold} \
+          ${"--min_base_qual " + min_base_qual} \
     fi
+    
+       # from metagenomics.py:
+#       kraken_tool = classify.kraken2.Kraken2()
+#     	kraken_tool.pipeline(db, inBams, out_reports=outReports, out_reads=outReads,
+#            min_base_qual=min_base_qual, confidence=confidence,
+#            minimum_hit_groups=minimum_hit_groups, num_threads=threads)
+
+        # Danny's initial suggestion:
+#         kraken2 \
+#           --db $DB_DIR/kraken2 \
+#           ${reads_bam} \
+#           --output "${out_basename}".kraken2.reads.txt \
+#           --report \
+#           --outReports "${out_basename}".kraken2.report.txt
+
 
     wait # for krona_taxonomy_db_tgz to download and extract
     pigz "${out_basename}".kraken2.reads.txt &
