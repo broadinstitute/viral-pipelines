@@ -195,7 +195,7 @@ task kraken2 {
   }
 
   input {
-    File     reads_bam
+    File     reads_or_contigs
     File     kraken2_db_tgz         # {database.kdb,taxonomy}
     File     krona_taxonomy_db_tgz  # taxonomy.tab
     Float?   confidence_threshold
@@ -206,8 +206,8 @@ task kraken2 {
   }
 
   parameter_meta {
-    reads_bam: {
-      description: "Reads to classify. May be unmapped or mapped or both, paired-end or single-end.",
+    reads_or_contigs: {
+      description: "Reads or contigs to classify. May be unmapped or mapped or both, paired-end or single-end.",
       patterns: ["*.bam", "*.fasta"]
     }
     kraken2_db_tgz: {
@@ -226,7 +226,7 @@ task kraken2 {
     }
   }
 
-  String out_basename=basename(basename(reads_bam, '.bam'), '.fasta')
+  String out_basename=basename(basename(reads_or_contigs, '.bam'), '.fasta')
 
   command {
     set -ex -o pipefail
@@ -262,10 +262,10 @@ task kraken2 {
 
     metagenomics.py --version | tee VERSION
 
-    if [[ ${reads_bam} == *.bam ]]; then
+    if [[ ${reads_or_contigs} == *.bam ]]; then
         metagenomics.py kraken2 \
           $DB_DIR/kraken2 \
-          ${reads_bam} \
+          ${reads_or_contigs} \
           --outReads   "${out_basename}".kraken2.reads.txt \
           --outReports "${out_basename}".kraken2.report.txt \
           ${"--confidence " + confidence_threshold} \
@@ -274,7 +274,7 @@ task kraken2 {
     else # fasta input file: call kraken2 directly
         kraken2 \
           --db $DB_DIR/kraken2 \
-          ${reads_bam} \
+          ${reads_or_contigs} \
           --output "${out_basename}".kraken2.reads.txt \
           --report "${out_basename}".kraken2.report.txt \
           ${"--confidence " + confidence_threshold} \
