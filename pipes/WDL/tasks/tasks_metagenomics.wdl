@@ -196,6 +196,7 @@ task kraken2 {
 
   input {
     File     reads_bam
+    File     any_file
     File     kraken2_db_tgz         # {database.kdb,taxonomy}
     File     krona_taxonomy_db_tgz  # taxonomy.tab
     Float?   confidence_threshold
@@ -208,7 +209,8 @@ task kraken2 {
   parameter_meta {
     reads_bam: {
       description: "Reads to classify. May be unmapped or mapped or both, paired-end or single-end.",
-      patterns: ["*.bam", "*.fasta"] }
+      patterns: ["*.bam", "*.fasta"]
+    }
     kraken2_db_tgz: {
       description: "Pre-built Kraken database tarball containing three files: hash.k2d, opts.k2d, and taxo.k2d.",
       patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
