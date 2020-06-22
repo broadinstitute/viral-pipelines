@@ -196,7 +196,6 @@ task kraken2 {
 
   input {
     File     reads_bam
-    File     any_file
     File     kraken2_db_tgz         # {database.kdb,taxonomy}
     File     krona_taxonomy_db_tgz  # taxonomy.tab
     Float?   confidence_threshold
