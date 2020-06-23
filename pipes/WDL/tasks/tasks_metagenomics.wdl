@@ -657,6 +657,7 @@ task filter_bam_to_taxa {
     Boolean        exclude_taxa=false
     String         out_filename_suffix = "filtered"
 
+    Int?           machine_mem_gb
     String         docker="quay.io/broadinstitute/viral-classify"
   }
 
@@ -721,10 +722,10 @@ task filter_bam_to_taxa {
 
   runtime {
     docker: "${docker}"
-    memory: "13 GB"
+    memory: select_first([machine_mem_gb, 26]) + " GB"
     disks: "local-disk 375 LOCAL"
-    cpu: 2
-    dx_instance_type: "mem3_ssd1_v2_x2"
+    cpu: 4
+    dx_instance_type: "mem3_ssd1_v2_x4"
   }
 
 }
