@@ -177,7 +177,7 @@ task align_and_count {
   }
 
   runtime {
-    memory: select_first([machine_mem_gb, 3]) + " GB"
+    memory: select_first([machine_mem_gb, 15]) + " GB"
     cpu: 4
     docker: "${docker}"
     disks: "local-disk 375 LOCAL"
