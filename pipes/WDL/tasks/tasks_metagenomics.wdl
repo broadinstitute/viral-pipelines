@@ -207,8 +207,9 @@ task kraken2 {
 
   parameter_meta {
     reads_bam: {
-      description: "Reads to classify. May be unmapped or mapped or both, paired-end or single-end.",
-      patterns: ["*.bam"] }
+      description: "Reads or contigs to classify. May be unmapped or mapped or both, paired-end or single-end.",
+      patterns: ["*.bam", "*.fasta"]
+    }
     kraken2_db_tgz: {
       description: "Pre-built Kraken database tarball containing three files: hash.k2d, opts.k2d, and taxo.k2d.",
       patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
@@ -225,7 +226,7 @@ task kraken2 {
     }
   }
 
-  String out_basename=basename(reads_bam, '.bam')
+  String out_basename=basename(basename(reads_bam, '.bam'), '.fasta')
 
   command {
     set -ex -o pipefail
@@ -261,14 +262,24 @@ task kraken2 {
 
     metagenomics.py --version | tee VERSION
 
-    metagenomics.py kraken2 \
-      $DB_DIR/kraken2 \
-      ${reads_bam} \
-      --outReads   "${out_basename}".kraken2.reads.txt \
-      --outReports "${out_basename}".kraken2.report.txt \
-      ${"--confidence " + confidence_threshold} \
-      ${"--min_base_qual " + min_base_qual} \
-      --loglevel=DEBUG
+    if [[ ${reads_bam} == *.bam ]]; then
+        metagenomics.py kraken2 \
+          $DB_DIR/kraken2 \
+          ${reads_bam} \
+          --outReads   "${out_basename}".kraken2.reads.txt \
+          --outReports "${out_basename}".kraken2.report.txt \
+          ${"--confidence " + confidence_threshold} \
+          ${"--min_base_qual " + min_base_qual} \
+          --loglevel=DEBUG
+    else # fasta input file: call kraken2 directly
+        kraken2 \
+          --db $DB_DIR/kraken2 \
+          ${reads_bam} \
+          --output "${out_basename}".kraken2.reads.txt \
+          --report "${out_basename}".kraken2.report.txt \
+          ${"--confidence " + confidence_threshold} \
+          ${"--min_base_qual " + min_base_qual}
+    fi
 
     wait # for krona_taxonomy_db_tgz to download and extract
     pigz "${out_basename}".kraken2.reads.txt &
