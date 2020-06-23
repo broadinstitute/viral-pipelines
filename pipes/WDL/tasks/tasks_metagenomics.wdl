@@ -668,6 +668,9 @@ task filter_bam_to_taxa {
       export TMPDIR=$(pwd)
     fi
 
+    # find 90% memory
+    mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
+
     # decompress taxonomy DB to CWD
     read_utils.py extract_tarball \
       ${ncbi_taxonomy_db_tgz} . \
@@ -701,6 +704,7 @@ task filter_bam_to_taxa {
       ${true='--without-children' false='' withoutChildren} \
       ${'--minimum_hit_groups=' + minimum_hit_groups} \
       --out_count COUNT \
+      --JVMmemory "$mem_in_mb"m \
       --loglevel=DEBUG
 
     samtools view -c "${out_basename}.bam" | tee classified_taxonomic_filter_read_count_post
@@ -717,10 +721,10 @@ task filter_bam_to_taxa {
 
   runtime {
     docker: "${docker}"
-    memory: "7 GB"
+    memory: "13 GB"
     disks: "local-disk 375 LOCAL"
     cpu: 2
-    dx_instance_type: "mem1_ssd2_v2_x4"
+    dx_instance_type: "mem3_ssd1_v2_x2"
   }
 
 }
