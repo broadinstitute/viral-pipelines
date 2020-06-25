@@ -149,6 +149,62 @@ task filter_subsample_sequences {
     }
 }
 
+task custom_mafft_align {
+    meta {
+        description: "Align multiple sequences from FASTA. Only appropriate for closely related (within 99% nucleotide conservation) genomes. See https://mafft.cbrc.jp/alignment/software/closelyrelatedviralgenomes.html"
+    }
+    input {
+        File     sequences
+        File     ref_fasta
+        String   basename
+        Boolean  remove_reference = true
+
+        String   docker = "quay.io/broadinstitute/viral-phylo"
+    }
+    command {
+        set -e
+
+        # mafft align to reference in "closely related" mode
+        mafft --auto --thread -1 --addfragments \
+            "~{sequences}" \
+            "~{ref_fasta}" \
+            > msa.fasta
+
+        # remove reference sequence
+        REMOVE_REF="~{true='--remove-reference' false='' remove_reference}"
+        if [ -n "$REMOVE_REF" ]; then
+            python3 <<CODE
+            import Bio.SeqIO
+            seq_it = Bio.SeqIO.parse('msa.fasta', 'fasta')
+            print("dumping " + str(seq_it.__next__().id)) # dump the first sequence (the reference)
+            Bio.SeqIO.write(seq_it, 'msa_out.fasta', 'fasta')
+            CODE
+            mv msa_out.fasta "~{basename}_aligned.fasta"
+        else
+            mv msa.fasta "~{basename}_aligned.fasta"
+        fi
+
+        # profiling and stats
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg > CPU_LOAD
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
+    }
+    runtime {
+        docker: docker
+        memory: "28 GB"
+        cpu :   32
+        disks:  "local-disk 100 HDD"
+        preemptible: 1
+        dx_instance_type: "mem1_ssd1_v2_x32"
+    }
+    output {
+        File   aligned_sequences = "~{basename}_aligned.fasta"
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
+        String cpu_load = read_string("CPU_LOAD")
+    }
+}
+
 task augur_mafft_align {
     meta {
         description: "Align multiple sequences from FASTA. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/align.html"
