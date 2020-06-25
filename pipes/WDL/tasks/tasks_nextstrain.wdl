@@ -83,8 +83,8 @@ task filter_subsample_sequences {
 
         Boolean  non_nucleotide=true
 
-        String?  min_date
-        String?  max_date
+        Float?   min_date
+        Float?   max_date
         Int?     min_length
         File?    priority
         Int?     subsample_seed
