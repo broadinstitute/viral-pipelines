@@ -149,37 +149,48 @@ task filter_subsample_sequences {
     }
 }
 
-task custom_mafft_align {
+task mafft_one_chr {
     meta {
         description: "Align multiple sequences from FASTA. Only appropriate for closely related (within 99% nucleotide conservation) genomes. See https://mafft.cbrc.jp/alignment/software/closelyrelatedviralgenomes.html"
     }
     input {
         File     sequences
-        File     ref_fasta
+        File?    ref_fasta
         String   basename
         Boolean  remove_reference = false
+        Boolean  keep_length = true
 
         String   docker = "quay.io/broadinstitute/viral-phylo"
     }
     command {
         set -e
+        touch args.txt
+
+        # if ref_fasta is specified, use "closely related" mode
+        # see https://mafft.cbrc.jp/alignment/software/closelyrelatedviralgenomes.html
+        if [ -f "~{ref_fasta}" ]; then
+            echo --addfragments >> args.txt
+            echo "~{sequences}" >> args.txt
+            echo "~{ref_fasta}" >> args.txt
+        else
+            echo "~{sequences}" >> args.txt
+        fi
 
         # mafft align to reference in "closely related" mode
-        mafft --auto --thread -1 --addfragments \
-            "~{sequences}" \
-            "~{ref_fasta}" \
+        cat args.txt | xargs -d '\n' mafft --auto --thread -1 \
+            ~{true='--keeplength --mapout' false='' keep_length} \
             > msa.fasta
 
         # remove reference sequence
+        python3 <<CODE
+        import Bio.SeqIO
+        seq_it = Bio.SeqIO.parse('msa.fasta', 'fasta')
+        print("dumping " + str(seq_it.__next__().id))
+        Bio.SeqIO.write(seq_it, 'msa_drop_one.fasta', 'fasta')
+        CODE
         REMOVE_REF="~{true='--remove-reference' false='' remove_reference}"
-        if [ -n "$REMOVE_REF" ]; then
-            python3 <<CODE
-            import Bio.SeqIO
-            seq_it = Bio.SeqIO.parse('msa.fasta', 'fasta')
-            print("dumping " + str(seq_it.__next__().id)) # dump the first sequence (the reference)
-            Bio.SeqIO.write(seq_it, 'msa_out.fasta', 'fasta')
-            CODE
-            mv msa_out.fasta "~{basename}_aligned.fasta"
+        if [ -n "$REMOVE_REF" -a -f "~{ref_fasta}" ]; then
+            mv msa_drop_one.fasta "~{basename}_aligned.fasta"
         else
             mv msa.fasta "~{basename}_aligned.fasta"
         fi
