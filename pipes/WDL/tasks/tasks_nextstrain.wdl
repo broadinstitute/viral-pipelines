@@ -149,6 +149,67 @@ task filter_subsample_sequences {
     }
 }
 
+task filter_sequences_to_list {
+    meta {
+        description: "Filter and subsample a sequence set to a specific list of ids in a text file (one id per line)."
+    }
+    input {
+        File     sequences
+        File?    keep_list
+
+        String   docker = "nextstrain/base"
+    }
+    parameter_meta {
+        sequences: {
+          description: "Set of sequences (unaligned fasta or aligned fasta -- one sequence per genome) or variants (vcf format) to subsample using augur filter.",
+          patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
+        }
+        keep_list: {
+          description: "List of strain ids.",
+          patterns: ["*.txt", "*.tsv"]
+        }
+    }
+    String out_fname = sub(sub(basename(sequences), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
+    command {
+        set -e
+        augur version > VERSION
+        if [ -f "~{keep_list}" ]; then
+            echo "strain" > keep_list.txt
+            cat "~{keep_list}" >> keep_list.txt
+            augur filter \
+                --sequences "~{sequences}" \
+                --metadata keep_list.txt \
+                --output "~{out_fname}" | tee STDOUT
+            grep "sequences were dropped during filtering" STDOUT | cut -f 1 -d ' ' > DROP_COUNT
+            grep "sequences have been written out to" STDOUT | cut -f 1 -d ' ' > OUT_COUNT
+        else
+            cp "~{sequences}" "~{out_fname}"
+            echo "0" > DROP_COUNT
+            echo "-1" > OUT_COUNT
+        fi
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg > CPU_LOAD
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
+    }
+    runtime {
+        docker: docker
+        memory: "3 GB"
+        cpu :   2
+        disks:  "local-disk 100 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+        preemptible: 1
+    }
+    output {
+        File   filtered_fasta    = out_fname
+        String augur_version     = read_string("VERSION")
+        Int    sequences_dropped = read_int("DROP_COUNT")
+        Int    sequences_out     = read_int("OUT_COUNT")
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
+        String cpu_load = read_string("CPU_LOAD")
+    }
+}
+
 task mafft_one_chr {
     meta {
         description: "Align multiple sequences from FASTA. Only appropriate for closely related (within 99% nucleotide conservation) genomes. See https://mafft.cbrc.jp/alignment/software/closelyrelatedviralgenomes.html"
@@ -205,7 +266,7 @@ task mafft_one_chr {
         memory: "60 GB"
         cpu :   32
         disks:  "local-disk 100 HDD"
-        preemptible: 1
+        preemptible: 0
         dx_instance_type: "mem1_ssd1_v2_x36"
     }
     output {
