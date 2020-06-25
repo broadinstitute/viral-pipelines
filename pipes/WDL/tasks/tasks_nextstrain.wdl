@@ -157,7 +157,7 @@ task custom_mafft_align {
         File     sequences
         File     ref_fasta
         String   basename
-        Boolean  remove_reference = true
+        Boolean  remove_reference = false
 
         String   docker = "quay.io/broadinstitute/viral-phylo"
     }
@@ -195,7 +195,7 @@ task custom_mafft_align {
         cpu :   32
         disks:  "local-disk 100 HDD"
         preemptible: 1
-        dx_instance_type: "mem1_ssd1_v2_x32"
+        dx_instance_type: "mem1_ssd1_v2_x36"
     }
     output {
         File   aligned_sequences = "~{basename}_aligned.fasta"
