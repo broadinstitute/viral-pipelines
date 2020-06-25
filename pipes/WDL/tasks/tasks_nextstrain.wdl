@@ -202,7 +202,7 @@ task mafft_one_chr {
     }
     runtime {
         docker: docker
-        memory: "28 GB"
+        memory: "60 GB"
         cpu :   32
         disks:  "local-disk 100 HDD"
         preemptible: 1
