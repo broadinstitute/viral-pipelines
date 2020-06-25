@@ -645,7 +645,7 @@ task assign_clades_to_nodes {
         preemptible: 1
     }
     output {
-        File   node_clade_data_json = "~{out_basename}_node-clade-assignments.json"
+        File   node_clade_data_json = "~{out_basename}_clades.json"
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         String augur_version      = read_string("VERSION")
     }
