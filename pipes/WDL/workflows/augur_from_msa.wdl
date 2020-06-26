@@ -11,6 +11,7 @@ workflow augur_from_msa {
 
     input {
         File            msa_or_vcf
+        File?           sequence_ids_to_keep
         File            sample_metadata
         File            ref_fasta
         File            genbank_gb
@@ -22,6 +23,10 @@ workflow augur_from_msa {
         msa_or_vcf: {
           description: "Multiple sequence alignment (aligned fasta) or variants (vcf format).",
           patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
+        }
+        sequence_ids_to_keep: {
+          description: "Optional list of sequence IDs (one per line) to filter the msa_or_vcf to at the beginning (otherwise we compute on all sequences in msa_to_vcf).",
+          patterns: ["*.txt", "*.tsv"]
         }
         sample_metadata: {
           description: "Metadata in tab-separated text format. See https://nextstrain-augur.readthedocs.io/en/stable/faq/metadata.html for details.",
@@ -44,9 +49,14 @@ workflow augur_from_msa {
         }
     }
 
+    call nextstrain.filter_sequences_to_list {
+        input:
+            sequences = msa_or_vcf,
+            keep_list = sequence_ids_to_keep
+    }
     call nextstrain.augur_mask_sites {
         input:
-            sequences = msa_or_vcf
+            sequences = filter_sequences_to_list.filtered_fasta
     }
     call nextstrain.draft_augur_tree {
         input:

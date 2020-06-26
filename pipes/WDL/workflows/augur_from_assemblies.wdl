@@ -58,7 +58,7 @@ workflow augur_from_assemblies {
                 sequences_fasta     = concatenate.combined,
                 sample_metadata_tsv = sample_metadata
     }
-    call nextstrain.augur_mafft_align {
+    call nextstrain.mafft_one_chr as mafft {
         input:
             sequences = filter_subsample_sequences.filtered_fasta,
             ref_fasta = ref_fasta,
@@ -66,11 +66,11 @@ workflow augur_from_assemblies {
     }
     call nextstrain.snp_sites {
         input:
-            msa_fasta = augur_mafft_align.aligned_sequences
+            msa_fasta = mafft.aligned_sequences
     }
     call nextstrain.augur_mask_sites {
         input:
-            sequences = augur_mafft_align.aligned_sequences
+            sequences = mafft.aligned_sequences
     }
     call nextstrain.draft_augur_tree {
         input:
@@ -125,7 +125,7 @@ workflow augur_from_assemblies {
 
     output {
         File  combined_assemblies = concatenate.combined
-        File  multiple_alignment  = augur_mafft_align.aligned_sequences
+        File  multiple_alignment  = mafft.aligned_sequences
         File  unmasked_snps       = snp_sites.snps_vcf
         File  masked_alignment    = augur_mask_sites.masked_sequences
         File  ml_tree             = draft_augur_tree.aligned_tree
