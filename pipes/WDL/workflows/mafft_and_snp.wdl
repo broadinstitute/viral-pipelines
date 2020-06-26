@@ -2,9 +2,9 @@ version 1.0
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 
-workflow mafft_iqtree {
+workflow mafft_and_snp {
     meta {
-        description: "Align assemblies, mask sites, build tree."
+        description: "Align assemblies with mafft and find SNPs with snp-sites."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
     }
@@ -12,6 +12,7 @@ workflow mafft_iqtree {
     input {
         Array[File]     assembly_fastas
         File            ref_fasta
+        Boolean         run_iqtree=false
     }
 
     parameter_meta {
@@ -40,20 +41,17 @@ workflow mafft_iqtree {
         input:
             msa_fasta = mafft.aligned_sequences
     }
-    call nextstrain.augur_mask_sites {
-        input:
-            sequences = mafft.aligned_sequences
-    }
-    call nextstrain.draft_augur_tree {
-        input:
-            msa_or_vcf = augur_mask_sites.masked_sequences
+    if(run_iqtree) {
+        call nextstrain.draft_augur_tree {
+            input:
+                msa_or_vcf = mafft.aligned_sequences
+        }
     }
 
     output {
         File  combined_assemblies = concatenate.combined
         File  multiple_alignment  = mafft.aligned_sequences
         File  unmasked_snps       = snp_sites.snps_vcf
-        File  masked_alignment    = augur_mask_sites.masked_sequences
-        File  ml_tree             = draft_augur_tree.aligned_tree
+        File? ml_tree             = draft_augur_tree.aligned_tree
     }
 }
