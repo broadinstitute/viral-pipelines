@@ -154,8 +154,8 @@ task filter_sequences_to_list {
         description: "Filter and subsample a sequence set to a specific list of ids in a text file (one id per line)."
     }
     input {
-        File     sequences
-        File?    keep_list
+        File          sequences
+        Array[File]?  keep_list
 
         String   docker = "nextstrain/base"
     }
@@ -173,9 +173,11 @@ task filter_sequences_to_list {
     command {
         set -e
         augur version > VERSION
-        if [ -f "~{keep_list}" ]; then
+        KEEP_LISTS="~{sep=' ' select_first([keep_list, []])}"
+
+        if [ -n "$KEEP_LISTS" ]; then
             echo "strain" > keep_list.txt
-            cat "~{keep_list}" >> keep_list.txt
+            cat $KEEP_LISTS >> keep_list.txt
             augur filter \
                 --sequences "~{sequences}" \
                 --metadata keep_list.txt \
