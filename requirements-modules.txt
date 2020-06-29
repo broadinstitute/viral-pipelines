@@ -1,8 +1,8 @@
-broadinstitute/viral-core=2.1.6
+broadinstitute/viral-core=2.1.7
 broadinstitute/viral-assemble=2.1.4.0
 broadinstitute/viral-classify=2.1.4.0
 broadinstitute/viral-phylo=2.1.4.0
 broadinstitute/beast-beagle-cuda=1.10.5pre
 broadinstitute/ncbi-tools=2.10.7.0
-nextstrain/base=build-20200608T223413Z
+nextstrain/base=build-20200625T042106Z
 andersenlabapps/ivar=1.2.2
