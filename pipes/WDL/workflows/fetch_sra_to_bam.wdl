@@ -3,6 +3,12 @@ version 1.0
 import "../tasks/tasks_ncbi_tools.wdl" as ncbi_tools
 
 workflow multi_Fetch_SRA_to_BAM {
+    meta {
+        description: "Retrieve reads from the NCBI Short Read Archive in unaligned BAM format with relevant metadata encoded."
+        author: "Broad Viral Genomics"
+        email:  "viral-ngs@broadinstitute.org"
+    }
+
     input {
         Array[String]  SRR_accessions
     }

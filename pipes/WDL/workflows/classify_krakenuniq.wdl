@@ -4,6 +4,12 @@ import "../tasks/tasks_metagenomics.wdl" as metagenomics
 import "../tasks/tasks_reports.wdl" as reports
 
 workflow classify_krakenuniq {
+    meta {
+        description: "Taxonomic classification of reads using krakenuniq v1."
+        author: "Broad Viral Genomics"
+        email:  "viral-ngs@broadinstitute.org"
+    }
+
     call metagenomics.krakenuniq
 
     call reports.aggregate_metagenomics_reports as metag_summary_report {

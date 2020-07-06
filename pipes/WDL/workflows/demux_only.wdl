@@ -4,6 +4,12 @@ import "../tasks/tasks_demux.wdl" as tasks_demux
 import "../tasks/tasks_reports.wdl" as reports
 
 workflow demux_only {
+    meta {
+        description: "Picard-based demultiplexing and basecalling from a tarball of a raw BCL directory."
+        author: "Broad Viral Genomics"
+        email:  "viral-ngs@broadinstitute.org"
+    }
+
     call tasks_demux.illumina_demux
 
     call reports.MultiQC {
