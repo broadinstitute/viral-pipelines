@@ -14,27 +14,27 @@ workflows:
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/align_and_plot.wdl
    testParameterFiles:
-    - test/input/WDL/test_inputs-align_and_plot-local.json
+    - /test/input/WDL/test_inputs-align_and_plot-local.json
  - name: assemble_denovo
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/assemble_denovo.wdl
    testParameterFiles:
-    - test/input/WDL/test_inputs-assemble_denovo-local.json
+    - /test/input/WDL/test_inputs-assemble_denovo-local.json
  - name: assemble_refbased
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/assemble_refbased.wdl
    testParameterFiles:
-    - test/input/WDL/test_inputs-assemble_refbased-local.json
+    - /test/input/WDL/test_inputs-assemble_refbased-local.json
  - name: augur_from_assemblies
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/augur_from_assemblies.wdl
    testParameterFiles:
-    - test/input/WDL/test_inputs-augur_from_assemblies-local.json
+    - /test/input/WDL/test_inputs-augur_from_assemblies-local.json
  - name: augur_from_beast_mcc
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/augur_from_beast_mcc.wdl
    testParameterFiles:
-    - test/input/WDL/test_inputs-augur_from_beast_mcc-local.json
+    - /test/input/WDL/test_inputs-augur_from_beast_mcc-local.json
  - name: augur_from_msa
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/augur_from_msa.wdl
@@ -64,7 +64,7 @@ workflows:
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/classify_kraken2.wdl
    testParameterFiles:
-    - test/input/WDL/test_inputs-classify_kraken2-local.json
+    - /test/input/WDL/test_inputs-classify_kraken2-local.json
  - name: classify_krakenuniq
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/classify_krakenuniq.wdl
@@ -124,7 +124,7 @@ workflows:
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/fastq_to_ubam.wdl
    testParameterFiles:
-    - test/input/WDL/test_inputs-fastq_to_ubam-local.json
+    - /test/input/WDL/test_inputs-fastq_to_ubam-local.json
  - name: fetch_annotations
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/fetch_annotations.wdl
@@ -149,7 +149,7 @@ workflows:
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/genbank.wdl
    testParameterFiles:
-    - test/input/WDL/test_inputs-genbank-local.json
+    - /test/input/WDL/test_inputs-genbank-local.json
  - name: isnvs_merge_to_vcf
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/isnvs_merge_to_vcf.wdl
