@@ -9,7 +9,7 @@ task multi_align_mafft_ref {
     Float?         mafft_gapOpeningPenalty
 
     Int?           machine_mem_gb
-    String         docker="quay.io/broadinstitute/viral-phylo"
+    String         docker="quay.io/broadinstitute/viral-phylo:2.1.4.0"
   }
 
   String           fasta_basename = basename(reference_fasta, '.fasta')
@@ -53,7 +53,7 @@ task multi_align_mafft {
     Float?         mafft_gapOpeningPenalty
 
     Int?           machine_mem_gb
-    String         docker="quay.io/broadinstitute/viral-phylo"
+    String         docker="quay.io/broadinstitute/viral-phylo:2.1.4.0"
   }
 
   command {
@@ -90,7 +90,7 @@ task beast {
   input {
     File     beauti_xml
 
-    String   docker="quay.io/broadinstitute/beast-beagle-cuda"
+    String   docker="quay.io/broadinstitute/beast-beagle-cuda:1.10.5pre"
   }
 
   # TO DO: parameterize gpuType and gpuCount
@@ -137,7 +137,7 @@ task index_ref {
     File?    novocraft_license
 
     Int?     machine_mem_gb
-    String   docker="quay.io/broadinstitute/viral-core"
+    String   docker="quay.io/broadinstitute/viral-core:2.1.8"
   }
 
   command {
@@ -247,7 +247,7 @@ task merge_vcfs_gatk {
     File        ref_fasta
 
     Int?     machine_mem_gb
-    String   docker="quay.io/broadinstitute/viral-phylo"
+    String   docker="quay.io/broadinstitute/viral-phylo:2.1.4.0"
 
     String   output_prefix = "merged"
   }
