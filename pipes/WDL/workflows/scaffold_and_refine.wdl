@@ -3,6 +3,12 @@ version 1.0
 import "../tasks/tasks_assembly.wdl" as assembly
 
 workflow scaffold_and_refine {
+    meta {
+        description: "Scaffold de novo contigs against a set of possible references and subsequently polish with reads."
+        author: "Broad Viral Genomics"
+        email:  "viral-ngs@broadinstitute.org"
+    }
+
     input {
         File reads_unmapped_bam
     }

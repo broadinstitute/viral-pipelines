@@ -3,6 +3,12 @@ version 1.0
 import "../tasks/tasks_metagenomics.wdl" as metagenomics
 
 workflow classify_kraken2 {
+    meta {
+        description: "Taxonomic classification of sequences via kraken2 (or kraken2x, depending on the database provided)."
+        author: "Broad Viral Genomics"
+        email:  "viral-ngs@broadinstitute.org"
+    }
+
     call metagenomics.kraken2
 
     output {

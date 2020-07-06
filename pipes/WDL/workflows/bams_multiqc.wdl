@@ -3,6 +3,12 @@ version 1.0
 import "../tasks/tasks_reports.wdl" as reports
 
 workflow bams_multiqc {
+    meta {
+        description: "Run FastQC on a set of BAM files, and then MultiQC to summarize all outputs."
+        author: "Broad Viral Genomics"
+        email:  "viral-ngs@broadinstitute.org"
+    }
+
     input {
         Array[File]+  read_bams
     }

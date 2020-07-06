@@ -8,6 +8,11 @@ import "../tasks/tasks_assembly.wdl" as assembly
 import "../tasks/tasks_reports.wdl" as reports
 
 workflow demux_plus {
+    meta {
+        description: "Picard-based demultiplexing and basecalling from a tarball of a raw BCL directory, followed by basic metagenomics and QC metrics. Intended for automatic triggering post upload on DNAnexus."
+        author: "Broad Viral Genomics"
+        email:  "viral-ngs@broadinstitute.org"
+    }
 
     input {
         File spikein_db

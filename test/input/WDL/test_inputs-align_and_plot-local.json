@@ -2,5 +2,5 @@
   "align_and_plot.align.reads_unmapped_bam": "test/input/G5012.3.subset.bam",
   "align_and_plot.align.reference_fasta": "test/input/ebov-makona.fasta",
   "align_and_plot.align.aligner": "bwa",
-  "align_and_plot.aligner_options": "-B 1"
+  "align_and_plot.align.aligner_options": "-B 1"
 }
