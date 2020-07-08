@@ -127,7 +127,7 @@ task beast {
     acceleratorCount:    4                   # GCP PAPIv2
     gpuType:             "nvidia-tesla-k80"  # Terra
     gpuCount:            4                   # Terra
-    nvidiaDriverVersion: "396.37"
+    nvidiaDriverVersion: "410.79"
   }
 }
 
