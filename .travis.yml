@@ -99,7 +99,7 @@ jobs:
         - DX_PROJECT=project-F8PQ6380xf5bK0Qk0YPjB17P
       before_install:
         - sudo apt-get -q update
-        - sudo apt-get -y install python2
+        - sudo apt-get -y install python2 python-argcomplete
       install:
         - travis/install-wdl.sh
       script:
