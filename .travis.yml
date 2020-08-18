@@ -4,6 +4,9 @@ os: linux
 git:
   depth: 150
 
+services:
+  - docker
+
 env:
   global:
   - CACHE_DIR="$HOME/misc_cache"
