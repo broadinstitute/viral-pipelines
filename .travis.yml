@@ -1,4 +1,4 @@
-dist: bionic
+dist: focal
 os: linux
 
 git:
@@ -9,15 +9,15 @@ services:
 
 env:
   global:
-  - CACHE_DIR="$HOME/misc_cache"
-  - MINICONDA_DIR="$HOME/miniconda"
-  - CONDA_DEFAULT_ENV="$HOME/misc_cache/default_env"
-  - PYTHONIOENCODING=UTF8
-  - BOTO_CONFIG=/dev/null # bogus value to override config on travis
-  - DOCKER_REGISTRY="quay.io"
-  - DOCKER_REPO_PROD="quay.io/broadinstitute/viral-pipelines"
-  - DOCKER_REPO_DEV="quay.io/broadinstitute/viral-pipelines-dev"
-  - MODULE_VERSIONS="requirements-modules.txt"
+    - CACHE_DIR="$HOME/misc_cache"
+    - MINICONDA_DIR="$HOME/miniconda"
+    - CONDA_DEFAULT_ENV="$HOME/misc_cache/default_env"
+    - PYTHONIOENCODING=UTF8
+    - BOTO_CONFIG=/dev/null # bogus value to override config on travis
+    - DOCKER_REGISTRY="quay.io"
+    - DOCKER_REPO_PROD="quay.io/broadinstitute/viral-pipelines"
+    - DOCKER_REPO_DEV="quay.io/broadinstitute/viral-pipelines-dev"
+    - MODULE_VERSIONS="requirements-modules.txt"
 
 cache:
   directories:
