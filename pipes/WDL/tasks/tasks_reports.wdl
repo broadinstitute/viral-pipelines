@@ -295,9 +295,6 @@ task MultiQC {
     String          docker = "quay.io/biocontainers/multiqc:1.8--py_2"
   }
 
-  String exclude_modules_str = if defined(exclude_modules_str) then "${sep=' --exclude ' exclude_modules}" else ""
-  String module_to_use_str = if defined(module_to_use) then "${sep=' --module ' module_to_use}" else ""
-
   parameter_meta {
     output_data_format: { description: "[tsv|yaml|json] default:tsv" }
   }
@@ -325,8 +322,8 @@ task MultiQC {
       ${"--ignore " + ignore_analysis_files} \
       ${"--ignore-samples" + ignore_sample_names} \
       ${"--sample-names " + sample_names} \
-      ${true="--exclude " false="" defined(exclude_modules)}${exclude_modules_str} \
-      ${true="--module " false="" defined(module_to_use)}${module_to_use_str} \
+      ${true="--exclude " false="" defined(exclude_modules)}${sep=' --exclude ' select_first([exclude_modules,[]])} \
+      ${true="--module " false="" defined(module_to_use)}${sep=' --module ' select_first([module_to_use,[]])} \
       ${true="--data-dir" false="" data_dir} \
       ${true="--no-data-dir" false="" no_data_dir} \
       ${"--data-format " + output_data_format} \
