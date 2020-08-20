@@ -17,6 +17,8 @@ mkdir $test_dir
 cp -r test $test_dir
 cd $test_dir
 
+docker --version
+
 # make sure our system has everything it needs to perform "miniwdl run" (e.g. docker swarm works)
 miniwdl run_self_test
 
