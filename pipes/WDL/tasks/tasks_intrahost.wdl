@@ -17,10 +17,11 @@ task isnvs_per_sample {
 
   command {
     intrahost.py --version | tee VERSION
+    echo ${sample_name} | tee SAMPLE_NAME
     intrahost.py vphaser_one_sample \
         ${mapped_bam} \
         ${assembly_fasta} \
-        vphaser2.${sample_name}.txt.gz \
+        ${sample_name}.vphaser2.txt.gz \
         ${'--vphaserNumThreads' + threads} \
         --removeDoublyMappedReads \
         ${'--minReadsEach' + minReadsPerStrand} \
@@ -28,7 +29,8 @@ task isnvs_per_sample {
   }
 
   output {
-    File   isnvsFile        = "vphaser2.${sample_name}.txt.gz"
+    File   isnvsFile        = "${sample_name}.vphaser2.txt.gz"
+    String sample_name      = read_string("SAMPLE_NAME")
     String viralngs_version = read_string("VERSION")
   }
   runtime {
@@ -49,6 +51,7 @@ task isnvs_vcf {
     Array[String]? sampleNames
     String?        emailAddress
     Boolean        naiveFilter=false
+    Boolean        outputAllPositions=true
 
     Int?           machine_mem_gb
     String         docker="quay.io/broadinstitute/viral-phylo:2.1.4.0"
@@ -87,6 +90,7 @@ task isnvs_vcf {
         --alignments ${sep=' ' perSegmentMultiAlignments} \
         --strip_chr_version \
         ${true="--naive_filter" false="" naiveFilter} \
+        ${true="--output_all_positions" false="" outputAllPositions} \
         --parse_accession
         
     interhost.py snpEff \
