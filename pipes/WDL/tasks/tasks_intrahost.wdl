@@ -30,7 +30,7 @@ task isnvs_per_sample {
 
   output {
     File   isnvsFile        = "${sample_name}.vphaser2.txt.gz"
-    String sample_name      = read_string("SAMPLE_NAME")
+    String sample_name_out  = read_string("SAMPLE_NAME")
     String viralngs_version = read_string("VERSION")
   }
   runtime {
