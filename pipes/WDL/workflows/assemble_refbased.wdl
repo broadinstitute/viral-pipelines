@@ -1,7 +1,8 @@
 version 1.0
 
 import "../tasks/tasks_assembly.wdl" as assembly
-import "../tasks/tasks_intrahost.wdl" as assembly
+import "../tasks/tasks_intrahost.wdl" as intrahost
+import "../tasks/tasks_interhost.wdl" as interhost
 import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_read_utils.wdl" as read_utils
 
