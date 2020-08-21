@@ -51,17 +51,21 @@ task isnvs_vcf {
     Array[String]? sampleNames
     String?        emailAddress
     Boolean        naiveFilter=false
+    Boolean        append_reference_to_input=false
     Boolean        outputAllPositions=true
 
     Int?           machine_mem_gb
     String         docker="quay.io/broadinstitute/viral-phylo:2.1.4.0"
   }
 
+  Int num_input_fastas = length(perSegmentMultiAlignments)
+
   parameter_meta {
     vphaser2Calls:             { description: "vphaser output; ex. vphaser2.<sample>.txt.gz" }
     perSegmentMultiAlignments: { description: "aligned_##.fasta, where ## is segment number" }
     snpEffRef:                 { description: "list of accessions to build/find snpEff database" }
     sampleNames:               { description: "list of sample names" }
+    append_reference_to_input: { description: "Concatenate contents of reference sequence file to input sequence file, useful in the case where the input is already in the reference coordinate space and the reference sequence is not in the same file. The reference must contain exactly one segment since we cannot necessarily know without alignment which of the per-segment inputs each of several reference corresponds to." }
     emailAddress:              { description: "email address passed to NCBI if we need to download reference sequences" }
   }
 
@@ -69,6 +73,23 @@ task isnvs_vcf {
     set -ex -o pipefail
 
     intrahost.py --version | tee VERSION
+
+    if [[ "${append_reference_to_input}" == "true" ]]; then
+      if [[ "${num_input_fastas}" == "1" ]]; then
+        if [[ "$(grep '>' ${reference_fasta} | wc -l | tr -d ' ')" == "1" ]]; then
+          cat ${sep=' ' perSegmentMultiAlignments} reference_fasta > ref_and_data_aligned_to_ref.fasta
+          input_alignments="ref_and_data_aligned_to_ref.fasta"
+        else
+          echo "Reference fasta has >1 sequence, target for concatenation is unclear."
+          exit 1
+        fi
+      else
+        echo ">1 input fasta, unclear to which reference fasta data should be concatenated"
+        exit 1
+      fi
+    else
+      input_alignments="${sep=' ' perSegmentMultiAlignments}"
+    fi
 
     SAMPLES="${sep=' ' sampleNames}"
     if [ -n "$SAMPLES" ]; then SAMPLES="--samples $SAMPLES"; fi
@@ -87,7 +108,7 @@ task isnvs_vcf {
         isnvs.vcf.gz \
         $SAMPLES \
         --isnvs ${sep=' ' vphaser2Calls} \
-        --alignments ${sep=' ' perSegmentMultiAlignments} \
+        --alignments $input_alignments \
         --strip_chr_version \
         ${true="--naive_filter" false="" naiveFilter} \
         ${true="--output_all_positions" false="" outputAllPositions} \
