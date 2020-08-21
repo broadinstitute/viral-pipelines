@@ -124,16 +124,16 @@ workflow assemble_refbased {
 
     call interhost.multi_align_mafft_ref as mafft {
         input:
-            reference_fasta = reference_fasta,
-            assemblies_fasta = call_consensus.refined_assembly_fasta
+            reference_fasta  = reference_fasta,
+            assemblies_fasta = select_all([call_consensus.refined_assembly_fasta,[]])
     }
 
     call intrahost.isnvs_vcf as write_isnv_vcf {
         input:
-            vphaser2Calls             = call_isnvs.isnvsFile,
+            vphaser2Calls             = select_all([call_isnvs.isnvsFile,[]]),
             perSegmentMultiAlignments = mafft.alignments_by_chr,
             reference_fasta           = reference_fasta,
-            sampleNames               = call_isnvs.sample_name_out
+            sampleNames               = select_all([call_isnvs.sample_name_out,[]])
     }
 
     scatter(reads_unmapped_bam in reads_unmapped_bams) {
