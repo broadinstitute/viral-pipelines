@@ -11,12 +11,17 @@ workflow augur_from_beast_mcc {
 
     input {
         File    beast_mcc_tree
+        File    auspice_config
     }
 
     parameter_meta {
         beast_mcc_tree: {
           description: "A maximum clade credibility (MCC) tree (.tree file) that is output from a BEAST run.",
           patterns: ["*.tree"]
+        }
+        auspice_config: {
+          description: "A file specifying options to customize the auspice export; see: https://nextstrain.github.io/auspice/customise-client/introduction",
+          patterns: ["*.json", "*.txt"]
         }
     }
 
@@ -27,7 +32,8 @@ workflow augur_from_beast_mcc {
     call nextstrain.export_auspice_json {
         input:
             tree            = augur_import_beast.tree_newick,
-            node_data_jsons = [augur_import_beast.node_data_json]
+            node_data_jsons = [augur_import_beast.node_data_json],
+            auspice_config  = auspice_config
     }
 
     output {

@@ -4,17 +4,20 @@ os: linux
 git:
   depth: 150
 
+services:
+  - docker
+
 env:
   global:
-  - CACHE_DIR="$HOME/misc_cache"
-  - MINICONDA_DIR="$HOME/miniconda"
-  - CONDA_DEFAULT_ENV="$HOME/misc_cache/default_env"
-  - PYTHONIOENCODING=UTF8
-  - BOTO_CONFIG=/dev/null # bogus value to override config on travis
-  - DOCKER_REGISTRY="quay.io"
-  - DOCKER_REPO_PROD="quay.io/broadinstitute/viral-pipelines"
-  - DOCKER_REPO_DEV="quay.io/broadinstitute/viral-pipelines-dev"
-  - MODULE_VERSIONS="requirements-modules.txt"
+    - CACHE_DIR="$HOME/misc_cache"
+    - MINICONDA_DIR="$HOME/miniconda"
+    - CONDA_DEFAULT_ENV="$HOME/misc_cache/default_env"
+    - PYTHONIOENCODING=UTF8
+    - BOTO_CONFIG=/dev/null # bogus value to override config on travis
+    - DOCKER_REGISTRY="quay.io"
+    - DOCKER_REPO_PROD="quay.io/broadinstitute/viral-pipelines"
+    - DOCKER_REPO_DEV="quay.io/broadinstitute/viral-pipelines-dev"
+    - MODULE_VERSIONS="requirements-modules.txt"
 
 cache:
   directories:
@@ -98,8 +101,7 @@ jobs:
         - secure: "zAAxwXWwSDcwnLYHawc0+gbshV3UURAZWSyk8g99kXgFCRcgytacvUpRxd44mC+rlgL2RtS8+RPT11hO2zJ+4y0J0FBaC8d9R7aTzEAGKLHk11cfhMg63QMVBt/8Gz9HToeE0BJ8/JbNZr+IZ01dD8GNDRA4FcFj+8maTpp4nrQ5/leDdmUwzkV1XfMiE+0/wR3KttKvqzHy6+6gRTAKbTeSxPICvWpHKlIYkIxFcEoH+3SNxgwWU9jZqG29MRt3/ikzZMBW/T2O9g+tY/5vKRqxm9aqWChFgjrpWRZDwvZqvwdxizokoVfReLZES3Ls//YSKzfFJG2GZ6a2vhAbfjcUkbRnyPOcZPwK+sE91Pq7FgFwL4N8BV63j6GQ5VrHZxe0b6spw8gvlkEjjhBgN1178lcxnp75QANNJ8AprZBqi3MzTQOTlgRZRAsDWTLgpXODrcDib76pg3af+JK5PQb0ncRVps9Z09u2EJ8fk9MGCDB6iw7XFedPPCxlx6MyIp2ywF4v9mkQXUBafYo67KRyPaojUUDGFkJsylYxzGHvvp0PrU93cp8zvDg4NqUkrbgEdGVvPF+qmXxT9MpfLc/yZ4vfhtKfZuQUGmNw+5WfTa3RYbJDEowN6noWCdXBZ67SrusKrok3TxIJV25vxXrFVhD/u/3ermysu7xA9ss="
         - DX_PROJECT=project-F8PQ6380xf5bK0Qk0YPjB17P
       before_install:
-        - sudo apt-get -q update
-        - sudo apt-get -y install python2 python-argcomplete
+        - sudo apt-get -y install python2-minimal
       install:
         - travis/install-wdl.sh
       script:
