@@ -14,6 +14,7 @@ workflow augur_from_msa {
         File            sample_metadata
         File            ref_fasta
         File            genbank_gb
+        File            auspice_config
         File?           clades_tsv
         Array[String]?  ancestral_traits_to_infer
     }
@@ -37,6 +38,10 @@ workflow augur_from_msa {
         }
         ancestral_traits_to_infer: {
           description: "A list of metadata traits to use for ancestral node inference (see https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/traits.html). Multiple traits may be specified; must correspond exactly to column headers in metadata file. Omitting these values will skip ancestral trait inference, and ancestral nodes will not have estimated values for metadata."
+        }
+        auspice_config: {
+          description: "A file specifying options to customize the auspice export; see: https://nextstrain.github.io/auspice/customise-client/introduction",
+          patterns: ["*.json", "*.txt"]
         }
         clades_tsv: {
           description: "A TSV file containing clade mutation positions in four columns: [clade  gene    site    alt]; see: https://nextstrain.org/docs/tutorials/defining-clades",
@@ -100,7 +105,8 @@ workflow augur_from_msa {
                                 ancestral_traits.node_data_json,
                                 ancestral_tree.nt_muts_json,
                                 translate_augur_tree.aa_muts_json,
-                                assign_clades_to_nodes.node_clade_data_json])
+                                assign_clades_to_nodes.node_clade_data_json]),
+            auspice_config  = auspice_config
     }
 
     output {
