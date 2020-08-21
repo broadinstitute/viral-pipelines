@@ -695,7 +695,7 @@ task filter_bam_to_taxa {
 
     samtools view -c ${classified_bam} | tee classified_taxonomic_filter_read_count_pre &
 
-    cat taxfilterargs | xargs -d '\n' metagenomics.py filter_bam_to_taxa \
+    cat taxfilterargs | grep . | xargs -d '\n' metagenomics.py filter_bam_to_taxa \
       ${classified_bam} \
       ${classified_reads_txt_gz} \
       "${out_basename}.bam" \
