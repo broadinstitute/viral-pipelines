@@ -125,7 +125,7 @@ workflow assemble_refbased {
     call interhost.multi_align_mafft_ref as mafft {
         input:
             reference_fasta  = reference_fasta,
-            assemblies_fasta = select_all([call_consensus.refined_assembly_fasta,[]])
+            assemblies_fasta = [call_consensus.refined_assembly_fasta]
     }
 
     call intrahost.isnvs_vcf as write_isnv_vcf {
