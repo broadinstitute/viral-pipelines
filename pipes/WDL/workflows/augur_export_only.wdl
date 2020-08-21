@@ -2,7 +2,7 @@ version 1.0
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 
-workflow augur_from_newick {
+workflow augur_export_only {
     meta {
         description: "Convert a newick formatted phylogenetic tree into a json suitable for auspice visualization. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/export.html"
         author: "Broad Viral Genomics"
