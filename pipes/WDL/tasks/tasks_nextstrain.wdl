@@ -519,10 +519,10 @@ task refine_augur_tree {
     }
     runtime {
         docker: docker
-        memory: "25 GB"
-        cpu :   4
+        memory: "50 GB"
+        cpu :   2
         disks:  "local-disk 100 HDD"
-        dx_instance_type: "mem3_ssd1_v2_x4"
+        dx_instance_type: "mem3_ssd1_v2_x8"
         preemptible: 0
     }
     output {
@@ -627,10 +627,10 @@ task ancestral_tree {
     }
     runtime {
         docker: docker
-        memory: "20 GB"
+        memory: "50 GB"
         cpu :   4
         disks:  "local-disk 50 HDD"
-        dx_instance_type: "mem3_ssd1_v2_x4"
+        dx_instance_type: "mem3_ssd1_v2_x8"
         preemptible: 0
     }
     output {
