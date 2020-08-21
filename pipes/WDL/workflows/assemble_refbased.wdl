@@ -130,7 +130,7 @@ workflow assemble_refbased {
 
     call intrahost.isnvs_vcf as write_isnv_vcf {
         input:
-            vphaser2Calls             = select_all([call_isnvs.isnvsFile,[]]),
+            vphaser2Calls             = [call_isnvs.isnvsFile],
             perSegmentMultiAlignments = mafft.alignments_by_chr,
             reference_fasta           = reference_fasta,
             sampleNames               = select_all([call_isnvs.sample_name_out,[]])
