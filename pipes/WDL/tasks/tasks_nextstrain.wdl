@@ -412,6 +412,7 @@ task draft_augur_tree {
         File?    vcf_reference
         String?  tree_builder_args
 
+        Int?     cpus
         String   docker = "nextstrain/base:build-20200629T201240Z"
     }
     parameter_meta {
@@ -439,7 +440,7 @@ task draft_augur_tree {
     runtime {
         docker: docker
         memory: "32 GB"
-        cpu :   64
+        cpu:    select_first([cpus, 64])
         disks:  "local-disk 750 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x36"
         preemptible: 0
@@ -518,10 +519,10 @@ task refine_augur_tree {
     }
     runtime {
         docker: docker
-        memory: "25 GB"
-        cpu :   4
+        memory: "50 GB"
+        cpu :   2
         disks:  "local-disk 100 HDD"
-        dx_instance_type: "mem3_ssd1_v2_x4"
+        dx_instance_type: "mem3_ssd1_v2_x8"
         preemptible: 0
     }
     output {
@@ -626,10 +627,10 @@ task ancestral_tree {
     }
     runtime {
         docker: docker
-        memory: "20 GB"
+        memory: "50 GB"
         cpu :   4
         disks:  "local-disk 50 HDD"
-        dx_instance_type: "mem3_ssd1_v2_x4"
+        dx_instance_type: "mem3_ssd1_v2_x8"
         preemptible: 0
     }
     output {

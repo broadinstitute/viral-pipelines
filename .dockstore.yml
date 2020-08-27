@@ -25,6 +25,11 @@ workflows:
    primaryDescriptorPath: /pipes/WDL/workflows/assemble_refbased.wdl
    testParameterFiles:
     - /test/input/WDL/test_inputs-assemble_refbased-local.json
+ - name: augur_export_only
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/augur_export_only.wdl
+   testParameterFiles:
+    - empty.json
  - name: augur_from_assemblies
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/augur_from_assemblies.wdl
@@ -35,14 +40,14 @@ workflows:
    primaryDescriptorPath: /pipes/WDL/workflows/augur_from_beast_mcc.wdl
    testParameterFiles:
     - /test/input/WDL/test_inputs-augur_from_beast_mcc-local.json
+ - name: augur_from_mltree
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/augur_from_mltree.wdl
+   testParameterFiles:
+    - empty.json
  - name: augur_from_msa
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/augur_from_msa.wdl
-   testParameterFiles:
-    - empty.json
- - name: augur_from_newick
-   subclass: WDL
-   primaryDescriptorPath: /pipes/WDL/workflows/augur_from_newick.wdl
    testParameterFiles:
     - empty.json
  - name: bams_multiqc
