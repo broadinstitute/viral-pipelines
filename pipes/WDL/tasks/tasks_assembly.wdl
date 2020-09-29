@@ -350,7 +350,7 @@ task align_reads {
 
   runtime {
     docker: "${docker}"
-    memory: "7 GB"
+    memory: "15 GB"
     cpu: 8
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x8"
