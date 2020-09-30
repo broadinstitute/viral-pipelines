@@ -298,7 +298,7 @@ task align_reads {
         --aligner ${aligner} \
         ${'--aligner_options "' + aligner_options + '"'} \
         ${true='--skipMarkDupes' false="" skip_mark_dupes} \
-        --JVMmemory=3g \
+        --JVMmemory=8g \
         ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
         --loglevel=DEBUG
 
