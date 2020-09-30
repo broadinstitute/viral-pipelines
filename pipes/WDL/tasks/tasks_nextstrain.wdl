@@ -104,7 +104,6 @@ task filter_subsample_sequences {
         }
     }
     String out_fname = sub(sub(basename(sequences_fasta), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
-    Int mem_size = ceil(size(sequences_fasta, "GB") * 3)
     command {
         set -e
         augur version > VERSION
@@ -133,7 +132,7 @@ task filter_subsample_sequences {
     }
     runtime {
         docker: docker
-        memory: mem_size
+        memory: "3 GB"
         cpu :   4
         disks:  "local-disk 100 HDD"
         dx_instance_type: "mem1_ssd1_v2_x4"
@@ -171,6 +170,7 @@ task filter_sequences_to_list {
         }
     }
     String out_fname = sub(sub(basename(sequences), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
+    Int mem_size = ceil(size(sequences, "GB") * 3)
     command {
         set -e
         augur version > VERSION
@@ -196,7 +196,7 @@ task filter_sequences_to_list {
     }
     runtime {
         docker: docker
-        memory: "3 GB"
+        memory: mem_size
         cpu :   2
         disks:  "local-disk 100 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
