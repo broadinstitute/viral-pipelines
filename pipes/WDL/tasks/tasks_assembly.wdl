@@ -274,6 +274,8 @@ task align_reads {
 
     read_utils.py --version | tee VERSION
 
+    mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
+
     cp ${reference_fasta} assembly.fasta
     grep -v '^>' assembly.fasta | tr -d '\n' | wc -c | tee assembly_length
 
@@ -298,7 +300,7 @@ task align_reads {
         --aligner ${aligner} \
         ${'--aligner_options "' + aligner_options + '"'} \
         ${true='--skipMarkDupes' false="" skip_mark_dupes} \
-        --JVMmemory=8g \
+        --JVMmemory "$mem_in_mb"m \
         ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
         --loglevel=DEBUG
 
