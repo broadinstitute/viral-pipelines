@@ -130,8 +130,8 @@ task beast {
     dx_instance_type:    "mem1_ssd1_gpu2_x8" # dxWDL
     acceleratorType:     select_first([accelerator_type, "nvidia-tesla-k80"])  # GCP PAPIv2
     acceleratorCount:    select_first([accelerator_count, 4])  # GCP PAPIv2
-    gpuType:             select_first([gpu_type, "nvidia-tesla-k80"])  # GCP PAPIv2
-    gpuCount:            select_first([gpu_count, 4])  # GCP PAPIv2
+    gpuType:             select_first([gpu_type, "nvidia-tesla-k80"])  # Terra
+    gpuCount:            select_first([gpu_count, 4])  # Terra
     nvidiaDriverVersion: "410.79"
   }
 }
