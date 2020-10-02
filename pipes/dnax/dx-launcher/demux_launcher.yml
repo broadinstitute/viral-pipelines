@@ -43,9 +43,9 @@ access:
 runSpec:
   systemRequirements:
     main:
-      instanceType: mem1_ssd1_x2
+      instanceType: mem1_ssd1_v2_x2
     launch_demux:
-      instanceType: mem1_ssd1_x2
+      instanceType: mem1_ssd1_v2_x2
   distribution: Ubuntu
   release: "16.04"
   execDepends:
@@ -95,43 +95,43 @@ runSpec:
       # total data size more roughly tracks total tile count
       total_tile_count=$((lane_count*surface_count*swath_count*tile_count))
 
-      demux_instance_type="mem1_ssd1_x4"
+      demux_instance_type="mem1_ssd1_v2_x4"
       demux_threads=$(echo "$demux_instance_type" | cut -dx -f2)
       min_base_quality=25
       max_reads_in_ram_per_tile=1000000
       max_records_in_ram=2000000
       if [ "$total_tile_count" -le 50 ]; then 
-          tar_consolidation_instance_size="mem1_ssd1_x4"
-          demux_instance_type="mem2_ssd1_x8"
+          tar_consolidation_instance_size="mem1_ssd1_v2_x4"
+          demux_instance_type="mem2_ssd1_v2_x8"
           echo "Detected $total_tile_count tiles, interpreting as MiSeq run, executing on a $demux_instance_type machine."
       elif [ "$total_tile_count" -le 150 ]; then
-          tar_consolidation_instance_size="mem1_ssd2_x4"
-          demux_instance_type="mem1_ssd2_x16"
+          tar_consolidation_instance_size="mem1_ssd2_v2_x4"
+          demux_instance_type="mem1_ssd2_v2_x16"
           echo "Detected $total_tile_count tiles, interpreting as HiSeq2k run, executing on a $demux_instance_type machine."
       elif [ "$total_tile_count" -le 288 ]; then
-          tar_consolidation_instance_size="mem1_ssd2_x4"
-          demux_instance_type="mem1_ssd1_x32"
+          tar_consolidation_instance_size="mem1_ssd2_v2_x4"
+          demux_instance_type="mem1_ssd1_v2_x36"
           echo "Detected $total_tile_count tiles, interpreting as NextSeq (mid-output) run."
       elif [ "$total_tile_count" -le 624 ]; then
-          tar_consolidation_instance_size="mem1_ssd1_x32"
-          demux_instance_type="mem3_ssd1_x32"
+          tar_consolidation_instance_size="mem1_ssd1_v2_x36"
+          demux_instance_type="mem3_ssd1_v2_x32"
           echo "Detected $total_tile_count tiles, interpreting as NovaSeq SP run, executing on a $demux_instance_type machine."
       elif [ "$total_tile_count" -le 864 ]; then
-          tar_consolidation_instance_size="mem1_ssd2_x16"
-          demux_instance_type="mem1_ssd1_x32"
+          tar_consolidation_instance_size="mem1_ssd2_v2_x16"
+          demux_instance_type="mem1_ssd1_v2_x36"
           echo "Detected $total_tile_count tiles, interpreting as NextSeq (high-output) run."
       elif [ "$total_tile_count" -le 896 ]; then
-          tar_consolidation_instance_size="mem1_ssd1_x32"
-          demux_instance_type="mem3_ssd1_x32"
+          tar_consolidation_instance_size="mem1_ssd1_v2_x36"
+          demux_instance_type="mem3_ssd1_v2_x32"
           echo "Detected $total_tile_count tiles, interpreting as HiSeq4k run, executing on a $demux_instance_type machine."
       elif [ "$total_tile_count" -le 1408 ]; then
-          tar_consolidation_instance_size="mem1_ssd2_x36"
+          tar_consolidation_instance_size="mem1_ssd2_v2_x36"
           demux_instance_type="mem3_ssd2_v2_x32"
           echo "Detected $total_tile_count tiles, interpreting as NovaSeq run, executing on a $demux_instance_type machine."
           echo "  **Note: Q20 threshold used since NovaSeq with RTA3 writes only four Q-score values: 2, 12, 23, and 37.**"
           echo "    See: https://www.illumina.com/content/dam/illumina-marketing/documents/products/appnotes/novaseq-hiseq-q30-app-note-770-2017-010.pdf"
       elif [ "$total_tile_count" -gt 1408 ]; then
-          tar_consolidation_instance_size="mem1_ssd2_x36"
+          tar_consolidation_instance_size="mem1_ssd2_v2_x36"
           demux_instance_type="mem3_ssd2_v2_x32"
           echo "Tile count: $total_tile_count tiles, (unknown instrument type), executing on a $demux_instance_type machine."
       fi
@@ -183,7 +183,7 @@ runSpec:
 
         # schedule a subjob when all the demux analyses complete, to propagate all their
         # output files to the output of this job.
-        subjob=$(dx-jobutil-new-job propagate_outputs -i output_project=$output_project -i folder="$folder" -i run_id="$run_id" --depends-on ${analyses[@]})
+        subjob=$(dx-jobutil-new-job propagate_outputs -i output_project=$output_project -i folder="$folder" -i run_id="$run_id" --depends-on ${analyses[@]} --instance-type mem1_ssd1_v2_x2)
         echo $subjob
         dx-jobutil-add-output demux_outputs_all $subjob:demux_outputs
       fi
