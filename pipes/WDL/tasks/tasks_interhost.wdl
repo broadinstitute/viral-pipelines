@@ -89,6 +89,11 @@ task multi_align_mafft {
 task beast {
   input {
     File     beauti_xml
+    
+    String? accelerator_type
+    Int? accelerator_count
+    String? gpu_type
+    Int? gpu_count
 
     String   docker="quay.io/broadinstitute/beast-beagle-cuda:1.10.5pre"
   }
@@ -123,10 +128,10 @@ task beast {
     gpu:                 true                # dxWDL
     dx_timeout:          "40H"               # dxWDL
     dx_instance_type:    "mem1_ssd1_gpu2_x8" # dxWDL
-    acceleratorType:     "nvidia-tesla-k80"  # GCP PAPIv2
-    acceleratorCount:    4                   # GCP PAPIv2
-    gpuType:             "nvidia-tesla-k80"  # Terra
-    gpuCount:            4                   # Terra
+    acceleratorType:     select_first([accelerator_type, "nvidia-tesla-k80"])  # GCP PAPIv2
+    acceleratorCount:    select_first([accelerator_count, 4])  # GCP PAPIv2
+    gpuType:             select_first([gpu_type, "nvidia-tesla-k80"])  # Terra
+    gpuCount:            select_first([gpu_count, 4])  # Terra
     nvidiaDriverVersion: "410.79"
   }
 }
