@@ -170,7 +170,7 @@ task filter_sequences_to_list {
         }
     }
     String out_fname = sub(sub(basename(sequences), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
-    Int mem_size = ceil(size(sequences, "GB") * 2)
+    Int mem_size = ceil(size(sequences, "GB") * 2 + 0.001)
     command {
         set -e
         augur version > VERSION
