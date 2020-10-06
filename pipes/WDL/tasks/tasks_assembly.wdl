@@ -259,6 +259,7 @@ task align_reads {
     String?  aligner_options
     Boolean? skip_mark_dupes=false
 
+    Int?     machine_mem_gb
     String   docker="quay.io/broadinstitute/viral-core:2.1.8"
 
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
@@ -272,6 +273,8 @@ task align_reads {
     set -ex # do not set pipefail, since grep exits 1 if it can't find the pattern
 
     read_utils.py --version | tee VERSION
+
+    mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
 
     cp ${reference_fasta} assembly.fasta
     grep -v '^>' assembly.fasta | tr -d '\n' | wc -c | tee assembly_length
@@ -297,7 +300,7 @@ task align_reads {
         --aligner ${aligner} \
         ${'--aligner_options "' + aligner_options + '"'} \
         ${true='--skipMarkDupes' false="" skip_mark_dupes} \
-        --JVMmemory=3g \
+        --JVMmemory "$mem_in_mb"m \
         ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
         --loglevel=DEBUG
 
@@ -350,7 +353,7 @@ task align_reads {
 
   runtime {
     docker: "${docker}"
-    memory: "7 GB"
+    memory: select_first([machine_mem_gb, 15]) + " GB"
     cpu: 8
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x8"
