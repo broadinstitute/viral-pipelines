@@ -8,6 +8,7 @@ task isnvs_per_sample {
     Int?    threads
     Int?    minReadsPerStrand
     Int?    maxBias
+    Boolean removeDoublyMappedReads=true
 
     Int?    machine_mem_gb
     String  docker="quay.io/broadinstitute/viral-phylo:2.1.4.0"
@@ -21,10 +22,10 @@ task isnvs_per_sample {
         ${mapped_bam} \
         ${assembly_fasta} \
         vphaser2.${sample_name}.txt.gz \
-        ${'--vphaserNumThreads' + threads} \
-        --removeDoublyMappedReads \
-        ${'--minReadsEach' + minReadsPerStrand} \
-        ${'--maxBias' + maxBias}
+        ${'--vphaserNumThreads=' + threads} \
+        ${true="--removeDoublyMappedReads" false="" removeDoublyMappedReads} \
+        ${'--minReadsEach=' + minReadsPerStrand} \
+        ${'--maxBias=' + maxBias}
   }
 
   output {
