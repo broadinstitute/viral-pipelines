@@ -23,6 +23,29 @@ task concatenate {
     }
 }
 
+task fasta_to_ids {
+    meta {
+        description: "Return the headers only from a fasta file"
+    }
+    input {
+        File sequences_fasta
+    }
+    String basename = basename(sequences_fasta, ".fasta")
+    command {
+        cat "~{sequences_fasta}" | grep \> | cut -c 2- > "~{basename}.txt"
+    }
+    runtime {
+        docker: "ubuntu"
+        memory: "1 GB"
+        cpu:    1
+        disks: "local-disk 375 LOCAL"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+    output {
+        File ids_txt = "~{basename}.txt"
+    }
+}
+
 task filter_segments {
     input {
         File  all_samples_fasta
