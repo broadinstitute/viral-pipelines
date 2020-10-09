@@ -111,8 +111,8 @@ task filter_subsample_sequences {
         Int?     min_length
         File?    priority
         Int?     subsample_seed
-        String?  exclude_where
-        String?  include_where
+        Array[String]?  exclude_where
+        Array[String]?  include_where
 
         String   docker = "nextstrain/base:build-20200629T201240Z"
     }
@@ -130,7 +130,20 @@ task filter_subsample_sequences {
     command {
         set -e
         augur version > VERSION
-        augur filter \
+
+        touch wherefile
+        VALS="~{write_lines(select_first([exclude_where, []]))}"
+        if [ -n "$(cat $VALS)" ]; then
+            echo "--exclude-where" >> wherefile
+            cat $VALS >> wherefile
+        fi
+        VALS="~{write_lines(select_first([include_where, []]))}"
+        if [ -n "$(cat $VALS)" ]; then
+            echo "--include-where" >> wherefile
+            cat $VALS >> wherefile
+        fi
+
+        cat wherefile | tr '\n' '\0' | xargs -0 -t augur filter \
             --sequences ~{sequences_fasta} \
             --metadata ~{sample_metadata_tsv} \
             ~{"--min-date " + min_date} \
@@ -143,8 +156,6 @@ task filter_subsample_sequences {
             ~{"--sequences-per-group " + sequences_per_group} \
             ~{"--group-by " + group_by} \
             ~{"--subsample-seed " + subsample_seed} \
-            ~{"--exclude-where " + exclude_where} \
-            ~{"--include-where " + include_where} \
             --output "~{out_fname}" | tee STDOUT
         #cat ~{sequences_fasta} | grep \> | wc -l > IN_COUNT
         grep "sequences were dropped during filtering" STDOUT | cut -f 1 -d ' ' > DROP_COUNT
