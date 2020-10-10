@@ -96,6 +96,8 @@ workflow subsample_by_metadata_with_focal {
     output {
         File keep_list            = fasta_to_ids.ids_txt
         File subsampled_sequences = cat_fasta.combined
+        Int  focal_kept           = subsample_focal.sequences_out
+        Int  global_kept          = subsample_global.sequences_out
         Int  sequences_kept       = subsample_focal.sequences_out + subsample_global.sequences_out
     }
 }
