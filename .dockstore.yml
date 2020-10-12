@@ -225,6 +225,11 @@ workflows:
    primaryDescriptorPath: /pipes/WDL/workflows/subsample_by_metadata.wdl
    testParameterFiles:
     - empty.json
+ - name: subsample_by_metadata_with_focal
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/subsample_by_metadata_with_focal.wdl
+   testParameterFiles:
+    - empty.json
  - name: trimal
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/trimal.wdl
