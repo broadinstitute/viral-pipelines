@@ -268,6 +268,11 @@ task mafft_one_chr {
         set -e
         touch args.txt
 
+        # boolean options
+        echo "~{true='--large' false='' large}" >> args.txt
+        echo "~{true='--memsavetree' false='' memsavetree}" >> args.txt
+        echo "--auto" >> args.txt
+
         # if ref_fasta is specified, use "closely related" mode
         # see https://mafft.cbrc.jp/alignment/software/closelyrelatedviralgenomes.html
         if [ -f "~{ref_fasta}" ]; then
@@ -277,11 +282,6 @@ task mafft_one_chr {
         else
             echo "~{sequences}" >> args.txt
         fi
-
-        # boolean options
-        echo "~{true='--large' false='' large}" >> args.txt
-        echo "~{true='--memsavetree' false='' memsavetree}" >> args.txt
-        echo "--auto" >> args.txt
 
         # mafft align to reference in "closely related" mode
         cat args.txt | grep . | xargs -d '\n' mafft --thread -1 \
