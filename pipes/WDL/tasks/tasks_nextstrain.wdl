@@ -258,7 +258,7 @@ task mafft_one_chr {
         Boolean  remove_reference = false
         Boolean  keep_length = true
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.4.0"
+        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.10.0"
     }
     command {
         set -e
