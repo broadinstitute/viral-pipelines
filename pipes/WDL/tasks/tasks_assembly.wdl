@@ -5,11 +5,10 @@ task assemble {
       File     reads_unmapped_bam
       File     trim_clip_db
 
-      Int?     trinity_n_reads=250000
       Int?     spades_n_reads=10000000
       Int?     spades_min_contig_len=0
 
-      String?  assembler="trinity"  # trinity, spades, or trinity-spades
+      String?  assembler="spades"
       Boolean? always_succeed=false
 
       # do this in two steps in case the input doesn't actually have "taxfilt" in the name
@@ -28,18 +27,7 @@ task assemble {
 
         assembly.py --version | tee VERSION
 
-        if [[ "${assembler}" == "trinity" ]]; then
-          assembly.py assemble_trinity \
-            ${reads_unmapped_bam} \
-            ${trim_clip_db} \
-            ${sample_name}.assembly1-${assembler}.fasta \
-            ${'--n_reads=' + trinity_n_reads} \
-            ${true='--alwaysSucceed' false="" always_succeed} \
-            --JVMmemory "$mem_in_mb"m \
-            --outReads=${sample_name}.subsamp.bam \
-            --loglevel=DEBUG
-
-        elif [[ "${assembler}" == "spades" ]]; then
+        if [[ "${assembler}" == "spades" ]]; then
           assembly.py assemble_spades \
             ${reads_unmapped_bam} \
             ${trim_clip_db} \
@@ -50,28 +38,6 @@ task assemble {
             --memLimitGb $mem_in_gb \
             --outReads=${sample_name}.subsamp.bam \
             --loglevel=DEBUG
-
-        elif [[ "${assembler}" == "trinity-spades" ]]; then
-          assembly.py assemble_trinity \
-            ${reads_unmapped_bam} \
-            ${trim_clip_db} \
-            ${sample_name}.assembly1-trinity.fasta \
-            ${'--n_reads=' + trinity_n_reads} \
-            --JVMmemory "$mem_in_mb"m \
-            --outReads=${sample_name}.subsamp.bam \
-            ${true='--always_succeed' false='' always_succeed} \
-            --loglevel=DEBUG
-          assembly.py assemble_spades \
-            ${reads_unmapped_bam} \
-            ${trim_clip_db} \
-            ${sample_name}.assembly1-${assembler}.fasta \
-            --contigsUntrusted=${sample_name}.assembly1-trinity.fasta \
-            ${'--nReads=' + spades_n_reads} \
-            ${true='--alwaysSucceed' false='' always_succeed} \
-            ${'--minContigLen=' + spades_min_contig_len} \
-            --memLimitGb $mem_in_gb \
-            --loglevel=DEBUG
-
         else
           echo "unrecognized assembler ${assembler}" >&2
           exit 1
@@ -117,7 +83,7 @@ task scaffold {
       String       docker="quay.io/broadinstitute/viral-assemble:2.1.4.0"
 
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
-      String       sample_name = basename(basename(basename(contigs_fasta, ".fasta"), ".assembly1-trinity"), ".assembly1-spades")
+      String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
     }
 
     command {
