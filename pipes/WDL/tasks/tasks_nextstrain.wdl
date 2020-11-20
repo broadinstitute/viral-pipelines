@@ -258,6 +258,7 @@ task mafft_one_chr {
         Boolean  remove_reference = false
         Boolean  keep_length = true
 
+        Int?    machine_mem_gb 
         String   docker = "quay.io/broadinstitute/viral-phylo:2.1.4.0"
     }
     command {
@@ -300,7 +301,7 @@ task mafft_one_chr {
     }
     runtime {
         docker: docker
-        memory: "60 GB"
+        memory: select_first([machine_mem_gb, 10]) + " GB"
         cpu :   32
         disks:  "local-disk 100 HDD"
         preemptible: 0
