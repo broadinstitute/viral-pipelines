@@ -682,14 +682,19 @@ task filter_bam_to_taxa {
     TAXNAMELIST="${write_lines(select_first([taxonomic_names, []]))}"
     if [ -n "$(cat $TAXNAMELIST)" ]; then
       echo "--taxNames" >> taxfilterargs
+      cat $TAXNAMELIST >> taxfilterargs
+      echo "" >> taxfilterargs # cromwell write_lines lacks a final newline, so add one manually
     fi
-    cat $TAXNAMELIST >> taxfilterargs
 
     TAXIDLIST="${write_lines(select_first([taxonomic_ids, []]))}"
     if [ -n "$(cat $TAXIDLIST)" ]; then
       echo "--taxIDs" >> taxfilterargs
+      cat $TAXIDLIST >> taxfilterargs
+      echo "" >> taxfilterargs # cromwell write_lines lacks a final newline, so add one manually
     fi
-    cat $TAXIDLIST >> taxfilterargs
+
+    echo "taxfilterargs:"
+    cat taxfilterargs
 
     metagenomics.py --version | tee VERSION
 
