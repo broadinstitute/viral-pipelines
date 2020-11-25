@@ -128,7 +128,7 @@ task filter_subsample_sequences {
     }
     String out_fname = sub(sub(basename(sequences_fasta), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
     command {
-        set -e
+        set -e -o pipefail
         augur version > VERSION
 
         touch wherefile
@@ -268,7 +268,7 @@ task mafft_one_chr {
         Int      cpus = 32
     }
     command {
-        set -e
+        set -e -o pipefail
         touch args.txt
 
         # boolean options
@@ -376,12 +376,13 @@ task augur_mafft_align {
 task snp_sites {
     input {
         File   msa_fasta
+        Boolean allow_wildcard_bases=true
         String docker = "quay.io/biocontainers/snp-sites:2.5.1--hed695b0_0"
     }
     String out_basename = basename(msa_fasta, ".fasta")
     command {
         snp-sites -V > VERSION
-        snp-sites -v -c -o ~{out_basename}.vcf ~{msa_fasta}
+        snp-sites -v ~{true="" false="-c" allow_wildcard_bases} -o ~{out_basename}.vcf ~{msa_fasta}
     }
     runtime {
         docker: docker
