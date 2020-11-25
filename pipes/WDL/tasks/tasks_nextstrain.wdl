@@ -143,7 +143,6 @@ task filter_subsample_sequences {
             cat $VALS >> wherefile
         fi
 
-        set -o pipefail
         cat wherefile | tr '\n' '\0' | xargs -0 -t augur filter \
             --sequences ~{sequences_fasta} \
             --metadata ~{sample_metadata_tsv} \
@@ -158,7 +157,6 @@ task filter_subsample_sequences {
             ~{"--group-by " + group_by} \
             ~{"--subsample-seed " + subsample_seed} \
             --output "~{out_fname}" | tee STDOUT
-        set +o pipefail
 
         #cat ~{sequences_fasta} | grep \> | wc -l > IN_COUNT
         grep "sequences were dropped during filtering" STDOUT | cut -f 1 -d ' ' > DROP_COUNT
