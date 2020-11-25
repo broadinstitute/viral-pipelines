@@ -128,7 +128,7 @@ task filter_subsample_sequences {
     }
     String out_fname = sub(sub(basename(sequences_fasta), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
     command {
-        set -e
+        set -e -o pipefail
         augur version > VERSION
 
         touch wherefile
@@ -265,7 +265,7 @@ task mafft_one_chr {
         Int      cpus = 32
     }
     command {
-        set -e
+        set -e -o pipefail
         touch args.txt
 
         # boolean options
