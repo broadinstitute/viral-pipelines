@@ -128,7 +128,7 @@ task filter_subsample_sequences {
     }
     String out_fname = sub(sub(basename(sequences_fasta), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
     command {
-        set -e -o pipefail
+        set -e
         augur version > VERSION
 
         touch wherefile
