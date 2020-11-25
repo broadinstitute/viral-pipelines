@@ -159,7 +159,7 @@ task filter_subsample_sequences {
             ~{"--subsample-seed " + subsample_seed} \
             --output "~{out_fname}" | tee STDOUT
         set +o pipefail
-        
+
         #cat ~{sequences_fasta} | grep \> | wc -l > IN_COUNT
         grep "sequences were dropped during filtering" STDOUT | cut -f 1 -d ' ' > DROP_COUNT
         grep "sequences have been written out to" STDOUT | cut -f 1 -d ' ' > OUT_COUNT
@@ -268,7 +268,7 @@ task mafft_one_chr {
         Int      cpus = 32
     }
     command {
-        set -e -o pipefail
+        set -e
         touch args.txt
 
         # boolean options
