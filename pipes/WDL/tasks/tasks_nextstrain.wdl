@@ -128,7 +128,7 @@ task filter_subsample_sequences {
     }
     String out_fname = sub(sub(basename(sequences_fasta), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
     command {
-        set -e -o pipefail
+        set -e
         augur version > VERSION
 
         touch wherefile
@@ -143,6 +143,7 @@ task filter_subsample_sequences {
             cat $VALS >> wherefile
         fi
 
+        set -o pipefail
         cat wherefile | tr '\n' '\0' | xargs -0 -t augur filter \
             --sequences ~{sequences_fasta} \
             --metadata ~{sample_metadata_tsv} \
@@ -157,6 +158,8 @@ task filter_subsample_sequences {
             ~{"--group-by " + group_by} \
             ~{"--subsample-seed " + subsample_seed} \
             --output "~{out_fname}" | tee STDOUT
+        set +o pipefail
+
         #cat ~{sequences_fasta} | grep \> | wc -l > IN_COUNT
         grep "sequences were dropped during filtering" STDOUT | cut -f 1 -d ' ' > DROP_COUNT
         grep "sequences have been written out to" STDOUT | cut -f 1 -d ' ' > OUT_COUNT
@@ -265,7 +268,7 @@ task mafft_one_chr {
         Int      cpus = 32
     }
     command {
-        set -e -o pipefail
+        set -e
         touch args.txt
 
         # boolean options
