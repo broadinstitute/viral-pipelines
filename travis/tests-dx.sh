@@ -104,7 +104,7 @@ dx upload --brief --no-progress --destination /build/$VERSION/ $TEST_LAUNCH_ALL
 #
 THIRTY_DAYS_FILES="30d_old_files.json"
 dx find data --class file --created-before=-30d --path=/tests/ --json > $THIRTY_DAYS_FILES
-[ "$(cat $THIRTY_DAYS_FILES)" != "[]" ] && dx rm -r -f $(jq -r .[].describe.folder $THIRTY_DAYS_FILES | sort -u)
+[ "$(cat $THIRTY_DAYS_FILES)" != "[]" ] && dx rm -r -f $(jq -r '(.[].describe.folder + "/")' $THIRTY_DAYS_FILES | sort -u)
 rm -rf $THIRTY_DAYS_FILES
 
 # Cleanup empty folders
