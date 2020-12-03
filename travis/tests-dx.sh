@@ -70,7 +70,6 @@ for workflow in pipes/WDL/workflows/*.wdl; do
   fi
 done
 
-
 # only run demux_plus if this is on master or tagged branch
 if [ "$TRAVIS_BRANCH" = "master" -o -n "$TRAVIS_TAG" ]; then
   demux_name="demux_plus"
