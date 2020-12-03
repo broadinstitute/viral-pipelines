@@ -51,12 +51,13 @@ for workflow in pipes/WDL/workflows/*.wdl; do
        # launch simple test cases on DNAnexus CI project
        dx_workflow_id=$(grep -w "^$workflow_name" $COMPILE_SUCCESS | cut -f 2)
        timeout_args=$(dx_run_timeout_args $dx_workflow_id)
+       echo "running test $workflow_name - $dx_workflow_id -y --brief -f $input_json --extra-args $timeout_args"
        dx_job_id=$(dx run \
            $dx_workflow_id -y --brief \
            -f $input_json \
            --name "$VERSION $workflow_name" \
            --destination /tests/$VERSION/$workflow_name \
-           --extra-args $timeout_args \
+           #--extra-args $timeout_args \
            )
        if [ $? -eq 0 ]; then
            echo "Launched $workflow_name as $dx_job_id"
@@ -69,20 +70,32 @@ for workflow in pipes/WDL/workflows/*.wdl; do
   fi
 done
 
-# Special case: run test for the demux_launcher native applet (which invokes
-# the demux_plus WDL workflow)
-demux_launcher_id=$(grep demux_launcher $COMPILE_SUCCESS | cut -f 2)
-demux_plus_workflow_id=$(grep demux_plus $COMPILE_SUCCESS | cut -f 2)
-timeout_args=$(dx_run_timeout_args $demux_plus_workflow_id $demux_launcher_id)
-dx_job_id=$(dx run \
-  $demux_launcher_id -y --brief \
+
+# only run demux_plus if this is on master or tagged branch
+if [ "$TRAVIS_BRANCH" = "master" -o -n "$TRAVIS_TAG" ]; then
+  demux_name="demux_plus"
+else
+  # otherwise just run the (faster) demux_only
+  demux_name="demux_only"
+fi
+
+# Special case: run test for the demux_(plus|only)_launcher native applet (which invokes
+# the demux_(plus|only) WDL workflow)
+demux_launcher_id=$(grep "^${demux_name}_launcher\s" $COMPILE_SUCCESS | cut -f 2)
+
+demux_workflow_id=$(grep "^${demux_name}\s" $COMPILE_SUCCESS | cut -f 2)
+
+timeout_args=$(dx_run_timeout_args $demux_workflow_id $demux_launcher_id)
+dx_job_id=$(dx run "${demux_launcher_id}" \
+  -y --brief \
   -i upload_sentinel_record=record-Bv8qkgQ0jy198GK0QVz2PV8Y \
-  --name "$VERSION demux_launcher" \
-  -i folder=/tests/$VERSION/demux_launcher \
+  -i demux_workflow_id=${demux_workflow_id} \
+  --name "$VERSION ${demux_name}_launcher" \
+  -i folder=/tests/$VERSION/${demux_name}_launcher \
   --extra-args $timeout_args \
   )
-echo "Launched demux_launcher as $dx_job_id"
-echo -e "demux_launcher\t$demux_launcher_id\t$dx_job_id" >> $TEST_LAUNCH_ALL
+echo "Launched ${demux_name}_launcher as $dx_job_id"
+echo -e "${demux_name}_launcher\t$demux_launcher_id\t$dx_job_id" >> $TEST_LAUNCH_ALL
 
 # the presence of this file in the project denotes all tests launched
 dx upload --brief --no-progress --destination /build/$VERSION/ $TEST_LAUNCH_ALL
@@ -91,8 +104,8 @@ dx upload --brief --no-progress --destination /build/$VERSION/ $TEST_LAUNCH_ALL
 # Cleanup folders w/ files that are 30 days old
 #
 THIRTY_DAYS_FILES="30d_old_files.json"
-dx find data --class file --created-before=-30d --path=/tests/ --json > $THIRTY_DAYS_FILE
-[ "$(cat $THIRTY_DAYS_FILES)" != "[]" ] && dx rm -r -f $(jq -r .[].describe.folder $THIRTY_DAYS_FILE | sort -u)
+dx find data --class file --created-before=-30d --path=/tests/ --json > $THIRTY_DAYS_FILES
+[ "$(cat $THIRTY_DAYS_FILES)" != "[]" ] && dx rm -r -f $(jq -r .[].describe.folder $THIRTY_DAYS_FILES | sort -u)
 rm -rf $THIRTY_DAYS_FILES
 
 # Cleanup empty folders
