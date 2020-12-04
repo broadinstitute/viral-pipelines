@@ -3,7 +3,7 @@ set -e -o pipefail
 
 if [ -z "$TRAVIS_PULL_REQUEST_BRANCH" ]; then
 
-	travis/version-wdl-runtimes.sh
+	travis/check-wdl-runtimes.sh
 	travis/flatten-wdls.sh > /dev/null
 
 	VERSION=$(travis/list-docker-tags.sh | cut -f 2 -d ":" | tail -1); echo "version - $VERSION"

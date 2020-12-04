@@ -143,6 +143,7 @@ task filter_subsample_sequences {
             cat $VALS >> wherefile
         fi
 
+        set -o pipefail
         cat wherefile | tr '\n' '\0' | xargs -0 -t augur filter \
             --sequences ~{sequences_fasta} \
             --metadata ~{sample_metadata_tsv} \
@@ -157,6 +158,8 @@ task filter_subsample_sequences {
             ~{"--group-by " + group_by} \
             ~{"--subsample-seed " + subsample_seed} \
             --output "~{out_fname}" | tee STDOUT
+        set +o pipefail
+
         #cat ~{sequences_fasta} | grep \> | wc -l > IN_COUNT
         grep "sequences were dropped during filtering" STDOUT | cut -f 1 -d ' ' > DROP_COUNT
         grep "sequences have been written out to" STDOUT | cut -f 1 -d ' ' > OUT_COUNT
@@ -257,12 +260,21 @@ task mafft_one_chr {
         String   basename
         Boolean  remove_reference = false
         Boolean  keep_length = true
+        Boolean  large = false
+        Boolean  memsavetree = false
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.4.0"
+        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.10.0"
+        Int      mem_size = 60
+        Int      cpus = 32
     }
     command {
         set -e
         touch args.txt
+
+        # boolean options
+        echo "~{true='--large' false='' large}" >> args.txt
+        echo "~{true='--memsavetree' false='' memsavetree}" >> args.txt
+        echo "--auto" >> args.txt
 
         # if ref_fasta is specified, use "closely related" mode
         # see https://mafft.cbrc.jp/alignment/software/closelyrelatedviralgenomes.html
@@ -275,7 +287,7 @@ task mafft_one_chr {
         fi
 
         # mafft align to reference in "closely related" mode
-        cat args.txt | xargs -d '\n' mafft --auto --thread -1 \
+        cat args.txt | grep . | xargs -d '\n' mafft --thread -1 \
             ~{true='--keeplength --mapout' false='' keep_length} \
             > msa.fasta
 
@@ -300,8 +312,8 @@ task mafft_one_chr {
     }
     runtime {
         docker: docker
-        memory: "60 GB"
-        cpu :   32
+        memory: mem_size + " GB"
+        cpu :   cpus
         disks:  "local-disk 100 HDD"
         preemptible: 0
         dx_instance_type: "mem1_ssd1_v2_x36"
@@ -364,12 +376,13 @@ task augur_mafft_align {
 task snp_sites {
     input {
         File   msa_fasta
+        Boolean allow_wildcard_bases=true
         String docker = "quay.io/biocontainers/snp-sites:2.5.1--hed695b0_0"
     }
     String out_basename = basename(msa_fasta, ".fasta")
     command {
         snp-sites -V > VERSION
-        snp-sites -v -c -o ~{out_basename}.vcf ~{msa_fasta}
+        snp-sites -v ~{true="" false="-c" allow_wildcard_bases} -o ~{out_basename}.vcf ~{msa_fasta}
     }
     runtime {
         docker: docker
