@@ -1,7 +1,7 @@
-broadinstitute/viral-core=2.1.10
-broadinstitute/viral-assemble=2.1.10.0
-broadinstitute/viral-classify=2.1.10.0
-broadinstitute/viral-phylo=2.1.10.0
+broadinstitute/viral-core=2.1.12
+broadinstitute/viral-assemble=2.1.12.0
+broadinstitute/viral-classify=2.1.12.0
+broadinstitute/viral-phylo=2.1.12.0
 broadinstitute/beast-beagle-cuda=1.10.5pre
 broadinstitute/ncbi-tools=2.10.7.1
 nextstrain/base=build-20200629T201240Z

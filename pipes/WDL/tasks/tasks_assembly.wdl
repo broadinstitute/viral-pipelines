@@ -15,7 +15,7 @@ task assemble {
       String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
 
       Int?     machine_mem_gb
-      String   docker="quay.io/broadinstitute/viral-assemble:2.1.10.0"
+      String   docker="quay.io/broadinstitute/viral-assemble:2.1.12.0"
     }
 
     command {
@@ -80,7 +80,7 @@ task scaffold {
       Float?       scaffold_min_pct_contig_aligned
 
       Int?         machine_mem_gb
-      String       docker="quay.io/broadinstitute/viral-assemble:2.1.10.0"
+      String       docker="quay.io/broadinstitute/viral-assemble:2.1.12.0"
 
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
@@ -226,7 +226,7 @@ task align_reads {
     Boolean? skip_mark_dupes=false
 
     Int?     machine_mem_gb
-    String   docker="quay.io/broadinstitute/viral-core:2.1.10"
+    String   docker="quay.io/broadinstitute/viral-core:2.1.12"
 
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
   }
@@ -342,7 +342,7 @@ task refine_assembly_with_aligned_reads {
       Int?     min_coverage=3
 
       Int?     machine_mem_gb
-      String   docker="quay.io/broadinstitute/viral-assemble:2.1.10.0"
+      String   docker="quay.io/broadinstitute/viral-assemble:2.1.12.0"
     }
 
     parameter_meta {
@@ -434,7 +434,7 @@ task refine {
       Int?    min_coverage=1
 
       Int?    machine_mem_gb
-      String  docker="quay.io/broadinstitute/viral-assemble:2.1.10.0"
+      String  docker="quay.io/broadinstitute/viral-assemble:2.1.12.0"
 
       String  assembly_basename=basename(basename(assembly_fasta, ".fasta"), ".scaffold")
     }
@@ -504,7 +504,7 @@ task refine_2x_and_plot {
       String? plot_coverage_novoalign_options="-r Random -l 40 -g 40 -x 20 -t 100 -k"
 
       Int?    machine_mem_gb
-      String  docker="quay.io/broadinstitute/viral-assemble:2.1.10.0"
+      String  docker="quay.io/broadinstitute/viral-assemble:2.1.12.0"
 
       # do this in two steps in case the input doesn't actually have "cleaned" in the name
       String  sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
@@ -636,7 +636,7 @@ task run_discordance {
       String   out_basename = "run"
       Int      min_coverage=4
 
-      String   docker="quay.io/broadinstitute/viral-core:2.1.10"
+      String   docker="quay.io/broadinstitute/viral-core:2.1.12"
     }
 
     command {
