@@ -24,7 +24,7 @@ Workflows are continuously deployed to a [DNAnexus CI project](https://platform.
 
 ## Basic execution
 
-<img src="https://github.com/openwdl/learn-wdl/blob/master/images/miniwdl-dev.png" width=600>
+<img src="https://raw.githubusercontent.com/openwdl/learn-wdl/master/images/miniwdl-dev.png" width=600>
 
 The easiest way to get started is on a single, Python & Docker-capable machine (your laptop, shared workstation, or virtual machine) using [miniWDL](https://github.com/chanzuckerberg/miniwdl) as shown above. MiniWDL can be installed either via `pip` or `conda` (via conda-forge). After confirming that it works (`miniwdl run_self_test`, you can use [miniwdl run](https://miniwdl.readthedocs.io/en/latest/getting_started.html) to invoke WDL workflows from this repository.
 
