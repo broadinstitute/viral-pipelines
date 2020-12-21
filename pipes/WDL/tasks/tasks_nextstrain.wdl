@@ -145,8 +145,8 @@ task filter_subsample_sequences {
 
         set -o pipefail
         cat wherefile | tr '\n' '\0' | xargs -0 -t augur filter \
-            --sequences ~{sequences_fasta} \
-            --metadata ~{sample_metadata_tsv} \
+            --sequences "~{sequences_fasta}" \
+            --metadata "~{sample_metadata_tsv}" \
             ~{"--min-date " + min_date} \
             ~{"--max-date " + max_date} \
             ~{"--min-length " + min_length} \
@@ -344,9 +344,9 @@ task augur_mafft_align {
     command {
         set -e
         augur version > VERSION
-        augur align --sequences ~{sequences} \
-            --reference-sequence ~{ref_fasta} \
-            --output ~{basename}_aligned.fasta \
+        augur align --sequences "~{sequences}" \
+            --reference-sequence "~{ref_fasta}" \
+            --output "~{basename}_aligned.fasta" \
             ~{true="--fill-gaps" false="" fill_gaps} \
             ~{"--existing-alignment " + existing_alignment} \
             ~{true="--remove-reference" false="" remove_reference} \
@@ -382,7 +382,7 @@ task snp_sites {
     String out_basename = basename(msa_fasta, ".fasta")
     command {
         snp-sites -V > VERSION
-        snp-sites -v ~{true="" false="-c" allow_wildcard_bases} -o ~{out_basename}.vcf ~{msa_fasta}
+        snp-sites -v ~{true="" false="-c" allow_wildcard_bases} -o "~{out_basename}.vcf" "~{msa_fasta}"
     }
     runtime {
         docker: docker
@@ -420,7 +420,7 @@ task augur_mask_sites {
         augur version > VERSION
         BEDFILE=~{select_first([mask_bed, "/dev/null"])}
         if [ -s "$BEDFILE" ]; then
-            augur mask --sequences ~{sequences} \
+            augur mask --sequences "~{sequences}" \
                 --mask "$BEDFILE" \
                 --output "~{out_fname}"
         else
@@ -473,9 +473,9 @@ task draft_augur_tree {
     command {
         set -e
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur tree --alignment ~{msa_or_vcf} \
-            --output ~{out_basename}_~{method}.nwk \
-            --method ~{method} \
+        AUGUR_RECURSION_LIMIT=10000 augur tree --alignment "~{msa_or_vcf}" \
+            --output "~{out_basename}_~{method}.nwk" \
+            --method "~{method}" \
             --substitution-model ~{default="GTR" substitution_model} \
             ~{"--exclude-sites " + exclude_sites} \
             ~{"--vcf-reference " + vcf_reference} \
@@ -540,11 +540,11 @@ task refine_augur_tree {
         set -e
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur refine \
-            --tree ~{raw_tree} \
-            --alignment ~{msa_or_vcf} \
-            --metadata ~{metadata} \
-            --output-tree ~{out_basename}_timetree.nwk \
-            --output-node-data ~{out_basename}_branch_lengths.json \
+            --tree "~{raw_tree}" \
+            --alignment "~{msa_or_vcf}" \
+            --metadata "~{metadata}" \
+            --output-tree "~{out_basename}_timetree.nwk" \
+            --output-node-data "~{out_basename}_branch_lengths.json" \
             --timetree \
             ~{"--clock-rate " + clock_rate} \
             ~{"--clock-std-dev " + clock_std_dev} \
@@ -603,8 +603,8 @@ task ancestral_traits {
         set -e
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur traits \
-            --tree ~{tree} \
-            --metadata ~{metadata} \
+            --tree "~{tree}" \
+            --metadata "~{metadata}" \
             --columns ~{sep=" " columns} \
             --output-node-data "~{out_basename}_ancestral_traits.json" \
             ~{"--weights " + weights} \
@@ -659,12 +659,12 @@ task ancestral_tree {
         set -e
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur ancestral \
-            --tree ~{tree} \
-            --alignment ~{msa_or_vcf} \
-            --output-node-data ~{out_basename}_nt_muts.json \
+            --tree "~{tree}" \
+            --alignment "~{msa_or_vcf}" \
+            --output-node-data "~{out_basename}_nt_muts.json" \
             ~{"--vcf-reference " + vcf_reference} \
             ~{"--output-vcf " + output_vcf} \
-            --output-sequences ~{out_basename}_ancestral_sequences.fasta \
+            --output-sequences "~{out_basename}_ancestral_sequences.fasta" \
             ~{true="--keep-overhangs" false="" keep_overhangs} \
             --inference ~{default="joint" inference} \
             ~{true="--keep-ambiguous" false="" keep_ambiguous} \
@@ -710,9 +710,9 @@ task translate_augur_tree {
     command {
         set -e
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur translate --tree ~{tree} \
-            --ancestral-sequences ~{nt_muts} \
-            --reference-sequence ~{genbank_gb} \
+        AUGUR_RECURSION_LIMIT=10000 augur translate --tree "~{tree}" \
+            --ancestral-sequences "~{nt_muts}" \
+            --reference-sequence "~{genbank_gb}" \
             ~{"--vcf-reference-output " + vcf_reference_output} \
             ~{"--vcf-reference " + vcf_reference} \
             ~{"--genes " + genes} \
@@ -752,11 +752,11 @@ task assign_clades_to_nodes {
         set -e
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur clades \
-        --tree ~{tree_nwk} \
-        --mutations ~{nt_muts_json} ~{aa_muts_json} \
-        --reference ~{ref_fasta} \
-        --clades ~{clades_tsv} \
-        --output-node-data ~{out_basename}_clades.json
+        --tree "~{tree_nwk}" \
+        --mutations "~{nt_muts_json}" "~{aa_muts_json}" \
+        --reference "~{ref_fasta}" \
+        --clades "~{clades_tsv}" \
+        --output-node-data "~{out_basename}_clades.json"
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
@@ -883,13 +883,13 @@ task export_auspice_json {
         cat $VALS >> exportargs
 
         (export AUGUR_RECURSION_LIMIT=10000; cat exportargs | tr '\n' '\0' | xargs -0 -t augur export v2 \
-            --tree ~{tree} \
+            --tree "~{tree}" \
             ~{"--metadata " + sample_metadata} \
-            --auspice-config ~{auspice_config} \
+            --auspice-config "~{auspice_config}" \
             ~{"--lat-longs " + lat_longs_tsv} \
             ~{"--colors " + colors_tsv} \
             ~{"--description " + description_md} \
-            --output ~{out_basename}_auspice.json)
+            --output "~{out_basename}_auspice.json")
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
