@@ -34,9 +34,9 @@ task nextclade_one_sample {
                 for c in zip(*(l.rstrip().split('\t') for l in inf)):
                     outf.write('\t'.join(c)+'\n')
         CODE
-        grep ^clade transposed.tsv | cut -f 2 > NEXTCLADE_CLADE
-        grep ^aaSubstitutions transposed.tsv | cut -f 2 > NEXTCLADE_AASUBS
-        grep ^aaDeletions transposed.tsv | cut -f 2 > NEXTCLADE_AADELS
+        grep ^clade transposed.tsv | cut -f 2 | grep -v clade > NEXTCLADE_CLADE
+        grep ^aaSubstitutions transposed.tsv | cut -f 2 | grep -v aaSubstitutions > NEXTCLADE_AASUBS
+        grep ^aaDeletions transposed.tsv | cut -f 2 | grep -v aaDeletions > NEXTCLADE_AADELS
     }
     runtime {
         docker: "neherlab/nextclade:0.10.0"
@@ -133,7 +133,7 @@ task pangolin_one_sample {
                 for c in zip(*(l.rstrip().split(',') for l in inf)):
                     outf.write('\t'.join(c)+'\n')
         CODE
-        grep ^lineage transposed.tsv | cut -f 2 > PANGOLIN_CLADE
+        grep ^lineage transposed.tsv | cut -f 2 | grep -v lineage > PANGOLIN_CLADE
     }
     runtime {
         docker: "staphb/pangolin:2.1.1"
