@@ -28,6 +28,7 @@ task nextclade_one_sample {
             --output-tree "~{basename}".nextclade.auspice.json
         cp "~{basename}".nextclade.tsv input.tsv
         python3 <<CODE
+        # transpose table
         with open('input.tsv', 'rt') as inf:
             with open('transposed.tsv', 'wt') as outf:
                 for c in zip(*(l.rstrip().split('\t') for l in inf)):
@@ -78,6 +79,7 @@ task pangolin_one_sample {
 
         cp "~{basename}.pangolin_report.csv" input.csv
         python3 <<CODE
+        # transpose table and convert csv to tsv
         with open('input.csv', 'rt') as inf:
             with open('transposed.tsv', 'wt') as outf:
                 for c in zip(*(l.rstrip().split(',') for l in inf)):
