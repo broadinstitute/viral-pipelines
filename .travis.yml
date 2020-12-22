@@ -111,41 +111,41 @@ jobs:
         - travis/build-dx.sh
         - travis/tests-dx.sh
 
-    - language: python
-      stage: build
-      python: "3.8"
-      env:
-        - TRAVIS_JOB=deploy_github_staging
-      install:
-        - pip3 -q install miniwdl
-      script:
-        - travis/github-viral-ngs-staging.sh
-      after_failure:
-        - sleep 10
+    #- language: python
+    #  stage: build
+    #  python: "3.8"
+    #  env:
+    #    - TRAVIS_JOB=deploy_github_staging
+    #  install:
+    #    - pip3 -q install miniwdl
+    #  script:
+    #    - travis/github-viral-ngs-staging.sh
+    #  after_failure:
+    #    - sleep 10
 
-    - language: python
-      stage: build
-      python: "3.8"
-      env:
-        - TRAVIS_JOB=deploy_gcs
-      script: skip
-      before_deploy:
-        - set -e -o pipefail
-        - openssl aes-256-cbc -K $encrypted_6def3e87f286_key -iv $encrypted_6def3e87f286_iv -in travis/viral-ngs-wdl.json.enc -out travis/viral-ngs-wdl.json -d
-        - export DEST_DIR=`travis/list-docker-tags.sh | tail -1 | sed 's/:/\//'`
-        - pip3 -q install miniwdl
-        - travis/check-wdl-runtimes.sh
-        - travis/flatten-wdls.sh
-      deploy:
-          provider:   gcs
-          edge:       true
-          key_file:   travis/viral-ngs-wdl.json
-          bucket:     viral-ngs-wdl
-          local_dir:  pipes/WDL/flattened
-          upload_dir: "$DEST_DIR"
-          acl:        public-read
-          on:
-              all_branches: true
+    #- language: python
+    #  stage: build
+    #  python: "3.8"
+    #  env:
+    #    - TRAVIS_JOB=deploy_gcs
+    #  script: skip
+    #  before_deploy:
+    #    - set -e -o pipefail
+    #    - openssl aes-256-cbc -K $encrypted_6def3e87f286_key -iv $encrypted_6def3e87f286_iv -in travis/viral-ngs-wdl.json.enc -out travis/viral-ngs-wdl.json -d
+    #    - export DEST_DIR=`travis/list-docker-tags.sh | tail -1 | sed 's/:/\//'`
+    #    - pip3 -q install miniwdl
+    #    - travis/check-wdl-runtimes.sh
+    #    - travis/flatten-wdls.sh
+    #  deploy:
+    #      provider:   gcs
+    #      edge:       true
+    #      key_file:   travis/viral-ngs-wdl.json
+    #      bucket:     viral-ngs-wdl
+    #      local_dir:  pipes/WDL/flattened
+    #      upload_dir: "$DEST_DIR"
+    #      acl:        public-read
+    #      on:
+    #          all_branches: true
 
     #- language: python
     #  stage: build
