@@ -48,6 +48,8 @@ task nextclade_one_sample {
         File   auspice_json       = "~{basename}.nextclade.auspice.json"
         File   nextclade_tsv      = "~{basename}.nextclade.tsv"
         String nextclade_clade    = read_map("transposed.tsv")["clade"]
+        String aa_subs_csv        = read_map("transposed.tsv")["aaSubstitutions"]
+        String aa_dels_csv        = read_map("transposed.tsv")["aaDeletions"]
     }
 }
 
