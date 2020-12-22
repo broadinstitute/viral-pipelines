@@ -34,6 +34,9 @@ task nextclade_one_sample {
                 for c in zip(*(l.rstrip().split('\t') for l in inf)):
                     outf.write('\t'.join(c)+'\n')
         CODE
+        grep ^clade transposed.tsv | cut -f 2 > NEXTCLADE_CLADE
+        grep ^aaSubstitutions transposed.tsv | cut -f 2 > NEXTCLADE_AASUBS
+        grep ^aaDeletions transposed.tsv | cut -f 2 > NEXTCLADE_AADELS
     }
     runtime {
         docker: "neherlab/nextclade:0.10.0"
@@ -47,9 +50,9 @@ task nextclade_one_sample {
         File   nextclade_json     = "~{basename}.nextclade.json"
         File   auspice_json       = "~{basename}.nextclade.auspice.json"
         File   nextclade_tsv      = "~{basename}.nextclade.tsv"
-        String nextclade_clade    = read_map("transposed.tsv")["clade"]
-        String aa_subs_csv        = read_map("transposed.tsv")["aaSubstitutions"]
-        String aa_dels_csv        = read_map("transposed.tsv")["aaDeletions"]
+        String nextclade_clade    = read_string("NEXTCLADE_CLADE")
+        String aa_subs_csv        = read_string("NEXTCLADE_AASUBS")
+        String aa_dels_csv        = read_string("NEXTCLADE_AADELS")
     }
 }
 
@@ -130,6 +133,7 @@ task pangolin_one_sample {
                 for c in zip(*(l.rstrip().split(',') for l in inf)):
                     outf.write('\t'.join(c)+'\n')
         CODE
+        grep ^lineage transposed.tsv | cut -f 2 > PANGOLIN_CLADE
     }
     runtime {
         docker: "staphb/pangolin:2.1.1"
@@ -143,6 +147,6 @@ task pangolin_one_sample {
         String lineages_version   = read_string("VERSION_LINEAGES")
         String pangolearn_version = read_string("VERSION_PANGOLEARN")
         File   pangolin_csv       = "~{basename}.pangolin_report.csv"
-        String pangolin_clade     = read_map("transposed.tsv")["lineage"]
+        String pangolin_clade     = read_string("PANGOLIN_CLADE")
     }
 }
