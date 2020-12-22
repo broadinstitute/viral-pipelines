@@ -219,6 +219,11 @@ workflows:
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_lineages.wdl
    testParameterFiles:
+    - /test/input/WDL/test_inputs-sarscov2_lineages-local.json
+ - name: sarscov2_nextclade_multi
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_nextclade_multi.wdl
+   testParameterFiles:
     - empty.json
  - name: scaffold_and_refine
    subclass: WDL

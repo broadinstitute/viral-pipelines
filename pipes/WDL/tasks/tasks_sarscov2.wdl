@@ -34,6 +34,9 @@ task nextclade_one_sample {
                 for c in zip(*(l.rstrip().split('\t') for l in inf)):
                     outf.write('\t'.join(c)+'\n')
         CODE
+        grep ^clade transposed.tsv | cut -f 2 | grep -v clade > NEXTCLADE_CLADE
+        grep ^aaSubstitutions transposed.tsv | cut -f 2 | grep -v aaSubstitutions > NEXTCLADE_AASUBS
+        grep ^aaDeletions transposed.tsv | cut -f 2 | grep -v aaDeletions > NEXTCLADE_AADELS
     }
     runtime {
         docker: "neherlab/nextclade:0.10.0"
@@ -47,9 +50,52 @@ task nextclade_one_sample {
         File   nextclade_json     = "~{basename}.nextclade.json"
         File   auspice_json       = "~{basename}.nextclade.auspice.json"
         File   nextclade_tsv      = "~{basename}.nextclade.tsv"
-        String nextclade_clade    = read_map("transposed.tsv")["clade"]
-        String aa_subs_csv        = read_map("transposed.tsv")["aaSubstitutions"]
-        String aa_dels_csv        = read_map("transposed.tsv")["aaDeletions"]
+        String nextclade_clade    = read_string("NEXTCLADE_CLADE")
+        String aa_subs_csv        = read_string("NEXTCLADE_AASUBS")
+        String aa_dels_csv        = read_string("NEXTCLADE_AADELS")
+    }
+}
+
+task nextclade_many_samples {
+    meta {
+        description: "Nextclade classification of many samples. Leaving optional inputs unspecified will use SARS-CoV-2 defaults."
+    }
+    input {
+        Array[File]+ genome_fastas
+        File?  root_sequence
+        File?  auspice_reference_tree_json
+        File?  qc_config_json
+        File?  gene_annotations_json
+        File?  pcr_primers_csv
+        String basename
+    }
+    command {
+        set -e
+        nextclade.js --version > VERSION
+        cat ~{sep=" " genome_fastas} > genomes.fasta
+        nextclade.js \
+            --input-fasta genomes.fasta \
+            ~{"--input-root-seq " + root_sequence} \
+            ~{"--input-tree " + auspice_reference_tree_json} \
+            ~{"--input-qc-config " + qc_config_json} \
+            ~{"--input-gene-map " + gene_annotations_json} \
+            ~{"--input-pcr-primers " + pcr_primers_csv} \
+            --output-json "~{basename}".nextclade.json \
+            --output-tsv  "~{basename}".nextclade.tsv \
+            --output-tree "~{basename}".nextclade.auspice.json
+    }
+    runtime {
+        docker: "neherlab/nextclade:0.10.0"
+        memory: "14 GB"
+        cpu:    16
+        disks: "local-disk 100 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x16"
+    }
+    output {
+        String nextclade_version  = read_string("VERSION")
+        File   nextclade_json     = "~{basename}.nextclade.json"
+        File   auspice_json       = "~{basename}.nextclade.auspice.json"
+        File   nextclade_tsv      = "~{basename}.nextclade.tsv"
     }
 }
 
@@ -87,6 +133,7 @@ task pangolin_one_sample {
                 for c in zip(*(l.rstrip().split(',') for l in inf)):
                     outf.write('\t'.join(c)+'\n')
         CODE
+        grep ^lineage transposed.tsv | cut -f 2 | grep -v lineage > PANGOLIN_CLADE
     }
     runtime {
         docker: "staphb/pangolin:2.1.1"
@@ -100,6 +147,6 @@ task pangolin_one_sample {
         String lineages_version   = read_string("VERSION_LINEAGES")
         String pangolearn_version = read_string("VERSION_PANGOLEARN")
         File   pangolin_csv       = "~{basename}.pangolin_report.csv"
-        String pangolin_clade     = read_map("transposed.tsv")["lineage"]
+        String pangolin_clade     = read_string("PANGOLIN_CLADE")
     }
 }
