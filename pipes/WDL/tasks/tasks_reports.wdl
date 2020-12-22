@@ -436,7 +436,7 @@ task compare_two_genomes {
     File          genome_two
     String        out_basename
 
-    String        docker="quay.io/broadinstitute/viral-assemble:2.1.12.0"
+    String        docker="quay.io/broadinstitute/viral-assemble:2.1.12.1"
   }
 
   command {
