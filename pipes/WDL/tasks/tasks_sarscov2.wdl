@@ -53,6 +53,49 @@ task nextclade_one_sample {
     }
 }
 
+task nextclade_many_samples {
+    meta {
+        description: "Nextclade classification of many samples. Leaving optional inputs unspecified will use SARS-CoV-2 defaults."
+    }
+    input {
+        Array[File] genome_fastas
+        File?  root_sequence
+        File?  auspice_reference_tree_json
+        File?  qc_config_json
+        File?  gene_annotations_json
+        File?  pcr_primers_csv
+        String basename
+    }
+    command {
+        set -e
+        nextclade.js --version > VERSION
+        cat ~{sep=" " genome_fastas} > genomes.fasta
+        nextclade.js \
+            --input-fasta genomes.fasta \
+            ~{"--input-root-seq " + root_sequence} \
+            ~{"--input-tree " + auspice_reference_tree_json} \
+            ~{"--input-qc-config " + qc_config_json} \
+            ~{"--input-gene-map " + gene_annotations_json} \
+            ~{"--input-pcr-primers " + pcr_primers_csv} \
+            --output-json "~{basename}".nextclade.json \
+            --output-tsv  "~{basename}".nextclade.tsv \
+            --output-tree "~{basename}".nextclade.auspice.json
+    }
+    runtime {
+        docker: "neherlab/nextclade:0.10.0"
+        memory: "14 GB"
+        cpu:    16
+        disks: "local-disk 100 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x16"
+    }
+    output {
+        String nextclade_version  = read_string("VERSION")
+        File   nextclade_json     = "~{basename}.nextclade.json"
+        File   auspice_json       = "~{basename}.nextclade.auspice.json"
+        File   nextclade_tsv      = "~{basename}.nextclade.tsv"
+    }
+}
+
 task pangolin_one_sample {
     meta {
         description: "Pangolin classification of one SARS-CoV-2 sample."
