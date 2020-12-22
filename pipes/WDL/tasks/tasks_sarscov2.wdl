@@ -61,7 +61,7 @@ task nextclade_many_samples {
         description: "Nextclade classification of many samples. Leaving optional inputs unspecified will use SARS-CoV-2 defaults."
     }
     input {
-        Array[File] genome_fastas
+        Array[File]+ genome_fastas
         File?  root_sequence
         File?  auspice_reference_tree_json
         File?  qc_config_json
