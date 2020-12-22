@@ -43,6 +43,7 @@ jobs:
       install:
         - pip3 -q install miniwdl
       script:
+        - set -e
         - travis/check-wdl-runtimes.sh
         - miniwdl check pipes/WDL/workflows/*.wdl
 
@@ -54,6 +55,7 @@ jobs:
       install:
         - travis/install-wdl.sh
       script:
+        - set -e
         - travis/check-wdl-runtimes.sh
         - travis/validate-wdl-womtool.sh
 
@@ -74,7 +76,7 @@ jobs:
       install:
         - travis/install-wdl.sh
       script:
-        - travis/check-wdl-runtimes.sh
+        - set -e
         - travis/relative-wdl-paths.sh
         - travis/tests-cromwell.sh
 
@@ -89,7 +91,6 @@ jobs:
       install:
         - pip3 -q install miniwdl
       script:
-        - travis/check-wdl-runtimes.sh
         - travis/tests-miniwdl.sh
 
     - language: java
@@ -106,7 +107,6 @@ jobs:
         - travis/install-wdl.sh
       script:
         - set -e
-        - travis/check-wdl-runtimes.sh
         - travis/relative-wdl-paths.sh
         - travis/build-dx.sh
         - travis/tests-dx.sh
