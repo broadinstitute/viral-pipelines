@@ -314,7 +314,7 @@ task mafft_one_chr {
         docker: docker
         memory: mem_size + " GB"
         cpu :   cpus
-        disks:  "local-disk 100 HDD"
+        disks:  "local-disk 375 LOCAL"
         preemptible: 0
         dx_instance_type: "mem1_ssd1_v2_x36"
     }
