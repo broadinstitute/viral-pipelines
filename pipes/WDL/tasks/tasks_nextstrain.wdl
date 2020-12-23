@@ -386,11 +386,11 @@ task snp_sites {
     }
     runtime {
         docker: docker
-        memory: "1 GB"
-        cpu :   1
-        disks:  "local-disk 50 HDD"
+        memory: "7 GB"
+        cpu :   2
+        disks:  "local-disk 100 HDD"
         preemptible: 0
-        dx_instance_type: "mem1_ssd1_v2_x2"
+        dx_instance_type: "mem1_ssd1_v2_x4"
     }
     output {
         File   snps_vcf = "~{out_basename}.vcf"
