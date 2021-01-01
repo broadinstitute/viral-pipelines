@@ -10,7 +10,7 @@ task plot_coverage {
     Boolean bin_large_plots=false
     String?  binning_summary_statistic="max" # max or min
 
-    String   docker="quay.io/broadinstitute/viral-core:2.1.12"
+    String   docker="quay.io/broadinstitute/viral-core:2.1.13"
   }
   
   command {
@@ -85,7 +85,7 @@ task coverage_report {
     Array[File]  mapped_bam_idx # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name="coverage_report.txt"
 
-    String       docker="quay.io/broadinstitute/viral-core:2.1.12"
+    String       docker="quay.io/broadinstitute/viral-core:2.1.13"
   }
 
   command {
@@ -115,7 +115,7 @@ task fastqc {
   input {
     File     reads_bam
 
-    String   docker="quay.io/broadinstitute/viral-core:2.1.12"
+    String   docker="quay.io/broadinstitute/viral-core:2.1.13"
   }
 
   String   reads_basename=basename(reads_bam, ".bam")
@@ -148,7 +148,7 @@ task align_and_count {
     Int     topNHits = 3
 
     Int?    machine_mem_gb
-    String  docker="quay.io/broadinstitute/viral-core:2.1.12"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.13"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
@@ -191,7 +191,7 @@ task align_and_count_summary {
 
     String       output_prefix="count_summary"
 
-    String        docker="quay.io/broadinstitute/viral-core:2.1.12"
+    String        docker="quay.io/broadinstitute/viral-core:2.1.13"
   }
 
   command {
@@ -361,32 +361,17 @@ task MultiQC {
 task tsv_join {
   input {
     Array[File]+   input_tsvs
-    Array[String]+ id_columns
-    String         join_type="inner"
+    String         id_col
     String         out_basename
 
-    String         docker="quay.io/broadinstitute/viral-core:2.1.12"
+    String         docker="quay.io/broadinstitute/viral-core:2.1.13"
   }
 
   command {
-    if [ "${join_type}" = "inner" ]; then
-      JOIN_TYPE=""
-    elif [ "${join_type}" = "outer" ]; then
-      JOIN_TYPE="--${join_type}"
-    elif [ "${join_type}" = "left" ]; then
-      JOIN_TYPE="--${join_type}"
-    elif [ "${join_type}" = "right" ]; then
-      JOIN_TYPE="--${join_type}"
-    else
-      echo "unrecognized join_type ${join_type}"
-      exit 1
-    fi
-    csvjoin -t -y 0 -I \
-      -c ${sep=',' id_columns} \
-      $JOIN_TYPE \
-      ${sep=' ' input_tsvs} \
-      | tr , '\t' \
-      > ${out_basename}.txt
+    file_utils.py tsv_join \
+      ~{sep=' ' input_tsvs} \
+      ~{out_basename}.txt \
+      --join_id ~{id_col}
   }
 
   output {
@@ -394,10 +379,10 @@ task tsv_join {
   }
 
   runtime {
-    memory: "1 GB"
+    memory: "3 GB"
     cpu: 1
     docker: "${docker}"
-    disks: "local-disk 50 HDD"
+    disks: "local-disk 100 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
@@ -406,7 +391,7 @@ task tsv_stack {
   input {
     Array[File]+   input_tsvs
     String         out_basename
-    String         docker="quay.io/broadinstitute/viral-core:2.1.12"
+    String         docker="quay.io/broadinstitute/viral-core:2.1.13"
   }
 
   command {

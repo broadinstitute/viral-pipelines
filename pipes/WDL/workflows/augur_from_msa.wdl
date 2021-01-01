@@ -1,6 +1,7 @@
 version 1.0
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
+import "../tasks/tasks_reports.wdl" as reports
 
 workflow augur_from_msa {
     meta {
@@ -11,7 +12,7 @@ workflow augur_from_msa {
 
     input {
         File            msa_or_vcf
-        File            sample_metadata
+        Array[File]+    sample_metadata
         File            ref_fasta
         File            genbank_gb
         File            auspice_config
@@ -25,7 +26,7 @@ workflow augur_from_msa {
           patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
         }
         sample_metadata: {
-          description: "Metadata in tab-separated text format. See https://nextstrain-augur.readthedocs.io/en/stable/faq/metadata.html for details.",
+          description: "Metadata in tab-separated text format. See https://nextstrain-augur.readthedocs.io/en/stable/faq/metadata.html for details. At least one tab file must be provided--if multiple are provided, they will be joined via a full left outer join using the 'strain' column as the join ID.",
           patterns: ["*.txt", "*.tsv"]
         }
         ref_fasta: {
@@ -61,17 +62,25 @@ workflow augur_from_msa {
         input:
             msa_or_vcf = augur_mask_sites.masked_sequences
     }
+    if(length(sample_metadata)>1) {
+        call reports.tsv_join {
+            input:
+                input_tsvs = sample_metadata,
+                id_col = 'strain',
+                out_basename = "metadata-merged"
+        }
+    }
     call nextstrain.refine_augur_tree {
         input:
             raw_tree    = draft_augur_tree.aligned_tree,
             msa_or_vcf  = augur_mask_sites.masked_sequences,
-            metadata    = sample_metadata
+            metadata    = select_first(flatten([[tsv_join.out_tsv], sample_metadata]))
     }
     if(defined(ancestral_traits_to_infer) && length(select_first([ancestral_traits_to_infer,[]]))>0) {
         call nextstrain.ancestral_traits {
             input:
                 tree           = refine_augur_tree.tree_refined,
-                metadata       = sample_metadata,
+                metadata       = select_first(flatten([[tsv_join.out_tsv], sample_metadata])),
                 columns        = select_first([ancestral_traits_to_infer,[]])
         }
     }
@@ -99,7 +108,7 @@ workflow augur_from_msa {
     call nextstrain.export_auspice_json {
         input:
             tree            = refine_augur_tree.tree_refined,
-            sample_metadata = sample_metadata,
+            sample_metadata = select_first(flatten([[tsv_join.out_tsv], sample_metadata])),
             node_data_jsons = select_all([
                                 refine_augur_tree.branch_lengths,
                                 ancestral_traits.node_data_json,
