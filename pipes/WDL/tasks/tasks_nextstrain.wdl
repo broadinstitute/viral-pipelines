@@ -207,21 +207,43 @@ task filter_sequences_to_list {
         }
     }
     String out_fname = sub(sub(basename(sequences), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
-    Int mem_size = ceil(size(sequences, "GB") * 2 + 0.001)
-    command {
+    command <<<
         set -e
-        augur version > VERSION
         KEEP_LISTS="~{sep=' ' select_first([keep_list, []])}"
 
         if [ -n "$KEEP_LISTS" ]; then
-            echo "strain" > keep_list.txt
-            cat $KEEP_LISTS >> keep_list.txt
-            augur filter \
-                --sequences "~{sequences}" \
-                --metadata keep_list.txt \
-                --output "~{out_fname}" | tee STDOUT
-            grep "sequences were dropped during filtering" STDOUT | cut -f 1 -d ' ' > DROP_COUNT
-            grep "sequences have been written out to" STDOUT | cut -f 1 -d ' ' > OUT_COUNT
+            cat $KEEP_LISTS > keep_list.txt
+            if [[ "~{sequences}" = *.vcf || "~{sequences}" = *.vcf.gz ]]; then
+                # filter vcf file to keep_list.txt
+                echo filtering vcf file
+                bcftools view --samples-file keep_list.txt "~{sequences}" -Ou | bcftools filter -i "AC>1" -o "~{out_fname}"
+                echo "-1" > DROP_COUNT
+                bcftools view "~{out_fname}" | grep CHROM | awk -F'\t' '{print NF-9}' > OUT_COUNT
+            else
+                # filter fasta file to keep_list.txt
+                echo filtering fasta file
+    python3 <<CODE
+    import Bio.SeqIO
+    keep_list = set()
+    with open('keep_list.txt', 'rt') as inf:
+        keep_list = set(line.strip() for line in inf)
+    n_total = 0
+    n_kept = 0
+    with open('~{sequences}', 'rt') as inf:
+        with open('~{out_fname}', 'wt') as outf:
+            for seq in Bio.SeqIO.parse(inf, 'fasta'):
+                n_total += 1
+                if seq.id in keep_list:
+                    n_kept += 1
+                    Bio.SeqIO.write(seq, outf, 'fasta')
+    n_dropped = n_total-n_kept
+    with open('OUT_COUNT', 'wt') as outf:
+        outf.write(str(n_kept)+'\n')
+    with open('DROP_COUNT', 'wt') as outf:
+        outf.write(str(n_dropped)+'\n')
+    CODE
+            fi
+
         else
             cp "~{sequences}" "~{out_fname}"
             echo "0" > DROP_COUNT
@@ -230,18 +252,17 @@ task filter_sequences_to_list {
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
-    }
+    >>>
     runtime {
         docker: docker
-        memory: mem_size + " GB"
+        memory: "7 GB"
         cpu :   2
-        disks:  "local-disk 100 HDD"
-        dx_instance_type: "mem1_ssd1_v2_x2"
+        disks:  "local-disk 200 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x4"
         preemptible: 1
     }
     output {
         File   filtered_fasta    = out_fname
-        String augur_version     = read_string("VERSION")
         Int    sequences_dropped = read_int("DROP_COUNT")
         Int    sequences_out     = read_int("OUT_COUNT")
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
