@@ -114,7 +114,7 @@ task filter_subsample_sequences {
         Array[String]?  exclude_where
         Array[String]?  include_where
 
-        String   docker = "nextstrain/base:build-20200629T201240Z"
+        String   docker = "nextstrain/base:build-20201214T004216Z"
     }
     parameter_meta {
         sequences_fasta: {
@@ -142,10 +142,11 @@ task filter_subsample_sequences {
             echo "--include-where" >> wherefile
             cat $VALS >> wherefile
         fi
+        echo --sequences >> wherefile
+        echo "~{sequences_fasta}" >> wherefile
 
         set -o pipefail
-        cat wherefile | tr '\n' '\0' | xargs -0 -t augur filter \
-            --sequences "~{sequences_fasta}" \
+        cat wherefile | grep . | tr '\n' '\0' | xargs -0 -t augur filter \
             --metadata "~{sample_metadata_tsv}" \
             ~{"--min-date " + min_date} \
             ~{"--max-date " + max_date} \
@@ -194,7 +195,7 @@ task filter_sequences_to_list {
         File          sequences
         Array[File]?  keep_list
 
-        String   docker = "nextstrain/base:build-20200629T201240Z"
+        String   docker = "nextstrain/base:build-20201214T004216Z"
     }
     parameter_meta {
         sequences: {
@@ -207,21 +208,43 @@ task filter_sequences_to_list {
         }
     }
     String out_fname = sub(sub(basename(sequences), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
-    Int mem_size = ceil(size(sequences, "GB") * 2 + 0.001)
-    command {
+    command <<<
         set -e
-        augur version > VERSION
         KEEP_LISTS="~{sep=' ' select_first([keep_list, []])}"
 
         if [ -n "$KEEP_LISTS" ]; then
-            echo "strain" > keep_list.txt
-            cat $KEEP_LISTS >> keep_list.txt
-            augur filter \
-                --sequences "~{sequences}" \
-                --metadata keep_list.txt \
-                --output "~{out_fname}" | tee STDOUT
-            grep "sequences were dropped during filtering" STDOUT | cut -f 1 -d ' ' > DROP_COUNT
-            grep "sequences have been written out to" STDOUT | cut -f 1 -d ' ' > OUT_COUNT
+            cat $KEEP_LISTS > keep_list.txt
+            if [[ "~{sequences}" = *.vcf || "~{sequences}" = *.vcf.gz ]]; then
+                # filter vcf file to keep_list.txt
+                echo filtering vcf file
+                bcftools view --samples-file keep_list.txt "~{sequences}" -Ou | bcftools filter -i "AC>1" -o "~{out_fname}"
+                echo "-1" > DROP_COUNT
+                bcftools view "~{out_fname}" | grep CHROM | awk -F'\t' '{print NF-9}' > OUT_COUNT
+            else
+                # filter fasta file to keep_list.txt
+                echo filtering fasta file
+    python3 <<CODE
+    import Bio.SeqIO
+    keep_list = set()
+    with open('keep_list.txt', 'rt') as inf:
+        keep_list = set(line.strip() for line in inf)
+    n_total = 0
+    n_kept = 0
+    with open('~{sequences}', 'rt') as inf:
+        with open('~{out_fname}', 'wt') as outf:
+            for seq in Bio.SeqIO.parse(inf, 'fasta'):
+                n_total += 1
+                if seq.id in keep_list:
+                    n_kept += 1
+                    Bio.SeqIO.write(seq, outf, 'fasta')
+    n_dropped = n_total-n_kept
+    with open('OUT_COUNT', 'wt') as outf:
+        outf.write(str(n_kept)+'\n')
+    with open('DROP_COUNT', 'wt') as outf:
+        outf.write(str(n_dropped)+'\n')
+    CODE
+            fi
+
         else
             cp "~{sequences}" "~{out_fname}"
             echo "0" > DROP_COUNT
@@ -230,18 +253,17 @@ task filter_sequences_to_list {
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
-    }
+    >>>
     runtime {
         docker: docker
-        memory: mem_size + " GB"
+        memory: "7 GB"
         cpu :   2
-        disks:  "local-disk 100 HDD"
-        dx_instance_type: "mem1_ssd1_v2_x2"
+        disks:  "local-disk 200 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x4"
         preemptible: 1
     }
     output {
         File   filtered_fasta    = out_fname
-        String augur_version     = read_string("VERSION")
         Int    sequences_dropped = read_int("DROP_COUNT")
         Int    sequences_out     = read_int("OUT_COUNT")
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
@@ -339,7 +361,7 @@ task augur_mafft_align {
         Boolean  fill_gaps = true
         Boolean  remove_reference = true
 
-        String   docker = "nextstrain/base:build-20200629T201240Z"
+        String   docker = "nextstrain/base:build-20201214T004216Z"
     }
     command {
         set -e
@@ -406,7 +428,7 @@ task augur_mask_sites {
         File     sequences
         File?    mask_bed
 
-        String   docker = "nextstrain/base:build-20200629T201240Z"
+        String   docker = "nextstrain/base:build-20201214T004216Z"
     }
     parameter_meta {
         sequences: {
@@ -461,7 +483,7 @@ task draft_augur_tree {
         String?  tree_builder_args
 
         Int?     cpus
-        String   docker = "nextstrain/base:build-20200629T201240Z"
+        String   docker = "nextstrain/base:build-20201214T004216Z"
     }
     parameter_meta {
         msa_or_vcf: {
@@ -527,7 +549,7 @@ task refine_augur_tree {
         String?  divergence_units
         File?    vcf_reference
 
-        String   docker = "nextstrain/base:build-20200629T201240Z"
+        String   docker = "nextstrain/base:build-20201214T004216Z"
     }
     parameter_meta {
         msa_or_vcf: {
@@ -596,7 +618,7 @@ task ancestral_traits {
         File?          weights
         Float?         sampling_bias_correction
 
-        String   docker = "nextstrain/base:build-20200629T201240Z"
+        String   docker = "nextstrain/base:build-20201214T004216Z"
     }
     String out_basename = basename(tree, '.nwk')
     command {
@@ -646,7 +668,7 @@ task ancestral_tree {
         File?    vcf_reference
         File?    output_vcf
 
-        String   docker = "nextstrain/base:build-20200629T201240Z"
+        String   docker = "nextstrain/base:build-20201214T004216Z"
     }
     parameter_meta {
         msa_or_vcf: {
@@ -704,7 +726,7 @@ task translate_augur_tree {
         File?  vcf_reference_output
         File?  vcf_reference
 
-        String docker = "nextstrain/base:build-20200629T201240Z"
+        String docker = "nextstrain/base:build-20201214T004216Z"
     }
     String out_basename = basename(tree, '.nwk')
     command {
@@ -745,7 +767,7 @@ task assign_clades_to_nodes {
         File ref_fasta
         File clades_tsv
 
-        String docker = "nextstrain/base:build-20200629T201240Z"
+        String docker = "nextstrain/base:build-20201214T004216Z"
     }
     String out_basename = basename(basename(tree_nwk, ".nwk"), "_timetree")
     command {
@@ -787,7 +809,7 @@ task augur_import_beast {
         String? tip_date_delimiter
 
         Int?    machine_mem_gb
-        String  docker = "nextstrain/base:build-20200629T201240Z"
+        String  docker = "nextstrain/base:build-20201214T004216Z"
     }
     String tree_basename = basename(beast_mcc_tree, ".tree")
     command {
@@ -841,7 +863,7 @@ task export_auspice_json {
         Array[String]? maintainers
         String?        title
 
-        String docker = "nextstrain/base:build-20200629T201240Z"
+        String docker = "nextstrain/base:build-20201214T004216Z"
     }
     String out_basename = basename(basename(tree, ".nwk"), "_timetree")
     command {
@@ -882,10 +904,14 @@ task export_auspice_json {
         fi
         cat $VALS >> exportargs
 
-        (export AUGUR_RECURSION_LIMIT=10000; cat exportargs | tr '\n' '\0' | xargs -0 -t augur export v2 \
-            --tree "~{tree}" \
+        # some mandatory args to ensure the file is never empty
+        echo --tree >> exportargs
+        echo "~{tree}" >> exportargs
+        echo --auspice-config >> exportargs
+        echo "~{auspice_config}" >> exportargs
+
+        (export AUGUR_RECURSION_LIMIT=10000; cat exportargs | grep . | tr '\n' '\0' | xargs -0 -t augur export v2 \
             ~{"--metadata " + sample_metadata} \
-            --auspice-config "~{auspice_config}" \
             ~{"--lat-longs " + lat_longs_tsv} \
             ~{"--colors " + colors_tsv} \
             ~{"--description " + description_md} \
