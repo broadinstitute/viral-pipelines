@@ -142,10 +142,11 @@ task filter_subsample_sequences {
             echo "--include-where" >> wherefile
             cat $VALS >> wherefile
         fi
+        echo --sequences >> wherefile
+        echo "~{sequences_fasta}" >> wherefile
 
         set -o pipefail
-        cat wherefile | tr '\n' '\0' | xargs -0 -t augur filter \
-            --sequences "~{sequences_fasta}" \
+        cat wherefile | grep . | tr '\n' '\0' | xargs -0 -t augur filter \
             --metadata "~{sample_metadata_tsv}" \
             ~{"--min-date " + min_date} \
             ~{"--max-date " + max_date} \
