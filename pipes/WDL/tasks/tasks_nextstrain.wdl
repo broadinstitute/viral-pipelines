@@ -903,10 +903,14 @@ task export_auspice_json {
         fi
         cat $VALS >> exportargs
 
-        (export AUGUR_RECURSION_LIMIT=10000; cat exportargs | tr '\n' '\0' | xargs -0 -t augur export v2 \
-            --tree "~{tree}" \
+        # some mandatory args to ensure the file is never empty
+        echo --tree >> exportargs
+        echo "~{tree}" >> exportargs
+        echo --auspice-config >> exportargs
+        echo "~{auspice_config}" >> exportargs
+
+        (export AUGUR_RECURSION_LIMIT=10000; cat exportargs | grep . | tr '\n' '\0' | xargs -0 -t augur export v2 \
             ~{"--metadata " + sample_metadata} \
-            --auspice-config "~{auspice_config}" \
             ~{"--lat-longs " + lat_longs_tsv} \
             ~{"--colors " + colors_tsv} \
             ~{"--description " + description_md} \
