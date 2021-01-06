@@ -199,6 +199,29 @@ task align_and_annot_transfer_single {
   }
 }
 
+task rename_fasta {
+  input {
+    File    genome_fasta
+    String  new_name
+
+    String  docker="quay.io/broadinstitute/viral-core:2.1.13"
+  }
+  command {
+    set -e
+    file_utils.py rename_fasta_sequences \
+      "~{genome_fasta}.fasta" "~{new_name}.fasta" "~{new_name}"
+  }
+  output {
+    File renamed_fasta = "~{new_name}.fasta"
+  }
+  runtime {
+    docker: "~{docker}"
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task biosample_to_genbank {
   meta {
     description: "Prepares two input metadata files for Genbank submission based on a BioSample registration attributes table (attributes.tsv) since all of the necessary values are there. This produces both a Genbank Source Modifier Table and a BioSample ID map file that can be fed into the prepare_genbank task."
