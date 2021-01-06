@@ -405,6 +405,7 @@ task package_genbank_ftp_submission {
     # make the submission xml file
     SUB_NAME="~{submission_name}"
     ACCT_NAME="~{account_name}"
+    SPUID="~{submission_uid}"
     cat << EOF > submission.xml
     <?xml version="1.0"?>
     <Submission>
@@ -416,12 +417,12 @@ task package_genbank_ftp_submission {
       </Description>
       <Action>
         <AddFiles target_db="GenBank">
-          <File file_path="~{submission_uid}.zip">
+          <File file_path="$SPUID.zip">
             <DataType>genbank-submission-package</DataType>
           </File>
           <Attribute name="wizard">BankIt_SARSCoV2_api</Attribute>
           <Identifier>
-            <SPUID spuid_namespace="~{spuid_namespace}">~{submission_uid}</SPUID>
+            <SPUID spuid_namespace="~{spuid_namespace}">$SPUID</SPUID>
           </Identifier>
         </AddFiles>
       </Action>
