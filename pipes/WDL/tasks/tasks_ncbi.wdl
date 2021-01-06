@@ -455,7 +455,7 @@ task vadr {
 
     String  docker="staphb/vadr:1.1"
   }
-  String out_base = basename(genome_fasta, 'fasta')
+  String out_base = basename(genome_fasta, '.fasta')
   command <<<
     set -e
 
