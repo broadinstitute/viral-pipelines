@@ -378,7 +378,7 @@ task prepare_genbank {
 
 task package_genbank_ftp_submission {
   meta {
-    description: "Prepares a zip and xml file for FTP-based NCBI Genbank submission."
+    description: "Prepares a zip and xml file for FTP-based NCBI Genbank submission according to instructions at https://www.ncbi.nlm.nih.gov/viewvc/v1/trunk/submit/public-docs/genbank/SARS-CoV-2/."
   }
   input {
     File   sequences_fasta
@@ -390,27 +390,103 @@ task package_genbank_ftp_submission {
     String spuid_namespace
     String account_name
 
-    String  docker="quay.io/broadinstitute/viral-core:2.1.13"
+    String  docker="quay.io/broadinstitute/viral-baseimage:0.1.19"
   }
-  command {
-    set -ex -o pipefail
+  command <<<
+    set -e
 
-    cp ${sequences_fasta} sequence.fsa
-    cp ${structured_comment_table} comment.cmt
-    cp ${source_modifier_table} source.src
-    cp ${author_template_sbt} template.sbt
-    zip ${submission_uid}.zip sequences.fsa comment.cmt source.src template.sbt
+    # make the submission zip file
+    cp "~{sequences_fasta}" sequence.fsa
+    cp "~{structured_comment_table}" comment.cmt
+    cp "~{source_modifier_table}" source.src
+    cp "~{author_template_sbt}" template.sbt
+    zip "~{submission_uid}.zip" sequences.fsa comment.cmt source.src template.sbt
 
+    # make the submission xml file
+    SUB_NAME="~{submission_name}"
+    ACCT_NAME="~{account_name}"
+    cat << EOF > submission.xml
+    <?xml version="1.0"?>
+    <Submission>
+      <Description>
+        <Comment>$SUB_NAME</Comment>
+        <Organization type="center" role="owner">
+          <Name>$ACCT_NAME</Name>
+        </Organization>
+      </Description>
+      <Action>
+        <AddFiles target_db="GenBank">
+          <File file_path="~{submission_uid}.zip">
+            <DataType>genbank-submission-package</DataType>
+          </File>
+          <Attribute name="wizard">BankIt_SARSCoV2_api</Attribute>
+          <Identifier>
+            <SPUID spuid_namespace="~{spuid_namespace}">~{submission_uid}</SPUID>
+          </Identifier>
+        </AddFiles>
+      </Action>
+    </Submission>
+    EOF
 
-  }
+    # make the (empty) ready file
+    touch submit.ready
+  >>>
   output {
-    File submission_zip = "${submission_uid}.zip"
+    File submission_zip = "~{submission_uid}.zip"
     File submission_xml = "submission.xml"
+    File submit_ready = "submit.ready"
   }
   runtime {
-    docker: "${docker}"
+    docker: "~{docker}"
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
+
+
+task vadr {
+  meta {
+    description: "Runs NCBI's Viral Annotation DefineR for annotation and QC."
+  }
+  input {
+    File   genome_fasta
+    String vadr_opts="-r -s --nomisc --lowsimterm 2 --mkey NC_045512 --fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf"
+
+    String  docker="staphb/vadr:1.1"
+  }
+  String out_base = basename(genome_fasta, 'fasta')
+  command <<<
+    set -e
+
+    # find available RAM
+    RAM_MB=$(free -m | head -2 | tail -1 | awk '{print $2}')
+
+    # run VADR
+    v-annotate.pl \
+      ~{vadr_opts} \
+      --mxsize $RAM_MB \
+      "~{genome_fasta}" \
+      ~{out_base}
+
+    # package everything for output
+    tar -C ~{out_base} -czvf ~{out_base}.vadr.tar.gz .
+
+    # prep alerts into a tsv file for parsing
+    cat ~{out_base}/~{out_base}.vadr.alt.list| tail -n +2 | cut -f 2- > ~{out_base}.vadr.alerts.tsv
+  >>>
+  output {
+    File feature_tbl  = "~{out_base}/~{out_base}.vadr.pass.tbl"
+    Int  num_alerts = length(read_lines("~{out_base}.vadr.alerts.tsv"))
+    File alerts_list = "~{out_base}/~{out_base}.vadr.alt.list"
+    Array[Array[String]] alerts = read_tsv("~{out_base}.vadr.alerts.tsv")
+    File outputs_tgz = "~{out_base}.vadr.tar.gz"
+  }
+  runtime {
+    docker: "~{docker}"
+    memory: "64 GB"
+    cpu: 8
+    dx_instance_type: "mem3_ssd1_v2_x8"
+  }
+}
+
