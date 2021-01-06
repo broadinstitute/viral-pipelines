@@ -25,7 +25,7 @@ task download_fasta {
     Array[String]+ accessions
     String         emailAddress
 
-    String         docker="quay.io/broadinstitute/viral-phylo:2.1.12.0"
+    String         docker="quay.io/broadinstitute/viral-phylo:2.1.13.0"
   }
 
   command {
@@ -56,7 +56,7 @@ task download_annotations {
     String         emailAddress
     String         combined_out_prefix
 
-    String         docker="quay.io/broadinstitute/viral-phylo:2.1.12.0"
+    String         docker="quay.io/broadinstitute/viral-phylo:2.1.13.0"
   }
 
   command {
@@ -100,7 +100,7 @@ task annot_transfer {
     File         reference_fasta
     Array[File]+ reference_feature_table
 
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.12.0"
+    String  docker="quay.io/broadinstitute/viral-phylo:2.1.13.0"
   }
 
   parameter_meta {
@@ -153,7 +153,7 @@ task align_and_annot_transfer_single {
     Array[File]+ reference_fastas
     Array[File]+ reference_feature_tables
 
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.12.0"
+    String  docker="quay.io/broadinstitute/viral-phylo:2.1.13.0"
   }
 
   parameter_meta {
@@ -208,7 +208,9 @@ task biosample_to_genbank {
     Int   num_segments=1
     Int   taxid
 
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.12.0"
+    File? filter_to_ids
+
+    String  docker="quay.io/broadinstitute/viral-phylo:2.1.13.0"
   }
   String base = basename(biosample_attributes, ".txt")
   command {
@@ -220,6 +222,8 @@ task biosample_to_genbank {
         ${taxid} \
         "${base}".genbank.src \
         "${base}".biosample.map.txt \
+        ${'--filter_to_samples ' + filter_to_ids} \
+        --biosample_in_smt \
         --loglevel DEBUG
   }
   output {
@@ -254,7 +258,7 @@ task prepare_genbank {
     String?      assembly_method_version
 
     Int?         machine_mem_gb
-    String       docker="quay.io/broadinstitute/viral-phylo:2.1.12.0"
+    String       docker="quay.io/broadinstitute/viral-phylo:2.1.13.0"
   }
 
   parameter_meta {
@@ -367,6 +371,46 @@ task prepare_genbank {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 3]) + " GB"
     cpu: 2
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
+
+task package_genbank_ftp_submission {
+  meta {
+    description: "Prepares a zip and xml file for FTP-based NCBI Genbank submission."
+  }
+  input {
+    File   sequences_fasta
+    File   structured_comment_table
+    File   source_modifier_table
+    File   author_template_sbt
+    String submission_name
+    String submission_uid
+    String spuid_namespace
+    String account_name
+
+    String  docker="quay.io/broadinstitute/viral-core:2.1.13"
+  }
+  command {
+    set -ex -o pipefail
+
+    cp ${sequences_fasta} sequence.fsa
+    cp ${structured_comment_table} comment.cmt
+    cp ${source_modifier_table} source.src
+    cp ${author_template_sbt} template.sbt
+    zip ${submission_uid}.zip sequences.fsa comment.cmt source.src template.sbt
+
+
+  }
+  output {
+    File submission_zip = "${submission_uid}.zip"
+    File submission_xml = "submission.xml"
+  }
+  runtime {
+    docker: "${docker}"
+    memory: "1 GB"
+    cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
