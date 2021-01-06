@@ -110,6 +110,34 @@ task coverage_report {
   }
 }
 
+task assembly_bases {
+    meta {
+      description: "Count bases in a fasta file."
+    }
+
+    input {
+      File     fasta
+      String   docker="quay.io/broadinstitute/viral-baseimage:0.1.19"
+    }
+
+    command {
+        grep -v '^>' refined.fasta | tr -d '\n' | wc -c | tee assembly_length
+        grep -v '^>' refined.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
+    }
+
+    output {
+        Int    assembly_length              = read_int("assembly_length")
+        Int    assembly_length_unambiguous  = read_int("assembly_length_unambiguous")
+    }
+
+    runtime {
+        docker: "${docker}"
+        memory: "1 GB"
+        cpu: 1
+        disks: "local-disk 50 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+}
 
 task fastqc {
   input {

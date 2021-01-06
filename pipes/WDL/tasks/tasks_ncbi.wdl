@@ -199,6 +199,55 @@ task align_and_annot_transfer_single {
   }
 }
 
+task structured_comments {
+  input {
+    File    assembly_stats_tsv
+
+    File?   filter_to_ids
+
+    String  docker="quay.io/broadinstitute/viral-core:2.1.13"
+  }
+  String out_base = basename(assembly_stats_tsv, '.txt')
+  command <<<
+    set -e
+
+    python3 << CODE
+      import util.file
+
+      samples_to_filter_to = set()
+      if "~{default='' filter_to_ids}":
+          with open("~{default='' filter_to_ids}", 'rt') as inf:
+              samples_to_filter_to = set(line.strip() for line in inf)
+
+      out_headers_total = ('SeqID', 'StructuredCommentPrefix', 'Assembly Method', 'Coverage', 'Sequencing Technology', 'StructuredCommentSuffix')
+      with open("~{out_base}.cmt", 'wt') as outf:
+          outf.write('\t'.join(out_headers_total)+'\n')
+
+          for row in util.file.read_tabfile_dict(in_table):
+              outrow = dict((h, row.get(header_key_map.get(h,h), '')) for h in out_headers)
+
+              if samples_to_filter_to:
+                if row['SeqID'] not in samples_to_filter_to:
+                    continue
+
+              if outrow['Coverage']:
+                outrow['Coverage'] = "{}x".format(round(float(outrow['Coverage'])))
+              outrow['StructuredCommentPrefix'] = 'Assembly-Data'
+              outrow['StructuredCommentSuffix'] = 'Assembly-Data'
+              outf.write('\t'.join(outrow[h] for h in out_headers)+'\n')
+    CODE
+  >>>
+  output {
+    File   structured_comment_table = "~{out_base}.cmt"
+  }
+  runtime {
+    docker: "~{docker}"
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task rename_fasta {
   input {
     File    genome_fasta
@@ -398,7 +447,6 @@ task prepare_genbank {
   }
 }
 
-
 task package_genbank_ftp_submission {
   meta {
     description: "Prepares a zip and xml file for FTP-based NCBI Genbank submission according to instructions at https://www.ncbi.nlm.nih.gov/viewvc/v1/trunk/submit/public-docs/genbank/SARS-CoV-2/."
@@ -467,7 +515,6 @@ task package_genbank_ftp_submission {
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
-
 
 task vadr {
   meta {
