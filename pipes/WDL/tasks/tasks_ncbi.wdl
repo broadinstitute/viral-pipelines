@@ -224,7 +224,7 @@ task structured_comments {
         outf.write('\t'.join(out_headers)+'\n')
 
         for row in util.file.read_tabfile_dict("~{assembly_stats_tsv}"):
-            outrow = dict((h, row.get(header_key_map.get(h,h), '')) for h in out_headers)
+            outrow = dict((h, row.get(h, '')) for h in out_headers)
 
             if samples_to_filter_to:
               if row['SeqID'] not in samples_to_filter_to:
