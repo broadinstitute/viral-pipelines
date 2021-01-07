@@ -248,7 +248,7 @@ task structured_comments {
   }
 }
 
-task rename_fasta {
+task rename_fasta_header {
   input {
     File    genome_fasta
     String  new_name
