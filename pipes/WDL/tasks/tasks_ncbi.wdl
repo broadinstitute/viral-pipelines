@@ -496,7 +496,7 @@ task package_genbank_ftp_submission {
     cp "~{structured_comment_table}" comment.cmt
     cp "~{source_modifier_table}" source.src
     cp "~{author_template_sbt}" template.sbt
-    zip "~{submission_uid}.zip" sequences.fsa comment.cmt source.src template.sbt
+    zip "~{submission_uid}.zip" sequence.fsa comment.cmt source.src template.sbt
 
     # make the submission xml file
     SUB_NAME="~{submission_name}"
@@ -569,11 +569,12 @@ task vadr {
     tar -C ~{out_base} -czvf ~{out_base}.vadr.tar.gz .
 
     # prep alerts into a tsv file for parsing
-    cat ~{out_base}/~{out_base}.vadr.alt.list| tail -n +2 | cut -f 2- > ~{out_base}.vadr.alerts.tsv
+    cat ~{out_base}/~{out_base}.vadr.alt.list| cut -f 2 | tail -n +2 > ~{out_base}.vadr.alerts.tsv
+    wc -l ~{out_base}.vadr.alerts.tsv > NUM_ALERTS
   >>>
   output {
     File feature_tbl  = "~{out_base}/~{out_base}.vadr.pass.tbl"
-    Int  num_alerts = length(read_lines("~{out_base}.vadr.alerts.tsv"))
+    Int  num_alerts = read_int("NUM_ALERTS")
     File alerts_list = "~{out_base}/~{out_base}.vadr.alt.list"
     Array[Array[String]] alerts = read_tsv("~{out_base}.vadr.alerts.tsv")
     File outputs_tgz = "~{out_base}.vadr.tar.gz"
