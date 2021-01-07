@@ -223,7 +223,7 @@ task structured_comments {
     with open("~{out_base}.cmt", 'wt') as outf:
         outf.write('\t'.join(out_headers_total)+'\n')
 
-        for row in util.file.read_tabfile_dict(in_table):
+        for row in util.file.read_tabfile_dict("~{assembly_stats_tsv}"):
             outrow = dict((h, row.get(header_key_map.get(h,h), '')) for h in out_headers)
 
             if samples_to_filter_to:
