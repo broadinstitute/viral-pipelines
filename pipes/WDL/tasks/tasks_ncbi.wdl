@@ -258,7 +258,7 @@ task rename_fasta {
   command {
     set -e
     file_utils.py rename_fasta_sequences \
-      "~{genome_fasta}.fasta" "~{new_name}.fasta" "~{new_name}"
+      "~{genome_fasta}" "~{new_name}.fasta" "~{new_name}"
   }
   output {
     File renamed_fasta = "~{new_name}.fasta"
