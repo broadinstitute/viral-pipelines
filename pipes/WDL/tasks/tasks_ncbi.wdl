@@ -253,15 +253,17 @@ task rename_fasta {
     File    genome_fasta
     String  new_name
 
+    String  out_basename = basename(genome_fasta, ".fasta")
+
     String  docker="quay.io/broadinstitute/viral-core:2.1.13"
   }
   command {
     set -e
     file_utils.py rename_fasta_sequences \
-      "~{genome_fasta}" "~{new_name}.fasta" "~{new_name}"
+      "~{genome_fasta}" "~{out_basename}.fasta" "~{new_name}"
   }
   output {
-    File renamed_fasta = "~{new_name}.fasta"
+    File renamed_fasta = "~{out_basename}.fasta"
   }
   runtime {
     docker: "~{docker}"
