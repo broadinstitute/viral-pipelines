@@ -45,10 +45,11 @@ workflow sarscov2_genbank {
 
     scatter(assembly in assemblies_fasta) {
         if(defined(fasta_rename_map)) {
+          String fasta_basename = basename(assembly, ".fasta")
           call ncbi.rename_fasta_header {
             input:
               genome_fasta = assembly,
-              new_name = read_map(select_first([fasta_rename_map]))[basename(assembly, ".fasta")]
+              new_name = read_map(select_first([fasta_rename_map]))[fasta_basename]
           }
         }
         File renamed_assembly = select_first([rename_fasta_header.renamed_fasta, assembly])
