@@ -563,14 +563,14 @@ task vadr {
       ~{vadr_opts} \
       --mxsize $RAM_MB \
       "~{genome_fasta}" \
-      ~{out_base}
+      "~{out_base}"
 
     # package everything for output
-    tar -C ~{out_base} -czvf ~{out_base}.vadr.tar.gz .
+    tar -C "~{out_base}" -czvf "~{out_base}.vadr.tar.gz" .
 
     # prep alerts into a tsv file for parsing
-    cat ~{out_base}/~{out_base}.vadr.alt.list| cut -f 2 | tail -n +2 > ~{out_base}.vadr.alerts.tsv
-    wc -l ~{out_base}.vadr.alerts.tsv > NUM_ALERTS
+    cat "~{out_base}/~{out_base}.vadr.alt.list" | cut -f 2 | tail -n +2 > "~{out_base}.vadr.alerts.tsv"
+    cat "~{out_base}.vadr.alerts.tsv" | wc -l > NUM_ALERTS
   >>>
   output {
     File feature_tbl  = "~{out_base}/~{out_base}.vadr.pass.tbl"
