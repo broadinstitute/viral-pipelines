@@ -39,7 +39,7 @@ task nextclade_one_sample {
         grep ^aaDeletions transposed.tsv | cut -f 2 | grep -v aaDeletions > NEXTCLADE_AADELS
     }
     runtime {
-        docker: "neherlab/nextclade:0.10.0"
+        docker: "neherlab/nextclade:0.11.1"
         memory: "3 GB"
         cpu:    2
         disks: "local-disk 50 HDD"
@@ -85,7 +85,7 @@ task nextclade_many_samples {
             --output-tree "~{basename}".nextclade.auspice.json
     }
     runtime {
-        docker: "neherlab/nextclade:0.10.0"
+        docker: "neherlab/nextclade:0.11.1"
         memory: "14 GB"
         cpu:    16
         disks: "local-disk 100 HDD"
@@ -136,7 +136,7 @@ task pangolin_one_sample {
         grep ^lineage transposed.tsv | cut -f 2 | grep -v lineage > PANGOLIN_CLADE
     }
     runtime {
-        docker: "staphb/pangolin:2.1.1"
+        docker: "staphb/pangolin:2.1.6"
         memory: "3 GB"
         cpu:    2
         disks: "local-disk 50 HDD"
