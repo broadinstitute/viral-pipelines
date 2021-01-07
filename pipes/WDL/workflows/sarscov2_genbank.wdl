@@ -45,13 +45,18 @@ workflow sarscov2_genbank {
 
     scatter(assembly in assemblies_fasta) {
         if(defined(fasta_rename_map)) {
-          call ncbi.rename_fasta_with_map {
+          call ncbi.lookup_table_by_filename {
             input:
-              fasta = assembly,
-              id_map = fasta_rename_map
+              id = basename(assembly),
+              mapping_tsv = select_first([fasta_rename_map])
+          }
+          call ncbi.rename_fasta {
+            input:
+              genome_fasta = assembly,
+              new_name = lookup_table_by_filename.value
           }
         }
-        File renamed_assembly = select_first([rename_fasta_with_map.renamed_fasta, assembly])
+        File renamed_assembly = select_first([rename_fasta.renamed_fasta, assembly])
         call reports.assembly_bases {
           input:
             fasta = renamed_assembly

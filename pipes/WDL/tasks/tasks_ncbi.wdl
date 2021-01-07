@@ -271,6 +271,29 @@ task rename_fasta {
   }
 }
 
+task lookup_table_by_filename {
+  input {
+    String  id
+    File    mapping_tsv
+    Int     return_col=2
+
+    String  docker="ubuntu"
+  }
+  command {
+    set -e -o pipefail
+    grep ^"~{id}" ~{mapping_tsv} | cut -f ~{return_col} > OUTVAL
+  }
+  output {
+    String value = read_string("OUTVAL")
+  }
+  runtime {
+    docker: "~{docker}"
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task biosample_to_genbank {
   meta {
     description: "Prepares two input metadata files for Genbank submission based on a BioSample registration attributes table (attributes.tsv) since all of the necessary values are there. This produces both a Genbank Source Modifier Table and a BioSample ID map file that can be fed into the prepare_genbank task."
