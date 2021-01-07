@@ -212,29 +212,29 @@ task structured_comments {
     set -e
 
     python3 << CODE
-      import util.file
+    import util.file
 
-      samples_to_filter_to = set()
-      if "~{default='' filter_to_ids}":
-          with open("~{default='' filter_to_ids}", 'rt') as inf:
-              samples_to_filter_to = set(line.strip() for line in inf)
+    samples_to_filter_to = set()
+    if "~{default='' filter_to_ids}":
+        with open("~{default='' filter_to_ids}", 'rt') as inf:
+            samples_to_filter_to = set(line.strip() for line in inf)
 
-      out_headers_total = ('SeqID', 'StructuredCommentPrefix', 'Assembly Method', 'Coverage', 'Sequencing Technology', 'StructuredCommentSuffix')
-      with open("~{out_base}.cmt", 'wt') as outf:
-          outf.write('\t'.join(out_headers_total)+'\n')
+    out_headers_total = ('SeqID', 'StructuredCommentPrefix', 'Assembly Method', 'Coverage', 'Sequencing Technology', 'StructuredCommentSuffix')
+    with open("~{out_base}.cmt", 'wt') as outf:
+        outf.write('\t'.join(out_headers_total)+'\n')
 
-          for row in util.file.read_tabfile_dict(in_table):
-              outrow = dict((h, row.get(header_key_map.get(h,h), '')) for h in out_headers)
+        for row in util.file.read_tabfile_dict(in_table):
+            outrow = dict((h, row.get(header_key_map.get(h,h), '')) for h in out_headers)
 
-              if samples_to_filter_to:
-                if row['SeqID'] not in samples_to_filter_to:
-                    continue
+            if samples_to_filter_to:
+              if row['SeqID'] not in samples_to_filter_to:
+                  continue
 
-              if outrow['Coverage']:
-                outrow['Coverage'] = "{}x".format(round(float(outrow['Coverage'])))
-              outrow['StructuredCommentPrefix'] = 'Assembly-Data'
-              outrow['StructuredCommentSuffix'] = 'Assembly-Data'
-              outf.write('\t'.join(outrow[h] for h in out_headers)+'\n')
+            if outrow['Coverage']:
+              outrow['Coverage'] = "{}x".format(round(float(outrow['Coverage'])))
+            outrow['StructuredCommentPrefix'] = 'Assembly-Data'
+            outrow['StructuredCommentSuffix'] = 'Assembly-Data'
+            outf.write('\t'.join(outrow[h] for h in out_headers)+'\n')
     CODE
   >>>
   output {
