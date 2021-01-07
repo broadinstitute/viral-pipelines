@@ -47,7 +47,7 @@ workflow sarscov2_genbank {
         if(defined(fasta_rename_map)) {
           call ncbi.lookup_table_by_filename {
             input:
-              id = basename(assembly),
+              id = basename(assembly, ".fasta"),
               mapping_tsv = select_first([fasta_rename_map])
           }
           call ncbi.rename_fasta {
