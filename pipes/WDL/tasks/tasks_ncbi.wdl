@@ -219,9 +219,9 @@ task structured_comments {
         with open("~{default='' filter_to_ids}", 'rt') as inf:
             samples_to_filter_to = set(line.strip() for line in inf)
 
-    out_headers_total = ('SeqID', 'StructuredCommentPrefix', 'Assembly Method', 'Coverage', 'Sequencing Technology', 'StructuredCommentSuffix')
+    out_headers = ('SeqID', 'StructuredCommentPrefix', 'Assembly Method', 'Coverage', 'Sequencing Technology', 'StructuredCommentSuffix')
     with open("~{out_base}.cmt", 'wt') as outf:
-        outf.write('\t'.join(out_headers_total)+'\n')
+        outf.write('\t'.join(out_headers)+'\n')
 
         for row in util.file.read_tabfile_dict("~{assembly_stats_tsv}"):
             outrow = dict((h, row.get(header_key_map.get(h,h), '')) for h in out_headers)
