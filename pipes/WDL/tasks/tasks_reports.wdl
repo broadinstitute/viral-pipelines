@@ -117,12 +117,13 @@ task assembly_bases {
 
     input {
       File     fasta
-      String   docker="quay.io/broadinstitute/viral-baseimage:0.1.19"
+      String   docker="ubuntu"
     }
 
     command {
-        grep -v '^>' refined.fasta | tr -d '\n' | wc -c | tee assembly_length
-        grep -v '^>' refined.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
+        set -e
+        grep -v '^>' "~{fasta}" | tr -d '\n' | wc -c | tee assembly_length
+        grep -v '^>' "~{fasta}" | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
     }
 
     output {
