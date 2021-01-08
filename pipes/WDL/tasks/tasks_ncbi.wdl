@@ -550,7 +550,7 @@ task vadr {
     File   genome_fasta
     String vadr_opts="-r -s --nomisc --lowsimterm 2 --mkey NC_045512 --fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf"
 
-    String  docker="staphb/vadr:1.1"
+    String  docker="staphb/vadr:1.1.2"
   }
   String out_base = basename(genome_fasta, '.fasta')
   command <<<
