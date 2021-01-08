@@ -544,11 +544,11 @@ task package_genbank_ftp_submission {
 
 task vadr {
   meta {
-    description: "Runs NCBI's Viral Annotation DefineR for annotation and QC."
+    description: "Runs NCBI's Viral Annotation DefineR for annotation and QC. See https://github.com/ncbi/vadr/wiki/Coronavirus-annotation"
   }
   input {
     File   genome_fasta
-    String vadr_opts="-r -s --nomisc --lowsimterm 2 --mkey NC_045512 --fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf"
+    String vadr_opts="-s -r --nomisc --mkey NC_045512 --lowsim5term 2 --lowsim3term 2 --fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf"
 
     String  docker="staphb/vadr:1.1.2"
   }
