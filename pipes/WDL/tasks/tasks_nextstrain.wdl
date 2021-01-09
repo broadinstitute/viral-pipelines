@@ -170,7 +170,7 @@ task filter_subsample_sequences {
     }
     runtime {
         docker: docker
-        memory: "3 GB"
+        memory: "15 GB"
         cpu :   4
         disks:  "local-disk 100 HDD"
         dx_instance_type: "mem1_ssd1_v2_x4"
