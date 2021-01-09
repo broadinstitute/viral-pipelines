@@ -1,6 +1,7 @@
 version 1.0
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
+import "../tasks/tasks_reports.wdl" as reports
 
 workflow subsample_by_metadata_with_focal {
     meta {
@@ -40,7 +41,7 @@ workflow subsample_by_metadata_with_focal {
     }
 
     input {
-        File    sample_metadata_tsv
+        Array[File]+ sample_metadata_tsvs
         File    sequences_fasta
         File?   priorities
 
@@ -53,6 +54,17 @@ workflow subsample_by_metadata_with_focal {
         String  global_bin_variable = "country"
         Int     global_bin_max = 50
     }
+
+    if(length(sample_metadata_tsvs)>1) {
+        call reports.tsv_join {
+            input:
+                input_tsvs = sample_metadata_tsvs,
+                id_col = 'strain',
+                out_basename = "metadata-merged"
+        }
+    }
+    File sample_metadata_tsv = select_first(flatten([[tsv_join.out_tsv], sample_metadata_tsvs]))
+
 
     call nextstrain.filter_subsample_sequences as prefilter {
         input:
@@ -94,6 +106,7 @@ workflow subsample_by_metadata_with_focal {
     }
 
     output {
+        File metadata_merged      = sample_metadata_tsv
         File keep_list            = fasta_to_ids.ids_txt
         File subsampled_sequences = cat_fasta.combined
         Int  focal_kept           = subsample_focal.sequences_out
