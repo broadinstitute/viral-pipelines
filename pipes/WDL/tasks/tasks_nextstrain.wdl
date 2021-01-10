@@ -355,7 +355,7 @@ task mafft_one_chr {
         Boolean  memsavetree = false
 
         String   docker = "quay.io/broadinstitute/viral-phylo:2.1.13.2"
-        Int      mem_size = 60
+        Int      mem_size = 80
         Int      cpus = 32
     }
     command {
