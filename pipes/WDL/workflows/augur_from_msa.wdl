@@ -18,6 +18,7 @@ workflow augur_from_msa {
         File            auspice_config
         File?           clades_tsv
         Array[String]?  ancestral_traits_to_infer
+        Array[File]?    keep_list
     }
 
     parameter_meta {
@@ -48,11 +49,16 @@ workflow augur_from_msa {
           description: "A TSV file containing clade mutation positions in four columns: [clade  gene    site    alt]; see: https://nextstrain.org/docs/tutorials/defining-clades",
           patterns: ["*.tsv", "*.txt"]
         }
+        keep_list: {
+          description: "Lists of strain ids to filter inputs down to.",
+          patterns: ["*.txt", "*.tsv"]
+        }
     }
 
     call nextstrain.filter_sequences_to_list {
         input:
-            sequences = msa_or_vcf
+            sequences = msa_or_vcf,
+            keep_list = keep_list
     }
     call nextstrain.augur_mask_sites {
         input:
