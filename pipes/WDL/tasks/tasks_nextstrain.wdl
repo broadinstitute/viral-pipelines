@@ -364,8 +364,8 @@ task mafft_one_chr {
         # decompress sequences if necessary
         GENOMES="~{sequences}"
         if [[ $GENOMES == *.gz ]]; then
-            gzip -d $GENOMES
-            GENOMES=$(basename $GENOMES .gz)
+            gzip -dc $GENOMES > uncompressed.fasta
+            GENOMES="uncompressed.fasta"
         fi
 
         touch args.txt
