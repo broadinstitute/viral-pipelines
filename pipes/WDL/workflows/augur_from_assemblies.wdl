@@ -1,7 +1,5 @@
 version 1.0
 
-import "mafft_and_snp.wdl"
-
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_reports.wdl" as reports
 
@@ -13,8 +11,9 @@ workflow augur_from_assemblies {
     }
 
     input {
-        File            ref_fasta
+        Array[File]+    assembly_fastas
         Array[File]+    sample_metadata_tsvs
+        File            ref_fasta
 
         String          focal_variable = "region"
         String          focal_value = "North America"
@@ -30,13 +29,17 @@ workflow augur_from_assemblies {
     }
 
     parameter_meta {
-        ref_fasta: {
-          description: "A reference assembly (not included in assembly_fastas) to align assembly_fastas against. Typically from NCBI RefSeq or similar.",
-          patterns: ["*.fasta", "*.fa"]
+        assembly_fastas: {
+          description: "Set of assembled genomes to align and build trees. These must represent a single chromosome/segment of a genome only. Fastas may be one-sequence-per-individual or a concatenated multi-fasta (unaligned) or a mixture of the two. They may be compressed (gz, bz2, zst, lz4), uncompressed, or a mixture.",
+          patterns: ["*.fasta", "*.fa", "*.fasta.gz", "*.fasta.zst"]
         }
         sample_metadata_tsvs: {
             description: "Tab-separated metadata file that contain binning variables and values. Must contain all samples: output will be filtered to the IDs present in this file.",
             patterns: ["*.txt", "*.tsv"]
+        }
+        ref_fasta: {
+          description: "A reference assembly (not included in assembly_fastas) to align assembly_fastas against. Typically from NCBI RefSeq or similar.",
+          patterns: ["*.fasta", "*.fa"]
         }
 
         focal_variable: {
@@ -69,10 +72,23 @@ workflow augur_from_assemblies {
         }
     }
 
-    call mafft_and_snp.mafft_and_snp {
+
+    #### mafft_and_snp
+
+    call nextstrain.gzcat {
         input:
+            infiles     = assembly_fastas,
+            output_name = "all_samples_combined_assembly.fasta.gz"
+    }
+    call nextstrain.mafft_one_chr as mafft {
+        input:
+            sequences = gzcat.combined,
             ref_fasta = ref_fasta,
-            run_iqtree = false
+            basename  = "all_samples_aligned.fasta"
+    }
+    call nextstrain.snp_sites {
+        input:
+            msa_fasta = mafft.aligned_sequences
     }
 
 
@@ -94,7 +110,7 @@ workflow augur_from_assemblies {
 
     call nextstrain.filter_subsample_sequences as prefilter {
         input:
-            sequences_fasta = mafft_and_snp.multiple_alignment,
+            sequences_fasta = mafft.aligned_sequences,
             sample_metadata_tsv = derived_cols.derived_metadata
     }
 
@@ -188,9 +204,9 @@ workflow augur_from_assemblies {
     }
 
     output {
-      File  combined_assemblies   = mafft_and_snp.combined_assemblies
-      File  multiple_alignment    = mafft_and_snp.multiple_alignment
-      File  unmasked_snps         = mafft_and_snp.unmasked_snps
+      File  combined_assemblies   = gzcat.combined
+      File  multiple_alignment    = mafft.aligned_sequences
+      File  unmasked_snps         = snp_sites.snps_vcf
 
       File  metadata_merged       = derived_cols.derived_metadata
       File  keep_list             = fasta_to_ids.ids_txt
