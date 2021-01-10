@@ -35,9 +35,9 @@ task gzcat {
     command <<<
         python3 <<CODE
         import util.file
-        with util.file.open_or_gzopen("~{output_name}", 'w') as outf:
+        with util.file.open_or_gzopen("~{output_name}", 'wt') as outf:
             for infname in "~{sep=' ' infiles}".split(' '):
-                with util.file.open_or_gzopen(infname, 'r') as inf:
+                with util.file.open_or_gzopen(infname, 'rt') as inf:
                     for line in inf:
                         outf.write(line)
         CODE
