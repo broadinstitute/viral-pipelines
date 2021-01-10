@@ -9,7 +9,7 @@ workflow subsample_by_metadata_with_focal {
     }
 
     parameter_meta {
-        sample_metadata_tsv: {
+        sample_metadata_tsvs: {
             description: "Tab-separated metadata file that contain binning variables and values. Must contain all samples: output will be filtered to the IDs present in this file.",
             patterns: ["*.txt", "*.tsv"]
         }
