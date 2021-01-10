@@ -19,6 +19,7 @@ workflow augur_from_msa {
         File?           clades_tsv
         Array[String]?  ancestral_traits_to_infer
         Array[File]?    keep_list
+        File?           mask_bed
     }
 
     parameter_meta {
@@ -50,8 +51,12 @@ workflow augur_from_msa {
           patterns: ["*.tsv", "*.txt"]
         }
         keep_list: {
-          description: "Lists of strain ids to filter inputs down to.",
+          description: "Optional lists of strain ids to filter inputs down to.",
           patterns: ["*.txt", "*.tsv"]
+        }
+        mask_bed: {
+          description: "Optional list of sites to mask when building trees.",
+          patterns: ["*.bed"]
         }
     }
 
@@ -62,7 +67,8 @@ workflow augur_from_msa {
     }
     call nextstrain.augur_mask_sites {
         input:
-            sequences = filter_sequences_to_list.filtered_fasta
+            sequences = filter_sequences_to_list.filtered_fasta,
+            mask_bed  = mask_bed
     }
     call nextstrain.draft_augur_tree {
         input:
@@ -128,6 +134,12 @@ workflow augur_from_msa {
         File  masked_alignment    = augur_mask_sites.masked_sequences
         File  ml_tree             = draft_augur_tree.aligned_tree
         File  time_tree           = refine_augur_tree.tree_refined
+        Array[File] node_data_jsons     = select_all([
+                    refine_augur_tree.branch_lengths,
+                    ancestral_traits.node_data_json,
+                    ancestral_tree.nt_muts_json,
+                    translate_augur_tree.aa_muts_json,
+                    assign_clades_to_nodes.node_clade_data_json])
         File  auspice_input_json  = export_auspice_json.virus_json
     }
 }
