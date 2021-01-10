@@ -78,7 +78,7 @@ workflow augur_from_assemblies {
     call nextstrain.gzcat {
         input:
             infiles     = assembly_fastas,
-            output_name = "all_samples_combined_assembly.fasta.gz"
+            output_name = "all_samples_combined_assembly.fasta"
     }
     call nextstrain.mafft_one_chr as mafft {
         input:
