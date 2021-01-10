@@ -63,19 +63,22 @@ workflow subsample_by_metadata_with_focal {
                 out_basename = "metadata-merged"
         }
     }
-    File sample_metadata_tsv = select_first(flatten([[tsv_join.out_tsv], sample_metadata_tsvs]))
 
+    call nextstrain.derived_cols {
+        input:
+            metadata_tsv = select_first(flatten([[tsv_join.out_tsv], sample_metadata_tsvs]))
+    }
 
     call nextstrain.filter_subsample_sequences as prefilter {
         input:
             sequences_fasta = sequences_fasta,
-            sample_metadata_tsv = sample_metadata_tsv
+            sample_metadata_tsv = derived_cols.derived_metadata
     }
 
     call nextstrain.filter_subsample_sequences as subsample_focal {
         input:
             sequences_fasta = prefilter.filtered_fasta,
-            sample_metadata_tsv = sample_metadata_tsv,
+            sample_metadata_tsv = derived_cols.derived_metadata,
             exclude_where = ["${focal_variable}!=${focal_value}"],
             sequences_per_group = focal_bin_max,
             group_by = focal_bin_variable,
@@ -85,7 +88,7 @@ workflow subsample_by_metadata_with_focal {
     call nextstrain.filter_subsample_sequences as subsample_global {
         input:
             sequences_fasta = prefilter.filtered_fasta,
-            sample_metadata_tsv = sample_metadata_tsv,
+            sample_metadata_tsv = derived_cols.derived_metadata,
             exclude_where = ["${focal_variable}=${focal_value}"],
             sequences_per_group = global_bin_max,
             group_by = global_bin_variable,
@@ -106,7 +109,7 @@ workflow subsample_by_metadata_with_focal {
     }
 
     output {
-        File metadata_merged      = sample_metadata_tsv
+        File metadata_merged      = derived_cols.derived_metadata
         File keep_list            = fasta_to_ids.ids_txt
         File subsampled_sequences = cat_fasta.combined
         Int  focal_kept           = subsample_focal.sequences_out

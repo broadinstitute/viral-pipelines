@@ -23,6 +23,75 @@ task concatenate {
     }
 }
 
+task gzcat {
+    meta {
+        description: "Glue together a bunch of text files that may or may not be compressed (autodetect among gz, bz2, lz4, zstd or uncompressed inputs). Optionally compress the output (depending on requested file extension)"
+    }
+    input {
+        Array[File] infiles
+        String      output_name
+        String      docker="quay.io/broadinstitute/viral-core:2.1.13"
+    }
+    command <<<
+        python3 <<CODE
+        import util.file
+        with util.file.open_or_gzopen("~{output_name}", 'w') as outf:
+            for infname in "~{sep=' ' infiles}".split(' '):
+                with util.file.open_or_gzopen(infname, 'r') as inf:
+                    for line in inf:
+                        outf.write(line)
+        CODE
+    >>>
+    runtime {
+        docker: docker
+        memory: "1 GB"
+        cpu:    2
+        disks: "local-disk 375 LOCAL"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+    output {
+        File combined = "${output_name}"
+    }
+}
+
+task derived_cols {
+    meta {
+        description: "Create derivative columns in nextstrain metadata file."
+    }
+    input {
+        File          metadata_tsv
+        String?       lab_highlight_loc
+        Array[File]   table_map=[]
+
+        String        docker="quay.io/broadinstitute/viral-core:2.1.13"
+    }
+    String basename = basename(basename(metadata_tsv, ".txt"), ".tsv")
+    command {
+        set -e
+
+        TABLES="~{sep=' ' table_map}"
+        if [ -n "$TABLES" ]; then
+            TABLES="--table_map $TABLES"
+        fi
+
+        file_utils.py tsv_derived_cols \
+            "~{metadata_tsv}" \
+            "~{basename}.derived_cols.txt" \
+            $TABLES \
+            ~{'--lab_highlight_loc "' + lab_highlight_loc + '"'}
+    }
+    runtime {
+        docker: docker
+        memory: "1 GB"
+        cpu:    1
+        disks: "local-disk 50 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+    output {
+        File derived_metadata = "~{basename}.derived_cols.txt"
+    }
+}
+
 task fasta_to_ids {
     meta {
         description: "Return the headers only from a fasta file"
@@ -291,6 +360,14 @@ task mafft_one_chr {
     }
     command {
         set -e
+
+        # decompress sequences if necessary
+        GENOMES="~{sequences}"
+        if [[ $GENOMES == *.gz ]]; then
+            gzip -d $GENOMES
+            GENOMES=$(basename $GENOMES .gz)
+        fi
+
         touch args.txt
 
         # boolean options
@@ -302,10 +379,10 @@ task mafft_one_chr {
         # see https://mafft.cbrc.jp/alignment/software/closelyrelatedviralgenomes.html
         if [ -f "~{ref_fasta}" ]; then
             echo --addfragments >> args.txt
-            echo "~{sequences}" >> args.txt
+            echo "$GENOMES" >> args.txt
             echo "~{ref_fasta}" >> args.txt
         else
-            echo "~{sequences}" >> args.txt
+            echo "$GENOMES" >> args.txt
         fi
 
         # mafft align to reference in "closely related" mode
