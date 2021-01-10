@@ -14,6 +14,7 @@ workflow augur_from_assemblies {
 
     input {
         File            ref_fasta
+        File            auspice_config
     }
 
     parameter_meta {
@@ -21,11 +22,16 @@ workflow augur_from_assemblies {
           description: "A reference assembly (not included in assembly_fastas) to align assembly_fastas against. Typically from NCBI RefSeq or similar.",
           patterns: ["*.fasta", "*.fa"]
         }
+        auspice_config: {
+          description: "A file specifying options to customize the auspice export; see: https://nextstrain.github.io/auspice/customise-client/introduction",
+          patterns: ["*.json", "*.txt"]
+        }
     }
 
     call mafft_and_snp.mafft_and_snp {
         input:
-            ref_fasta = ref_fasta
+            ref_fasta = ref_fasta,
+            run_iqtree = false
     }
 
     call subsample_by_metadata_with_focal.subsample_by_metadata_with_focal as subsample {
@@ -38,7 +44,8 @@ workflow augur_from_assemblies {
             msa_or_vcf = mafft_and_snp.multiple_alignment,
             sample_metadata = [subsample.metadata_merged],
             ref_fasta = ref_fasta,
-            keep_list = [subsample.keep_list]
+            keep_list = [subsample.keep_list],
+            auspice_config = auspice_config
     }
 
     # re-export because it's quick and it exposes all the optional inputs
@@ -46,7 +53,8 @@ workflow augur_from_assemblies {
         input:
             tree            = augur_from_msa.time_tree,
             sample_metadata = subsample.metadata_merged,
-            node_data_jsons = augur_from_msa.node_data_jsons
+            node_data_jsons = augur_from_msa.node_data_jsons,
+            auspice_config  = auspice_config
     }
 
     output {
