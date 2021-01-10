@@ -613,7 +613,7 @@ task refine_augur_tree {
         Int?     gen_per_year
         Float?   clock_rate
         Float?   clock_std_dev
-        Boolean  keep_root = false
+        Boolean  keep_root = true
         String?  root
         Boolean? covariance
         Boolean  keep_polytomies = false
@@ -623,7 +623,7 @@ task refine_augur_tree {
         String?  branch_length_inference
         String?  coalescent
         Int?     clock_filter_iqd = 4
-        String?  divergence_units
+        String?  divergence_units = "mutations"
         File?    vcf_reference
 
         String   docker = "nextstrain/base:build-20201214T004216Z"
