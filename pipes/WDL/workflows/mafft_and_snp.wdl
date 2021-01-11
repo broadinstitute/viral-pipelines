@@ -12,6 +12,7 @@ workflow mafft_and_snp {
     input {
         Array[File]     assembly_fastas
         File            ref_fasta
+        Int             min_unambig_genome
         Boolean         run_iqtree=false
     }
 
@@ -24,6 +25,9 @@ workflow mafft_and_snp {
           description: "A reference assembly (not included in assembly_fastas) to align assembly_fastas against. Typically from NCBI RefSeq or similar. Uncompressed.",
           patterns: ["*.fasta", "*.fa"]
         }
+        min_unambig_genome: {
+          description: "Minimum number of called bases in genome to pass prefilter."
+        }
     }
 
     call nextstrain.gzcat {
@@ -31,9 +35,14 @@ workflow mafft_and_snp {
             infiles     = assembly_fastas,
             output_name = "all_samples_combined_assembly.fasta.gz"
     }
+    call nextstrain.filter_sequences_by_length {
+        input:
+            sequences_fasta = gzcat.combined,
+            min_non_N = min_unambig_genome
+    }
     call nextstrain.mafft_one_chr as mafft {
         input:
-            sequences = gzcat.combined,
+            sequences = filter_sequences_by_length.filtered_fasta,
             ref_fasta = ref_fasta,
             basename  = "all_samples_aligned.fasta"
     }
@@ -49,7 +58,7 @@ workflow mafft_and_snp {
     }
 
     output {
-        File  combined_assemblies = gzcat.combined
+        File  combined_assemblies = filter_sequences_by_length.filtered_fasta
         File  multiple_alignment  = mafft.aligned_sequences
         File  unmasked_snps       = snp_sites.snps_vcf
         File? ml_tree             = draft_augur_tree.aligned_tree

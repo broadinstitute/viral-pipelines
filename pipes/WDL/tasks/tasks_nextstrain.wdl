@@ -256,6 +256,68 @@ task filter_subsample_sequences {
     }
 }
 
+task filter_sequences_by_length {
+    meta {
+        description: "Filter sequences in a fasta file to enforce a minimum count of non-N bases."
+    }
+    input {
+        File    sequences_fasta
+        Int     min_non_N = 1
+
+        String  docker="quay.io/broadinstitute/viral-core:2.1.13"
+    }
+    parameter_meta {
+        sequences_fasta: {
+          description: "Set of sequences in fasta format",
+          patterns: ["*.fasta", "*.fa"]
+        }
+        min_non_N: {
+          description: "Minimum number of called bases (non-N, non-gap, A, T, C, G, and other non-N ambiguity codes accepted)"
+        }
+    }
+    String out_fname = sub(basename(sequences_fasta), ".fasta", ".filtered.fasta")
+    command <<<
+    python3 <<CODE
+    import Bio.SeqIO
+    import util.file
+    n_total = 0
+    n_kept = 0
+    do_not_count = set(('N','n','-','.',' '))
+    with util.file.open_or_gzopen('~{sequences_fasta}', 'rt') as inf:
+        with util.file.open_or_gzopen('~{out_fname}', 'wt') as outf:
+            for seq in Bio.SeqIO.parse(inf, 'fasta'):
+                n_total += 1
+                n_unambig = 0
+                for base in seq.seq:
+                    if base not in do_not_count:
+                        n_unambig += 1
+                if n_unambig >= ~{min_non_N}:
+                    n_kept += 1
+                    Bio.SeqIO.write(seq, outf, 'fasta')
+    n_dropped = n_total-n_kept
+    with open('IN_COUNT', 'wt') as outf:
+        outf.write(str(n_total)+'\n')
+    with open('OUT_COUNT', 'wt') as outf:
+        outf.write(str(n_kept)+'\n')
+    with open('DROP_COUNT', 'wt') as outf:
+        outf.write(str(n_dropped)+'\n')
+    CODE
+    >>>
+    runtime {
+        docker: docker
+        memory: "2 GB"
+        cpu :   2
+        disks:  "local-disk 300 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+    output {
+        File   filtered_fasta    = out_fname
+        Int    sequences_in      = read_int("IN_COUNT")
+        Int    sequences_dropped = read_int("DROP_COUNT")
+        Int    sequences_out     = read_int("OUT_COUNT")
+    }
+}
+
 task filter_sequences_to_list {
     meta {
         description: "Filter and subsample a sequence set to a specific list of ids in a text file (one id per line)."

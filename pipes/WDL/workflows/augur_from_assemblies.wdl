@@ -15,6 +15,8 @@ workflow augur_from_assemblies {
         Array[File]+    sample_metadata_tsvs
         File            ref_fasta
 
+        Int             min_unambig_genome
+
         String          focal_variable = "region"
         String          focal_value = "North America"
 
@@ -40,6 +42,9 @@ workflow augur_from_assemblies {
         ref_fasta: {
           description: "A reference assembly (not included in assembly_fastas) to align assembly_fastas against. Typically from NCBI RefSeq or similar.",
           patterns: ["*.fasta", "*.fa"]
+        }
+        min_unambig_genome: {
+          description: "Minimum number of called bases in genome to pass prefilter."
         }
 
         focal_variable: {
@@ -80,9 +85,14 @@ workflow augur_from_assemblies {
             infiles     = assembly_fastas,
             output_name = "all_samples_combined_assembly.fasta"
     }
+    call nextstrain.filter_sequences_by_length {
+        input:
+            sequences_fasta = gzcat.combined,
+            min_non_N = min_unambig_genome
+    }
     call nextstrain.mafft_one_chr as mafft {
         input:
-            sequences = gzcat.combined,
+            sequences = filter_sequences_by_length.filtered_fasta,
             ref_fasta = ref_fasta,
             basename  = "all_samples_aligned.fasta"
     }
@@ -204,7 +214,7 @@ workflow augur_from_assemblies {
     }
 
     output {
-      File  combined_assemblies   = gzcat.combined
+      File  combined_assemblies   = filter_sequences_by_length.filtered_fasta
       File  multiple_alignment    = mafft.aligned_sequences
       File  unmasked_snps         = snp_sites.snps_vcf
 
