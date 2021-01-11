@@ -413,7 +413,7 @@ task mafft_one_chr {
         Boolean  memsavetree = false
 
         String   docker = "quay.io/broadinstitute/viral-phylo:2.1.13.2"
-        Int      mem_size = 80
+        Int      mem_size = 250
         Int      cpus = 32
     }
     command {
@@ -473,7 +473,7 @@ task mafft_one_chr {
         cpu :   cpus
         disks:  "local-disk 375 LOCAL"
         preemptible: 0
-        dx_instance_type: "mem1_ssd1_v2_x36"
+        dx_instance_type: "mem3_ssd1_v2_x36"
     }
     output {
         File   aligned_sequences = "~{basename}_aligned.fasta"
