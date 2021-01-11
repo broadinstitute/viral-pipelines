@@ -282,16 +282,12 @@ task filter_sequences_by_length {
     import util.file
     n_total = 0
     n_kept = 0
-    do_not_count = set(('N','n','-','.',' '))
     with util.file.open_or_gzopen('~{sequences_fasta}', 'rt') as inf:
         with util.file.open_or_gzopen('~{out_fname}', 'wt') as outf:
             for seq in Bio.SeqIO.parse(inf, 'fasta'):
                 n_total += 1
-                n_unambig = 0
-                for base in seq.seq:
-                    if base not in do_not_count:
-                        n_unambig += 1
-                if n_unambig >= ~{min_non_N}:
+                ungapseq = seq.seq.ungap().upper()
+                if (len(ungapseq) - ungapseq.count('N')) >= ~{min_non_N}:
                     n_kept += 1
                     Bio.SeqIO.write(seq, outf, 'fasta')
     n_dropped = n_total-n_kept
