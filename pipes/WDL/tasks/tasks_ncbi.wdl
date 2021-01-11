@@ -296,6 +296,123 @@ task lookup_table_by_filename {
   }
 }
 
+task sra_meta_prep {
+  meta {
+    description: "Prepare tables for submission to NCBI's SRA database. This only works on bam files produced by illumina.py illumina_demux --append_run_id in viral-core."
+  }
+  input {
+    Array[String]  cleaned_bam_filepaths
+    File           biosample_map
+    Array[File]    library_metadata
+    String         platform
+    String         instrument_model
+    String         title
+    Boolean        paired
+
+    String         out_name = "sra_metadata.tsv"
+  }
+  parameter_meta {
+    cleaned_bam_filepaths: {
+      description: "Complete path and filename of unaligned bam files containing cleaned (submittable) reads.",
+      patterns: ["*.bam"]
+    }
+    biosample_map: {
+      description: "Tab text file with a header and at least two columns named accession and sample_name. 'accession' maps to the BioSample accession number. Any samples without an accession will be omitted from output. 'sample_name' maps to the internal lab sample name used in filenames, samplesheets, and library_metadata files.",
+      patterns: ["*.txt", "*.tsv"]
+    }
+    library_metadata: {
+      description: "Tab text file with a header and at least six columns (sample, library_id_per_sample, library_strategy, library_source, library_selection, design_description). See 3rd tab of https://www.ncbi.nlm.nih.gov/core/assets/sra/files/SRA_metadata_acc_example.xlsx for controlled vocabulary and term definition.",
+      patterns: ["*.txt", "*.tsv"]
+    }
+    platform: {
+      description: "Sequencing platform (one of _LS454, ABI_SOLID, BGISEQ, CAPILLARY, COMPLETE_GENOMICS, HELICOS, ILLUMINA, ION_TORRENT, OXFORD_NANOPORE, PACBIO_SMRT)."
+    }
+    instrument_model: {
+      description: "Sequencing instrument model (examples for platform=ILLUMINA: HiSeq X Five, HiSeq X Ten, Illumina Genome Analyzer, Illumina Genome Analyzer II, Illumina Genome Analyzer IIx, Illumina HiScanSQ, Illumina HiSeq 1000, Illumina HiSeq 1500, Illumina HiSeq 2000, Illumina HiSeq 2500, Illumina HiSeq 3000, Illumina HiSeq 4000, Illumina iSeq 100, Illumina NovaSeq 6000, Illumina MiniSeq, Illumina MiSeq, NextSeq 500, NextSeq 550)."
+    }
+    title: {
+      description: "Descriptive sentence of the form <method> of <organism>, e.g. Metagenomic RNA-seq of SARS-CoV-2."
+    }
+  }
+  command <<<
+    python3 << CODE
+    import os.path
+    import csv
+
+    # WDL arrays to python arrays
+    bam_uris = '~{sep="*" cleaned_bam_filepaths}'.split('*')
+    library_metadata = '~{sep="*" library_metadata}'.split('*')
+
+    # lookup table files to dicts
+    lib_to_bams = {}
+    sample_to_biosample = {}
+    for bam in bam_uris:
+      # filename must be <libraryname>.<flowcell>.<lane>.cleaned.bam
+      assert bam.endswith('.cleaned.bam'), "filename does not end in .cleaned.bam: {}".format(bam)
+      bam_parts = os.path.basename(bam).split('.')
+      assert len(bam_parts) >= 5, "filename does not conform to <libraryname>.<flowcell>.<lane>.cleaned.bam -- {}".format(bam)
+      lib = '.'.join(bam_parts[:-4])
+      lib_to_bams.setdefault(lib, [])
+      lib_to_bams[lib].append(bam)
+    with open('~{biosample_map}', 'rt') as inf:
+      for row in csv.DictReader(inf, delimiter='\t'):
+        sample_to_biosample[row['sample_name']] = row['accession']
+
+    # set up SRA metadata table
+    outrows = []
+    out_headers = ('biosample_accession', 'library_ID', 'title', 'library_strategy', 'library_source', 'library_selection', 'library_layout', 'platform', 'instrument_model', 'design_description', 'filetype', 'filename')
+
+    # iterate through library_metadata entries and produce an output row for each entry
+    for libfile in library_metadata:
+      with open(libfile, 'rt') as inf:
+        for row in csv.DictReader(inf, delimiter='\t'):
+          lib = "{}.l{}".format(row['sample'], row['library_id_per_sample'])
+          print("debug: sample={} lib={}".format(row['sample'], lib))
+          if row['sample'] in sample_to_biosample and lib in lib_to_bams:
+            print("debug: passed")
+            outrows.append({
+              'biosample_accession': sample_to_biosample[row['sample']],
+              'library_ID': lib,
+              'title': "~{title}",
+              'library_strategy': row.get('library_strategy',''),
+              'library_source': row.get('library_source',''),
+              'library_selection': row.get('library_selection',''),
+              'library_layout': '${true="paired" false="single" paired}',
+              'platform': '~{platform}',
+              'instrument_model': '~{instrument_model}',
+              'design_description': row.get('design_description',''),
+              'filetype': 'bam',
+              'files': lib_to_bams[lib],
+            })
+
+    # find library with the most files and add col headers
+    n_cols = max(len(row['files']) for row in outrows)
+    for i in range(n_cols-1):
+      out_headers.append('filename{}'.format(i+2))
+
+    # write output file
+    with open('~{out_name}', 'wt') as outf:
+      outf.write('\t'.join(out_headers)+'\n')
+      for row in outrows:
+        row['filename'] = row['files'][0]
+        for i in range(len(row['files'])):
+          row['filename{}'.format(i+1)] = row['files'][i]
+        outf.write('\t'.join(row.get(h,'') for h in out_headers)+'\n')
+    CODE
+  >>>
+  output {
+    File         sra_metadata = "~{out_name}"
+    File         cleaned_bam_uris = write_lines(cleaned_bam_filepaths)
+  }
+  runtime {
+    docker: "python"
+    memory: "1 GB"
+    cpu: 1
+    disks: "local-disk 50 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task biosample_to_genbank {
   meta {
     description: "Prepares two input metadata files for Genbank submission based on a BioSample registration attributes table (attributes.tsv) since all of the necessary values are there. This produces both a Genbank Source Modifier Table and a BioSample ID map file that can be fed into the prepare_genbank task."
