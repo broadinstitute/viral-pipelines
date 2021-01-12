@@ -1,5 +1,49 @@
 version 1.0
 
+task group_bams_by_sample {
+  input {
+    Array[String]  bam_filepaths
+  }
+  command <<<
+    python3 << CODE
+    import os.path
+
+    # WDL arrays to python arrays
+    bam_uris = '~{sep="*" bam_filepaths}'.split('*')
+
+    # lookup table files to dicts
+    sample_to_bams = {}
+    for bam in bam_uris:
+      # filename must be <samplename>.l<xxx>.bam
+      assert bam.endswith('.bam'), "filename does not end in .bam: {}".format(bam)
+      bam_base = os.path.basename(bam)
+      i = bam_base.index('.l')
+      assert i>0, "filename does not contain a .l -- {}".format(bam)
+      sample = bam_base[:i]
+      sample_to_bams.setdefault(sample, [])
+      sample_to_bams[sample].append(bam)
+
+    # write outputs
+    with open('grouped_bams', 'wt') as out_groups:
+      with open('sample_names', 'wt') as out_samples:
+        for sample in sorted(sample_to_bams.keys()):
+          out_samples.write(sample+'\n')
+          out_groups.write('\t'.join(sample_to_bams[sample])+'\n')
+    CODE
+  >>>
+  output {
+    Array[Array[String]] grouped_bam_filepaths = read_tsv('grouped_bams')
+    Array[String]        sample_names = read_lines('sample_names')
+  }
+  runtime {
+    docker: "python"
+    memory: "1 GB"
+    cpu: 1
+    disks: "local-disk 50 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task merge_and_reheader_bams {
     meta {
       description: "Merge and/or reheader bam files using a mapping table. This task can modify read group tags in a BAM header field for single BAM files or as part of a BAM merge operation. The output is a single BAM file (given one or more input BAMs) and a three-column tab delimited text table that defines: the field, the old value, and the new value (e.g. LB, old_lib_name, new_lib_name or SM, old_sample_name, new_sample_name)"
