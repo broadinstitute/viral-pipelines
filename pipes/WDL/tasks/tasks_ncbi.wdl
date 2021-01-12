@@ -351,12 +351,13 @@ task sra_meta_prep {
     for bam in bam_uris:
       # filename must be <libraryname>.<flowcell>.<lane>.cleaned.bam
       assert bam.endswith('.cleaned.bam'), "filename does not end in .cleaned.bam: {}".format(bam)
-      bam_parts = os.path.basename(bam).split('.')
-      assert len(bam_parts) >= 5, "filename does not conform to <libraryname>.<flowcell>.<lane>.cleaned.bam -- {}".format(bam)
+      bam_base = os.path.basename(bam)
+      bam_parts = bam_base.split('.')
+      assert len(bam_parts) >= 5, "filename does not conform to <libraryname>.<flowcell>.<lane>.cleaned.bam -- {}".format(bam_base)
       lib = '.'.join(bam_parts[:-4])
       lib_to_bams.setdefault(lib, [])
-      lib_to_bams[lib].append(bam)
-      print("debug: registering lib={} bam={}".format(lib, bam))
+      lib_to_bams[lib].append(bam_base)
+      print("debug: registering lib={} bam={}".format(lib, bam_base))
     with open('~{biosample_map}', 'rt') as inf:
       for row in csv.DictReader(inf, delimiter='\t'):
         sample_to_biosample[row['sample_name']] = row['accession']
@@ -381,7 +382,7 @@ task sra_meta_prep {
               'library_strategy': row.get('library_strategy',''),
               'library_source': row.get('library_source',''),
               'library_selection': row.get('library_selection',''),
-              'library_layout': '${true="paired" false="single" paired}',
+              'library_layout': '~{true="paired" false="single" paired}',
               'platform': '~{platform}',
               'instrument_model': '~{instrument_model}',
               'design_description': row.get('design_description',''),
