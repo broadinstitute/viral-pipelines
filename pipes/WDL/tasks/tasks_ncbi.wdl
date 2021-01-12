@@ -364,7 +364,7 @@ task sra_meta_prep {
 
     # set up SRA metadata table
     outrows = []
-    out_headers = ('biosample_accession', 'library_ID', 'title', 'library_strategy', 'library_source', 'library_selection', 'library_layout', 'platform', 'instrument_model', 'design_description', 'filetype', 'filename')
+    out_headers = ('biosample_accession', 'library_ID', 'title', 'library_strategy', 'library_source', 'library_selection', 'library_layout', 'platform', 'instrument_model', 'design_description', 'filetype', 'assembly', 'filename')
 
     # iterate through library_metadata entries and produce an output row for each entry
     for libfile in library_metadata:
@@ -387,6 +387,7 @@ task sra_meta_prep {
               'instrument_model': '~{instrument_model}',
               'design_description': row.get('design_description',''),
               'filetype': 'bam',
+              'assembly': 'unaligned',
               'files': lib_to_bams[lib],
             })
     assert outrows, "failed to prepare any metadata -- output is empty!"
