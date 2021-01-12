@@ -353,6 +353,7 @@ task sra_meta_prep {
       assert bam.endswith('.cleaned.bam'), "filename does not end in .cleaned.bam: {}".format(bam)
       bam_parts = os.path.basename(bam).split('.')
       assert len(bam_parts) >= 5, "filename does not conform to <libraryname>.<flowcell>.<lane>.cleaned.bam -- {}".format(bam)
+      lib = '.'.join(bam_parts[:-4])
       lib_to_bams.setdefault(lib, [])
       lib_to_bams[lib].append(bam)
       print("debug: registering lib={} bam={}".format(lib, bam))
