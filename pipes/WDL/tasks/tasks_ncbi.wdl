@@ -367,9 +367,10 @@ task sra_meta_prep {
       with open(libfile, 'rt') as inf:
         for row in csv.DictReader(inf, delimiter='\t'):
           lib = "{}.l{}".format(row['sample'], row['library_id_per_sample'])
-          print("debug: sample={} lib={}".format(row['sample'], lib))
-          if row['sample'] in sample_to_biosample and lib in lib_to_bams:
-            print("debug: passed")
+          biosample = sample_to_biosample.get(row['sample'],'')
+          bams = lib_to_bams.get(lib,[])
+          print("debug: sample={} lib={} biosample={}, bams={}".format(row['sample'], lib, biosample, bams))
+          if biosample and bams:
             outrows.append({
               'biosample_accession': sample_to_biosample[row['sample']],
               'library_ID': lib,
