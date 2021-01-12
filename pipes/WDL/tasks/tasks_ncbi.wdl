@@ -353,7 +353,6 @@ task sra_meta_prep {
       assert bam.endswith('.cleaned.bam'), "filename does not end in .cleaned.bam: {}".format(bam)
       bam_parts = os.path.basename(bam).split('.')
       assert len(bam_parts) >= 5, "filename does not conform to <libraryname>.<flowcell>.<lane>.cleaned.bam -- {}".format(bam)
-      lib = util.file.sanitize_id_for_sam_rname('.'.join(bam_parts[:-4]))
       lib_to_bams.setdefault(lib, [])
       lib_to_bams[lib].append(bam)
       print("debug: registering lib={} bam={}".format(lib, bam))
@@ -369,7 +368,7 @@ task sra_meta_prep {
     for libfile in library_metadata:
       with open(libfile, 'rt') as inf:
         for row in csv.DictReader(inf, delimiter='\t'):
-          lib = "{}.l{}".format(row['sample'], row['library_id_per_sample'])
+          lib = util.file.sanitize_id_for_sam_rname("{}.l{}".format(row['sample'], row['library_id_per_sample']))
           biosample = sample_to_biosample.get(row['sample'],'')
           bams = lib_to_bams.get(lib,[])
           print("debug: sample={} lib={} biosample={}, bams={}".format(row['sample'], lib, biosample, bams))
