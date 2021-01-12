@@ -310,6 +310,7 @@ task sra_meta_prep {
     Boolean        paired
 
     String         out_name = "sra_metadata.tsv"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.14"
   }
   parameter_meta {
     cleaned_bam_filepaths: {
@@ -338,6 +339,7 @@ task sra_meta_prep {
     python3 << CODE
     import os.path
     import csv
+    import util.file
 
     # WDL arrays to python arrays
     bam_uris = '~{sep="*" cleaned_bam_filepaths}'.split('*')
@@ -351,7 +353,7 @@ task sra_meta_prep {
       assert bam.endswith('.cleaned.bam'), "filename does not end in .cleaned.bam: {}".format(bam)
       bam_parts = os.path.basename(bam).split('.')
       assert len(bam_parts) >= 5, "filename does not conform to <libraryname>.<flowcell>.<lane>.cleaned.bam -- {}".format(bam)
-      lib = '.'.join(bam_parts[:-4])
+      lib = util.file.sanitize_id_for_sam_rname('.'.join(bam_parts[:-4]))
       lib_to_bams.setdefault(lib, [])
       lib_to_bams[lib].append(bam)
       print("debug: registering lib={} bam={}".format(lib, bam))
@@ -408,7 +410,7 @@ task sra_meta_prep {
     File         cleaned_bam_uris = write_lines(cleaned_bam_filepaths)
   }
   runtime {
-    docker: "python"
+    docker: docker
     memory: "1 GB"
     cpu: 1
     disks: "local-disk 50 HDD"
