@@ -205,7 +205,7 @@ task structured_comments {
 
     File?   filter_to_ids
 
-    String  docker="quay.io/broadinstitute/viral-core:2.1.13"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.14"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -255,7 +255,7 @@ task rename_fasta_header {
 
     String  out_basename = basename(genome_fasta, ".fasta")
 
-    String  docker="quay.io/broadinstitute/viral-core:2.1.13"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.14"
   }
   command {
     set -e
