@@ -25,7 +25,7 @@ task download_fasta {
     Array[String]+ accessions
     String         emailAddress
 
-    String         docker="quay.io/broadinstitute/viral-phylo:2.1.12.0"
+    String         docker="quay.io/broadinstitute/viral-phylo:2.1.13.2"
   }
 
   command {
@@ -56,7 +56,7 @@ task download_annotations {
     String         emailAddress
     String         combined_out_prefix
 
-    String         docker="quay.io/broadinstitute/viral-phylo:2.1.12.0"
+    String         docker="quay.io/broadinstitute/viral-phylo:2.1.13.2"
   }
 
   command {
@@ -100,7 +100,7 @@ task annot_transfer {
     File         reference_fasta
     Array[File]+ reference_feature_table
 
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.12.0"
+    String  docker="quay.io/broadinstitute/viral-phylo:2.1.13.2"
   }
 
   parameter_meta {
@@ -153,7 +153,7 @@ task align_and_annot_transfer_single {
     Array[File]+ reference_fastas
     Array[File]+ reference_feature_tables
 
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.12.0"
+    String  docker="quay.io/broadinstitute/viral-phylo:2.1.13.2"
   }
 
   parameter_meta {
@@ -199,6 +199,227 @@ task align_and_annot_transfer_single {
   }
 }
 
+task structured_comments {
+  input {
+    File    assembly_stats_tsv
+
+    File?   filter_to_ids
+
+    String  docker="quay.io/broadinstitute/viral-core:2.1.14"
+  }
+  String out_base = basename(assembly_stats_tsv, '.txt')
+  command <<<
+    set -e
+
+    python3 << CODE
+    import util.file
+
+    samples_to_filter_to = set()
+    if "~{default='' filter_to_ids}":
+        with open("~{default='' filter_to_ids}", 'rt') as inf:
+            samples_to_filter_to = set(line.strip() for line in inf)
+
+    out_headers = ('SeqID', 'StructuredCommentPrefix', 'Assembly Method', 'Coverage', 'Sequencing Technology', 'StructuredCommentSuffix')
+    with open("~{out_base}.cmt", 'wt') as outf:
+        outf.write('\t'.join(out_headers)+'\n')
+
+        for row in util.file.read_tabfile_dict("~{assembly_stats_tsv}"):
+            outrow = dict((h, row.get(h, '')) for h in out_headers)
+
+            if samples_to_filter_to:
+              if row['SeqID'] not in samples_to_filter_to:
+                  continue
+
+            if outrow['Coverage']:
+              outrow['Coverage'] = "{}x".format(round(float(outrow['Coverage'])))
+            outrow['StructuredCommentPrefix'] = 'Assembly-Data'
+            outrow['StructuredCommentSuffix'] = 'Assembly-Data'
+            outf.write('\t'.join(outrow[h] for h in out_headers)+'\n')
+    CODE
+  >>>
+  output {
+    File   structured_comment_table = "~{out_base}.cmt"
+  }
+  runtime {
+    docker: "~{docker}"
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
+task rename_fasta_header {
+  input {
+    File    genome_fasta
+    String  new_name
+
+    String  out_basename = basename(genome_fasta, ".fasta")
+
+    String  docker="quay.io/broadinstitute/viral-core:2.1.14"
+  }
+  command {
+    set -e
+    file_utils.py rename_fasta_sequences \
+      "~{genome_fasta}" "~{out_basename}.fasta" "~{new_name}"
+  }
+  output {
+    File renamed_fasta = "~{out_basename}.fasta"
+  }
+  runtime {
+    docker: "~{docker}"
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
+task lookup_table_by_filename {
+  input {
+    String  id
+    File    mapping_tsv
+    Int     return_col=2
+
+    String  docker="ubuntu"
+  }
+  command {
+    set -e -o pipefail
+    grep ^"~{id}" ~{mapping_tsv} | cut -f ~{return_col} > OUTVAL
+  }
+  output {
+    String value = read_string("OUTVAL")
+  }
+  runtime {
+    docker: "~{docker}"
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
+task sra_meta_prep {
+  meta {
+    description: "Prepare tables for submission to NCBI's SRA database. This only works on bam files produced by illumina.py illumina_demux --append_run_id in viral-core."
+  }
+  input {
+    Array[String]  cleaned_bam_filepaths
+    File           biosample_map
+    Array[File]    library_metadata
+    String         platform
+    String         instrument_model
+    String         title
+    Boolean        paired
+
+    String         out_name = "sra_metadata.tsv"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.14"
+  }
+  parameter_meta {
+    cleaned_bam_filepaths: {
+      description: "Complete path and filename of unaligned bam files containing cleaned (submittable) reads.",
+      patterns: ["*.bam"]
+    }
+    biosample_map: {
+      description: "Tab text file with a header and at least two columns named accession and sample_name. 'accession' maps to the BioSample accession number. Any samples without an accession will be omitted from output. 'sample_name' maps to the internal lab sample name used in filenames, samplesheets, and library_metadata files.",
+      patterns: ["*.txt", "*.tsv"]
+    }
+    library_metadata: {
+      description: "Tab text file with a header and at least six columns (sample, library_id_per_sample, library_strategy, library_source, library_selection, design_description). See 3rd tab of https://www.ncbi.nlm.nih.gov/core/assets/sra/files/SRA_metadata_acc_example.xlsx for controlled vocabulary and term definition.",
+      patterns: ["*.txt", "*.tsv"]
+    }
+    platform: {
+      description: "Sequencing platform (one of _LS454, ABI_SOLID, BGISEQ, CAPILLARY, COMPLETE_GENOMICS, HELICOS, ILLUMINA, ION_TORRENT, OXFORD_NANOPORE, PACBIO_SMRT)."
+    }
+    instrument_model: {
+      description: "Sequencing instrument model (examples for platform=ILLUMINA: HiSeq X Five, HiSeq X Ten, Illumina Genome Analyzer, Illumina Genome Analyzer II, Illumina Genome Analyzer IIx, Illumina HiScanSQ, Illumina HiSeq 1000, Illumina HiSeq 1500, Illumina HiSeq 2000, Illumina HiSeq 2500, Illumina HiSeq 3000, Illumina HiSeq 4000, Illumina iSeq 100, Illumina NovaSeq 6000, Illumina MiniSeq, Illumina MiSeq, NextSeq 500, NextSeq 550)."
+    }
+    title: {
+      description: "Descriptive sentence of the form <method> of <organism>, e.g. Metagenomic RNA-seq of SARS-CoV-2."
+    }
+  }
+  command <<<
+    python3 << CODE
+    import os.path
+    import csv
+    import util.file
+
+    # WDL arrays to python arrays
+    bam_uris = '~{sep="*" cleaned_bam_filepaths}'.split('*')
+    library_metadata = '~{sep="*" library_metadata}'.split('*')
+
+    # lookup table files to dicts
+    lib_to_bams = {}
+    sample_to_biosample = {}
+    for bam in bam_uris:
+      # filename must be <libraryname>.<flowcell>.<lane>.cleaned.bam
+      assert bam.endswith('.cleaned.bam'), "filename does not end in .cleaned.bam: {}".format(bam)
+      bam_base = os.path.basename(bam)
+      bam_parts = bam_base.split('.')
+      assert len(bam_parts) >= 5, "filename does not conform to <libraryname>.<flowcell>.<lane>.cleaned.bam -- {}".format(bam_base)
+      lib = '.'.join(bam_parts[:-4])
+      lib_to_bams.setdefault(lib, [])
+      lib_to_bams[lib].append(bam_base)
+      print("debug: registering lib={} bam={}".format(lib, bam_base))
+    with open('~{biosample_map}', 'rt') as inf:
+      for row in csv.DictReader(inf, delimiter='\t'):
+        sample_to_biosample[row['sample_name']] = row['accession']
+
+    # set up SRA metadata table
+    outrows = []
+    out_headers = ('biosample_accession', 'library_ID', 'title', 'library_strategy', 'library_source', 'library_selection', 'library_layout', 'platform', 'instrument_model', 'design_description', 'filetype', 'assembly', 'filename')
+
+    # iterate through library_metadata entries and produce an output row for each entry
+    for libfile in library_metadata:
+      with open(libfile, 'rt') as inf:
+        for row in csv.DictReader(inf, delimiter='\t'):
+          lib = util.file.string_to_file_name("{}.l{}".format(row['sample'], row['library_id_per_sample']))
+          biosample = sample_to_biosample.get(row['sample'],'')
+          bams = lib_to_bams.get(lib,[])
+          print("debug: sample={} lib={} biosample={}, bams={}".format(row['sample'], lib, biosample, bams))
+          if biosample and bams:
+            outrows.append({
+              'biosample_accession': sample_to_biosample[row['sample']],
+              'library_ID': lib,
+              'title': "~{title}",
+              'library_strategy': row.get('library_strategy',''),
+              'library_source': row.get('library_source',''),
+              'library_selection': row.get('library_selection',''),
+              'library_layout': '~{true="paired" false="single" paired}',
+              'platform': '~{platform}',
+              'instrument_model': '~{instrument_model}',
+              'design_description': row.get('design_description',''),
+              'filetype': 'bam',
+              'assembly': 'unaligned',
+              'files': lib_to_bams[lib],
+            })
+    assert outrows, "failed to prepare any metadata -- output is empty!"
+
+    # find library with the most files and add col headers
+    n_cols = max(len(row['files']) for row in outrows)
+    for i in range(n_cols-1):
+      out_headers.append('filename{}'.format(i+2))
+
+    # write output file
+    with open('~{out_name}', 'wt') as outf:
+      outf.write('\t'.join(out_headers)+'\n')
+      for row in outrows:
+        row['filename'] = row['files'][0]
+        for i in range(len(row['files'])):
+          row['filename{}'.format(i+1)] = row['files'][i]
+        outf.write('\t'.join(row.get(h,'') for h in out_headers)+'\n')
+    CODE
+  >>>
+  output {
+    File         sra_metadata = "~{out_name}"
+    File         cleaned_bam_uris = write_lines(cleaned_bam_filepaths)
+  }
+  runtime {
+    docker: docker
+    memory: "1 GB"
+    cpu: 1
+    disks: "local-disk 50 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task biosample_to_genbank {
   meta {
     description: "Prepares two input metadata files for Genbank submission based on a BioSample registration attributes table (attributes.tsv) since all of the necessary values are there. This produces both a Genbank Source Modifier Table and a BioSample ID map file that can be fed into the prepare_genbank task."
@@ -208,7 +429,9 @@ task biosample_to_genbank {
     Int   num_segments=1
     Int   taxid
 
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.12.0"
+    File? filter_to_ids
+
+    String  docker="quay.io/broadinstitute/viral-phylo:2.1.13.2"
   }
   String base = basename(biosample_attributes, ".txt")
   command {
@@ -220,6 +443,9 @@ task biosample_to_genbank {
         ${taxid} \
         "${base}".genbank.src \
         "${base}".biosample.map.txt \
+        ${'--filter_to_samples ' + filter_to_ids} \
+        --biosample_in_smt \
+        --iso_dates \
         --loglevel DEBUG
   }
   output {
@@ -254,7 +480,7 @@ task prepare_genbank {
     String?      assembly_method_version
 
     Int?         machine_mem_gb
-    String       docker="quay.io/broadinstitute/viral-phylo:2.1.12.0"
+    String       docker="quay.io/broadinstitute/viral-phylo:2.1.13.2"
   }
 
   parameter_meta {
@@ -370,3 +596,119 @@ task prepare_genbank {
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
+
+task package_genbank_ftp_submission {
+  meta {
+    description: "Prepares a zip and xml file for FTP-based NCBI Genbank submission according to instructions at https://www.ncbi.nlm.nih.gov/viewvc/v1/trunk/submit/public-docs/genbank/SARS-CoV-2/."
+  }
+  input {
+    File   sequences_fasta
+    File   structured_comment_table
+    File   source_modifier_table
+    File   author_template_sbt
+    String submission_name
+    String submission_uid
+    String spuid_namespace
+    String account_name
+
+    String  docker="quay.io/broadinstitute/viral-baseimage:0.1.19"
+  }
+  command <<<
+    set -e
+
+    # make the submission zip file
+    cp "~{sequences_fasta}" sequence.fsa
+    cp "~{structured_comment_table}" comment.cmt
+    cp "~{source_modifier_table}" source.src
+    cp "~{author_template_sbt}" template.sbt
+    zip "~{submission_uid}.zip" sequence.fsa comment.cmt source.src template.sbt
+
+    # make the submission xml file
+    SUB_NAME="~{submission_name}"
+    ACCT_NAME="~{account_name}"
+    SPUID="~{submission_uid}"
+    cat << EOF > submission.xml
+    <?xml version="1.0"?>
+    <Submission>
+      <Description>
+        <Comment>$SUB_NAME</Comment>
+        <Organization type="center" role="owner">
+          <Name>$ACCT_NAME</Name>
+        </Organization>
+      </Description>
+      <Action>
+        <AddFiles target_db="GenBank">
+          <File file_path="$SPUID.zip">
+            <DataType>genbank-submission-package</DataType>
+          </File>
+          <Attribute name="wizard">BankIt_SARSCoV2_api</Attribute>
+          <Identifier>
+            <SPUID spuid_namespace="~{spuid_namespace}">$SPUID</SPUID>
+          </Identifier>
+        </AddFiles>
+      </Action>
+    </Submission>
+    EOF
+
+    # make the (empty) ready file
+    touch submit.ready
+  >>>
+  output {
+    File submission_zip = "~{submission_uid}.zip"
+    File submission_xml = "submission.xml"
+    File submit_ready = "submit.ready"
+  }
+  runtime {
+    docker: "~{docker}"
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
+task vadr {
+  meta {
+    description: "Runs NCBI's Viral Annotation DefineR for annotation and QC. See https://github.com/ncbi/vadr/wiki/Coronavirus-annotation"
+  }
+  input {
+    File   genome_fasta
+    String vadr_opts="-s -r --nomisc --mkey NC_045512 --lowsim5term 2 --lowsim3term 2 --fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf"
+
+    String  docker="staphb/vadr:1.1.2"
+  }
+  String out_base = basename(genome_fasta, '.fasta')
+  command <<<
+    set -e
+
+    # find available RAM
+    RAM_MB=$(free -m | head -2 | tail -1 | awk '{print $2}')
+
+    # run VADR
+    v-annotate.pl \
+      ~{vadr_opts} \
+      --mxsize $RAM_MB \
+      "~{genome_fasta}" \
+      "~{out_base}"
+
+    # package everything for output
+    tar -C "~{out_base}" -czvf "~{out_base}.vadr.tar.gz" .
+
+    # prep alerts into a tsv file for parsing
+    cat "~{out_base}/~{out_base}.vadr.alt.list" | cut -f 2 | tail -n +2 > "~{out_base}.vadr.alerts.tsv"
+    cat "~{out_base}.vadr.alerts.tsv" | wc -l > NUM_ALERTS
+  >>>
+  output {
+    File feature_tbl  = "~{out_base}/~{out_base}.vadr.pass.tbl"
+    Int  num_alerts = read_int("NUM_ALERTS")
+    File alerts_list = "~{out_base}/~{out_base}.vadr.alt.list"
+    Array[Array[String]] alerts = read_tsv("~{out_base}.vadr.alerts.tsv")
+    File outputs_tgz = "~{out_base}.vadr.tar.gz"
+  }
+  runtime {
+    docker: "~{docker}"
+    memory: "64 GB"
+    cpu: 8
+    dx_instance_type: "mem3_ssd1_v2_x8"
+  }
+}
+

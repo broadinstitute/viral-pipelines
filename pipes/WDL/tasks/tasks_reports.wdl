@@ -10,7 +10,7 @@ task plot_coverage {
     Boolean bin_large_plots=false
     String?  binning_summary_statistic="max" # max or min
 
-    String   docker="quay.io/broadinstitute/viral-core:2.1.13"
+    String   docker="quay.io/broadinstitute/viral-core:2.1.14"
   }
   
   command {
@@ -85,7 +85,7 @@ task coverage_report {
     Array[File]  mapped_bam_idx # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name="coverage_report.txt"
 
-    String       docker="quay.io/broadinstitute/viral-core:2.1.13"
+    String       docker="quay.io/broadinstitute/viral-core:2.1.14"
   }
 
   command {
@@ -110,12 +110,41 @@ task coverage_report {
   }
 }
 
+task assembly_bases {
+    meta {
+      description: "Count bases in a fasta file."
+    }
+
+    input {
+      File     fasta
+      String   docker="ubuntu"
+    }
+
+    command {
+        set -e
+        grep -v '^>' "~{fasta}" | tr -d '\n' | wc -c | tee assembly_length
+        grep -v '^>' "~{fasta}" | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
+    }
+
+    output {
+        Int    assembly_length              = read_int("assembly_length")
+        Int    assembly_length_unambiguous  = read_int("assembly_length_unambiguous")
+    }
+
+    runtime {
+        docker: "${docker}"
+        memory: "1 GB"
+        cpu: 1
+        disks: "local-disk 50 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+}
 
 task fastqc {
   input {
     File     reads_bam
 
-    String   docker="quay.io/broadinstitute/viral-core:2.1.13"
+    String   docker="quay.io/broadinstitute/viral-core:2.1.14"
   }
 
   String   reads_basename=basename(reads_bam, ".bam")
@@ -148,7 +177,7 @@ task align_and_count {
     Int     topNHits = 3
 
     Int?    machine_mem_gb
-    String  docker="quay.io/broadinstitute/viral-core:2.1.13"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.14"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
@@ -191,7 +220,7 @@ task align_and_count_summary {
 
     String       output_prefix="count_summary"
 
-    String        docker="quay.io/broadinstitute/viral-core:2.1.13"
+    String        docker="quay.io/broadinstitute/viral-core:2.1.14"
   }
 
   command {
@@ -364,7 +393,7 @@ task tsv_join {
     String         id_col
     String         out_basename
 
-    String         docker="quay.io/broadinstitute/viral-core:2.1.13"
+    String         docker="quay.io/broadinstitute/viral-core:2.1.14"
   }
 
   command {
@@ -391,7 +420,7 @@ task tsv_stack {
   input {
     Array[File]+   input_tsvs
     String         out_basename
-    String         docker="quay.io/broadinstitute/viral-core:2.1.13"
+    String         docker="quay.io/broadinstitute/viral-core:2.1.14"
   }
 
   command {

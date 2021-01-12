@@ -23,6 +23,75 @@ task concatenate {
     }
 }
 
+task gzcat {
+    meta {
+        description: "Glue together a bunch of text files that may or may not be compressed (autodetect among gz, bz2, lz4, zstd or uncompressed inputs). Optionally compress the output (depending on requested file extension)"
+    }
+    input {
+        Array[File] infiles
+        String      output_name
+        String      docker="quay.io/broadinstitute/viral-core:2.1.14"
+    }
+    command <<<
+        python3 <<CODE
+        import util.file
+        with util.file.open_or_gzopen("~{output_name}", 'wt') as outf:
+            for infname in "~{sep=' ' infiles}".split(' '):
+                with util.file.open_or_gzopen(infname, 'rt') as inf:
+                    for line in inf:
+                        outf.write(line)
+        CODE
+    >>>
+    runtime {
+        docker: docker
+        memory: "1 GB"
+        cpu:    2
+        disks: "local-disk 375 LOCAL"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+    output {
+        File combined = "${output_name}"
+    }
+}
+
+task derived_cols {
+    meta {
+        description: "Create derivative columns in nextstrain metadata file."
+    }
+    input {
+        File          metadata_tsv
+        String?       lab_highlight_loc
+        Array[File]   table_map=[]
+
+        String        docker="quay.io/broadinstitute/viral-core:2.1.14"
+    }
+    String basename = basename(basename(metadata_tsv, ".txt"), ".tsv")
+    command {
+        set -e
+
+        TABLES="~{sep=' ' table_map}"
+        if [ -n "$TABLES" ]; then
+            TABLES="--table_map $TABLES"
+        fi
+
+        file_utils.py tsv_derived_cols \
+            "~{metadata_tsv}" \
+            "~{basename}.derived_cols.txt" \
+            $TABLES \
+            ~{'--lab_highlight_loc "' + lab_highlight_loc + '"'}
+    }
+    runtime {
+        docker: docker
+        memory: "1 GB"
+        cpu:    1
+        disks: "local-disk 50 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+    output {
+        File derived_metadata = "~{basename}.derived_cols.txt"
+    }
+}
+
 task fasta_to_ids {
     meta {
         description: "Return the headers only from a fasta file"
@@ -170,7 +239,7 @@ task filter_subsample_sequences {
     }
     runtime {
         docker: docker
-        memory: "3 GB"
+        memory: "15 GB"
         cpu :   4
         disks:  "local-disk 100 HDD"
         dx_instance_type: "mem1_ssd1_v2_x4"
@@ -184,6 +253,64 @@ task filter_subsample_sequences {
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
         String cpu_load = read_string("CPU_LOAD")
+    }
+}
+
+task filter_sequences_by_length {
+    meta {
+        description: "Filter sequences in a fasta file to enforce a minimum count of non-N bases."
+    }
+    input {
+        File    sequences_fasta
+        Int     min_non_N = 1
+
+        String  docker="quay.io/broadinstitute/viral-core:2.1.14"
+    }
+    parameter_meta {
+        sequences_fasta: {
+          description: "Set of sequences in fasta format",
+          patterns: ["*.fasta", "*.fa"]
+        }
+        min_non_N: {
+          description: "Minimum number of called bases (non-N, non-gap, A, T, C, G, and other non-N ambiguity codes accepted)"
+        }
+    }
+    String out_fname = sub(basename(sequences_fasta), ".fasta", ".filtered.fasta")
+    command <<<
+    python3 <<CODE
+    import Bio.SeqIO
+    import util.file
+    n_total = 0
+    n_kept = 0
+    with util.file.open_or_gzopen('~{sequences_fasta}', 'rt') as inf:
+        with util.file.open_or_gzopen('~{out_fname}', 'wt') as outf:
+            for seq in Bio.SeqIO.parse(inf, 'fasta'):
+                n_total += 1
+                ungapseq = seq.seq.ungap().upper()
+                if (len(ungapseq) - ungapseq.count('N')) >= ~{min_non_N}:
+                    n_kept += 1
+                    Bio.SeqIO.write(seq, outf, 'fasta')
+    n_dropped = n_total-n_kept
+    with open('IN_COUNT', 'wt') as outf:
+        outf.write(str(n_total)+'\n')
+    with open('OUT_COUNT', 'wt') as outf:
+        outf.write(str(n_kept)+'\n')
+    with open('DROP_COUNT', 'wt') as outf:
+        outf.write(str(n_dropped)+'\n')
+    CODE
+    >>>
+    runtime {
+        docker: docker
+        memory: "2 GB"
+        cpu :   2
+        disks:  "local-disk 300 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+    output {
+        File   filtered_fasta    = out_fname
+        Int    sequences_in      = read_int("IN_COUNT")
+        Int    sequences_dropped = read_int("DROP_COUNT")
+        Int    sequences_out     = read_int("OUT_COUNT")
     }
 }
 
@@ -285,12 +412,20 @@ task mafft_one_chr {
         Boolean  large = false
         Boolean  memsavetree = false
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.12.0"
-        Int      mem_size = 60
+        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.13.2"
+        Int      mem_size = 250
         Int      cpus = 32
     }
     command {
         set -e
+
+        # decompress sequences if necessary
+        GENOMES="~{sequences}"
+        if [[ $GENOMES == *.gz ]]; then
+            gzip -dc $GENOMES > uncompressed.fasta
+            GENOMES="uncompressed.fasta"
+        fi
+
         touch args.txt
 
         # boolean options
@@ -302,10 +437,10 @@ task mafft_one_chr {
         # see https://mafft.cbrc.jp/alignment/software/closelyrelatedviralgenomes.html
         if [ -f "~{ref_fasta}" ]; then
             echo --addfragments >> args.txt
-            echo "~{sequences}" >> args.txt
+            echo "$GENOMES" >> args.txt
             echo "~{ref_fasta}" >> args.txt
         else
-            echo "~{sequences}" >> args.txt
+            echo "$GENOMES" >> args.txt
         fi
 
         # mafft align to reference in "closely related" mode
@@ -338,7 +473,7 @@ task mafft_one_chr {
         cpu :   cpus
         disks:  "local-disk 375 LOCAL"
         preemptible: 0
-        dx_instance_type: "mem1_ssd1_v2_x36"
+        dx_instance_type: "mem3_ssd1_v2_x36"
     }
     output {
         File   aligned_sequences = "~{basename}_aligned.fasta"
@@ -536,7 +671,7 @@ task refine_augur_tree {
         Int?     gen_per_year
         Float?   clock_rate
         Float?   clock_std_dev
-        Boolean  keep_root = false
+        Boolean  keep_root = true
         String?  root
         Boolean? covariance
         Boolean  keep_polytomies = false
@@ -546,7 +681,7 @@ task refine_augur_tree {
         String?  branch_length_inference
         String?  coalescent
         Int?     clock_filter_iqd = 4
-        String?  divergence_units
+        String?  divergence_units = "mutations"
         File?    vcf_reference
 
         String   docker = "nextstrain/base:build-20201214T004216Z"
