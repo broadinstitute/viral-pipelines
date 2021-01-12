@@ -28,7 +28,7 @@ workflow demux_deplete {
         call demux.illumina_demux as illumina_demux {
             input:
                 flowcell_tgz = flowcell_tgz,
-                lane = lane_sheet.left,
+                lane = lane_sheet.left + 1,
                 samplesheet = lane_sheet.right
         }
     }
