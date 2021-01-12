@@ -369,7 +369,7 @@ task sra_meta_prep {
     for libfile in library_metadata:
       with open(libfile, 'rt') as inf:
         for row in csv.DictReader(inf, delimiter='\t'):
-          lib = util.file.sanitize_id_for_sam_rname("{}.l{}".format(row['sample'], row['library_id_per_sample']))
+          lib = util.file.string_to_file_name("{}.l{}".format(row['sample'], row['library_id_per_sample']))
           biosample = sample_to_biosample.get(row['sample'],'')
           bams = lib_to_bams.get(lib,[])
           print("debug: sample={} lib={} biosample={}, bams={}".format(row['sample'], lib, biosample, bams))
