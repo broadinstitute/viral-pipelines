@@ -354,6 +354,7 @@ task sra_meta_prep {
       lib = '.'.join(bam_parts[:-4])
       lib_to_bams.setdefault(lib, [])
       lib_to_bams[lib].append(bam)
+      print("debug: registering lib={} bam={}".format(lib, bam))
     with open('~{biosample_map}', 'rt') as inf:
       for row in csv.DictReader(inf, delimiter='\t'):
         sample_to_biosample[row['sample_name']] = row['accession']
@@ -385,6 +386,7 @@ task sra_meta_prep {
               'filetype': 'bam',
               'files': lib_to_bams[lib],
             })
+    assert outrows, "failed to prepare any metadata -- output is empty!"
 
     # find library with the most files and add col headers
     n_cols = max(len(row['files']) for row in outrows)

@@ -32,7 +32,7 @@ task group_bams_by_sample {
     CODE
   >>>
   output {
-    Array[Array[String]] grouped_bam_filepaths = read_tsv('grouped_bams')
+    Array[Array[String]+] grouped_bam_filepaths = read_tsv('grouped_bams')
     Array[String]        sample_names = read_lines('sample_names')
   }
   runtime {

@@ -8,25 +8,25 @@ workflow sarscov2_lineages {
     }
 
     input {
-    	File genome_fasta
+        File genome_fasta
     }
 
     call sarscov2.nextclade_one_sample {
-    	input:
-    		genome_fasta = genome_fasta
+        input:
+            genome_fasta = genome_fasta
     }
 
     call sarscov2.pangolin_one_sample {
-    	input:
-    		genome_fasta = genome_fasta
+        input:
+            genome_fasta = genome_fasta
     }
 
     output {
-    	String nextclade_clade = nextclade_one_sample.nextclade_clade
-    	File   nextclade_tsv   = nextclade_one_sample.nextclade_tsv
-    	String nextclade_aa_subs = nextclade_one_sample.aa_subs_csv
-    	String nextclade_aa_dels = nextclade_one_sample.aa_dels_csv
-    	String pangolin_clade  = pangolin_one_sample.pangolin_clade
-    	File   pangolin_csv    = pangolin_one_sample.pangolin_csv
+        String nextclade_clade = nextclade_one_sample.nextclade_clade
+        File   nextclade_tsv   = nextclade_one_sample.nextclade_tsv
+        String nextclade_aa_subs = nextclade_one_sample.aa_subs_csv
+        String nextclade_aa_dels = nextclade_one_sample.aa_dels_csv
+        String pangolin_clade  = pangolin_one_sample.pangolin_clade
+        File   pangolin_csv    = pangolin_one_sample.pangolin_csv
     }
 }
