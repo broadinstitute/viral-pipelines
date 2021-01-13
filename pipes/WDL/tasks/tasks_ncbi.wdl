@@ -364,7 +364,7 @@ task sra_meta_prep {
 
     # set up SRA metadata table
     outrows = []
-    out_headers = ('biosample_accession', 'library_ID', 'title', 'library_strategy', 'library_source', 'library_selection', 'library_layout', 'platform', 'instrument_model', 'design_description', 'filetype', 'assembly', 'filename')
+    out_headers = ['biosample_accession', 'library_ID', 'title', 'library_strategy', 'library_source', 'library_selection', 'library_layout', 'platform', 'instrument_model', 'design_description', 'filetype', 'assembly', 'filename']
 
     # iterate through library_metadata entries and produce an output row for each entry
     for libfile in library_metadata:
