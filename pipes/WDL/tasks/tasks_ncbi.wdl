@@ -205,7 +205,7 @@ task structured_comments {
 
     File?   filter_to_ids
 
-    String  docker="quay.io/broadinstitute/viral-core:2.1.14"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.15"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -255,7 +255,7 @@ task rename_fasta_header {
 
     String  out_basename = basename(genome_fasta, ".fasta")
 
-    String  docker="quay.io/broadinstitute/viral-core:2.1.14"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.15"
   }
   command {
     set -e
@@ -310,7 +310,7 @@ task sra_meta_prep {
     Boolean        paired
 
     String         out_name = "sra_metadata.tsv"
-    String  docker="quay.io/broadinstitute/viral-core:2.1.14"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.15"
   }
   parameter_meta {
     cleaned_bam_filepaths: {
@@ -364,7 +364,7 @@ task sra_meta_prep {
 
     # set up SRA metadata table
     outrows = []
-    out_headers = ('biosample_accession', 'library_ID', 'title', 'library_strategy', 'library_source', 'library_selection', 'library_layout', 'platform', 'instrument_model', 'design_description', 'filetype', 'assembly', 'filename')
+    out_headers = ['biosample_accession', 'library_ID', 'title', 'library_strategy', 'library_source', 'library_selection', 'library_layout', 'platform', 'instrument_model', 'design_description', 'filetype', 'assembly', 'filename']
 
     # iterate through library_metadata entries and produce an output row for each entry
     for libfile in library_metadata:

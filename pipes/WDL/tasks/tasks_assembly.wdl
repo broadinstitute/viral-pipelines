@@ -167,7 +167,7 @@ task ivar_trim {
       Int?    min_quality=1
 
       Int?    machine_mem_gb
-      String  docker="andersenlabapps/ivar:1.2.2"
+      String  docker="andersenlabapps/ivar:1.3"
     }
 
     String  bam_basename=basename(aligned_bam, ".bam")
@@ -226,7 +226,7 @@ task align_reads {
     Boolean? skip_mark_dupes=false
 
     Int?     machine_mem_gb
-    String   docker="quay.io/broadinstitute/viral-core:2.1.14"
+    String   docker="quay.io/broadinstitute/viral-core:2.1.15"
 
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
   }
@@ -636,7 +636,7 @@ task run_discordance {
       String   out_basename = "run"
       Int      min_coverage=4
 
-      String   docker="quay.io/broadinstitute/viral-core:2.1.14"
+      String   docker="quay.io/broadinstitute/viral-core:2.1.15"
     }
 
     command {
