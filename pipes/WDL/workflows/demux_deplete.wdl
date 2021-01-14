@@ -71,6 +71,7 @@ workflow demux_deplete {
             input:
                 cleaned_bam_filepaths = deplete.cleaned_bam,
                 biosample_map = select_first([biosample_map]),
+                library_metadata = sheets,
                 out_name = "sra_metadata-~{basename(flowcell_tgz, '.tar.gz')}.tsv"
         }
     }
