@@ -63,7 +63,7 @@ task get_sample_meta {
 
     # lookup table files to dicts
     sanitized_to_meta = {}
-    meta_cols = ('sample',amplicon_set','control')
+    meta_cols = ('sample','amplicon_set','control')
     for libfile in library_metadata:
       with open(libfile, 'rt') as inf:
         for row in csv.DictReader(inf, delimiter='\t'):
@@ -81,9 +81,6 @@ task get_sample_meta {
     CODE
   >>>
   output {
-    Array[Array[String]+] grouped_bam_filepaths = read_tsv('grouped_bams')
-    Array[String]         sample_names = read_lines('sample_names')
-    Array[String]         sample_names_sanitary = read_lines('sample_names_sanitary')
     Map[String,String] original_names = read_map('sample')
     Map[String,String] amplicon_set = read_map('amplicon_set')
     Map[String,String] control = read_map('control')
