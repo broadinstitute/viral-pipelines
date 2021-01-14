@@ -54,7 +54,7 @@ workflow sarscov2_illumina_full {
         Array[File]+  samplesheets  ## must be in lane order!
 
         File          reference_fasta
-        File          amplicon_bed_prefix
+        String        amplicon_bed_prefix
 
         File          biosample_attributes
         File?         sample_rename_map
@@ -64,7 +64,6 @@ workflow sarscov2_illumina_full {
         String        gisaid_prefix = 'hCoV-19/'
 
         File          spikein_db
-        File          trim_clip_db
         Array[File]?  bmtaggerDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
         Array[File]?  blastDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
         Array[File]?  bwaDbs
