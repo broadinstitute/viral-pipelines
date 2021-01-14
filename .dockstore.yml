@@ -180,6 +180,11 @@ workflows:
    primaryDescriptorPath: /pipes/WDL/workflows/mafft_and_snp.wdl
    testParameterFiles:
     - empty.json
+ - name: mafft_and_snp_annotated
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/mafft_and_snp_annotated.wdl
+   testParameterFiles:
+    - empty.json
  - name: mafft_and_trim
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/mafft_and_trim.wdl
