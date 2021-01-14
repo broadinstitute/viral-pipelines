@@ -3,7 +3,7 @@ version 1.0
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_intrahost.wdl" as intrahost
 
-workflow mafft_and_snp {
+workflow mafft_and_snp_annotated {
     meta {
         description: "Align assemblies with mafft and find SNPs with snp-sites."
         author: "Broad Viral Genomics"
