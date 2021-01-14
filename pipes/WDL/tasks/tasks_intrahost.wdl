@@ -11,7 +11,7 @@ task isnvs_per_sample {
     Boolean removeDoublyMappedReads=true
 
     Int?    machine_mem_gb
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.13.2"
+    String  docker="quay.io/broadinstitute/viral-phylo:2.1.16.0"
 
     String  sample_name = basename(basename(basename(mapped_bam, ".bam"), ".all"), ".mapped")
   }
@@ -52,7 +52,7 @@ task isnvs_vcf {
     Boolean        naiveFilter=false
 
     Int?           machine_mem_gb
-    String         docker="quay.io/broadinstitute/viral-phylo:2.1.13.2"
+    String         docker="quay.io/broadinstitute/viral-phylo:2.1.16.0"
   }
 
   parameter_meta {
