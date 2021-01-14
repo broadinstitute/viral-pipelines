@@ -125,7 +125,7 @@ task annotate_vcf_snpeff {
     String?        emailAddress
 
     Int?           machine_mem_gb
-    String         docker="quay.io/broadinstitute/viral-phylo:2.1.13.2"
+    String         docker="quay.io/broadinstitute/viral-phylo:2.1.16.0"
 
     String         output_basename = basename(basename(in_vcf, ".gz"), ".vcf")
   }
@@ -150,32 +150,53 @@ task annotate_vcf_snpeff {
     fi
     echo "snpRefAccessions: $snpRefAccessions"
 
+    vcf_to_use=""
     if (file "${in_vcf}" | grep -q "gzip" ) ; then
       echo "${in_vcf} is already compressed"
+      vcf_to_use="${in_vcf}"
     else
       echo "${in_vcf} is not compressed; gzipping..."
       bgzip "${in_vcf}"
+      vcf_to_use="${in_vcf}.gz"
     fi
+
+    # renames the seq id using the first sequence in the alignment
+    ref_name=$(head -n1 "~{ref_fasta}" | sed -E 's/^>([^[:space:]]+).*$/\1/g')
+    ref_name_no_version=$(head -n1 "~{ref_fasta}" | sed -E 's/^>([^[:space:]\.]+).*$/\1/g')
+    # copy the input or just created gzipped vcf file
+    cp "$vcf_to_use" "temp.vcf.gz"
+    # ensure uncompressed
+    bgzip -d "temp.vcf.gz"
+    # rename chr field (first col) in vcf
+    cat "temp.vcf" | sed "s/^1/$ref_name_no_version/" > "temp2.vcf"
+    
+    # output the vcf, removing the reference sequence if present as a sample name
+    bgzip "temp2.vcf"
+    tabix -p vcf "temp2.vcf.gz"
+    bcftools index "temp2.vcf.gz"
+    bcftools view -s "^$ref_name" "temp2.vcf.gz" > "temp3.vcf"
+    rm "temp2.vcf.gz"
+    vcf_to_use="temp3.vcf"
+
+    # compress vcf
+    bgzip -c "$vcf_to_use" > "$vcf_to_use.gz"
+    vcf_to_use="$vcf_to_use.gz"
+
+    # index vcf
     echo "Creating vcf index"
-    tabix -p vcf "${in_vcf}"
-        
+    bcftools index "$vcf_to_use"
+    tabix -p vcf "$vcf_to_use"
+    
     interhost.py snpEff \
-        "${in_vcf}" \
+        "$vcf_to_use" \
         $snpRefAccessions \
         "${output_basename}.annot.vcf.gz" \
         ${'--emailAddress=' + emailAddress}
-
-    intrahost.py iSNV_table \
-        "${output_basename}.annot.vcf.gz" \
-        "${output_basename}.annot.txt.gz"
-
-    tabix -p vcf "${output_basename}.annot.vcf.gz"
   }
 
   output {
     File        annot_vcf_gz      = "${output_basename}.annot.vcf.gz"
     File        annot_vcf_gz_tbi  = "${output_basename}.annot.vcf.gz.tbi"
-    File        annot_txt_gz      = "${output_basename}.annot.txt.gz"
     String      viralngs_version  = read_string("VERSION")
   }
   runtime {
