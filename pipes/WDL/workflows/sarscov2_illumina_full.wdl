@@ -108,7 +108,8 @@ workflow sarscov2_illumina_full {
             cleaned_bam_filepaths = deplete.cleaned_bam,
             biosample_map = biosample_attributes,
             library_metadata = samplesheet_rename_ids.new_sheet,
-            out_name = "sra_metadata-~{basename(flowcell_tgz, '.tar.gz')}.tsv"
+            out_name = "sra_metadata-~{basename(flowcell_tgz, '.tar.gz')}.tsv",
+            platform = "ILLUMINA"
     }
 
     #### summary stats
