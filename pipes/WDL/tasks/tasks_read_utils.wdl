@@ -33,7 +33,7 @@ task group_bams_by_sample {
   >>>
   output {
     Array[Array[String]+] grouped_bam_filepaths = read_tsv('grouped_bams')
-    Array[String]        sample_names = read_lines('sample_names')
+    Array[String]         sample_names = read_lines('sample_names')
   }
   runtime {
     docker: "python"
@@ -43,6 +43,60 @@ task group_bams_by_sample {
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
+
+task get_sample_meta {
+  input {
+    Array[String]  sanitized_sample_names
+    Array[File]    samplesheets_extended
+
+    String  docker="quay.io/broadinstitute/viral-core:2.1.16"
+  }
+  command <<<
+    python3 << CODE
+    import os.path
+    import csv
+    import util.file
+
+    # WDL arrays to python arrays
+    sanitized_samples = '~{sep="*" sanitized_sample_names}'.split('*')
+    library_metadata = '~{sep="*" samplesheets_extended}'.split('*')
+
+    # lookup table files to dicts
+    sanitized_to_meta = {}
+    meta_cols = ('sample',amplicon_set','control')
+    for libfile in library_metadata:
+      with open(libfile, 'rt') as inf:
+        for row in csv.DictReader(inf, delimiter='\t'):
+          sanitized = util.file.string_to_file_name(row['sample'])
+          sanitized_to_meta.setdefault(sanitized,{})
+          for c in meta_cols:
+            if row.get(c):
+              sanitized_to_meta[sanitized][c] = row[c]
+
+    # write outputs
+    for col in meta_cols:
+      with open(col, 'wt') as outf:
+        for sanitized in sanitized_samples:
+          outf.write('{}\t{}\n'.format(sanitized, sanitized_to_meta.get(sanitized,{}).get(col,'')))
+    CODE
+  >>>
+  output {
+    Array[Array[String]+] grouped_bam_filepaths = read_tsv('grouped_bams')
+    Array[String]         sample_names = read_lines('sample_names')
+    Array[String]         sample_names_sanitary = read_lines('sample_names_sanitary')
+    Map[String,String] original_names = read_map('sample')
+    Map[String,String] amplicon_set = read_map('amplicon_set')
+    Map[String,String] control = read_map('control')
+  }
+  runtime {
+    docker: docker
+    memory: "1 GB"
+    cpu: 1
+    disks: "local-disk 50 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 
 task merge_and_reheader_bams {
     meta {

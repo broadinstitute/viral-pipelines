@@ -41,7 +41,7 @@ task merge_tarballs {
 task samplesheet_rename_ids {
   input {
     File   old_sheet
-    File   rename_map
+    File?  rename_map
     String old_id_col = 'internal_id'
     String new_id_col = 'external_id'
   }
@@ -52,7 +52,7 @@ task samplesheet_rename_ids {
 
     # read in the rename_map file
     old_to_new = {}
-    with open('~{rename_map}', 'rt') as inf:
+    with open('~{default="/dev/null" rename_map}', 'rt') as inf:
       for row in csv.DictReader(inf, delimiter='\t'):
         old_to_new[row['~{old_id_col}']] = row['~{new_id_col}']
 
@@ -102,6 +102,12 @@ task illumina_demux {
 
     Int?    machine_mem_gb
     String  docker="quay.io/broadinstitute/viral-core:2.1.16"
+  }
+  parameter_meta {
+      flowcell_tgz: {
+          description: "Illumina BCL directory compressed as tarball. Must contain RunInfo.xml (unless overridden by runinfo), SampleSheet.csv (unless overridden by samplesheet), RTAComplete.txt, and Data/Intensities/BaseCalls/*",
+          patterns: ["*.tar.gz", ".tar.zst", ".tar.bz2", ".tar.lz4", ".tgz"]
+      }
   }
 
   command {

@@ -248,6 +248,34 @@ task structured_comments {
   }
 }
 
+task prefix_fasta_header {
+  input {
+    File    genome_fasta
+    String  prefix
+  }
+  String  out_basename = basename(genome_fasta, ".fasta")
+  command <<<
+    set -e
+    python3 <<CODE
+    with open('~{genome_fasta}', 'rt') as inf:
+      with open('~{out_basename}.fasta', 'wt') as outf:
+        for line in inf:
+          if line.startswith('>'):
+            line = ">{}{}\n".format('~{prefix}', line.rstrip()[1:])
+          outf.write(line)
+    CODE
+  >>>
+  output {
+    File renamed_fasta = "~{out_basename}.fasta"
+  }
+  runtime {
+    docker: "python"
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task rename_fasta_header {
   input {
     File    genome_fasta
@@ -453,7 +481,7 @@ task biosample_to_genbank {
     File biosample_map                 = "${base}.biosample.map.txt"
   }
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"

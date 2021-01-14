@@ -20,6 +20,19 @@ workflow sarscov2_illumina_full {
     }
 
     parameter_meta {
+        flowcell_tgz: {
+            description: "Illumina BCL directory compressed as tarball. Must contain RunInfo.xml, SampleSheet.csv, RTAComplete.txt, and Data/Intensities/BaseCalls/*",
+            patterns: ["*.tar.gz", ".tar.zst", ".tar.bz2", ".tar.lz4", ".tgz"]
+        }
+        samplesheets: {
+            description: "Custom formatted 'extended' format tsv samplesheets that will override any SampleSheet.csv in the illumina BCL directory. Must supply one file per lane of the flowcell, and must provide them in lane order. Required tsv column headings are: sample, library_id_per_sample, barcode_1, barcode_2 (if paired reads, omit if single-end), library_strategy, library_source, library_selection, design_description. 'sample' must correspond to a biological sample. 'sample' x 'library_id_per_sample' must be unique within a samplesheet and correspond to independent libraries from the same original sample. barcode_1 and barcode_2 must correspond to the actual index sequence. Remaining columns must follow strict ontology: see 3rd tab of https://www.ncbi.nlm.nih.gov/core/assets/sra/files/SRA_metadata_acc_example.xlsx for controlled vocabulary and term definitions.",
+            patterns: ["*.txt", "*.tsv"]
+        }
+        sample_rename_map: {
+            description: "If 'samples' need to be renamed, provide a two-column tsv that contains at least the following columns: internal_id, external_id. All samples will be renamed prior to analysis. Any samples described in the samplesheets that are not present in sample_rename_map will be unaltered. If this is omitted, no samples will be renamed.",
+            patterns: ["*.txt", "*.tsv"]
+        }
+
         reference_fasta: {
             description: "Reference genome to align reads to.",
             patterns: ["*.fasta"]
@@ -30,24 +43,25 @@ workflow sarscov2_illumina_full {
         }
 
         biosample_attributes: {
-          description: "A post-submission attributes file from NCBI BioSample, which is available at https://submit.ncbi.nlm.nih.gov/subs/ and clicking on 'Download attributes file with BioSample accessions'.",
+          description: "A post-submission attributes file from NCBI BioSample, which is available at https://submit.ncbi.nlm.nih.gov/subs/ and clicking on 'Download attributes file with BioSample accessions'. The 'sample_name' column must match the external_ids used in sample_rename_map (or internal ids if sample_rename_map is omitted).",
           patterns: ["*.txt", "*.tsv"]
         }
 
     }
 
     input {
-        File         flowcell_tgz
-        Array[File]+ samplesheets  ## must be in lane order!
+        File          flowcell_tgz
+        Array[File]+  samplesheets  ## must be in lane order!
 
         File          reference_fasta
-        File          ampseq_trim_coords_bed
+        File          amplicon_bed_prefix
 
         File          biosample_attributes
-        File?         rename_map
+        File?         sample_rename_map
 
         Int           taxid = 2697049
         Int           min_genome_bases = 20000
+        String        gisaid_prefix = 'hCoV-19/'
 
         File          spikein_db
         File          trim_clip_db
@@ -56,13 +70,18 @@ workflow sarscov2_illumina_full {
         Array[File]?  bwaDbs
     }
 
-    #### demux each lane
+    #### demux each lane (rename samples if requested)
     scatter(lane_sheet in zip(range(length(samplesheets)), samplesheets)) {
+        call demux.samplesheet_rename_ids {
+            input:
+                old_sheet = lane_sheet.right,
+                rename_map = sample_rename_map
+        }
         call demux.illumina_demux as illumina_demux {
             input:
                 flowcell_tgz = flowcell_tgz,
                 lane = lane_sheet.left + 1,
-                samplesheet = lane_sheet.right
+                samplesheet = samplesheet_rename_ids.new_sheet
         }
     }
 
@@ -80,12 +99,16 @@ workflow sarscov2_illumina_full {
                 blastDbs = blastDbs,
                 bwaDbs = bwaDbs
         }
+
+        # TO DO: flag all libraries where highest spike-in is not what was expected in extended samplesheet
     }
 
     #### SRA submission prep
     call ncbi.sra_meta_prep {
         input:
             cleaned_bam_filepaths = deplete.cleaned_bam,
+            biosample_map = biosample_attributes,
+            library_metadata = samplesheet_rename_ids.new_sheet,
             out_name = "sra_metadata-~{basename(flowcell_tgz, '.tar.gz')}.tsv"
     }
 
@@ -105,27 +128,45 @@ workflow sarscov2_illumina_full {
             counts_txt = spikein.report
     }
 
-    ### assembly and analyses per biosample
+    ### gather data by biosample
     call read_utils.group_bams_by_sample {
         input:
             bam_filepaths = deplete.cleaned_bam
     }
+    call read_utils.get_sample_meta {
+        input:
+            sanitized_sample_names = group_bams_by_sample.sample_names,
+            samplesheets_extended = samplesheet_rename_ids.new_sheet
+    }
 
+    ### assembly and analyses per biosample
     scatter(name_reads in zip(group_bams_by_sample.sample_names, group_bams_by_sample.grouped_bam_filepaths)) {
         # assemble genome
+        if (get_sample_meta.amplicon_set[name_reads.left] != "") {
+            String trim_coords_bed = amplicon_bed_prefix + get_sample_meta.amplicon_set[name_reads.left] + ".bed"
+        }
         call assemble_refbased.assemble_refbased {
             input:
                 reads_unmapped_bams = name_reads.right,
                 reference_fasta = reference_fasta,
-                sample_name = name_reads.left
-                # TO DO: lookup skip_mark_dupes and trim_coords_bed from metadata
+                sample_name = name_reads.left,
+                aligner = "minimap2",
+                skip_mark_dupes = (get_sample_meta.amplicon_set[name_reads.left] != ""),
+                trim_coords_bed = trim_coords_bed,
+                min_coverage = if (get_sample_meta.amplicon_set[name_reads.left] != "") then 20 else 3
         }
 
         # for genomes that somewhat assemble
         if (assemble_refbased.assembly_length_unambiguous >= min_genome_bases) {
-            File passing_assemblies = assemble_refbased.assembly_fasta
-            String passing_assembly_ids = name_reads.left
-            Array[String] assembly_meta = [name_reads.left, assemble_refbased.assembly_mean_coverage]
+            call ncbi.rename_fasta_header {
+              input:
+                genome_fasta = assemble_refbased.assembly_fasta,
+                new_name = get_sample_meta.original_names[name_reads.left]
+            }
+
+            File passing_assemblies = rename_fasta_header.renamed_fasta
+            String passing_assembly_ids = get_sample_meta.original_names[name_reads.left]
+            Array[String] assembly_meta = [get_sample_meta.original_names[name_reads.left], assemble_refbased.assembly_mean_coverage]
 
             # lineage assignment
             call sarscov2.nextclade_one_sample {
@@ -182,6 +223,13 @@ workflow sarscov2_illumina_full {
         structured_comment_table = structured_comments.structured_comment_table
     }
 
+    ### prep gisaid submission
+    call ncbi.prefix_fasta_header as prefix_gisaid {
+      input:
+        genome_fasta = submit_genomes.combined,
+        prefix = gisaid_prefix
+    }
+
     output {
         Array[File] raw_reads_unaligned_bams     = flatten(illumina_demux.raw_reads_unaligned_bams)
         Array[File] cleaned_reads_unaligned_bams = deplete.cleaned_bam
@@ -216,6 +264,8 @@ workflow sarscov2_illumina_full {
         File submit_ready   = package_genbank_ftp_submission.submit_ready
         Array[File] vadr_outputs = select_all(vadr.outputs_tgz)
         File genbank_source_table = biosample_to_genbank.genbank_source_modifier_table
+
+        File gisaid_fasta = prefix_gisaid.renamed_fasta
 
         Array[String] assembled_ids = select_all(passing_assembly_ids)
         Array[String] submittable_ids = select_all(submittable_id)
