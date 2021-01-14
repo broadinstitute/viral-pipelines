@@ -17,11 +17,27 @@ workflow demux_deplete {
         File         flowcell_tgz
         Array[File]+ samplesheets  ## must be in lane order!
 
+        File?        sample_rename_map
+        File?        biosample_map
+
         File spikein_db
         Array[File]? bmtaggerDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
         Array[File]? blastDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
         Array[File]? bwaDbs
     }
+
+    #### rename samples
+    if(defined(sample_rename_map)) {
+        scatter(samplesheet in samplesheets) {
+            call demux.samplesheet_rename_ids {
+                input:
+                    old_sheet = samplesheet,
+                    rename_map = select_first([sample_rename_map])
+            }
+        }
+        Array[File]+ renamed_sheets = samplesheet_rename_ids.new_sheet
+    }
+    Array[File]+ sheets = select_first([renamed_sheets, samplesheets])
 
     #### demux each lane
     scatter(lane_sheet in zip(range(length(samplesheets)), samplesheets)) {
@@ -50,10 +66,13 @@ workflow demux_deplete {
     }
 
     #### SRA submission prep
-    call ncbi.sra_meta_prep {
-        input:
-            cleaned_bam_filepaths = deplete.cleaned_bam,
-            out_name = "sra_metadata-~{basename(flowcell_tgz, '.tar.gz')}.tsv"
+    if(defined(biosample_map)) {
+        call ncbi.sra_meta_prep {
+            input:
+                cleaned_bam_filepaths = deplete.cleaned_bam,
+                biosample_map = select_first([biosample_map]),
+                out_name = "sra_metadata-~{basename(flowcell_tgz, '.tar.gz')}.tsv"
+        }
     }
 
     #### summary stats
@@ -79,7 +98,7 @@ workflow demux_deplete {
         Array[File] cleaned_reads_unaligned_bams = deplete.cleaned_bam
         Array[Int]  read_counts_depleted = deplete.depletion_read_count_post
 
-        File        sra_metadata          = sra_meta_prep.sra_metadata
+        File?       sra_metadata          = sra_meta_prep.sra_metadata
 
         Array[File] demux_metrics         = illumina_demux.metrics
         Array[File] demux_commonBarcodes  = illumina_demux.commonBarcodes

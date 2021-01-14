@@ -38,6 +38,47 @@ task merge_tarballs {
   }
 }
 
+task samplesheet_rename_ids {
+  input {
+    File   old_sheet
+    File   rename_map
+    String old_id_col = 'internal_id'
+    String new_id_col = 'external_id'
+  }
+  String new_base = basename(old_sheet, '.txt')
+  command <<<
+    python3 << CODE
+    import csv
+
+    # read in the rename_map file
+    old_to_new = {}
+    with open('~{rename_map}', 'rt') as inf:
+      for row in csv.DictReader(inf, delimiter='\t'):
+        old_to_new[row['~{old_id_col}']] = row['~{new_id_col}']
+
+    # change all ids in the sample column to new ids
+    with open('~{old_sheet}', 'rt') as inf:
+      reader = csv.DictReader(inf, delimiter='\t')
+      with open('~{new_base}.renamed.txt', 'w', newline='') as outf:
+        writer = csv.DictWriter(outf, reader.fieldnames, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
+        writer.writeheader()
+        for row in reader:
+          row['sample'] = old_to_new.get(row['sample'], row['sample'])
+          writer.writerow(row)
+    CODE
+  >>>
+  output {
+    File new_sheet = '~{new_base}.renamed.txt'
+  }
+  runtime {
+    docker: "python"
+    memory: "1 GB"
+    cpu: 1
+    disks: "local-disk 20 GB"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task illumina_demux {
   input {
     File    flowcell_tgz
