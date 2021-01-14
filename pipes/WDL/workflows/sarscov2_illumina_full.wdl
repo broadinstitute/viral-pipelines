@@ -138,8 +138,8 @@ workflow sarscov2_illumina_full {
             sanitized_sample_names = group_bams_by_sample.sample_names,
             samplesheets_extended = samplesheet_rename_ids.new_sheet
     }
-    Map[String,String] original_names = read_map(get_sample_meta.original_names)
-    Map[String,String] amplicon_set = read_map(get_sample_meta.amplicon_set)
+    Map[String,String] original_names = read_json(get_sample_meta.original_names)
+    Map[String,String] amplicon_set = read_json(get_sample_meta.amplicon_set)
 
     ### assembly and analyses per biosample
     scatter(name_reads in zip(group_bams_by_sample.sample_names, group_bams_by_sample.grouped_bam_filepaths)) {

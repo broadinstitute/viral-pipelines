@@ -55,29 +55,35 @@ task get_sample_meta {
     python3 << CODE
     import os.path
     import csv
+    import json
     import util.file
 
     # WDL arrays to python arrays
     sanitized_samples = '~{sep="*" sanitized_sample_names}'.split('*')
     library_metadata = '~{sep="*" samplesheets_extended}'.split('*')
+    sanitized_sample_set = set(sanitized_samples)
 
     # lookup table files to dicts
     sanitized_to_meta = {}
     meta_cols = ('sample','amplicon_set','control')
+    for sanitized in sanitized_sample_set:
+      sanitized_to_meta[sanitized] = {}
+      for c in meta_cols:
+        sanitized_to_meta[sanitized][c] = ''
     for libfile in library_metadata:
       with open(libfile, 'rt') as inf:
         for row in csv.DictReader(inf, delimiter='\t'):
           sanitized = util.file.string_to_file_name(row['sample'])
-          sanitized_to_meta.setdefault(sanitized,{})
-          for c in meta_cols:
-            if row.get(c):
-              sanitized_to_meta[sanitized][c] = row[c]
+          if sanitized in sanitized_sample_set:
+            for c in meta_cols:
+              if row.get(c):
+                sanitized_to_meta[sanitized][c] = row[c]
 
     # write outputs
     for col in meta_cols:
       with open(col, 'wt') as outf:
-        for sanitized in sanitized_samples:
-          outf.write('{}\t{}\n'.format(sanitized, sanitized_to_meta.get(sanitized,{}).get(col,'')))
+        out_map = dict((s,sanitized_to_meta[s][col]) for s in sanitized_sample_set)
+        json.dump(out_map, outf, indent=2)
     CODE
   >>>
   output {
