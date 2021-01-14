@@ -33,6 +33,5 @@ workflow merge_vcfs_and_annotate {
         File merged_vcf_gz_tbi       = merge_vcfs.merged_vcf_gz_tbi
         File merged_annot_vcf_gz     = annotate_vcf.annot_vcf_gz
         File merged_annot_vcf_gz_tbi = annotate_vcf.annot_vcf_gz_tbi
-        File merged_annot_txt_gz     = annotate_vcf.annot_txt_gz
     }
 }
