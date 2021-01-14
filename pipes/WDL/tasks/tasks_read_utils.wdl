@@ -81,9 +81,9 @@ task get_sample_meta {
     CODE
   >>>
   output {
-    Map[String,String] original_names = read_map('sample')
-    Map[String,String] amplicon_set = read_map('amplicon_set')
-    Map[String,String] control = read_map('control')
+    File original_names = 'sample'
+    File amplicon_set = 'amplicon_set'
+    File control = 'control'
   }
   runtime {
     docker: docker

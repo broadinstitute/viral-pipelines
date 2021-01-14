@@ -138,12 +138,14 @@ workflow sarscov2_illumina_full {
             sanitized_sample_names = group_bams_by_sample.sample_names,
             samplesheets_extended = samplesheet_rename_ids.new_sheet
     }
+    Map[String,String] original_names = read_map(get_sample_meta.original_names)
+    Map[String,String] amplicon_set = read_map(get_sample_meta.amplicon_set)
 
     ### assembly and analyses per biosample
     scatter(name_reads in zip(group_bams_by_sample.sample_names, group_bams_by_sample.grouped_bam_filepaths)) {
         # assemble genome
-        if (get_sample_meta.amplicon_set[name_reads.left] != "") {
-            String trim_coords_bed = amplicon_bed_prefix + get_sample_meta.amplicon_set[name_reads.left] + ".bed"
+        if (amplicon_set[name_reads.left] != "") {
+            String trim_coords_bed = amplicon_bed_prefix + amplicon_set[name_reads.left] + ".bed"
         }
         call assemble_refbased.assemble_refbased {
             input:
@@ -151,9 +153,9 @@ workflow sarscov2_illumina_full {
                 reference_fasta = reference_fasta,
                 sample_name = name_reads.left,
                 aligner = "minimap2",
-                skip_mark_dupes = (get_sample_meta.amplicon_set[name_reads.left] != ""),
+                skip_mark_dupes = (amplicon_set[name_reads.left] != ""),
                 trim_coords_bed = trim_coords_bed,
-                min_coverage = if (get_sample_meta.amplicon_set[name_reads.left] != "") then 20 else 3
+                min_coverage = if (amplicon_set[name_reads.left] != "") then 20 else 3
         }
 
         # for genomes that somewhat assemble
@@ -161,12 +163,12 @@ workflow sarscov2_illumina_full {
             call ncbi.rename_fasta_header {
               input:
                 genome_fasta = assemble_refbased.assembly_fasta,
-                new_name = get_sample_meta.original_names[name_reads.left]
+                new_name = original_names[name_reads.left]
             }
 
             File passing_assemblies = rename_fasta_header.renamed_fasta
-            String passing_assembly_ids = get_sample_meta.original_names[name_reads.left]
-            Array[String] assembly_meta = [get_sample_meta.original_names[name_reads.left], assemble_refbased.assembly_mean_coverage]
+            String passing_assembly_ids = original_names[name_reads.left]
+            Array[String] assembly_meta = [original_names[name_reads.left], assemble_refbased.assembly_mean_coverage]
 
             # lineage assignment
             call sarscov2.nextclade_one_sample {
