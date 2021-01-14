@@ -59,7 +59,7 @@ workflow assemble_refbased {
         String          aligner="minimap2"
         File?           novocraft_license
         Int             min_coverage=3
-        Boolean?        skip_mark_dupes=false
+        Boolean         skip_mark_dupes=false
         File?           trim_coords_bed
     }
 
