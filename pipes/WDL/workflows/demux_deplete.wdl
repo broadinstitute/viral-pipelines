@@ -40,7 +40,7 @@ workflow demux_deplete {
     Array[File]+ sheets = select_first([renamed_sheets, samplesheets])
 
     #### demux each lane
-    scatter(lane_sheet in zip(range(length(samplesheets)), samplesheets)) {
+    scatter(lane_sheet in zip(range(length(sheets)), sheets)) {
         call demux.illumina_demux as illumina_demux {
             input:
                 flowcell_tgz = flowcell_tgz,
