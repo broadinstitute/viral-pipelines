@@ -611,7 +611,7 @@ task package_genbank_ftp_submission {
     String spuid_namespace
     String account_name
 
-    String  docker="quay.io/broadinstitute/viral-baseimage:0.1.19"
+    String  docker="quay.io/broadinstitute/viral-baseimage:0.1.20"
   }
   command <<<
     set -e
