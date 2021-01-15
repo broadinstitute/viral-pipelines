@@ -1,5 +1,27 @@
 version 1.0
 
+task max {
+  input {
+    Array[Int] list
+    Int        default_empty=0
+  }
+  command <<<
+    python3 << CODE
+    print(str(max(map(int, '~{sep="*" list}'.split('*')), default = ~{default_empty})))
+    CODE
+  >>>
+  output {
+    Int max = read_int(stdout())
+  }
+  runtime {
+    docker: "python"
+    memory: "1 GB"
+    cpu: 1
+    disks: "local-disk 10 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task group_bams_by_sample {
   input {
     Array[String]  bam_filepaths

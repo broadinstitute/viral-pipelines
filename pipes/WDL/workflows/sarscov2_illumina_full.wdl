@@ -156,6 +156,11 @@ workflow sarscov2_illumina_full {
                 min_coverage = if (get_sample_meta.amplicon_set[name_reads.left] != "") then 20 else 3
         }
 
+        # log controls
+        if (get_sample_meta.control[name_reads.left] == 'NTC') {
+            Int ntc_bases = assemble_refbased.assembly_length_unambiguous
+        }
+
         # for genomes that somewhat assemble
         if (assemble_refbased.assembly_length_unambiguous >= min_genome_bases) {
             call ncbi.rename_fasta_header {
@@ -196,7 +201,11 @@ workflow sarscov2_illumina_full {
         }
     }
 
-    # TO DO: add some error checks / filtration if NTCs assemble above some length or above other genomes
+    # TO DO: filter out genomes from submission that are less than ntc_bases.max
+    call read_utils.max as ntc {
+      input:
+        list = select_all(ntc_bases)
+    }
 
     ### prep genbank submission
     call nextstrain.concatenate as submit_genomes {
@@ -242,6 +251,8 @@ workflow sarscov2_illumina_full {
         Array[File] assemblies_fasta = assemble_refbased.assembly_fasta
         Array[File] passing_assemblies_fasta = select_all(passing_assemblies)
         Array[File] submittable_assemblies_fasta = select_all(submittable_genomes)
+
+        Int         max_ntc_bases = ntc.max
 
         Array[File] demux_metrics            = illumina_demux.metrics
         Array[File] demux_commonBarcodes     = illumina_demux.commonBarcodes
