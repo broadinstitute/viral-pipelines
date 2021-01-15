@@ -61,6 +61,7 @@ workflow sarscov2_illumina_full {
 
         Int           taxid = 2697049
         Int           min_genome_bases = 20000
+        Int           min_reads_per_bam = 100
         String        gisaid_prefix = 'hCoV-19/'
 
         File          spikein_db
@@ -82,6 +83,7 @@ workflow sarscov2_illumina_full {
                 lane = lane_sheet.left + 1,
                 samplesheet = samplesheet_rename_ids.new_sheet
         }
+
     }
     call read_utils.get_sample_meta {
         input:
@@ -103,13 +105,20 @@ workflow sarscov2_illumina_full {
                 bwaDbs = bwaDbs
         }
 
+        if (deplete.depletion_read_count_post >= min_reads_per_bam) {
+            File cleaned_bam_passing = deplete.cleaned_bam
+        }
+        if (deplete.depletion_read_count_post < min_reads_per_bam) {
+            File empty_bam = raw_reads
+        }
+
         # TO DO: flag all libraries where highest spike-in is not what was expected in extended samplesheet
     }
 
     #### SRA submission prep
     call ncbi.sra_meta_prep {
         input:
-            cleaned_bam_filepaths = deplete.cleaned_bam,
+            cleaned_bam_filepaths = select_all(cleaned_bam_passing),
             biosample_map = biosample_attributes,
             library_metadata = samplesheet_rename_ids.new_sheet,
             out_name = "sra_metadata-~{basename(flowcell_tgz, '.tar.gz')}.tsv",
@@ -135,7 +144,7 @@ workflow sarscov2_illumina_full {
     ### gather data by biosample
     call read_utils.group_bams_by_sample {
         input:
-            bam_filepaths = deplete.cleaned_bam
+            bam_filepaths = select_all(cleaned_bam_passing)
     }
 
     ### assembly and analyses per biosample
@@ -240,7 +249,8 @@ workflow sarscov2_illumina_full {
 
     output {
         Array[File] raw_reads_unaligned_bams     = flatten(illumina_demux.raw_reads_unaligned_bams)
-        Array[File] cleaned_reads_unaligned_bams = deplete.cleaned_bam
+        Array[File] cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing)
+        Array[File] cleaned_bams_tiny = select_all(empty_bam)
 
         Array[Int]  read_counts_raw = deplete.depletion_read_count_pre
         Array[Int]  read_counts_depleted = deplete.depletion_read_count_post

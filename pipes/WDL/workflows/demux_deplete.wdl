@@ -19,6 +19,7 @@ workflow demux_deplete {
 
         File?        sample_rename_map
         File?        biosample_map
+        Int          min_reads_per_bam = 100
 
         File         spikein_db
         Array[File]? bmtaggerDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
@@ -74,13 +75,19 @@ workflow demux_deplete {
                 blastDbs = blastDbs,
                 bwaDbs = bwaDbs
         }
+        if (deplete.depletion_read_count_post >= min_reads_per_bam) {
+            File cleaned_bam_passing = deplete.cleaned_bam
+        }
+        if (deplete.depletion_read_count_post < min_reads_per_bam) {
+            File empty_bam = raw_reads
+        }
     }
 
     #### SRA submission prep
     if(defined(biosample_map)) {
         call ncbi.sra_meta_prep {
             input:
-                cleaned_bam_filepaths = deplete.cleaned_bam,
+                cleaned_bam_filepaths = select_all(cleaned_bam_passing),
                 biosample_map = select_first([biosample_map]),
                 library_metadata = samplesheet_rename_ids.new_sheet,
                 platform = "ILLUMINA",
@@ -110,7 +117,8 @@ workflow demux_deplete {
         Array[File] raw_reads_unaligned_bams     = flatten(illumina_demux.raw_reads_unaligned_bams)
         Array[Int]  read_counts_raw = deplete.depletion_read_count_pre
 
-        Array[File] cleaned_reads_unaligned_bams = deplete.cleaned_bam
+        Array[File] cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing)
+        Array[File] cleaned_bams_tiny = select_all(empty_bam)
         Array[Int]  read_counts_depleted = deplete.depletion_read_count_post
 
         File?       sra_metadata          = sra_meta_prep.sra_metadata
