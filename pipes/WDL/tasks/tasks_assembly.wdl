@@ -389,9 +389,16 @@ task refine_assembly_with_aligned_reads {
           refined.fasta "${sample_name}.fasta" "${sample_name}"
 
         # collect variant counts
-        bcftools filter -e "FMT/DP<${min_coverage}" -S . "${sample_name}.sites.vcf.gz" -Ou | bcftools filter -i "AC>1" -Ou > "${sample_name}.diffs.vcf"
-        bcftools filter -i 'TYPE="snp"'  "${sample_name}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_snps
-        bcftools filter -i 'TYPE!="snp"' "${sample_name}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_indels
+        if (( $(cat refined.fasta | wc -l) > 1 )); then
+          bcftools filter -e "FMT/DP<${min_coverage}" -S . "${sample_name}.sites.vcf.gz" -Ou | bcftools filter -i "AC>1" -Ou > "${sample_name}.diffs.vcf"
+          bcftools filter -i 'TYPE="snp"'  "${sample_name}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_snps
+          bcftools filter -i 'TYPE!="snp"' "${sample_name}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_indels
+        else
+          # empty output
+          echo "0" > num_snps
+          echo "0" > num_indels
+          cp "${sample_name}.sites.vcf.gz" "${sample_name}.diffs.vcf"
+        fi
 
         # collect figures of merit
         set +o pipefail # grep will exit 1 if it fails to find the pattern
