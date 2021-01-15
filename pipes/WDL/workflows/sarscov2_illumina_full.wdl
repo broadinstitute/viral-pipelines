@@ -189,14 +189,14 @@ workflow sarscov2_illumina_full {
             }
             if (vadr.num_alerts==0) {
               File submittable_genomes = passing_assemblies
-              String submittable_id = name_reads.left
+              String submittable_id = get_sample_meta.original_names[name_reads.left]
             }
             if (vadr.num_alerts>0) {
-              String failed_annotation_id = name_reads.left
+              String failed_annotation_id = get_sample_meta.original_names[name_reads.left]
             }
         }
         if (assemble_refbased.assembly_length_unambiguous < min_genome_bases) {
-            String failed_assembly_id = name_reads.left
+            String failed_assembly_id = get_sample_meta.original_names[name_reads.left]
         }
     }
 
