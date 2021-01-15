@@ -83,6 +83,10 @@ workflow sarscov2_illumina_full {
                 samplesheet = samplesheet_rename_ids.new_sheet
         }
     }
+    call read_utils.get_sample_meta {
+        input:
+            samplesheets_extended = samplesheet_rename_ids.new_sheet
+    }
 
     #### human depletion & spike-in counting for all files
     scatter(raw_reads in flatten(illumina_demux.raw_reads_unaligned_bams)) {
@@ -132,11 +136,6 @@ workflow sarscov2_illumina_full {
     call read_utils.group_bams_by_sample {
         input:
             bam_filepaths = deplete.cleaned_bam
-    }
-    call read_utils.get_sample_meta {
-        input:
-            sanitized_sample_names = group_bams_by_sample.sample_names,
-            samplesheets_extended = samplesheet_rename_ids.new_sheet
     }
 
     ### assembly and analyses per biosample

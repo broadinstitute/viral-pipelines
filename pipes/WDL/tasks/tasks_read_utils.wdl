@@ -68,7 +68,6 @@ task group_bams_by_sample {
 
 task get_sample_meta {
   input {
-    Array[String]  sanitized_sample_names
     Array[File]    samplesheets_extended
 
     String  docker="quay.io/broadinstitute/viral-core:2.1.16"
@@ -81,31 +80,26 @@ task get_sample_meta {
     import util.file
 
     # WDL arrays to python arrays
-    sanitized_samples = '~{sep="*" sanitized_sample_names}'.split('*')
     library_metadata = '~{sep="*" samplesheets_extended}'.split('*')
-    sanitized_sample_set = set(sanitized_samples)
 
     # lookup table files to dicts
-    sanitized_to_meta = {}
+    meta = {}
     meta_cols = ('sample','amplicon_set','control')
-    for sanitized in sanitized_sample_set:
-      sanitized_to_meta[sanitized] = {}
-      for c in meta_cols:
-        sanitized_to_meta[sanitized][c] = ''
+    for col in meta_cols:
+      meta[col] = {}
     for libfile in library_metadata:
       with open(libfile, 'rt') as inf:
         for row in csv.DictReader(inf, delimiter='\t'):
           sanitized = util.file.string_to_file_name(row['sample'])
-          if sanitized in sanitized_sample_set:
-            for c in meta_cols:
-              if row.get(c):
-                sanitized_to_meta[sanitized][c] = row[c]
+          for col in meta_cols:
+            meta[col].setdefault(sanitized, '')
+            if row.get(col):
+              meta[col][sanitized] = row[col]
 
     # write outputs
     for col in meta_cols:
       with open(col, 'wt') as outf:
-        out_map = dict((s,sanitized_to_meta[s][col]) for s in sanitized_sample_set)
-        json.dump(out_map, outf, indent=2)
+        json.dump(meta[col], outf, indent=2)
     CODE
   >>>
   output {
