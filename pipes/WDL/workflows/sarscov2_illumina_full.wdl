@@ -37,7 +37,7 @@ workflow sarscov2_illumina_full {
             description: "Reference genome to align reads to.",
             patterns: ["*.fasta"]
         }
-        ampseq_trim_coords_bed: {
+        amplicon_bed_prefix: {
             description: "amplicon primers to trim in reference coordinate space (0-based BED format)",
             patterns: ["*.bed"]
         }
