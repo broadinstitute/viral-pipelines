@@ -291,6 +291,7 @@ workflow sarscov2_illumina_full {
         Array[String] submittable_ids = select_all(submittable_id)
         Array[String] failed_assembly_ids = select_all(failed_assembly_id)
         Array[String] failed_annotation_ids = select_all(failed_annotation_id)
+        Int           num_read_files = length(select_all(cleaned_bam_passing))
         Int           num_assembled = length(select_all(passing_assemblies))
         Int           num_failed_assembly = length(select_all(failed_assembly_id))
         Int           num_submittable = length(select_all(submittable_id))

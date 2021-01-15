@@ -25,7 +25,13 @@ task max {
 
 task group_bams_by_sample {
   input {
-    Array[String]  bam_filepaths
+    Array[File]  bam_filepaths
+  }
+  parameter_meta {
+    bam_filepaths: {
+      description: "all bam files",
+      localization_optional: true
+    }
   }
   command <<<
     python3 << CODE
@@ -55,15 +61,15 @@ task group_bams_by_sample {
     CODE
   >>>
   output {
-    Array[Array[String]+] grouped_bam_filepaths = read_tsv('grouped_bams')
-    Array[String]         sample_names = read_lines('sample_names')
+    Array[Array[File]+] grouped_bam_filepaths = read_tsv('grouped_bams')
+    Array[String]       sample_names = read_lines('sample_names')
   }
   runtime {
     docker: "python"
     memory: "1 GB"
     cpu: 1
-    disks: "local-disk 50 HDD"
-    dx_instance_type: "mem1_ssd1_v2_x2"
+    disks: "local-disk 1000 HDD"
+    dx_instance_type: "mem1_ssd2_v2_x16"
   }
 }
 

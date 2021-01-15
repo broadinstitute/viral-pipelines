@@ -19,17 +19,17 @@ task merge_tarballs {
     file_utils.py --version | tee VERSION
 
     file_utils.py merge_tarballs \
-      ${out_filename} ${sep=' ' tar_chunks} \
+      ~{out_filename} ~{sep=' ' tar_chunks} \
       --loglevel=DEBUG
   }
 
   output {
-    File    combined_tar      = "${out_filename}"
+    File    combined_tar      = "~{out_filename}"
     String  viralngs_version  = read_string("VERSION")
   }
 
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: select_first([machine_mem_gb, 7]) + " GB"
     cpu: 16
     disks: "local-disk 2625 LOCAL"
@@ -124,12 +124,12 @@ task illumina_demux {
     read_utils.py --version | tee VERSION
 
     read_utils.py extract_tarball \
-      ${flowcell_tgz} $FLOWCELL_DIR \
+      ~{flowcell_tgz} $FLOWCELL_DIR \
       --loglevel=DEBUG
 
     # if we are overriding the RunInfo file, use the path of the file provided. Otherwise find the file
-    if [ -n "${runinfo}" ]; then
-      RUNINFO_FILE="${runinfo}"
+    if [ -n "~{runinfo}" ]; then
+      RUNINFO_FILE="~{runinfo}"
     else
       # full RunInfo.xml path
       RUNINFO_FILE="$(find $FLOWCELL_DIR -type f -name RunInfo.xml | head -n 1)"
@@ -204,43 +204,43 @@ task illumina_demux {
 
     # use the passed-in (or default) WDL value first, then fall back to the auto-scaled value
     # if the result of this is null (nothing is passed in, no autoscaled value, no param is passed to the command)
-    if [ -n "${minimumBaseQuality}" ]; then demux_min_base_quality="${minimumBaseQuality}"; else demux_min_base_quality="$demux_min_base_quality"; fi
+    if [ -n "~{minimumBaseQuality}" ]; then demux_min_base_quality="~{minimumBaseQuality}"; else demux_min_base_quality="$demux_min_base_quality"; fi
     if [ -n "$demux_min_base_quality" ]; then demux_min_base_quality="--minimum_base_quality=$demux_min_base_quality";fi
     
-    if [ -n "${threads}" ]; then demux_threads="${threads}"; else demux_threads="$demux_threads"; fi
+    if [ -n "~{threads}" ]; then demux_threads="~{threads}"; else demux_threads="$demux_threads"; fi
     if [ -n "$demux_threads" ]; then demux_threads="--threads=$demux_threads"; fi
     
 
-    if [ -n "${maxReadsInRamPerTile}" ]; then max_reads_in_ram_per_tile="${maxReadsInRamPerTile}"; else max_reads_in_ram_per_tile="$max_reads_in_ram_per_tile"; fi
+    if [ -n "~{maxReadsInRamPerTile}" ]; then max_reads_in_ram_per_tile="~{maxReadsInRamPerTile}"; else max_reads_in_ram_per_tile="$max_reads_in_ram_per_tile"; fi
     if [ -n "$max_reads_in_ram_per_tile" ]; then max_reads_in_ram_per_tile="--max_reads_in_ram_per_tile=$max_reads_in_ram_per_tile"; fi
     
-    if [ -n "${maxRecordsInRam}" ]; then max_records_in_ram="${maxRecordsInRam}"; else max_records_in_ram="$max_records_in_ram"; fi
+    if [ -n "~{maxRecordsInRam}" ]; then max_records_in_ram="~{maxRecordsInRam}"; else max_records_in_ram="$max_records_in_ram"; fi
     if [ -n "$max_records_in_ram" ]; then max_records_in_ram="--max_records_in_ram=$max_records_in_ram"; fi
 
     # note that we are intentionally setting --threads to about 2x the core
     # count. seems to still provide speed benefit (over 1x) when doing so.
     illumina.py illumina_demux \
       $FLOWCELL_DIR \
-      ${lane} \
+      ~{lane} \
       . \
-      ${'--sampleSheet=' + samplesheet} \
-      ${'--runInfo=' + runinfo} \
-      ${'--sequencing_center=' + sequencingCenter} \
+      ~{'--sampleSheet=' + samplesheet} \
+      ~{'--runInfo=' + runinfo} \
+      ~{'--sequencing_center=' + sequencingCenter} \
       --outMetrics=metrics.txt \
       --commonBarcodes=barcodes.txt \
-      ${'--flowcell=' + flowcell} \
+      ~{'--flowcell=' + flowcell} \
       $demux_min_base_quality \
-      ${'--max_mismatches=' + maxMismatches} \
-      ${'--min_mismatch_delta=' + minMismatchDelta} \
-      ${'--max_no_calls=' + maxNoCalls} \
-      ${'--read_structure=' + readStructure} \
-      ${'--minimum_quality=' + minimumQuality} \
-      ${'--run_start_date=' + runStartDate} \
+      ~{'--max_mismatches=' + maxMismatches} \
+      ~{'--min_mismatch_delta=' + minMismatchDelta} \
+      ~{'--max_no_calls=' + maxNoCalls} \
+      ~{'--read_structure=' + readStructure} \
+      ~{'--minimum_quality=' + minimumQuality} \
+      ~{'--run_start_date=' + runStartDate} \
       $max_reads_in_ram_per_tile \
       $max_records_in_ram \
       --JVMmemory="$mem_in_mb"m \
       $demux_threads \
-      ${true='--force_gc=true' false="--force_gc=false" forceGC} \
+      ~{true='--force_gc=true' false="--force_gc=false" forceGC} \
       --append_run_id \
       --compression_level=5 \
       --loglevel=DEBUG
@@ -255,6 +255,7 @@ task illumina_demux {
       echo "$(basename $bam .bam)" >> $OUT_BASENAMES
     done
 
+    # fastqc
     FASTQC_HARDCODED_MEM_PER_THREAD=250 # the value fastqc sets for -Xmx per thread, not adjustable
     num_cpus=$(nproc)
     num_bam_files=$(cat $OUT_BASENAMES | wc -l)
@@ -262,7 +263,7 @@ task illumina_demux {
     num_fastqc_threads=1
     total_ram_needed_mb=250
 
-    # determine the number of fastq jobs
+    # determine the number of fastqc jobs
     while [[ $total_ram_needed_mb -lt $mem_in_mb ]] && [[ $num_fastqc_jobs -lt $num_cpus ]] && [[ $num_fastqc_jobs -lt $num_bam_files ]]; do
         num_fastqc_jobs=$(($num_fastqc_jobs+1))
         total_ram_needed_mb=$(($total_ram_needed_mb+$FASTQC_HARDCODED_MEM_PER_THREAD))
@@ -307,7 +308,7 @@ task illumina_demux {
   }
 
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: select_first([machine_mem_gb, 200]) + " GB"
     cpu: 32
     disks: "local-disk 2625 LOCAL"
