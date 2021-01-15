@@ -7,7 +7,8 @@ task max {
   }
   command <<<
     python3 << CODE
-    print(str(max(map(int, '~{sep="*" list}'.split('*')), default = ~{default_empty})))
+    inlist = '~{sep="*" list}'.split('*')
+    print(str(max(map(int, [x for x in inlist if x]), default = ~{default_empty})))
     CODE
   >>>
   output {
