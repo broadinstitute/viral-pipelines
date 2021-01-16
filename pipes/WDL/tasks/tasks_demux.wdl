@@ -6,7 +6,7 @@ task merge_tarballs {
     String        out_filename
 
     Int?          machine_mem_gb
-    String        docker="quay.io/broadinstitute/viral-core:2.1.17"
+    String        docker="quay.io/broadinstitute/viral-core:2.1.18"
   }
 
   command {
@@ -101,7 +101,7 @@ task illumina_demux {
     Boolean? forceGC=true
 
     Int?    machine_mem_gb
-    String  docker="quay.io/broadinstitute/viral-core:2.1.17"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.18"
   }
   parameter_meta {
       flowcell_tgz: {
@@ -312,6 +312,9 @@ task illumina_demux {
     Map[String,Map[String,String]] meta_by_sample   = read_json('meta_by_sample.json')
     Map[String,Map[String,String]] meta_by_filename = read_json('meta_by_fname.json')
     Map[String,String]             run_info         = read_json('runinfo.json')
+    File meta_by_sample_json   = 'meta_by_sample.json'
+    File meta_by_filename_json = 'meta_by_fname.json'
+    File run_info_json         = 'runinfo.json'
   }
 
   runtime {
