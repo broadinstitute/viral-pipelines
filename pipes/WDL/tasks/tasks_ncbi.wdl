@@ -304,17 +304,68 @@ task rename_fasta_header {
 task gisaid_meta_prep {
   input {
     File   source_modifier_table
+    File   structured_comments
     String out_name
+    String continent = "North America"
   }
-  command {
+  command <<<
+    python3 << CODE
+    import os.path
+    import csv
 
-  }
+    # lookup table files to dicts
+    sample_to_cmt = {}
+    with open('~{structured_comments}', 'rt') as inf:
+      for row in csv.DictReader(inf, delimiter='\t'):
+        sample_to_cmt[row['SeqID']] = row
+
+    out_headers = ('submitter', 'fn', 'covv_virus_name', 'covv_type', 'covv_passage', 'covv_collection_date', 'covv_location', 'covv_add_location', 'covv_host', 'covv_add_host_info', 'covv_gender', 'covv_patient_age', 'covv_patient_status', 'covv_specimen', 'covv_outbreak', 'covv_last_vaccinated', 'covv_treatment', 'covv_seq_technology', 'covv_assembly_method', 'covv_coverage', 'covv_orig_lab', 'covv_orig_lab_addr', 'covv_provider_sample_id', 'covv_subm_lab', 'covv_subm_lab_addr', 'covv_subm_sample_id', 'covv_authors', 'covv_comment', 'comment_type')
+
+    with open('~{out_name}', 'wt') as outf:
+      writer = csv.DictWriter(outf, out_headers, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
+      writer.writeheader()
+
+      with open('~{source_modifier_table}', 'rt') as inf:
+        for row in csv.DictReader(inf, delimiter='\t'):
+          writer.writerow({
+            'covv_virus_name': 'hCoV-19/' +row['Sequence_ID'],
+            'covv_collection_date': row['collection_date'],
+            'covv_location': '~{continent} / ' + row['country'].replace(':',' /'),
+
+            'covv_type': 'betacoronavirus',
+            'covv_passage': 'Original',
+            'covv_host': 'Human',
+            'covv_gender': 'unknown',
+            'covv_patient_age': 'unknown',
+            'covv_patient_status': 'unknown',
+
+            'covv_assembly_method': sample_to_cmt[row['Sequence_ID']]['Assembly Method'],
+            'covv_coverage': sample_to_cmt[row['Sequence_ID']]['Coverage'],
+            'covv_seq_technology': sample_to_cmt[row['Sequence_ID']]['Sequencing Technology'],
+
+            'covv_orig_lab': row['collected_by'],
+            'covv_subm_lab': 'REQUIRED',
+            'covv_authors': 'REQUIRED',
+            'covv_orig_lab_addr': 'REQUIRED',
+            'covv_subm_lab_addr': 'REQUIRED',
+            'submitter': 'REQUIRED',
+            'fn': 'REQUIRED',
+          })
+
+          #covv_specimen
+
+          assert row['isolation_source'] == 'Clinical'
+          assert row['host'] == 'Homo sapiens'
+          assert row['organism'] == 'Severe acute respiratory syndrome coronavirus 2'
+          assert row['db_xref'] == 'taxon:2697049'
+
+    CODE
+  >>>
   output {
     File meta_tsv = "~{out_name}"
-    String value = read_string("OUTVAL")
   }
   runtime {
-    docker: "ubuntu"
+    docker: "python"
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"

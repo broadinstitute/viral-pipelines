@@ -184,7 +184,7 @@ workflow sarscov2_illumina_full {
 
             File passing_assemblies = rename_fasta_header.renamed_fasta
             String passing_assembly_ids = orig_name
-            Array[String] assembly_meta = [orig_name, "Broad viral-ngs v. " + illumina_demux.viralngs_version[0], assemble_refbased.assembly_mean_coverage]
+            Array[String] assembly_cmt = [orig_name, "Broad viral-ngs v. " + illumina_demux.viralngs_version[0], assemble_refbased.assembly_mean_coverage]
 
             # lineage assignment
             call sarscov2.nextclade_one_sample {
@@ -212,6 +212,38 @@ workflow sarscov2_illumina_full {
         if (assemble_refbased.assembly_length_unambiguous < min_genome_bases) {
             String failed_assembly_id = orig_name
         }
+
+        Map[String,String?] assembly_stats = {
+            'sample_orig': orig_name,
+            'sample': name_reads.left,
+            'amplicon_set': meta_sample.merged[name_reads.left]["amplicon_set"],
+            'assembly_mean_coverage': assemble_refbased.assembly_mean_coverage,
+            'nextclade_clade': nextclade_one_sample.nextclade_clade ,
+            'nextclade_aa_subs': nextclade_one_sample.aa_subs_csv,
+            'nextclade_aa_dels': nextclade_one_sample.aa_dels_csv,
+            'pangolin_clade': pangolin_one_sample.pangolin_clade
+        }
+        Map[String,File?] assembly_files = {
+            'assembly_fasta': assemble_refbased.assembly_fasta,
+            'coverage_plot': assemble_refbased.align_to_ref_merged_coverage_plot,
+            'aligned_bam': assemble_refbased.align_to_ref_merged_aligned_trimmed_only_bam,
+            'replicate_discordant_vcf': assemble_refbased.replicate_discordant_vcf,
+            'nextclade_tsv': nextclade_one_sample.nextclade_tsv,
+            'pangolin_csv': pangolin_one_sample.pangolin_csv,
+            'vadr_tgz': vadr.outputs_tgz
+        }
+        Map[String,Int?] assembly_metrics = {
+            'assembly_length_unambiguous': assemble_refbased.assembly_length_unambiguous,
+            'dist_to_ref_snps': assemble_refbased.dist_to_ref_snps,
+            'dist_to_ref_indels': assemble_refbased.dist_to_ref_indels,
+            'replicate_concordant_sites': assemble_refbased.replicate_concordant_sites,
+            'replicate_discordant_snps': assemble_refbased.replicate_discordant_snps,
+            'replicate_discordant_indels': assemble_refbased.replicate_discordant_indels,
+            'num_read_groups': assemble_refbased.num_read_groups,
+            'num_libraries': assemble_refbased.num_libraries,
+            'vadr_num_alerts': vadr.num_alerts
+        }
+
     }
 
     # TO DO: filter out genomes from submission that are less than ntc_bases.max
@@ -235,7 +267,7 @@ workflow sarscov2_illumina_full {
     }
     call ncbi.structured_comments {
       input:
-        assembly_stats_tsv = write_tsv(flatten([[['SeqID','Assembly Method','Coverage']],select_all(assembly_meta)])),
+        assembly_stats_tsv = write_tsv(flatten([[['SeqID','Assembly Method','Coverage']],select_all(assembly_cmt)])),
         filter_to_ids = write_lines(select_all(submittable_id))
     }
     call ncbi.package_genbank_ftp_submission {
@@ -251,11 +283,19 @@ workflow sarscov2_illumina_full {
         genome_fasta = submit_genomes.combined,
         prefix = gisaid_prefix
     }
+    call ncbi.gisaid_meta_prep {
+      input:
+        source_modifier_table = biosample_to_genbank.genbank_source_modifier_table,
+        structured_comments = structured_comments.structured_comment_table,
+        out_name = "gisaid_meta.tsv"
+    }
 
     output {
         Array[File] raw_reads_unaligned_bams     = flatten(illumina_demux.raw_reads_unaligned_bams)
         Array[File] cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing)
         Array[File] cleaned_bams_tiny = select_all(empty_bam)
+
+        Map[String,Map[String,String]] meta_by_filename = meta_filename.merged
 
         Array[Int]  read_counts_raw = deplete.depletion_read_count_pre
         Array[Int]  read_counts_depleted = deplete.depletion_read_count_post
@@ -276,13 +316,9 @@ workflow sarscov2_illumina_full {
         File        multiqc_report_cleaned = multiqc_cleaned.multiqc_report
         File        spikein_counts         = spike_summary.count_summary
 
-        # TO DO: bundle outputs into structs or some meaningful thing
-        #String nextclade_clade = nextclade_one_sample.nextclade_clade
-        #File   nextclade_tsv   = nextclade_one_sample.nextclade_tsv
-        #String nextclade_aa_subs = nextclade_one_sample.aa_subs_csv
-        #String nextclade_aa_dels = nextclade_one_sample.aa_dels_csv
-        #String pangolin_clade  = pangolin_one_sample.pangolin_clade
-        #File   pangolin_csv    = pangolin_one_sample.pangolin_csv
+        Array[Map[String,String?]] per_assembly_stats = assembly_stats
+        Array[Map[String,File?]]   per_assembly_files = assembly_files
+        Array[Map[String,Int?]]    per_assembly_metrics = assembly_metrics
 
         File submission_zip = package_genbank_ftp_submission.submission_zip
         File submission_xml = package_genbank_ftp_submission.submission_xml
@@ -291,6 +327,7 @@ workflow sarscov2_illumina_full {
         File genbank_source_table = biosample_to_genbank.genbank_source_modifier_table
 
         File gisaid_fasta = prefix_gisaid.renamed_fasta
+        File gisaid_meta_tsv = gisaid_meta_prep.meta_tsv
 
         Array[String] assembled_ids = select_all(passing_assembly_ids)
         Array[String] submittable_ids = select_all(submittable_id)
