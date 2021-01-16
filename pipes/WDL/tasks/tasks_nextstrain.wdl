@@ -149,9 +149,9 @@ task filter_segments {
     CODE
     >>>
     runtime {
-        docker : "python"
-        memory : select_first([machine_mem_gb, 3]) + " GB"
-        cpu :    1
+        docker: "python:slim"
+        memory: select_first([machine_mem_gb, 3]) + " GB"
+        cpu:    1
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x2"
     }

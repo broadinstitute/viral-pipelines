@@ -71,7 +71,7 @@ task samplesheet_rename_ids {
     File new_sheet = '~{new_base}.renamed.txt'
   }
   runtime {
-    docker: "python"
+    docker: "python:slim"
     memory: "1 GB"
     cpu: 1
     disks: "local-disk 50 HDD"
@@ -345,7 +345,7 @@ task merge_maps {
     Map[String,Map[String,String]] merged = read_json('out.json')
   }
   runtime {
-    docker: "python"
+    docker: "python:slim"
     memory: "1 GB"
     cpu: 1
     disks: "local-disk 20 HDD"

@@ -15,7 +15,7 @@ task max {
     Int max = read_int(stdout())
   }
   runtime {
-    docker: "python"
+    docker: "python:slim"
     memory: "1 GB"
     cpu: 1
     disks: "local-disk 10 HDD"
@@ -67,7 +67,7 @@ task group_bams_by_sample {
     Array[String]       sample_names = read_lines('sample_names')
   }
   runtime {
-    docker: "python"
+    docker: "python:slim"
     memory: "1 GB"
     cpu: 1
     disks: "local-disk 100 HDD"

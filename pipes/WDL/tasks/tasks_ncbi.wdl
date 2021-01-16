@@ -269,7 +269,7 @@ task prefix_fasta_header {
     File renamed_fasta = "~{out_basename}.fasta"
   }
   runtime {
-    docker: "python"
+    docker: "python:slim"
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -365,7 +365,7 @@ task gisaid_meta_prep {
     File meta_tsv = "~{out_name}"
   }
   runtime {
-    docker: "python"
+    docker: "python:slim"
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
