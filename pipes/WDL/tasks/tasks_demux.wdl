@@ -332,7 +332,8 @@ task merge_maps {
   command <<<
     python3 << CODE
     import json
-    inarrays = [ ~{sep="," maps} ]
+    with open('~{write_json(maps)}', 'rt') as inf:
+      inarrays = json.load(inf)
     out = {}
     for j in inarrays:
       out.update(j)
