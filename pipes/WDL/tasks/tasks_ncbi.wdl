@@ -205,7 +205,7 @@ task structured_comments {
 
     File?   filter_to_ids
 
-    String  docker="quay.io/broadinstitute/viral-core:2.1.16"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.17"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -283,7 +283,7 @@ task rename_fasta_header {
 
     String  out_basename = basename(genome_fasta, ".fasta")
 
-    String  docker="quay.io/broadinstitute/viral-core:2.1.16"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.17"
   }
   command {
     set -e
@@ -329,7 +329,7 @@ task sra_meta_prep {
     description: "Prepare tables for submission to NCBI's SRA database. This only works on bam files produced by illumina.py illumina_demux --append_run_id in viral-core."
   }
   input {
-    Array[String]  cleaned_bam_filepaths
+    Array[File]    cleaned_bam_filepaths
     File           biosample_map
     Array[File]    library_metadata
     String         platform
@@ -338,11 +338,13 @@ task sra_meta_prep {
     Boolean        paired
 
     String         out_name = "sra_metadata.tsv"
-    String  docker="quay.io/broadinstitute/viral-core:2.1.16"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.17"
   }
   parameter_meta {
     cleaned_bam_filepaths: {
-      description: "Complete path and filename of unaligned bam files containing cleaned (submittable) reads.",
+      description: "Unaligned bam files containing cleaned (submittable) reads.",
+      localization_optional: true,
+      stream: true,
       patterns: ["*.bam"]
     }
     biosample_map: {
@@ -443,7 +445,7 @@ task sra_meta_prep {
     docker: docker
     memory: "1 GB"
     cpu: 1
-    disks: "local-disk 50 HDD"
+    disks: "local-disk 100 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }

@@ -6,7 +6,7 @@ task merge_tarballs {
     String        out_filename
 
     Int?          machine_mem_gb
-    String        docker="quay.io/broadinstitute/viral-core:2.1.16"
+    String        docker="quay.io/broadinstitute/viral-core:2.1.17"
   }
 
   command {
@@ -101,7 +101,7 @@ task illumina_demux {
     Boolean? forceGC=true
 
     Int?    machine_mem_gb
-    String  docker="quay.io/broadinstitute/viral-core:2.1.16"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.17"
   }
   parameter_meta {
       flowcell_tgz: {
@@ -243,6 +243,9 @@ task illumina_demux {
       ~{true='--force_gc=true' false="--force_gc=false" forceGC} \
       --append_run_id \
       --compression_level=5 \
+      --out_meta_by_sample meta_by_sample.json \
+      --out_meta_by_filename meta_by_fname.json \
+      --out_runinfo runinfo.json \
       --loglevel=DEBUG
 
     illumina.py guess_barcodes --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
@@ -305,6 +308,10 @@ task illumina_demux {
     Int         runtime_sec = ceil(read_float("UPTIME_SEC"))
     Int         cpu_load_15min = ceil(read_float("LOAD_15M"))
     String      viralngs_version         = read_string("VERSION")
+
+    Map[String,Map[String,String]] meta_by_sample   = read_json('meta_by_sample.json')
+    Map[String,Map[String,String]] meta_by_filename = read_json('meta_by_filename.json')
+    Map[String,String]             run_info         = read_json('runinfo.json')
   }
 
   runtime {
@@ -315,5 +322,26 @@ task illumina_demux {
     dx_instance_type: "mem3_ssd2_v2_x32"
     dx_timeout: "20H"
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
+  }
+}
+
+task merge_maps {
+  input {
+    Array[Map[String,Map[String,String]]] maps
+  }
+  command <<<
+    python3 << CODE
+    import json
+    injsons = '~{sep="*" maps}'.split('*')
+    out = {}
+    for j in injsons:
+      with open(j, 'rt') as inf:
+        out.update(json.load(inf))
+    with open('out.json', 'wt') as outf:
+      json.dump(out, outf, indent=2)
+    CODE
+  >>>
+  output {
+    Map[String,Map[String,String]] merged = read_json('out.json')
   }
 }

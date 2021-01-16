@@ -77,7 +77,7 @@ workflow sarscov2_illumina_full {
                 old_sheet = lane_sheet.right,
                 rename_map = sample_rename_map
         }
-        call demux.illumina_demux as illumina_demux {
+        call demux.illumina_demux {
             input:
                 flowcell_tgz = flowcell_tgz,
                 lane = lane_sheet.left + 1,
@@ -85,9 +85,11 @@ workflow sarscov2_illumina_full {
         }
 
     }
-    call read_utils.get_sample_meta {
-        input:
-            samplesheets_extended = samplesheet_rename_ids.new_sheet
+    call demux.merge_maps as meta_sample {
+        input: maps = illumina_demux.meta_by_sample
+    }
+    call demux.merge_maps as meta_filename {
+        input: maps = illumina_demux.meta_by_filename
     }
 
     #### human depletion & spike-in counting for all files
@@ -150,8 +152,11 @@ workflow sarscov2_illumina_full {
     ### assembly and analyses per biosample
     scatter(name_reads in zip(group_bams_by_sample.sample_names, group_bams_by_sample.grouped_bam_filepaths)) {
         # assemble genome
-        if (get_sample_meta.amplicon_set[name_reads.left] != "") {
-            String trim_coords_bed = amplicon_bed_prefix + get_sample_meta.amplicon_set[name_reads.left] + ".bed"
+        Boolean ampseq = (meta_sample.merged[name_reads.left]["amplicon_set"] != "")
+        String orig_name = meta_sample.merged[name_reads.left]["sample_original"]
+
+        if (ampseq) {
+            String trim_coords_bed = amplicon_bed_prefix + meta_sample.merged[name_reads.left]["amplicon_set"] + ".bed"
         }
         call assemble_refbased.assemble_refbased {
             input:
@@ -159,13 +164,13 @@ workflow sarscov2_illumina_full {
                 reference_fasta = reference_fasta,
                 sample_name = name_reads.left,
                 aligner = "minimap2",
-                skip_mark_dupes = (get_sample_meta.amplicon_set[name_reads.left] != ""),
+                skip_mark_dupes = ampseq,
                 trim_coords_bed = trim_coords_bed,
-                min_coverage = if (get_sample_meta.amplicon_set[name_reads.left] != "") then 20 else 3
+                min_coverage = if ampseq then 20 else 3
         }
 
         # log controls
-        if (get_sample_meta.control[name_reads.left] == 'NTC') {
+        if (meta_sample.merged[name_reads.left]["control"] == 'NTC') {
             Int ntc_bases = assemble_refbased.assembly_length_unambiguous
         }
 
@@ -174,12 +179,12 @@ workflow sarscov2_illumina_full {
             call ncbi.rename_fasta_header {
               input:
                 genome_fasta = assemble_refbased.assembly_fasta,
-                new_name = get_sample_meta.original_names[name_reads.left]
+                new_name = orig_name
             }
 
             File passing_assemblies = rename_fasta_header.renamed_fasta
-            String passing_assembly_ids = get_sample_meta.original_names[name_reads.left]
-            Array[String] assembly_meta = [get_sample_meta.original_names[name_reads.left], assemble_refbased.assembly_mean_coverage]
+            String passing_assembly_ids = orig_name
+            Array[String] assembly_meta = [orig_name, "Broad viral-ngs v. " + illumina_demux.viralngs_version, assemble_refbased.assembly_mean_coverage]
 
             # lineage assignment
             call sarscov2.nextclade_one_sample {
@@ -198,14 +203,14 @@ workflow sarscov2_illumina_full {
             }
             if (vadr.num_alerts==0) {
               File submittable_genomes = passing_assemblies
-              String submittable_id = get_sample_meta.original_names[name_reads.left]
+              String submittable_id = orig_name
             }
             if (vadr.num_alerts>0) {
-              String failed_annotation_id = get_sample_meta.original_names[name_reads.left]
+              String failed_annotation_id = orig_name
             }
         }
         if (assemble_refbased.assembly_length_unambiguous < min_genome_bases) {
-            String failed_assembly_id = get_sample_meta.original_names[name_reads.left]
+            String failed_assembly_id = orig_name
         }
     }
 
@@ -230,7 +235,7 @@ workflow sarscov2_illumina_full {
     }
     call ncbi.structured_comments {
       input:
-        assembly_stats_tsv = write_tsv(flatten([[['SeqID','Coverage']],select_all(assembly_meta)])),
+        assembly_stats_tsv = write_tsv(flatten([[['SeqID','Assembly Method','Coverage']],select_all(assembly_meta)])),
         filter_to_ids = write_lines(select_all(submittable_id))
     }
     call ncbi.package_genbank_ftp_submission {
