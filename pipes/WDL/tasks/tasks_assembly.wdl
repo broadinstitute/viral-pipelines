@@ -15,7 +15,7 @@ task assemble {
       String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
 
       Int?     machine_mem_gb
-      String   docker="quay.io/broadinstitute/viral-assemble:2.1.16.0"
+      String   docker="quay.io/broadinstitute/viral-assemble:2.1.16.1"
     }
 
     command {
@@ -80,7 +80,7 @@ task scaffold {
       Float?       scaffold_min_pct_contig_aligned
 
       Int?         machine_mem_gb
-      String       docker="quay.io/broadinstitute/viral-assemble:2.1.16.0"
+      String       docker="quay.io/broadinstitute/viral-assemble:2.1.16.1"
 
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
@@ -226,7 +226,7 @@ task align_reads {
     Boolean? skip_mark_dupes=false
 
     Int?     machine_mem_gb
-    String   docker="quay.io/broadinstitute/viral-core:2.1.16"
+    String   docker="quay.io/broadinstitute/viral-core:2.1.18"
 
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
   }
@@ -342,7 +342,7 @@ task refine_assembly_with_aligned_reads {
       Int?     min_coverage=3
 
       Int?     machine_mem_gb
-      String   docker="quay.io/broadinstitute/viral-assemble:2.1.16.0"
+      String   docker="quay.io/broadinstitute/viral-assemble:2.1.16.1"
     }
 
     parameter_meta {
@@ -389,9 +389,16 @@ task refine_assembly_with_aligned_reads {
           refined.fasta "${sample_name}.fasta" "${sample_name}"
 
         # collect variant counts
-        bcftools filter -e "FMT/DP<${min_coverage}" -S . "${sample_name}.sites.vcf.gz" -Ou | bcftools filter -i "AC>1" -Ou > "${sample_name}.diffs.vcf"
-        bcftools filter -i 'TYPE="snp"'  "${sample_name}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_snps
-        bcftools filter -i 'TYPE!="snp"' "${sample_name}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_indels
+        if (( $(cat refined.fasta | wc -l) > 1 )); then
+          bcftools filter -e "FMT/DP<${min_coverage}" -S . "${sample_name}.sites.vcf.gz" -Ou | bcftools filter -i "AC>1" -Ou > "${sample_name}.diffs.vcf"
+          bcftools filter -i 'TYPE="snp"'  "${sample_name}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_snps
+          bcftools filter -i 'TYPE!="snp"' "${sample_name}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_indels
+        else
+          # empty output
+          echo "0" > num_snps
+          echo "0" > num_indels
+          cp "${sample_name}.sites.vcf.gz" "${sample_name}.diffs.vcf"
+        fi
 
         # collect figures of merit
         set +o pipefail # grep will exit 1 if it fails to find the pattern
@@ -434,7 +441,7 @@ task refine {
       Int?    min_coverage=1
 
       Int?    machine_mem_gb
-      String  docker="quay.io/broadinstitute/viral-assemble:2.1.16.0"
+      String  docker="quay.io/broadinstitute/viral-assemble:2.1.16.1"
 
       String  assembly_basename=basename(basename(assembly_fasta, ".fasta"), ".scaffold")
     }
@@ -504,7 +511,7 @@ task refine_2x_and_plot {
       String? plot_coverage_novoalign_options="-r Random -l 40 -g 40 -x 20 -t 100 -k"
 
       Int?    machine_mem_gb
-      String  docker="quay.io/broadinstitute/viral-assemble:2.1.16.0"
+      String  docker="quay.io/broadinstitute/viral-assemble:2.1.16.1"
 
       # do this in two steps in case the input doesn't actually have "cleaned" in the name
       String  sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
@@ -636,7 +643,7 @@ task run_discordance {
       String   out_basename = "run"
       Int      min_coverage=4
 
-      String   docker="quay.io/broadinstitute/viral-core:2.1.16"
+      String   docker="quay.io/broadinstitute/viral-core:2.1.18"
     }
 
     command {

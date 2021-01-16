@@ -40,6 +40,9 @@ workflow assemble_refbased {
             patterns: ["*.bed"],
             category: "common"
         }
+        min_coverage: {
+            description: "Minimum read coverage required to call a position unambiguous."
+        }
 
 
         assembly_fasta: { description: "The new assembly / consensus sequence for this sample" }
@@ -55,7 +58,8 @@ workflow assemble_refbased {
 
         String          aligner="minimap2"
         File?           novocraft_license
-        Boolean?        skip_mark_dupes=false
+        Int             min_coverage=3
+        Boolean         skip_mark_dupes=false
         File?           trim_coords_bed
     }
 
@@ -98,6 +102,7 @@ workflow assemble_refbased {
         input:
             reads_aligned_bam = merge_align_to_ref.out_bam,
             reference_fasta   = reference_fasta,
+            min_coverage      = min_coverage+1,
             out_basename      = sample_name
     }
 
@@ -111,6 +116,7 @@ workflow assemble_refbased {
         input:
             reference_fasta   = reference_fasta,
             reads_aligned_bam = merge_align_to_ref.out_bam,
+            min_coverage      = min_coverage,
             sample_name       = sample_name
     }
 

@@ -205,7 +205,7 @@ task structured_comments {
 
     File?   filter_to_ids
 
-    String  docker="quay.io/broadinstitute/viral-core:2.1.16"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.18"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -248,6 +248,34 @@ task structured_comments {
   }
 }
 
+task prefix_fasta_header {
+  input {
+    File    genome_fasta
+    String  prefix
+  }
+  String  out_basename = basename(genome_fasta, ".fasta")
+  command <<<
+    set -e
+    python3 <<CODE
+    with open('~{genome_fasta}', 'rt') as inf:
+      with open('~{out_basename}.fasta', 'wt') as outf:
+        for line in inf:
+          if line.startswith('>'):
+            line = ">{}{}\n".format('~{prefix}', line.rstrip()[1:])
+          outf.write(line)
+    CODE
+  >>>
+  output {
+    File renamed_fasta = "~{out_basename}.fasta"
+  }
+  runtime {
+    docker: "python:slim"
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task rename_fasta_header {
   input {
     File    genome_fasta
@@ -255,7 +283,7 @@ task rename_fasta_header {
 
     String  out_basename = basename(genome_fasta, ".fasta")
 
-    String  docker="quay.io/broadinstitute/viral-core:2.1.16"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.18"
   }
   command {
     set -e
@@ -267,6 +295,77 @@ task rename_fasta_header {
   }
   runtime {
     docker: "~{docker}"
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
+task gisaid_meta_prep {
+  input {
+    File   source_modifier_table
+    File   structured_comments
+    String out_name
+    String continent = "North America"
+  }
+  command <<<
+    python3 << CODE
+    import os.path
+    import csv
+
+    # lookup table files to dicts
+    sample_to_cmt = {}
+    with open('~{structured_comments}', 'rt') as inf:
+      for row in csv.DictReader(inf, delimiter='\t'):
+        sample_to_cmt[row['SeqID']] = row
+
+    out_headers = ('submitter', 'fn', 'covv_virus_name', 'covv_type', 'covv_passage', 'covv_collection_date', 'covv_location', 'covv_add_location', 'covv_host', 'covv_add_host_info', 'covv_gender', 'covv_patient_age', 'covv_patient_status', 'covv_specimen', 'covv_outbreak', 'covv_last_vaccinated', 'covv_treatment', 'covv_seq_technology', 'covv_assembly_method', 'covv_coverage', 'covv_orig_lab', 'covv_orig_lab_addr', 'covv_provider_sample_id', 'covv_subm_lab', 'covv_subm_lab_addr', 'covv_subm_sample_id', 'covv_authors', 'covv_comment', 'comment_type')
+
+    with open('~{out_name}', 'wt') as outf:
+      writer = csv.DictWriter(outf, out_headers, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
+      writer.writeheader()
+
+      with open('~{source_modifier_table}', 'rt') as inf:
+        for row in csv.DictReader(inf, delimiter='\t'):
+          writer.writerow({
+            'covv_virus_name': 'hCoV-19/' +row['Sequence_ID'],
+            'covv_collection_date': row['collection_date'],
+            'covv_location': '~{continent} / ' + row['country'].replace(':',' /'),
+
+            'covv_type': 'betacoronavirus',
+            'covv_passage': 'Original',
+            'covv_host': 'Human',
+            'covv_gender': 'unknown',
+            'covv_patient_age': 'unknown',
+            'covv_patient_status': 'unknown',
+
+            'covv_assembly_method': sample_to_cmt[row['Sequence_ID']]['Assembly Method'],
+            'covv_coverage': sample_to_cmt[row['Sequence_ID']]['Coverage'],
+            'covv_seq_technology': sample_to_cmt[row['Sequence_ID']]['Sequencing Technology'],
+
+            'covv_orig_lab': row['collected_by'],
+            'covv_subm_lab': 'REQUIRED',
+            'covv_authors': 'REQUIRED',
+            'covv_orig_lab_addr': 'REQUIRED',
+            'covv_subm_lab_addr': 'REQUIRED',
+            'submitter': 'REQUIRED',
+            'fn': 'REQUIRED',
+          })
+
+          #covv_specimen
+
+          assert row['isolation_source'] == 'Clinical'
+          assert row['host'] == 'Homo sapiens'
+          assert row['organism'] == 'Severe acute respiratory syndrome coronavirus 2'
+          assert row['db_xref'] == 'taxon:2697049'
+
+    CODE
+  >>>
+  output {
+    File meta_tsv = "~{out_name}"
+  }
+  runtime {
+    docker: "python:slim"
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -301,7 +400,7 @@ task sra_meta_prep {
     description: "Prepare tables for submission to NCBI's SRA database. This only works on bam files produced by illumina.py illumina_demux --append_run_id in viral-core."
   }
   input {
-    Array[String]  cleaned_bam_filepaths
+    Array[File]    cleaned_bam_filepaths
     File           biosample_map
     Array[File]    library_metadata
     String         platform
@@ -310,11 +409,13 @@ task sra_meta_prep {
     Boolean        paired
 
     String         out_name = "sra_metadata.tsv"
-    String  docker="quay.io/broadinstitute/viral-core:2.1.16"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.18"
   }
   parameter_meta {
     cleaned_bam_filepaths: {
-      description: "Complete path and filename of unaligned bam files containing cleaned (submittable) reads.",
+      description: "Unaligned bam files containing cleaned (submittable) reads.",
+      localization_optional: true,
+      stream: true,
       patterns: ["*.bam"]
     }
     biosample_map: {
@@ -415,7 +516,7 @@ task sra_meta_prep {
     docker: docker
     memory: "1 GB"
     cpu: 1
-    disks: "local-disk 50 HDD"
+    disks: "local-disk 100 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
@@ -453,7 +554,7 @@ task biosample_to_genbank {
     File biosample_map                 = "${base}.biosample.map.txt"
   }
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -611,7 +712,7 @@ task package_genbank_ftp_submission {
     String spuid_namespace
     String account_name
 
-    String  docker="quay.io/broadinstitute/viral-baseimage:0.1.19"
+    String  docker="quay.io/broadinstitute/viral-baseimage:0.1.20"
   }
   command <<<
     set -e

@@ -10,7 +10,7 @@ task plot_coverage {
     Boolean bin_large_plots=false
     String?  binning_summary_statistic="max" # max or min
 
-    String   docker="quay.io/broadinstitute/viral-core:2.1.16"
+    String   docker="quay.io/broadinstitute/viral-core:2.1.18"
   }
   
   command {
@@ -85,7 +85,7 @@ task coverage_report {
     Array[File]  mapped_bam_idx # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name="coverage_report.txt"
 
-    String       docker="quay.io/broadinstitute/viral-core:2.1.16"
+    String       docker="quay.io/broadinstitute/viral-core:2.1.18"
   }
 
   command {
@@ -144,7 +144,7 @@ task fastqc {
   input {
     File     reads_bam
 
-    String   docker="quay.io/broadinstitute/viral-core:2.1.16"
+    String   docker="quay.io/broadinstitute/viral-core:2.1.18"
   }
 
   String   reads_basename=basename(reads_bam, ".bam")
@@ -177,7 +177,7 @@ task align_and_count {
     Int     topNHits = 3
 
     Int?    machine_mem_gb
-    String  docker="quay.io/broadinstitute/viral-core:2.1.16"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.18"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
@@ -188,20 +188,22 @@ task align_and_count {
 
     read_utils.py --version | tee VERSION
 
-    ln -s ${reads_bam} ${reads_basename}.bam
+    ln -s "${reads_bam}" "${reads_basename}.bam"
     read_utils.py minimap2_idxstats \
-      ${reads_basename}.bam \
-      ${ref_db} \
-      --outStats ${reads_basename}.count.${ref_basename}.txt.unsorted \
+      "${reads_basename}.bam" \
+      "${ref_db}" \
+      --outStats "${reads_basename}.count.${ref_basename}.txt.unsorted" \
       --loglevel=DEBUG
 
-      sort -b -r -n -k3 ${reads_basename}.count.${ref_basename}.txt.unsorted > ${reads_basename}.count.${ref_basename}.txt
-      head -n ${topNHits} ${reads_basename}.count.${ref_basename}.txt > ${reads_basename}.count.${ref_basename}.top_${topNHits}_hits.txt
+    sort -b -r -n -k3 "${reads_basename}.count.${ref_basename}.txt.unsorted" > "${reads_basename}.count.${ref_basename}.txt"
+    head -n ${topNHits} "${reads_basename}.count.${ref_basename}.txt" > "${reads_basename}.count.${ref_basename}.top_${topNHits}_hits.txt"
+    head -1 "${reads_basename}.count.${ref_basename}.txt" | cut -f 1 > "${reads_basename}.count.${ref_basename}.top.txt"
   }
 
   output {
     File   report           = "${reads_basename}.count.${ref_basename}.txt"
     File   report_top_hits  = "${reads_basename}.count.${ref_basename}.top_${topNHits}_hits.txt"
+    String top_hit_id = read_string("${reads_basename}.count.${ref_basename}.top.txt")
     String viralngs_version = read_string("VERSION")
   }
 
@@ -220,7 +222,7 @@ task align_and_count_summary {
 
     String       output_prefix="count_summary"
 
-    String        docker="quay.io/broadinstitute/viral-core:2.1.16"
+    String        docker="quay.io/broadinstitute/viral-core:2.1.18"
   }
 
   command {
@@ -393,7 +395,7 @@ task tsv_join {
     String         id_col
     String         out_basename
 
-    String         docker="quay.io/broadinstitute/viral-core:2.1.16"
+    String         docker="quay.io/broadinstitute/viral-core:2.1.18"
   }
 
   command {
@@ -420,7 +422,7 @@ task tsv_stack {
   input {
     Array[File]+   input_tsvs
     String         out_basename
-    String         docker="quay.io/broadinstitute/viral-core:2.1.16"
+    String         docker="quay.io/broadinstitute/viral-core:2.1.18"
   }
 
   command {
@@ -450,7 +452,7 @@ task compare_two_genomes {
     File          genome_two
     String        out_basename
 
-    String        docker="quay.io/broadinstitute/viral-assemble:2.1.16.0"
+    String        docker="quay.io/broadinstitute/viral-assemble:2.1.16.1"
   }
 
   command {

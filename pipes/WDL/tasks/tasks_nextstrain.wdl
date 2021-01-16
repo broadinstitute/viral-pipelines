@@ -30,7 +30,7 @@ task gzcat {
     input {
         Array[File] infiles
         String      output_name
-        String      docker="quay.io/broadinstitute/viral-core:2.1.16"
+        String      docker="quay.io/broadinstitute/viral-core:2.1.18"
     }
     command <<<
         python3 <<CODE
@@ -63,7 +63,7 @@ task derived_cols {
         String?       lab_highlight_loc
         Array[File]   table_map=[]
 
-        String        docker="quay.io/broadinstitute/viral-core:2.1.16"
+        String        docker="quay.io/broadinstitute/viral-core:2.1.18"
     }
     String basename = basename(basename(metadata_tsv, ".txt"), ".tsv")
     command {
@@ -149,9 +149,9 @@ task filter_segments {
     CODE
     >>>
     runtime {
-        docker : "python"
-        memory : select_first([machine_mem_gb, 3]) + " GB"
-        cpu :    1
+        docker: "python:slim"
+        memory: select_first([machine_mem_gb, 3]) + " GB"
+        cpu:    1
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x2"
     }
@@ -264,7 +264,7 @@ task filter_sequences_by_length {
         File    sequences_fasta
         Int     min_non_N = 1
 
-        String  docker="quay.io/broadinstitute/viral-core:2.1.16"
+        String  docker="quay.io/broadinstitute/viral-core:2.1.18"
     }
     parameter_meta {
         sequences_fasta: {
