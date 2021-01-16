@@ -83,12 +83,22 @@ workflow sarscov2_illumina_full {
                 lane = lane_sheet.left + 1,
                 samplesheet = samplesheet_rename_ids.new_sheet
         }
+        call demux.map_map_setdefault as meta_default_sample {
+            input:
+                map_map_json = illumina_demux.meta_by_sample_json,
+                sub_keys = ["amplicon_set", "control"]
+        }
+        call demux.map_map_setdefault as meta_default_filename {
+            input:
+                map_map_json = illumina_demux.meta_by_filename_json,
+                sub_keys = ["spike_in"]
+        }
     }
     call demux.merge_maps as meta_sample {
-        input: maps_jsons = illumina_demux.meta_by_sample_json
+        input: maps_jsons = meta_default_sample.out_json
     }
     call demux.merge_maps as meta_filename {
-        input: maps_jsons = illumina_demux.meta_by_filename_json
+        input: maps_jsons = meta_default_filename.out_json
     }
 
     #### human depletion & spike-in counting for all files

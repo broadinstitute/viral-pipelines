@@ -328,6 +328,36 @@ task illumina_demux {
   }
 }
 
+task map_map_setdefault {
+  input {
+    File          map_map_json
+    Array[String] sub_keys
+  }
+  command <<<
+    python3 << CODE
+    import json
+    sub_keys = '~{sep="*" sub_keys}'.split('*')
+    with open('~{map_map_json}', 'rt') as inf:
+      out = json.load(inf)
+    for k in out.keys():
+      for sub_key in sub_keys:
+        out[k].setdefault(sub_key, "")
+    with open('out.json', 'wt') as outf:
+      json.dump(out, outf, indent=2)
+    CODE
+  >>>
+  output {
+    File out_json = 'out.json'
+  }
+  runtime {
+    docker: "python:slim"
+    memory: "1 GB"
+    cpu: 1
+    disks: "local-disk 20 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task merge_maps {
   input {
     Array[File] maps_jsons
