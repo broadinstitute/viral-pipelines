@@ -83,7 +83,6 @@ workflow sarscov2_illumina_full {
                 lane = lane_sheet.left + 1,
                 samplesheet = samplesheet_rename_ids.new_sheet
         }
-
     }
     call demux.merge_maps as meta_sample {
         input: maps = illumina_demux.meta_by_sample

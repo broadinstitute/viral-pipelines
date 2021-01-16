@@ -332,11 +332,10 @@ task merge_maps {
   command <<<
     python3 << CODE
     import json
-    injsons = '~{sep="*" maps}'.split('*')
+    inarrays = [ ~{sep="," maps} ]
     out = {}
-    for j in injsons:
-      with open(j, 'rt') as inf:
-        out.update(json.load(inf))
+    for j in inarrays:
+      out.update(j)
     with open('out.json', 'wt') as outf:
       json.dump(out, outf, indent=2)
     CODE
