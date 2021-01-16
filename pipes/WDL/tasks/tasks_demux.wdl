@@ -330,16 +330,16 @@ task illumina_demux {
 
 task merge_maps {
   input {
-    Array[Map[String,Map[String,String]]] maps
+    Array[File] maps_jsons
   }
   command <<<
     python3 << CODE
     import json
-    with open('~{write_json(maps)}', 'rt') as inf:
-      inarrays = json.load(inf)
+    infiles = '~{sep='*' maps_jsons}'.split('*')
     out = {}
-    for j in inarrays:
-      out.update(j)
+    for fname in infiles:
+      with open(fname, 'rt') as inf:
+        out.update(json.load(inf))
     with open('out.json', 'wt') as outf:
       json.dump(out, outf, indent=2)
     CODE

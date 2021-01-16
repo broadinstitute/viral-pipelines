@@ -85,10 +85,10 @@ workflow sarscov2_illumina_full {
         }
     }
     call demux.merge_maps as meta_sample {
-        input: maps = illumina_demux.meta_by_sample
+        input: maps_jsons = illumina_demux.meta_by_sample_json
     }
     call demux.merge_maps as meta_filename {
-        input: maps = illumina_demux.meta_by_filename
+        input: maps_jsons = illumina_demux.meta_by_filename_json
     }
 
     #### human depletion & spike-in counting for all files
