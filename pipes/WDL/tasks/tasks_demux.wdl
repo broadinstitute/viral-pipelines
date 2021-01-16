@@ -344,4 +344,11 @@ task merge_maps {
   output {
     Map[String,Map[String,String]] merged = read_json('out.json')
   }
+  runtime {
+    docker: "python"
+    memory: "1 GB"
+    cpu: 1
+    disks: "local-disk 20 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
 }
