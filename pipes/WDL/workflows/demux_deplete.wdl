@@ -61,10 +61,10 @@ workflow demux_deplete {
         }
     }
     call demux.merge_maps as meta_sample {
-        input: maps_jsons = meta_default_sample.out_json
+        input: maps_jsons = illumina_demux.meta_by_sample_json
     }
     call demux.merge_maps as meta_filename {
-        input: maps_jsons = meta_default_filename.out_json
+        input: maps_jsons = illumina_demux.meta_by_filename_json
     }
 
     #### human depletion & spike-in counting for all files
