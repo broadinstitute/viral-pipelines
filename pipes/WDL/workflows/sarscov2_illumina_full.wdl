@@ -151,10 +151,10 @@ workflow sarscov2_illumina_full {
 
     ### assembly and analyses per biosample
     scatter(name_reads in zip(group_bams_by_sample.sample_names, group_bams_by_sample.grouped_bam_filepaths)) {
-        # assemble genome
         Boolean ampseq = (meta_sample.merged[name_reads.left]["amplicon_set"] != "")
         String orig_name = meta_sample.merged[name_reads.left]["sample_original"]
 
+        # assemble genome
         if (ampseq) {
             String trim_coords_bed = amplicon_bed_prefix + meta_sample.merged[name_reads.left]["amplicon_set"] + ".bed"
         }
@@ -184,7 +184,7 @@ workflow sarscov2_illumina_full {
 
             File passing_assemblies = rename_fasta_header.renamed_fasta
             String passing_assembly_ids = orig_name
-            Array[String] assembly_meta = [orig_name, "Broad viral-ngs v. " + illumina_demux.viralngs_version, assemble_refbased.assembly_mean_coverage]
+            Array[String] assembly_meta = [orig_name, "Broad viral-ngs v. " + illumina_demux.viralngs_version[0], assemble_refbased.assembly_mean_coverage]
 
             # lineage assignment
             call sarscov2.nextclade_one_sample {

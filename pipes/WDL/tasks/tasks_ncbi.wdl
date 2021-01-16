@@ -301,6 +301,26 @@ task rename_fasta_header {
   }
 }
 
+task gisaid_meta_prep {
+  input {
+    File   source_modifier_table
+    String out_name
+  }
+  command {
+
+  }
+  output {
+    File meta_tsv = "~{out_name}"
+    String value = read_string("OUTVAL")
+  }
+  runtime {
+    docker: "ubuntu"
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task lookup_table_by_filename {
   input {
     String  id
