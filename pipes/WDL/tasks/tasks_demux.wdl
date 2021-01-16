@@ -310,7 +310,7 @@ task illumina_demux {
     String      viralngs_version         = read_string("VERSION")
 
     Map[String,Map[String,String]] meta_by_sample   = read_json('meta_by_sample.json')
-    Map[String,Map[String,String]] meta_by_filename = read_json('meta_by_filename.json')
+    Map[String,Map[String,String]] meta_by_filename = read_json('meta_by_fname.json')
     Map[String,String]             run_info         = read_json('runinfo.json')
   }
 
