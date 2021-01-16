@@ -60,6 +60,12 @@ workflow demux_deplete {
                 samplesheet = samplesheet_rename_ids.new_sheet
         }
     }
+    call demux.merge_maps as meta_sample {
+        input: maps_jsons = meta_default_sample.out_json
+    }
+    call demux.merge_maps as meta_filename {
+        input: maps_jsons = meta_default_filename.out_json
+    }
 
     #### human depletion & spike-in counting for all files
     scatter(raw_reads in flatten(illumina_demux.raw_reads_unaligned_bams)) {
@@ -116,6 +122,9 @@ workflow demux_deplete {
     output {
         Array[File] raw_reads_unaligned_bams     = flatten(illumina_demux.raw_reads_unaligned_bams)
         Array[Int]  read_counts_raw = deplete.depletion_read_count_pre
+
+        Map[String,Map[String,String]] meta_by_filename = meta_filename.merged
+        Map[String,Map[String,String]] meta_by_sample = meta_sample.merged
 
         Array[File] cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing)
         Array[File] cleaned_bams_tiny = select_all(empty_bam)
