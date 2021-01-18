@@ -9,6 +9,7 @@ import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_demux.wdl" as demux
 
+import "demux_deplete.wdl"
 import "assemble_refbased.wdl"
 import "sarscov2_lineages.wdl"
 
@@ -20,16 +21,8 @@ workflow sarscov2_illumina_full {
     }
 
     parameter_meta {
-        flowcell_tgz: {
-            description: "Illumina BCL directory compressed as tarball. Must contain RunInfo.xml, SampleSheet.csv, RTAComplete.txt, and Data/Intensities/BaseCalls/*",
-            patterns: ["*.tar.gz", ".tar.zst", ".tar.bz2", ".tar.lz4", ".tgz"]
-        }
         samplesheets: {
             description: "Custom formatted 'extended' format tsv samplesheets that will override any SampleSheet.csv in the illumina BCL directory. Must supply one file per lane of the flowcell, and must provide them in lane order. Required tsv column headings are: sample, library_id_per_sample, barcode_1, barcode_2 (if paired reads, omit if single-end), library_strategy, library_source, library_selection, design_description. 'sample' must correspond to a biological sample. 'sample' x 'library_id_per_sample' must be unique within a samplesheet and correspond to independent libraries from the same original sample. barcode_1 and barcode_2 must correspond to the actual index sequence. Remaining columns must follow strict ontology: see 3rd tab of https://www.ncbi.nlm.nih.gov/core/assets/sra/files/SRA_metadata_acc_example.xlsx for controlled vocabulary and term definitions.",
-            patterns: ["*.txt", "*.tsv"]
-        }
-        sample_rename_map: {
-            description: "If 'samples' need to be renamed, provide a two-column tsv that contains at least the following columns: internal_id, external_id. All samples will be renamed prior to analysis. Any samples described in the samplesheets that are not present in sample_rename_map will be unaltered. If this is omitted, no samples will be renamed.",
             patterns: ["*.txt", "*.tsv"]
         }
 
@@ -50,122 +43,40 @@ workflow sarscov2_illumina_full {
     }
 
     input {
-        File          flowcell_tgz
-        Array[File]+  samplesheets  ## must be in lane order!
-
         File          reference_fasta
         String        amplicon_bed_prefix
 
         File          biosample_attributes
-        File?         sample_rename_map
+        String        instrument_model
+        String        sra_title
 
         Int           taxid = 2697049
         Int           min_genome_bases = 20000
-        Int           min_reads_per_bam = 100
         String        gisaid_prefix = 'hCoV-19/'
-
-        File          spikein_db
-        Array[File]?  bmtaggerDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
-        Array[File]?  blastDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
-        Array[File]?  bwaDbs
     }
 
-    #### demux each lane (rename samples if requested)
-    scatter(lane_sheet in zip(range(length(samplesheets)), samplesheets)) {
-        call demux.samplesheet_rename_ids {
-            input:
-                old_sheet = lane_sheet.right,
-                rename_map = sample_rename_map
-        }
-        call demux.illumina_demux {
-            input:
-                flowcell_tgz = flowcell_tgz,
-                lane = lane_sheet.left + 1,
-                samplesheet = samplesheet_rename_ids.new_sheet
-        }
-        call demux.map_map_setdefault as meta_default_sample {
-            input:
-                map_map_json = illumina_demux.meta_by_sample_json,
-                sub_keys = ["amplicon_set", "control"]
-        }
-        call demux.map_map_setdefault as meta_default_filename {
-            input:
-                map_map_json = illumina_demux.meta_by_filename_json,
-                sub_keys = ["spike_in"]
-        }
-    }
-    call demux.merge_maps as meta_sample {
-        input: maps_jsons = meta_default_sample.out_json
-    }
-    call demux.merge_maps as meta_filename {
-        input: maps_jsons = meta_default_filename.out_json
-    }
-
-    #### human depletion & spike-in counting for all files
-    scatter(raw_reads in flatten(illumina_demux.raw_reads_unaligned_bams)) {
-        call reports.align_and_count as spikein {
-            input:
-                reads_bam = raw_reads,
-                ref_db = spikein_db
-        }
-        call taxon_filter.deplete_taxa as deplete {
-            input:
-                raw_reads_unmapped_bam = raw_reads,
-                bmtaggerDbs = bmtaggerDbs,
-                blastDbs = blastDbs,
-                bwaDbs = bwaDbs
-        }
-
-        if (deplete.depletion_read_count_post >= min_reads_per_bam) {
-            File cleaned_bam_passing = deplete.cleaned_bam
-        }
-        if (deplete.depletion_read_count_post < min_reads_per_bam) {
-            File empty_bam = raw_reads
-        }
-
-        # TO DO: flag all libraries where highest spike-in is not what was expected in extended samplesheet
-    }
-
-    #### SRA submission prep
-    call ncbi.sra_meta_prep {
+    ### demux, deplete, SRA submission prep, fastqc/multiqc
+    call demux_deplete.demux_deplete {
         input:
-            cleaned_bam_filepaths = select_all(cleaned_bam_passing),
             biosample_map = biosample_attributes,
-            library_metadata = samplesheet_rename_ids.new_sheet,
-            out_name = "sra_metadata-~{basename(flowcell_tgz, '.tar.gz')}.tsv",
-            platform = "ILLUMINA"
-    }
-
-    #### summary stats
-    call reports.MultiQC as multiqc_raw {
-        input:
-            input_files = flatten(illumina_demux.raw_reads_fastqc_zip),
-            file_name   = "multiqc-raw.html"
-    }
-    call reports.MultiQC as multiqc_cleaned {
-        input:
-            input_files = deplete.cleaned_fastqc_zip,
-            file_name   = "multiqc-cleaned.html"
-    }
-    call reports.align_and_count_summary as spike_summary {
-        input:
-            counts_txt = spikein.report
+            instrument_model = instrument_model,
+            sra_title = sra_title
     }
 
     ### gather data by biosample
     call read_utils.group_bams_by_sample {
         input:
-            bam_filepaths = select_all(cleaned_bam_passing)
+            bam_filepaths = demux_deplete.cleaned_reads_unaligned_bams
     }
 
     ### assembly and analyses per biosample
     scatter(name_reads in zip(group_bams_by_sample.sample_names, group_bams_by_sample.grouped_bam_filepaths)) {
-        Boolean ampseq = (meta_sample.merged[name_reads.left]["amplicon_set"] != "")
-        String orig_name = meta_sample.merged[name_reads.left]["sample_original"]
+        Boolean ampseq = (demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"] != "")
+        String orig_name = demux_deplete.meta_by_sample[name_reads.left]["sample_original"]
 
         # assemble genome
         if (ampseq) {
-            String trim_coords_bed = amplicon_bed_prefix + meta_sample.merged[name_reads.left]["amplicon_set"] + ".bed"
+            String trim_coords_bed = amplicon_bed_prefix + demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"] + ".bed"
         }
         call assemble_refbased.assemble_refbased {
             input:
@@ -179,7 +90,7 @@ workflow sarscov2_illumina_full {
         }
 
         # log controls
-        if (meta_sample.merged[name_reads.left]["control"] == 'NTC') {
+        if (demux_deplete.meta_by_sample[name_reads.left]["control"] == 'NTC') {
             Int ntc_bases = assemble_refbased.assembly_length_unambiguous
         }
 
@@ -193,7 +104,7 @@ workflow sarscov2_illumina_full {
 
             File passing_assemblies = rename_fasta_header.renamed_fasta
             String passing_assembly_ids = orig_name
-            Array[String] assembly_cmt = [orig_name, "Broad viral-ngs v. " + illumina_demux.viralngs_version[0], assemble_refbased.assembly_mean_coverage]
+            Array[String] assembly_cmt = [orig_name, "Broad viral-ngs v. " + demux_deplete.demux_viral_core_version, assemble_refbased.assembly_mean_coverage]
 
             # lineage assignment
             call sarscov2_lineages.sarscov2_lineages {
@@ -221,7 +132,7 @@ workflow sarscov2_illumina_full {
         Map[String,String?] assembly_stats = {
             'sample_orig': orig_name,
             'sample': name_reads.left,
-            'amplicon_set': meta_sample.merged[name_reads.left]["amplicon_set"],
+            'amplicon_set': demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"],
             'assembly_mean_coverage': assemble_refbased.assembly_mean_coverage,
             'nextclade_clade':   sarscov2_lineages.nextclade_clade,
             'nextclade_aa_subs': sarscov2_lineages.nextclade_aa_subs,
@@ -296,16 +207,16 @@ workflow sarscov2_illumina_full {
     }
 
     output {
-        Array[File] raw_reads_unaligned_bams     = flatten(illumina_demux.raw_reads_unaligned_bams)
-        Array[File] cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing)
-        Array[File] cleaned_bams_tiny = select_all(empty_bam)
+        Array[File] raw_reads_unaligned_bams     = demux_deplete.raw_reads_unaligned_bams
+        Array[File] cleaned_reads_unaligned_bams = demux_deplete.cleaned_reads_unaligned_bams
+        Array[File] cleaned_bams_tiny            = demux_deplete.cleaned_bams_tiny
 
-        File meta_by_filename = meta_filename.merged_json
+        File meta_by_filename = write_json(demux_deplete.meta_by_filename)
 
-        Array[Int]  read_counts_raw = deplete.depletion_read_count_pre
-        Array[Int]  read_counts_depleted = deplete.depletion_read_count_post
+        Array[Int]  read_counts_raw       = demux_deplete.read_counts_raw
+        Array[Int]  read_counts_depleted  = demux_deplete.read_counts_depleted
 
-        File        sra_metadata          = sra_meta_prep.sra_metadata
+        File        sra_metadata          = select_first([demux_deplete.sra_metadata])
 
         Array[File] assemblies_fasta = assemble_refbased.assembly_fasta
         Array[File] passing_assemblies_fasta = select_all(passing_assemblies)
@@ -313,13 +224,13 @@ workflow sarscov2_illumina_full {
 
         Int         max_ntc_bases = ntc.max
 
-        Array[File] demux_metrics            = illumina_demux.metrics
-        Array[File] demux_commonBarcodes     = illumina_demux.commonBarcodes
-        Array[File] demux_outlierBarcodes    = illumina_demux.outlierBarcodes
+        Array[File] demux_metrics            = demux_deplete.demux_metrics
+        Array[File] demux_commonBarcodes     = demux_deplete.demux_commonBarcodes
+        Array[File] demux_outlierBarcodes    = demux_deplete.demux_outlierBarcodes
 
-        File        multiqc_report_raw     = multiqc_raw.multiqc_report
-        File        multiqc_report_cleaned = multiqc_cleaned.multiqc_report
-        File        spikein_counts         = spike_summary.count_summary
+        File        multiqc_report_raw     = demux_deplete.multiqc_report_raw
+        File        multiqc_report_cleaned = demux_deplete.multiqc_report_cleaned
+        File        spikein_counts         = demux_deplete.spikein_counts
 
         Array[Map[String,String?]] per_assembly_stats = assembly_stats
         Array[Map[String,File?]]   per_assembly_files = assembly_files
@@ -338,7 +249,7 @@ workflow sarscov2_illumina_full {
         Array[String] submittable_ids = select_all(submittable_id)
         Array[String] failed_assembly_ids = select_all(failed_assembly_id)
         Array[String] failed_annotation_ids = select_all(failed_annotation_id)
-        Int           num_read_files = length(select_all(cleaned_bam_passing))
+        Int           num_read_files = length(demux_deplete.cleaned_reads_unaligned_bams)
         Int           num_assembled = length(select_all(passing_assemblies))
         Int           num_failed_assembly = length(select_all(failed_assembly_id))
         Int           num_submittable = length(select_all(submittable_id))
