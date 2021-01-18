@@ -7,10 +7,10 @@ import "../tasks/tasks_assembly.wdl" as assembly
 import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
-import "../tasks/tasks_sarscov2.wdl" as sarscov2
 import "../tasks/tasks_demux.wdl" as demux
 
 import "assemble_refbased.wdl"
+import "sarscov2_lineages.wdl"
 
 workflow sarscov2_illumina_full {
     meta {
@@ -196,11 +196,7 @@ workflow sarscov2_illumina_full {
             Array[String] assembly_cmt = [orig_name, "Broad viral-ngs v. " + illumina_demux.viralngs_version[0], assemble_refbased.assembly_mean_coverage]
 
             # lineage assignment
-            call sarscov2.nextclade_one_sample {
-                input:
-                    genome_fasta = passing_assemblies
-            }
-            call sarscov2.pangolin_one_sample {
+            call sarscov2_lineages.sarscov2_lineages {
                 input:
                     genome_fasta = passing_assemblies
             }
@@ -227,29 +223,29 @@ workflow sarscov2_illumina_full {
             'sample': name_reads.left,
             'amplicon_set': meta_sample.merged[name_reads.left]["amplicon_set"],
             'assembly_mean_coverage': assemble_refbased.assembly_mean_coverage,
-            'nextclade_clade': nextclade_one_sample.nextclade_clade ,
-            'nextclade_aa_subs': nextclade_one_sample.aa_subs_csv,
-            'nextclade_aa_dels': nextclade_one_sample.aa_dels_csv,
-            'pangolin_clade': pangolin_one_sample.pangolin_clade
+            'nextclade_clade':   sarscov2_lineages.nextclade_clade,
+            'nextclade_aa_subs': sarscov2_lineages.nextclade_aa_subs,
+            'nextclade_aa_dels': sarscov2_lineages.nextclade_aa_dels,
+            'pango_lineage':     sarscov2_lineages.pango_lineage
         }
         Map[String,File?] assembly_files = {
-            'assembly_fasta': assemble_refbased.assembly_fasta,
-            'coverage_plot': assemble_refbased.align_to_ref_merged_coverage_plot,
-            'aligned_bam': assemble_refbased.align_to_ref_merged_aligned_trimmed_only_bam,
+            'assembly_fasta':           assemble_refbased.assembly_fasta,
+            'coverage_plot':            assemble_refbased.align_to_ref_merged_coverage_plot,
+            'aligned_bam':              assemble_refbased.align_to_ref_merged_aligned_trimmed_only_bam,
             'replicate_discordant_vcf': assemble_refbased.replicate_discordant_vcf,
-            'nextclade_tsv': nextclade_one_sample.nextclade_tsv,
-            'pangolin_csv': pangolin_one_sample.pangolin_csv,
+            'nextclade_tsv': sarscov2_lineages.nextclade_tsv,
+            'pangolin_csv':  sarscov2_lineages.pangolin_csv,
             'vadr_tgz': vadr.outputs_tgz
         }
         Map[String,Int?] assembly_metrics = {
             'assembly_length_unambiguous': assemble_refbased.assembly_length_unambiguous,
-            'dist_to_ref_snps': assemble_refbased.dist_to_ref_snps,
-            'dist_to_ref_indels': assemble_refbased.dist_to_ref_indels,
-            'replicate_concordant_sites': assemble_refbased.replicate_concordant_sites,
-            'replicate_discordant_snps': assemble_refbased.replicate_discordant_snps,
+            'dist_to_ref_snps':            assemble_refbased.dist_to_ref_snps,
+            'dist_to_ref_indels':          assemble_refbased.dist_to_ref_indels,
+            'replicate_concordant_sites':  assemble_refbased.replicate_concordant_sites,
+            'replicate_discordant_snps':   assemble_refbased.replicate_discordant_snps,
             'replicate_discordant_indels': assemble_refbased.replicate_discordant_indels,
-            'num_read_groups': assemble_refbased.num_read_groups,
-            'num_libraries': assemble_refbased.num_libraries,
+            'num_read_groups':             assemble_refbased.num_read_groups,
+            'num_libraries':               assemble_refbased.num_libraries,
             'vadr_num_alerts': vadr.num_alerts
         }
 
@@ -304,7 +300,7 @@ workflow sarscov2_illumina_full {
         Array[File] cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing)
         Array[File] cleaned_bams_tiny = select_all(empty_bam)
 
-        Map[String,Map[String,String]] meta_by_filename = meta_filename.merged
+        File meta_by_filename = meta_filename.merged_json
 
         Array[Int]  read_counts_raw = deplete.depletion_read_count_pre
         Array[Int]  read_counts_depleted = deplete.depletion_read_count_post
