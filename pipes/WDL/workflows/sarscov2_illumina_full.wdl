@@ -50,10 +50,10 @@ workflow sarscov2_illumina_full {
         String        instrument_model
         String        sra_title
 
-        Int           taxid = 2697049
         Int           min_genome_bases = 20000
-        String        gisaid_prefix = 'hCoV-19/'
     }
+    Int     taxid = 2697049
+    String  gisaid_prefix = 'hCoV-19/'
 
     ### demux, deplete, SRA submission prep, fastqc/multiqc
     call demux_deplete.demux_deplete {
