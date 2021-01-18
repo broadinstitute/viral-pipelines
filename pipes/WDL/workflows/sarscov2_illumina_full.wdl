@@ -1,13 +1,8 @@
 version 1.0
 
-import "../tasks/tasks_metagenomics.wdl" as metagenomics
 import "../tasks/tasks_read_utils.wdl" as read_utils
-import "../tasks/tasks_taxon_filter.wdl" as taxon_filter
-import "../tasks/tasks_assembly.wdl" as assembly
-import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
-import "../tasks/tasks_demux.wdl" as demux
 
 import "demux_deplete.wdl"
 import "assemble_refbased.wdl"
