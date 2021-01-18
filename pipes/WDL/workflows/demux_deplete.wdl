@@ -144,6 +144,8 @@ workflow demux_deplete {
 
         Map[String,Map[String,String]] meta_by_filename = meta_filename.merged
         Map[String,Map[String,String]] meta_by_sample = meta_sample.merged
+        File meta_by_filename_json = meta_filename.merged_json
+        File meta_by_sample_json = meta_sample.merged_json
 
         Array[File] cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing)
         Array[File] cleaned_bams_tiny = select_all(empty_bam)
