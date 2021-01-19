@@ -183,9 +183,9 @@ task group_sra_bams_by_biosample {
       sample_to_libstrat[samn].add(libstrat)
 
     # write outputs
-    with open('attributes.json') as out_attr:
+    with open('attributes.json', 'wt') as out_attr:
         json.dump(sample_to_attributes, out_attr)
-    with open('attributes.tsv') as out_attr:
+    with open('attributes.tsv', 'wt') as out_attr:
         headers = tuple(sorted(attr_keys))
         out_attr.write('\t'.join(headers)+'\n')
         for sample in sorted(sample_to_bams.keys()):
@@ -195,7 +195,7 @@ task group_sra_bams_by_biosample {
         for sample in sorted(sample_to_bams.keys()):
           out_samples.write(sample+'\n')
           out_groups.write('\t'.join(sample_to_bams[sample])+'\n')
-    with open('library_strategies.json') as out_attr:
+    with open('library_strategies.json', 'wt') as out_attr:
         for k,v in sample_to_libstrat.items():
             sample_to_libstrat[k] = ';'.join(sorted(v))
         json.dump(sample_to_libstrat, out_attr)
