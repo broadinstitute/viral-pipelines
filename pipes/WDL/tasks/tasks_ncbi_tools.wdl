@@ -27,7 +27,7 @@ task Fetch_SRA_to_BAM {
             # per the SAM/BAM specification
             SAM_PLATFORM="ONT"
         else
-            SAM_PLATFORM="$LIBRARY"
+            SAM_PLATFORM="$PLATFORM"
         fi
 
         sam-dump --unaligned --header ${SRA_ID} \
