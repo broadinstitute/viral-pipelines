@@ -30,7 +30,7 @@ task Fetch_SRA_to_BAM {
             SAM_PLATFORM="$PLATFORM"
         fi
 
-        sam-dump --unaligned --header ${SRA_ID} \
+        sam-dump --unaligned --header "~{SRA_ID}" \
             | samtools view -bhS - \
             > temp.bam
         picard AddOrReplaceReadGroups \
