@@ -48,6 +48,7 @@ task Fetch_SRA_to_BAM {
             SRA.json | tee OUT_LIBRARY_STRATEGY
 
         python3 << CODE
+        import json
         with open('SRA.json', 'rt') as inf:
             meta = json.load(inf)
             biosample = dict((x['TAG'],x['VALUE']) for x in meta['EXPERIMENT_PACKAGE_SET']['EXPERIMENT_PACKAGE']['SAMPLE']['SAMPLE_ATTRIBUTES']['SAMPLE_ATTRIBUTE'])
