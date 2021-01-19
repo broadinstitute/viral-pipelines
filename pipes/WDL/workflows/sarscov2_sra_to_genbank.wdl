@@ -197,7 +197,8 @@ workflow sarscov2_sra_to_genbank {
       input:
         source_modifier_table = biosample_to_genbank.genbank_source_modifier_table,
         structured_comments = structured_comments.structured_comment_table,
-        out_name = "gisaid_meta.tsv"
+        out_name = "gisaid_meta.tsv",
+        strict = false
     }
 
     #### summary stats
