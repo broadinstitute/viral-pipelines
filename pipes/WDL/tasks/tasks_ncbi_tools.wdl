@@ -172,9 +172,11 @@ task group_sra_bams_by_biosample {
     sample_to_attributes = {}
     sample_to_libstrat = {}
     attr_keys = set()
-    for samn,bam,attr,libstrat in zip(biosample_accs,bam_uris, attributes, libstrats):
+    for samn,bam,attr_file,libstrat in zip(biosample_accs,bam_uris, attributes, libstrats):
       sample_to_bams.setdefault(samn, [])
       sample_to_bams[samn].append(bam)
+      with open(attr_file, 'rt') as inf:
+        attr = json.load(inf)
       sample_to_attributes[samn] = attr
       attr_keys.update(k for k,v in attr.items() if v)
       sample_to_libstrat.setdefault(samn, set())
