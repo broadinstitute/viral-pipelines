@@ -307,11 +307,14 @@ task gisaid_meta_prep {
     File   structured_comments
     String out_name
     String continent = "North America"
+    Boolean strict = true
   }
   command <<<
     python3 << CODE
     import os.path
     import csv
+
+    strict = ~{true="True" false="False" strict}
 
     # lookup table files to dicts
     sample_to_cmt = {}
@@ -353,11 +356,11 @@ task gisaid_meta_prep {
           })
 
           #covv_specimen
-
-          assert row['isolation_source'] == 'Clinical'
-          assert row['host'] == 'Homo sapiens'
-          assert row['organism'] == 'Severe acute respiratory syndrome coronavirus 2'
-          assert row['db_xref'] == 'taxon:2697049'
+          if strict:
+            assert row['isolation_source'] == 'Clinical'
+            assert row['host'] == 'Homo sapiens'
+            assert row['organism'] == 'Severe acute respiratory syndrome coronavirus 2'
+            assert row['db_xref'] == 'taxon:2697049'
 
     CODE
   >>>

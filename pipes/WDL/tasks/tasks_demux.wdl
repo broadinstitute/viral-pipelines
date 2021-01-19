@@ -376,6 +376,7 @@ task merge_maps {
   >>>
   output {
     Map[String,Map[String,String]] merged = read_json('out.json')
+    File merged_json = 'out.json'
   }
   runtime {
     docker: "python:slim"

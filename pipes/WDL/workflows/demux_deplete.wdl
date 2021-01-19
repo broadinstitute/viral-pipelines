@@ -21,10 +21,16 @@ workflow demux_deplete {
         File?        biosample_map
         Int          min_reads_per_bam = 100
 
+        String?      instrument_model
+        String?      sra_title
+
         File         spikein_db
         Array[File]? bmtaggerDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
         Array[File]? blastDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
         Array[File]? bwaDbs
+
+        Array[String] default_sample_keys = ["amplicon_set", "control"]
+        Array[String] default_filename_keys = ["spike_in"]
     }
 
     parameter_meta {
@@ -53,18 +59,28 @@ workflow demux_deplete {
                 old_sheet = lane_sheet.right,
                 rename_map = sample_rename_map
         }
-        call demux.illumina_demux as illumina_demux {
+        call demux.illumina_demux {
             input:
                 flowcell_tgz = flowcell_tgz,
                 lane = lane_sheet.left + 1,
                 samplesheet = samplesheet_rename_ids.new_sheet
         }
+        call demux.map_map_setdefault as meta_default_sample {
+            input:
+                map_map_json = illumina_demux.meta_by_sample_json,
+                sub_keys = default_sample_keys
+        }
+        call demux.map_map_setdefault as meta_default_filename {
+            input:
+                map_map_json = illumina_demux.meta_by_filename_json,
+                sub_keys = default_filename_keys
+        }
     }
     call demux.merge_maps as meta_sample {
-        input: maps_jsons = illumina_demux.meta_by_sample_json
+        input: maps_jsons = meta_default_sample.out_json
     }
     call demux.merge_maps as meta_filename {
-        input: maps_jsons = illumina_demux.meta_by_filename_json
+        input: maps_jsons = meta_default_filename.out_json
     }
 
     #### human depletion & spike-in counting for all files
@@ -97,7 +113,10 @@ workflow demux_deplete {
                 biosample_map = select_first([biosample_map]),
                 library_metadata = samplesheet_rename_ids.new_sheet,
                 platform = "ILLUMINA",
-                out_name = "sra_metadata-~{basename(flowcell_tgz, '.tar.gz')}.tsv"
+                paired = (illumina_demux.run_info[0]['indexes'] == '2'),
+                out_name = "sra_metadata-~{basename(flowcell_tgz, '.tar.gz')}.tsv",
+                instrument_model = select_first([instrument_model]),
+                title = select_first([sra_title])
         }
     }
 
@@ -125,6 +144,8 @@ workflow demux_deplete {
 
         Map[String,Map[String,String]] meta_by_filename = meta_filename.merged
         Map[String,Map[String,String]] meta_by_sample = meta_sample.merged
+        File meta_by_filename_json = meta_filename.merged_json
+        File meta_by_sample_json = meta_sample.merged_json
 
         Array[File] cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing)
         Array[File] cleaned_bams_tiny = select_all(empty_bam)

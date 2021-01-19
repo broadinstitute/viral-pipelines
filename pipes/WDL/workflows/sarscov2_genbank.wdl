@@ -20,8 +20,10 @@ workflow sarscov2_genbank {
         File          assembly_stats_tsv
         File?         fasta_rename_map
 
-        Int           taxid = 2697049
         Int           min_genome_bases = 20000
+
+        Int           taxid = 2697049
+        String        gisaid_prefix = 'hCoV-19/'
     }
 
     parameter_meta {
@@ -98,6 +100,18 @@ workflow sarscov2_genbank {
         structured_comment_table = structured_comments.structured_comment_table
     }
 
+    call ncbi.prefix_fasta_header as prefix_gisaid {
+      input:
+        genome_fasta = concatenate.combined,
+        prefix = gisaid_prefix
+    }
+    call ncbi.gisaid_meta_prep {
+      input:
+        source_modifier_table = biosample_to_genbank.genbank_source_modifier_table,
+        structured_comments = structured_comments.structured_comment_table,
+        out_name = "gisaid_meta.tsv"
+    }
+
     output {
         File submission_zip = package_genbank_ftp_submission.submission_zip
         File submission_xml    = package_genbank_ftp_submission.submission_xml
@@ -110,6 +124,9 @@ workflow sarscov2_genbank {
 
         File biosample_map = biosample_to_genbank.biosample_map
         File genbank_source_table = biosample_to_genbank.genbank_source_modifier_table
+
+        File gisaid_fasta = prefix_gisaid.renamed_fasta
+        File gisaid_meta_tsv = gisaid_meta_prep.meta_tsv
     }
 
 }

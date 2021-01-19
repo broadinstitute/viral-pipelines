@@ -148,6 +148,6 @@ task pangolin_one_sample {
         String lineages_version   = read_string("VERSION_LINEAGES")
         String pangolearn_version = read_string("VERSION_PANGOLEARN")
         File   pangolin_csv       = "~{basename}.pangolin_report.csv"
-        String pangolin_clade     = read_string("PANGOLIN_CLADE")
+        String pango_lineage      = read_string("PANGOLIN_CLADE")
     }
 }
