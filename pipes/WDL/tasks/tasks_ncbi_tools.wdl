@@ -23,11 +23,11 @@ task Fetch_SRA_to_BAM {
         LIBRARY=$(jq -r .EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.alias SRA.json)
         RUNDATE=$(jq -r '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.RUN_SET.RUN.SRAFiles|if (.SRAFile|type) == "object" then .SRAFile.date else [.SRAFile[]|select(.supertype == "Original")][0].date end' SRA.json | cut -f 1 -d ' ')
 
-        if [ "$LIBRARY" = "OXFORD_NANOPORE" ]; then
+        if [ "$PLATFORM" = "OXFORD_NANOPORE" ]; then
             # per the SAM/BAM specification
-            SAM_LIBRARY="ONT"
+            SAM_PLATFORM="ONT"
         else
-            SAM_LIBRARY="$LIBRARY"
+            SAM_PLATFORM="$LIBRARY"
         fi
 
         sam-dump --unaligned --header ${SRA_ID} \
@@ -39,7 +39,7 @@ task Fetch_SRA_to_BAM {
             RGID=1 \
             RGLB="$LIBRARY" \
             RGSM="$SAMPLE" \
-            RGPL="$SAM_LIBRARY" \
+            RGPL="$SAM_PLATFORM" \
             RGPU="$LIBRARY" \
             RGPM="$MODEL" \
             RGDT="$RUNDATE" \
