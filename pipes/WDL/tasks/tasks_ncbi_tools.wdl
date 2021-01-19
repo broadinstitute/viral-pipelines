@@ -55,7 +55,8 @@ task Fetch_SRA_to_BAM {
             biosample['message'] = 'Successfully loaded'
             biosample['bioproject_accession'] = meta['EXPERIMENT_PACKAGE_SET']['EXPERIMENT_PACKAGE']['SAMPLE']['SAMPLE_LINKS']['SAMPLE_LINK']['XREF_LINK']['LABEL']
             biosample['sample_name'] = biosample['isolate']
-            with open('~{SRA_ID}-biosample_attributes.json', 'wt')
+            with open('~{SRA_ID}-biosample_attributes.json', 'wt') as outf:
+                json.dump(biosample, outf)
         CODE
     }
 
