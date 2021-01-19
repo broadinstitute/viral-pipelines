@@ -37,6 +37,7 @@ workflow sarscov2_sra_to_genbank {
         File          spikein_db
 
         Int           min_genome_bases = 20000
+        Int           min_reads_per_bam = 100
     }
     Int     taxid = 2697049
     String  gisaid_prefix = 'hCoV-19/'
@@ -47,24 +48,31 @@ workflow sarscov2_sra_to_genbank {
             input:
                 SRA_ID = sra_id
         }
-        call reports.fastqc {
-            input:
-                reads_bam = Fetch_SRA_to_BAM.reads_ubam
-        }
-        call reports.align_and_count as spikein {
-            input:
-                reads_bam = Fetch_SRA_to_BAM.reads_ubam,
-                ref_db = spikein_db
+        if (Fetch_SRA_to_BAM.num_reads >= min_reads_per_bam) {
+            File reads_ubam = Fetch_SRA_to_BAM.reads_ubam
+            File biosample_attributes_json = Fetch_SRA_to_BAM.biosample_attributes_json
+            String library_strategy = Fetch_SRA_to_BAM.library_strategy
+            String biosample_accession = Fetch_SRA_to_BAM.biosample_accession
+            Int num_reads = Fetch_SRA_to_BAM.num_reads
+            call reports.fastqc {
+                input:
+                    reads_bam = Fetch_SRA_to_BAM.reads_ubam
+            }
+            call reports.align_and_count as spikein {
+                input:
+                    reads_bam = Fetch_SRA_to_BAM.reads_ubam,
+                    ref_db = spikein_db
+            }
         }
     }
 
     ### gather data by biosample
     call ncbi_tools.group_sra_bams_by_biosample {
         input:
-            biosamples                 = Fetch_SRA_to_BAM.biosample_accession,
-            bam_filepaths              = Fetch_SRA_to_BAM.reads_ubam,
-            biosample_attributes_jsons = Fetch_SRA_to_BAM.biosample_attributes_json,
-            library_strategies         = Fetch_SRA_to_BAM.library_strategy
+            biosamples                 = select_all(biosample_accession),
+            bam_filepaths              = select_all(reads_ubam),
+            biosample_attributes_jsons = select_all(biosample_attributes_json),
+            library_strategies         = select_all(library_strategy)
     }
 
     ### assembly and analyses per biosample
@@ -195,22 +203,22 @@ workflow sarscov2_sra_to_genbank {
     #### summary stats
     call reports.MultiQC as multiqc_raw {
         input:
-            input_files = fastqc.fastqc_zip,
+            input_files = select_all(fastqc.fastqc_zip),
             file_name   = "multiqc-raw.html"
     }
     call reports.align_and_count_summary as spike_summary {
         input:
-            counts_txt = spikein.report
+            counts_txt = select_all(spikein.report)
     }
 
     output {
-        Array[File] raw_reads_unaligned_bams     = Fetch_SRA_to_BAM.reads_ubam
-        Array[File] cleaned_reads_unaligned_bams = Fetch_SRA_to_BAM.reads_ubam
+        Array[File] raw_reads_unaligned_bams     = select_all(reads_ubam)
+        Array[File] cleaned_reads_unaligned_bams = select_all(reads_ubam)
 
         File        biosample_attributes = group_sra_bams_by_biosample.biosample_attributes_tsv
 
-        Array[Int]  read_counts_raw       = Fetch_SRA_to_BAM.num_reads
-        Array[Int]  read_counts_depleted  = Fetch_SRA_to_BAM.num_reads
+        Array[Int]  read_counts_raw       = select_all(num_reads)
+        Array[Int]  read_counts_depleted  = select_all(num_reads)
 
         Array[File] assemblies_fasta = assemble_refbased.assembly_fasta
         Array[File] passing_assemblies_fasta = select_all(passing_assemblies)
