@@ -80,6 +80,60 @@ task Fetch_SRA_to_BAM {
         memory:  select_first([machine_mem_gb, 6]) + " GB"
         disks:   "local-disk 750 LOCAL"
         dx_instance_type: "mem2_ssd1_v2_x2"
-        docker:  "${docker}"
+        docker:  docker
     }
 }
+
+
+task group_sra_bams_by_biosample {
+  input {
+    Array[File]   bam_filepaths
+    Array[String] biosamples
+    Array[File]   biosample_attributes_jsons
+  }
+  parameter_meta {
+    bam_filepaths: {
+      description: "all bam files",
+      localization_optional: true,
+      stream: true,
+      patterns: ["*.bam"]
+    }
+  }
+  command <<<
+    python3 << CODE
+    import os.path
+
+    # WDL arrays to python arrays
+    bam_uris = '~{sep="*" bam_filepaths}'.split('*')
+    biosample_accs = '~{sep="*" biosamples}'.split('*')
+    attributes = '~{sep="*" biosample_attributes_jsons}'.split('*')
+    assert len(bam_uris) == len(biosample_accs)
+    assert len(bam_uris) == len(attributes)
+
+    # lookup table files to dicts
+    sample_to_bams = {}
+    for samn,bam in zip(biosample_accs,bam_uris):
+      sample_to_bams.setdefault(samn, [])
+      sample_to_bams[samn].append(bam)
+
+    # write outputs
+    with open('grouped_bams', 'wt') as out_groups:
+      with open('samns', 'wt') as out_samples:
+        for sample in sorted(sample_to_bams.keys()):
+          out_samples.write(sample+'\n')
+          out_groups.write('\t'.join(sample_to_bams[sample])+'\n')
+    CODE
+  >>>
+  output {
+    Array[Array[File]+] grouped_bam_filepaths = read_tsv('grouped_bams')
+    Array[String]       biosample_accessions = read_lines('samns')
+  }
+  runtime {
+    docker: "python:slim"
+    memory: "1 GB"
+    cpu: 1
+    disks: "local-disk 100 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+

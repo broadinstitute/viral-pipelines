@@ -38,7 +38,7 @@ workflow sarscov2_illumina_full {
     }
 
     input {
-        Array[String] SRX_accessions
+        Array[String] SRR_accessions
 
         File          reference_fasta
         File          amplicon_bed_default
@@ -48,16 +48,18 @@ workflow sarscov2_illumina_full {
     Int     taxid = 2697049
     String  gisaid_prefix = 'hCoV-19/'
 
-    ### demux, deplete, SRA submission prep, fastqc/multiqc
-    call demux_deplete.demux_deplete {
-        input:
-            biosample_map = biosample_attributes
-    }
+    ### retrieve reads and annotation from SRA
+    scatter(sra_id in SRR_accessions) {
+        call Fetch_SRA_to_BAM {
+            input:
+                SRA_ID=sra_id
+        }
 
     ### gather data by biosample
-    call read_utils.group_bams_by_sample {
+    call ncbi_tools.group_sra_bams_by_biosample {
         input:
-            bam_filepaths = demux_deplete.cleaned_reads_unaligned_bams
+            biosamples    = Fetch_SRA_to_BAM.biosample_accession,
+            bam_filepaths = Fetch_SRA_to_BAM.reads_ubam
     }
 
     ### assembly and analyses per biosample
