@@ -7,4 +7,4 @@ broadinstitute/ncbi-tools=2.10.7.1
 nextstrain/base=build-20201214T004216Z
 andersenlabapps/ivar=1.3
 staphb/pangolin=2.1.7
-neherlab/nextclade=0.11.1
+neherlab/nextclade=0.12.0
