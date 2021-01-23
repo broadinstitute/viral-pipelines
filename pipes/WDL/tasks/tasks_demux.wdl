@@ -6,7 +6,7 @@ task merge_tarballs {
     String        out_filename
 
     Int?          machine_mem_gb
-    String        docker="quay.io/broadinstitute/viral-core:2.1.18"
+    String        docker="quay.io/broadinstitute/viral-core:2.1.19"
   }
 
   command {
@@ -101,7 +101,7 @@ task illumina_demux {
     Boolean? forceGC=true
 
     Int?    machine_mem_gb
-    String  docker="quay.io/broadinstitute/viral-core:2.1.18"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.19"
   }
   parameter_meta {
       flowcell_tgz: {
