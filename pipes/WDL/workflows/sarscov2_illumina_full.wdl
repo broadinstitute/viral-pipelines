@@ -214,11 +214,6 @@ workflow sarscov2_illumina_full {
     }
 
     ### prep genbank submission
-    call nextstrain.concatenate as submit_genomes {
-      input:
-        infiles = select_all(submittable_genomes),
-        output_name = "assemblies.fasta"
-    }
     call ncbi.biosample_to_genbank {
       input:
         biosample_attributes = biosample_merge.out_tsv,
@@ -231,9 +226,19 @@ workflow sarscov2_illumina_full {
         assembly_stats_tsv = write_tsv(flatten([[['SeqID','Assembly Method','Coverage']],select_all(assembly_cmt)])),
         filter_to_ids = write_lines(select_all(submittable_id))
     }
+    call nextstrain.concatenate as passing_genomes {
+      input:
+        infiles = select_all(submittable_genomes),
+        output_name = "assemblies.fasta"
+    }
+    call nextstrain.filter_sequences_to_list as submit_genomes {
+      input:
+        sequences = passing_genomes.combined,
+        keep_list = [biosample_to_genbank.sample_ids]
+    }
     call ncbi.package_genbank_ftp_submission {
       input:
-        sequences_fasta = submit_genomes.combined,
+        sequences_fasta = submit_genomes.filtered_fasta,
         source_modifier_table = biosample_to_genbank.genbank_source_modifier_table,
         structured_comment_table = structured_comments.structured_comment_table
     }
@@ -241,7 +246,7 @@ workflow sarscov2_illumina_full {
     ### prep gisaid submission
     call ncbi.prefix_fasta_header as prefix_gisaid {
       input:
-        genome_fasta = submit_genomes.combined,
+        genome_fasta = submit_genomes.filtered_fasta,
         prefix = gisaid_prefix
     }
     call ncbi.gisaid_meta_prep {

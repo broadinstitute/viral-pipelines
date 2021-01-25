@@ -551,10 +551,12 @@ task biosample_to_genbank {
         --biosample_in_smt \
         --iso_dates \
         --loglevel DEBUG
+    cut -f 1 "${base}.genbank.src" | tail +2 > "${base}.sample_ids.txt"
   }
   output {
     File genbank_source_modifier_table = "${base}.genbank.src"
     File biosample_map                 = "${base}.biosample.map.txt"
+    File sample_ids                    = "${base}.sample_ids.txt"
   }
   runtime {
     docker: docker
