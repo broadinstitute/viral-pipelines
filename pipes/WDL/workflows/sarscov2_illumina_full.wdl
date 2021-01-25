@@ -230,6 +230,10 @@ workflow sarscov2_illumina_full {
         Array[Map[String,String?]] per_assembly_stats = assembly_stats
         Array[Map[String,File?]]   per_assembly_files = assembly_files
         Array[Map[String,Int?]]    per_assembly_metrics = assembly_metrics
+        File per_assembly_stats_json   = write_json(assembly_stats)
+        File per_assembly_files_json   = write_json(assembly_files)
+        File per_assembly_metrics_json = write_json(assembly_metrics)
+
 
         File submission_zip = package_genbank_ftp_submission.submission_zip
         File submission_xml = package_genbank_ftp_submission.submission_xml
