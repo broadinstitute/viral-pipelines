@@ -191,6 +191,12 @@ workflow sarscov2_illumina_full {
         'replicate_concordant_sites', 'replicate_discordant_snps', 'replicate_discordant_indels', 'num_read_groups', 'num_libraries',
         ]
 
+    call nextstrain.concatenate as assembly_meta_tsv {
+      input:
+        infiles = [write_tsv([assembly_tsv_header]), write_tsv(assembly_tsv_row)],
+        output_name = "assembly_metadata.tsv"
+    }
+
 
     # TO DO: filter out genomes from submission that are less than ntc_max.out
     call read_utils.max as ntc_max {
@@ -265,7 +271,7 @@ workflow sarscov2_illumina_full {
         Array[Map[String,String?]] per_assembly_stats = assembly_stats
         Array[Map[String,File?]]   per_assembly_files = assembly_files
         Array[Map[String,Int?]]    per_assembly_metrics = assembly_metrics
-        File assembly_stats_tsv = write_tsv(flatten([[assembly_tsv_header],assembly_tsv_row]))
+        File assembly_stats_tsv = assembly_meta_tsv.combined
 
         File submission_zip = package_genbank_ftp_submission.submission_zip
         File submission_xml = package_genbank_ftp_submission.submission_xml
