@@ -155,10 +155,45 @@ workflow sarscov2_illumina_full {
             'vadr_num_alerts': vadr.num_alerts
         }
 
+        Array[String] assembly_tsv_row = [
+            orig_name,
+            name_reads.left,
+            demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"],
+            assemble_refbased.assembly_mean_coverage,
+            assemble_refbased.assembly_length_unambiguous,
+            select_first([sarscov2_lineages.nextclade_clade, ""]),
+            select_first([sarscov2_lineages.nextclade_aa_subs, ""]),
+            select_first([sarscov2_lineages.nextclade_aa_dels, ""]),
+            select_first([sarscov2_lineages.pango_lineage, ""]),
+            assemble_refbased.dist_to_ref_snps,
+            assemble_refbased.dist_to_ref_indels,
+            select_first([vadr.num_alerts, ""]),
+            assemble_refbased.assembly_fasta,
+            assemble_refbased.align_to_ref_merged_coverage_plot,
+            assemble_refbased.align_to_ref_merged_aligned_trimmed_only_bam,
+            assemble_refbased.replicate_discordant_vcf,
+            select_first([sarscov2_lineages.nextclade_tsv, ""]),
+            select_first([sarscov2_lineages.pangolin_csv, ""]),
+            select_first([vadr.outputs_tgz, ""]),
+            assemble_refbased.replicate_concordant_sites,
+            assemble_refbased.replicate_discordant_snps,
+            assemble_refbased.replicate_discordant_indels,
+            assemble_refbased.num_read_groups,
+            assemble_refbased.num_libraries,
+        ]
     }
+    Array[String] assembly_tsv_header = [
+        'sample', 'sample_sanitized', 'amplicon_set', 'assembly_mean_coverage', 'assembly_length_unambiguous',
+        'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels', 'pango_lineage',
+        'dist_to_ref_snps', 'dist_to_ref_indels', 'vadr_num_alerts',
+        'assembly_fasta', 'coverage_plot', 'aligned_bam', 'replicate_discordant_vcf',
+        'nextclade_tsv', 'pangolin_csv', 'vadr_tgz',
+        'replicate_concordant_sites', 'replicate_discordant_snps', 'replicate_discordant_indels', 'num_read_groups', 'num_libraries',
+        ]
 
-    # TO DO: filter out genomes from submission that are less than ntc_bases.max
-    call read_utils.max as ntc {
+
+    # TO DO: filter out genomes from submission that are less than ntc_max.out
+    call read_utils.max as ntc_max {
       input:
         list = select_all(ntc_bases)
     }
@@ -217,7 +252,7 @@ workflow sarscov2_illumina_full {
         Array[File] passing_assemblies_fasta = select_all(passing_assemblies)
         Array[File] submittable_assemblies_fasta = select_all(submittable_genomes)
 
-        Int         max_ntc_bases = ntc.max
+        Int         max_ntc_bases = ntc_max.out
 
         Array[File] demux_metrics            = demux_deplete.demux_metrics
         Array[File] demux_commonBarcodes     = demux_deplete.demux_commonBarcodes
@@ -230,10 +265,7 @@ workflow sarscov2_illumina_full {
         Array[Map[String,String?]] per_assembly_stats = assembly_stats
         Array[Map[String,File?]]   per_assembly_files = assembly_files
         Array[Map[String,Int?]]    per_assembly_metrics = assembly_metrics
-        File per_assembly_stats_json   = write_json(assembly_stats)
-        File per_assembly_files_json   = write_json(assembly_files)
-        File per_assembly_metrics_json = write_json(assembly_metrics)
-
+        File assembly_stats_tsv = write_tsv(flatten([[assembly_tsv_header],assembly_tsv_row]))
 
         File submission_zip = package_genbank_ftp_submission.submission_zip
         File submission_xml = package_genbank_ftp_submission.submission_xml
