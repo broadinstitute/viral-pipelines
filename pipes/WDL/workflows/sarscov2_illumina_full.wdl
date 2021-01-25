@@ -3,6 +3,7 @@ version 1.0
 import "../tasks/tasks_read_utils.wdl" as read_utils
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
+import "../tasks/tasks_reports.wdl" as reports
 
 import "demux_deplete.wdl"
 import "assemble_refbased.wdl"
@@ -41,7 +42,7 @@ workflow sarscov2_illumina_full {
         File          reference_fasta
         String        amplicon_bed_prefix
 
-        File          biosample_attributes
+        Array[File]   biosample_attributes
         String        instrument_model
         String        sra_title
 
@@ -50,10 +51,18 @@ workflow sarscov2_illumina_full {
     Int     taxid = 2697049
     String  gisaid_prefix = 'hCoV-19/'
 
+    # merge biosample attributes tables
+    call reports.tsv_join as biosample_merge {
+        input:
+            input_tsvs = biosample_attributes,
+            id_col = 'accession',
+            out_basename = "biosample_attributes-merged"
+    }
+
     ### demux, deplete, SRA submission prep, fastqc/multiqc
     call demux_deplete.demux_deplete {
         input:
-            biosample_map = biosample_attributes,
+            biosample_map = biosample_merge.out_tsv,
             instrument_model = instrument_model,
             sra_title = sra_title
     }
@@ -212,7 +221,7 @@ workflow sarscov2_illumina_full {
     }
     call ncbi.biosample_to_genbank {
       input:
-        biosample_attributes = biosample_attributes,
+        biosample_attributes = biosample_merge.out_tsv,
         num_segments = 1,
         taxid = taxid,
         filter_to_ids = write_lines(select_all(submittable_id))
