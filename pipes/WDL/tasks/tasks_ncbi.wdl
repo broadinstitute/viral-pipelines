@@ -353,7 +353,7 @@ task gisaid_meta_prep {
             'covv_seq_technology': sample_to_cmt[row['Sequence_ID']]['Sequencing Technology'],
 
             'covv_orig_lab': row['collected_by'],
-            'covv_subm_lab': "~{default='REQUIRED' submitting_lab_name}"
+            'covv_subm_lab': "~{default='REQUIRED' submitting_lab_name}",
             'covv_authors': "~{default='REQUIRED' authors}",
             'covv_orig_lab_addr': "~{default='REQUIRED' originating_lab_addr}",
             'covv_subm_lab_addr': "~{default='REQUIRED' submitting_lab_addr}",
