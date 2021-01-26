@@ -252,8 +252,8 @@ task prefix_fasta_header {
   input {
     File    genome_fasta
     String  prefix
+    String  out_basename = basename(genome_fasta, ".fasta")
   }
-  String  out_basename = basename(genome_fasta, ".fasta")
   command <<<
     set -e
     python3 <<CODE

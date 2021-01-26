@@ -39,6 +39,7 @@ workflow sarscov2_illumina_full {
     }
 
     input {
+        File          flowcell_tgz
         File          reference_fasta
         String        amplicon_bed_prefix
 
@@ -50,6 +51,7 @@ workflow sarscov2_illumina_full {
     }
     Int     taxid = 2697049
     String  gisaid_prefix = 'hCoV-19/'
+    String  flowcell_id = basename(basename(basename(basename(flowcell_tgz, ".gz"), ".zst"), ".tar"), ".tgz")
 
     # merge biosample attributes tables
     call reports.tsv_join as biosample_merge {
@@ -62,6 +64,7 @@ workflow sarscov2_illumina_full {
     ### demux, deplete, SRA submission prep, fastqc/multiqc
     call demux_deplete.demux_deplete {
         input:
+            flowcell_tgz = flowcell_tgz,
             biosample_map = biosample_merge.out_tsv,
             instrument_model = instrument_model,
             sra_title = sra_title
@@ -172,7 +175,7 @@ workflow sarscov2_illumina_full {
     call nextstrain.concatenate as assembly_meta_tsv {
       input:
         infiles = [write_tsv([assembly_tsv_header]), write_tsv(assembly_tsv_row)],
-        output_name = "assembly_metadata.tsv"
+        output_name = "assembly_metadata-~{flowcell_id}.tsv"
     }
 
 
@@ -209,20 +212,23 @@ workflow sarscov2_illumina_full {
       input:
         sequences_fasta = submit_genomes.filtered_fasta,
         source_modifier_table = biosample_to_genbank.genbank_source_modifier_table,
-        structured_comment_table = structured_comments.structured_comment_table
+        structured_comment_table = structured_comments.structured_comment_table,
+        submission_name = flowcell_id,
+        submission_uid = flowcell_id
     }
 
     ### prep gisaid submission
     call ncbi.prefix_fasta_header as prefix_gisaid {
       input:
         genome_fasta = submit_genomes.filtered_fasta,
-        prefix = gisaid_prefix
+        prefix = gisaid_prefix,
+        out_basename = "gisaid-sequences-~{flowcell_id}"
     }
     call ncbi.gisaid_meta_prep {
       input:
         source_modifier_table = biosample_to_genbank.genbank_source_modifier_table,
         structured_comments = structured_comments.structured_comment_table,
-        out_name = "gisaid_meta.tsv"
+        out_name = "gisaid-meta-~{flowcell_id}.tsv"
     }
 
     output {
@@ -236,6 +242,7 @@ workflow sarscov2_illumina_full {
         Array[Int]  read_counts_depleted  = demux_deplete.read_counts_depleted
 
         File        sra_metadata          = select_first([demux_deplete.sra_metadata])
+        File        cleaned_bam_uris      = select_first([demux_deplete.cleaned_bam_uris])
 
         Array[File] assemblies_fasta = assemble_refbased.assembly_fasta
         Array[File] passing_assemblies_fasta = select_all(passing_assemblies)
