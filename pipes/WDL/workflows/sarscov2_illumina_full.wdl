@@ -224,7 +224,7 @@ workflow sarscov2_illumina_full {
     call ncbi.structured_comments {
       input:
         assembly_stats_tsv = write_tsv(flatten([[['SeqID','Assembly Method','Coverage']],select_all(assembly_cmt)])),
-        filter_to_ids = write_lines(select_all(submittable_id))
+        filter_to_ids = biosample_to_genbank.sample_ids
     }
     call nextstrain.concatenate as passing_genomes {
       input:
