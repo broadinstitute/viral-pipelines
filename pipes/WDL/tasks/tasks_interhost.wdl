@@ -9,7 +9,7 @@ task multi_align_mafft_ref {
     Float?         mafft_gapOpeningPenalty
 
     Int?           machine_mem_gb
-    String         docker="quay.io/broadinstitute/viral-phylo:2.1.19.0"
+    String         docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   String           fasta_basename = basename(reference_fasta, '.fasta')
@@ -53,7 +53,7 @@ task multi_align_mafft {
     Float?         mafft_gapOpeningPenalty
 
     Int?           machine_mem_gb
-    String         docker="quay.io/broadinstitute/viral-phylo:2.1.19.0"
+    String         docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   command {
@@ -252,7 +252,7 @@ task merge_vcfs_gatk {
     File        ref_fasta
 
     Int?     machine_mem_gb
-    String   docker="quay.io/broadinstitute/viral-phylo:2.1.19.0"
+    String   docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
 
     String   output_prefix = "merged"
   }
