@@ -560,7 +560,7 @@ task biosample_to_genbank {
         ${'--filter_to_samples ' + filter_to_ids} \
         --biosample_in_smt \
         --iso_dates \
-        ~{true="--sgtf_override" s_dropout_note} \
+        ~{true="--sgtf_override" false="" s_dropout_note} \
         --loglevel DEBUG
     cut -f 1 "${base}.genbank.src" | tail +2 > "${base}.sample_ids.txt"
   }
