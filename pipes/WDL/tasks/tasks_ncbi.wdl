@@ -308,6 +308,12 @@ task gisaid_meta_prep {
     String out_name
     String continent = "North America"
     Boolean strict = true
+    String? username
+    String? submitting_lab_name
+    String? submitting_lab_addr
+    String? originating_lab_addr
+    String? authors
+    String? fasta_filename
   }
   command <<<
     python3 << CODE
@@ -347,12 +353,12 @@ task gisaid_meta_prep {
             'covv_seq_technology': sample_to_cmt[row['Sequence_ID']]['Sequencing Technology'],
 
             'covv_orig_lab': row['collected_by'],
-            'covv_subm_lab': 'REQUIRED',
-            'covv_authors': 'REQUIRED',
-            'covv_orig_lab_addr': 'REQUIRED',
-            'covv_subm_lab_addr': 'REQUIRED',
-            'submitter': 'REQUIRED',
-            'fn': 'REQUIRED',
+            'covv_subm_lab': "~{default='REQUIRED' submitting_lab_name}"
+            'covv_authors': "~{default='REQUIRED' authors}",
+            'covv_orig_lab_addr': "~{default='REQUIRED' originating_lab_addr}",
+            'covv_subm_lab_addr': "~{default='REQUIRED' submitting_lab_addr}",
+            'submitter': "~{default='REQUIRED' username}",
+            'fn': "~{default='REQUIRED' fasta_filename}",
           })
 
           #covv_specimen
