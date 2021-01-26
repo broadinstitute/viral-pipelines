@@ -54,6 +54,7 @@ workflow sarscov2_sra_to_genbank {
             String library_strategy = Fetch_SRA_to_BAM.library_strategy
             String biosample_accession = Fetch_SRA_to_BAM.biosample_accession
             Int num_reads = Fetch_SRA_to_BAM.num_reads
+            String seq_platform = Fetch_SRA_to_BAM.sequencing_platform
             call reports.fastqc {
                 input:
                     reads_bam = Fetch_SRA_to_BAM.reads_ubam
@@ -72,7 +73,8 @@ workflow sarscov2_sra_to_genbank {
             biosamples                 = select_all(biosample_accession),
             bam_filepaths              = select_all(reads_ubam),
             biosample_attributes_jsons = select_all(biosample_attributes_json),
-            library_strategies         = select_all(library_strategy)
+            library_strategies         = select_all(library_strategy),
+            seq_platforms              = select_all(seq_platform)
     }
 
     ### assembly and analyses per biosample
@@ -105,7 +107,7 @@ workflow sarscov2_sra_to_genbank {
 
             File passing_assemblies = rename_fasta_header.renamed_fasta
             String passing_assembly_ids = orig_name
-            Array[String] assembly_cmt = [orig_name, "Broad viral-ngs v. " + assemble_refbased.align_to_ref_viral_core_version, assemble_refbased.assembly_mean_coverage]
+            Array[String] assembly_cmt = [orig_name, "Broad viral-ngs v. " + assemble_refbased.align_to_ref_viral_core_version, assemble_refbased.assembly_mean_coverage, group_sra_bams_by_biosample.samn_to_sequencing_platform[samn_bam.left]]
 
             # lineage assignment
             call sarscov2_lineages.sarscov2_lineages {
@@ -130,36 +132,47 @@ workflow sarscov2_sra_to_genbank {
             String failed_assembly_id = orig_name
         }
 
-        Map[String,String?] assembly_stats = {
-            'sample_orig': orig_name,
-            'sample': samn_bam.left,
-            'assembly_mean_coverage': assemble_refbased.assembly_mean_coverage,
-            'nextclade_clade':   sarscov2_lineages.nextclade_clade,
-            'nextclade_aa_subs': sarscov2_lineages.nextclade_aa_subs,
-            'nextclade_aa_dels': sarscov2_lineages.nextclade_aa_dels,
-            'pango_lineage':     sarscov2_lineages.pango_lineage
-        }
-        Map[String,File?] assembly_files = {
-            'assembly_fasta':           assemble_refbased.assembly_fasta,
-            'coverage_plot':            assemble_refbased.align_to_ref_merged_coverage_plot,
-            'aligned_bam':              assemble_refbased.align_to_ref_merged_aligned_trimmed_only_bam,
-            'replicate_discordant_vcf': assemble_refbased.replicate_discordant_vcf,
-            'nextclade_tsv': sarscov2_lineages.nextclade_tsv,
-            'pangolin_csv':  sarscov2_lineages.pangolin_csv,
-            'vadr_tgz': vadr.outputs_tgz
-        }
-        Map[String,Int?] assembly_metrics = {
-            'assembly_length_unambiguous': assemble_refbased.assembly_length_unambiguous,
-            'dist_to_ref_snps':            assemble_refbased.dist_to_ref_snps,
-            'dist_to_ref_indels':          assemble_refbased.dist_to_ref_indels,
-            'replicate_concordant_sites':  assemble_refbased.replicate_concordant_sites,
-            'replicate_discordant_snps':   assemble_refbased.replicate_discordant_snps,
-            'replicate_discordant_indels': assemble_refbased.replicate_discordant_indels,
-            'num_read_groups':             assemble_refbased.num_read_groups,
-            'num_libraries':               assemble_refbased.num_libraries,
-            'vadr_num_alerts': vadr.num_alerts
-        }
+        Array[String] assembly_tsv_row = [
+            orig_name,
+            samn_bam.left,
+            basename(select_first([trim_coords_bed, ""])),
+            assemble_refbased.assembly_mean_coverage,
+            assemble_refbased.assembly_length_unambiguous,
+            select_first([sarscov2_lineages.nextclade_clade, ""]),
+            select_first([sarscov2_lineages.nextclade_aa_subs, ""]),
+            select_first([sarscov2_lineages.nextclade_aa_dels, ""]),
+            select_first([sarscov2_lineages.pango_lineage, ""]),
+            assemble_refbased.dist_to_ref_snps,
+            assemble_refbased.dist_to_ref_indels,
+            select_first([vadr.num_alerts, ""]),
+            assemble_refbased.assembly_fasta,
+            assemble_refbased.align_to_ref_merged_coverage_plot,
+            assemble_refbased.align_to_ref_merged_aligned_trimmed_only_bam,
+            assemble_refbased.replicate_discordant_vcf,
+            select_first([sarscov2_lineages.nextclade_tsv, ""]),
+            select_first([sarscov2_lineages.pangolin_csv, ""]),
+            select_first([vadr.outputs_tgz, ""]),
+            assemble_refbased.replicate_concordant_sites,
+            assemble_refbased.replicate_discordant_snps,
+            assemble_refbased.replicate_discordant_indels,
+            assemble_refbased.num_read_groups,
+            assemble_refbased.num_libraries,
+        ]
+    }
 
+    Array[String] assembly_tsv_header = [
+        'sample', 'sample_sanitized', 'amplicon_set', 'assembly_mean_coverage', 'assembly_length_unambiguous',
+        'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels', 'pango_lineage',
+        'dist_to_ref_snps', 'dist_to_ref_indels', 'vadr_num_alerts',
+        'assembly_fasta', 'coverage_plot', 'aligned_bam', 'replicate_discordant_vcf',
+        'nextclade_tsv', 'pangolin_csv', 'vadr_tgz',
+        'replicate_concordant_sites', 'replicate_discordant_snps', 'replicate_discordant_indels', 'num_read_groups', 'num_libraries',
+        ]
+
+    call nextstrain.concatenate as assembly_meta_tsv {
+      input:
+        infiles = [write_tsv([assembly_tsv_header]), write_tsv(assembly_tsv_row)],
+        output_name = "assembly_metadata.tsv"
     }
 
     ### prep genbank submission
@@ -177,7 +190,7 @@ workflow sarscov2_sra_to_genbank {
     }
     call ncbi.structured_comments {
       input:
-        assembly_stats_tsv = write_tsv(flatten([[['SeqID','Assembly Method','Coverage']],select_all(assembly_cmt)])),
+        assembly_stats_tsv = write_tsv(flatten([[['SeqID','Assembly Method','Coverage','Sequencing Technology']],select_all(assembly_cmt)])),
         filter_to_ids = write_lines(select_all(submittable_id))
     }
     call ncbi.package_genbank_ftp_submission {
@@ -228,9 +241,7 @@ workflow sarscov2_sra_to_genbank {
         File        multiqc_report_raw     = multiqc_raw.multiqc_report
         File        spikein_counts         = spike_summary.count_summary
 
-        Array[Map[String,String?]] per_assembly_stats = assembly_stats
-        Array[Map[String,File?]]   per_assembly_files = assembly_files
-        Array[Map[String,Int?]]    per_assembly_metrics = assembly_metrics
+        File assembly_stats_tsv = assembly_meta_tsv.combined
 
         File submission_zip = package_genbank_ftp_submission.submission_zip
         File submission_xml = package_genbank_ftp_submission.submission_xml
