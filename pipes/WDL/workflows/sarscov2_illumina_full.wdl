@@ -108,7 +108,7 @@ workflow sarscov2_illumina_full {
 
             File passing_assemblies = rename_fasta_header.renamed_fasta
             String passing_assembly_ids = orig_name
-            Array[String] assembly_cmt = [orig_name, "Broad viral-ngs v. " + demux_deplete.demux_viral_core_version, assemble_refbased.assembly_mean_coverage]
+            Array[String] assembly_cmt = [orig_name, "Broad viral-ngs v. " + demux_deplete.demux_viral_core_version, assemble_refbased.assembly_mean_coverage, instrument_model]
 
             # lineage assignment
             call sarscov2_lineages.sarscov2_lineages {
@@ -192,7 +192,7 @@ workflow sarscov2_illumina_full {
     }
     call ncbi.structured_comments {
       input:
-        assembly_stats_tsv = write_tsv(flatten([[['SeqID','Assembly Method','Coverage']],select_all(assembly_cmt)])),
+        assembly_stats_tsv = write_tsv(flatten([[['SeqID','Assembly Method','Coverage','Sequencing Technology']],select_all(assembly_cmt)])),
         filter_to_ids = biosample_to_genbank.sample_ids
     }
     call nextstrain.concatenate as passing_genomes {
