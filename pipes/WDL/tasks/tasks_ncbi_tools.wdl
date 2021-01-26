@@ -146,6 +146,7 @@ task group_sra_bams_by_biosample {
     Array[String] biosamples
     Array[File]   biosample_attributes_jsons
     Array[String] library_strategies
+    Array[String] seq_platforms
   }
   parameter_meta {
     bam_filepaths: {
@@ -165,14 +166,16 @@ task group_sra_bams_by_biosample {
     biosample_accs = '~{sep="*" biosamples}'.split('*')
     attributes = '~{sep="*" biosample_attributes_jsons}'.split('*')
     libstrats = '~{sep="*" library_strategies}'.split('*')
-    assert len(bam_uris) == len(biosample_accs) == len(attributes) == len(libstrats)
+    seqplats = '~{sep="*" seq_platforms}'.split('*')
+    assert len(bam_uris) == len(biosample_accs) == len(attributes) == len(libstrats) == len(seqplats)
 
     # lookup table files to dicts
     sample_to_bams = {}
     sample_to_attributes = {}
     sample_to_libstrat = {}
+    sample_to_seqplat = {}
     attr_keys = set()
-    for samn,bam,attr_file,libstrat in zip(biosample_accs,bam_uris, attributes, libstrats):
+    for samn,bam,attr_file,libstrat,seqplat in zip(biosample_accs,bam_uris, attributes, libstrats, seqplats):
       sample_to_bams.setdefault(samn, [])
       sample_to_bams[samn].append(bam)
       with open(attr_file, 'rt') as inf:
@@ -181,24 +184,30 @@ task group_sra_bams_by_biosample {
       attr_keys.update(k for k,v in attr.items() if v)
       sample_to_libstrat.setdefault(samn, set())
       sample_to_libstrat[samn].add(libstrat)
+      sample_to_seqplat.setdefault(samn, set())
+      sample_to_seqplat[samn].add(seqplat)
 
     # write outputs
-    with open('attributes.json', 'wt') as out_attr:
-        json.dump(sample_to_attributes, out_attr)
-    with open('attributes.tsv', 'wt') as out_attr:
+    with open('attributes.json', 'wt') as outf:
+        json.dump(sample_to_attributes, outf)
+    with open('attributes.tsv', 'wt') as outf:
         headers = tuple(sorted(attr_keys))
-        out_attr.write('\t'.join(headers)+'\n')
+        outf.write('\t'.join(headers)+'\n')
         for sample in sorted(sample_to_bams.keys()):
-            out_attr.write('\t'.join(sample_to_attributes[sample].get(h,'') for h in headers)+'\n')
+            outf.write('\t'.join(sample_to_attributes[sample].get(h,'') for h in headers)+'\n')
     with open('grouped_bams', 'wt') as out_groups:
       with open('samns', 'wt') as out_samples:
         for sample in sorted(sample_to_bams.keys()):
           out_samples.write(sample+'\n')
           out_groups.write('\t'.join(sample_to_bams[sample])+'\n')
-    with open('library_strategies.json', 'wt') as out_attr:
+    with open('library_strategies.json', 'wt') as outf:
         for k,v in sample_to_libstrat.items():
             sample_to_libstrat[k] = ';'.join(sorted(v))
-        json.dump(sample_to_libstrat, out_attr)
+        json.dump(sample_to_libstrat, outf)
+    with open('sequencing_platforms.json', 'wt') as outf:
+        for k,v in sample_to_seqplat.items():
+            sample_to_seqplat[k] = ';'.join(sorted(v))
+        json.dump(sample_to_seqplat, outf)
     CODE
   >>>
   output {
@@ -207,6 +216,7 @@ task group_sra_bams_by_biosample {
     Map[String,Map[String,String]] samn_to_attributes = read_json('attributes.json')
     File                biosample_attributes_tsv = 'attributes.tsv'
     Map[String,String]  samn_to_library_strategy = read_json('library_strategies.json')
+    Map[String,String]  samn_to_sequencing_platform = read_json('sequencing_platforms.json')
   }
   runtime {
     docker: "python:slim"

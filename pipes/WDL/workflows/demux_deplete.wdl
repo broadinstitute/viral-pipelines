@@ -152,6 +152,7 @@ workflow demux_deplete {
         Array[Int]  read_counts_depleted = deplete.depletion_read_count_post
 
         File?       sra_metadata          = sra_meta_prep.sra_metadata
+        File?       cleaned_bam_uris      = sra_meta_prep.cleaned_bam_uris
 
         Array[File] demux_metrics         = illumina_demux.metrics
         Array[File] demux_commonBarcodes  = illumina_demux.commonBarcodes

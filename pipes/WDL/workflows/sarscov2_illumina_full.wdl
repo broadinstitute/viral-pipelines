@@ -3,6 +3,7 @@ version 1.0
 import "../tasks/tasks_read_utils.wdl" as read_utils
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
+import "../tasks/tasks_reports.wdl" as reports
 
 import "demux_deplete.wdl"
 import "assemble_refbased.wdl"
@@ -38,22 +39,33 @@ workflow sarscov2_illumina_full {
     }
 
     input {
+        File          flowcell_tgz
         File          reference_fasta
         String        amplicon_bed_prefix
 
-        File          biosample_attributes
+        Array[File]   biosample_attributes
         String        instrument_model
         String        sra_title
 
-        Int           min_genome_bases = 20000
+        Int           min_genome_bases = 15000
     }
     Int     taxid = 2697049
     String  gisaid_prefix = 'hCoV-19/'
+    String  flowcell_id = basename(basename(basename(basename(flowcell_tgz, ".gz"), ".zst"), ".tar"), ".tgz")
+
+    # merge biosample attributes tables
+    call reports.tsv_join as biosample_merge {
+        input:
+            input_tsvs = biosample_attributes,
+            id_col = 'accession',
+            out_basename = "biosample_attributes-merged"
+    }
 
     ### demux, deplete, SRA submission prep, fastqc/multiqc
     call demux_deplete.demux_deplete {
         input:
-            biosample_map = biosample_attributes,
+            flowcell_tgz = flowcell_tgz,
+            biosample_map = biosample_merge.out_tsv,
             instrument_model = instrument_model,
             sra_title = sra_title
     }
@@ -99,7 +111,7 @@ workflow sarscov2_illumina_full {
 
             File passing_assemblies = rename_fasta_header.renamed_fasta
             String passing_assembly_ids = orig_name
-            Array[String] assembly_cmt = [orig_name, "Broad viral-ngs v. " + demux_deplete.demux_viral_core_version, assemble_refbased.assembly_mean_coverage]
+            Array[String] assembly_cmt = [orig_name, "Broad viral-ngs v. " + demux_deplete.demux_viral_core_version, assemble_refbased.assembly_mean_coverage, instrument_model]
 
             # lineage assignment
             call sarscov2_lineages.sarscov2_lineages {
@@ -124,81 +136,100 @@ workflow sarscov2_illumina_full {
             String failed_assembly_id = orig_name
         }
 
-        Map[String,String?] assembly_stats = {
-            'sample_orig': orig_name,
-            'sample': name_reads.left,
-            'amplicon_set': demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"],
-            'assembly_mean_coverage': assemble_refbased.assembly_mean_coverage,
-            'nextclade_clade':   sarscov2_lineages.nextclade_clade,
-            'nextclade_aa_subs': sarscov2_lineages.nextclade_aa_subs,
-            'nextclade_aa_dels': sarscov2_lineages.nextclade_aa_dels,
-            'pango_lineage':     sarscov2_lineages.pango_lineage
-        }
-        Map[String,File?] assembly_files = {
-            'assembly_fasta':           assemble_refbased.assembly_fasta,
-            'coverage_plot':            assemble_refbased.align_to_ref_merged_coverage_plot,
-            'aligned_bam':              assemble_refbased.align_to_ref_merged_aligned_trimmed_only_bam,
-            'replicate_discordant_vcf': assemble_refbased.replicate_discordant_vcf,
-            'nextclade_tsv': sarscov2_lineages.nextclade_tsv,
-            'pangolin_csv':  sarscov2_lineages.pangolin_csv,
-            'vadr_tgz': vadr.outputs_tgz
-        }
-        Map[String,Int?] assembly_metrics = {
-            'assembly_length_unambiguous': assemble_refbased.assembly_length_unambiguous,
-            'dist_to_ref_snps':            assemble_refbased.dist_to_ref_snps,
-            'dist_to_ref_indels':          assemble_refbased.dist_to_ref_indels,
-            'replicate_concordant_sites':  assemble_refbased.replicate_concordant_sites,
-            'replicate_discordant_snps':   assemble_refbased.replicate_discordant_snps,
-            'replicate_discordant_indels': assemble_refbased.replicate_discordant_indels,
-            'num_read_groups':             assemble_refbased.num_read_groups,
-            'num_libraries':               assemble_refbased.num_libraries,
-            'vadr_num_alerts': vadr.num_alerts
-        }
+        Array[String] assembly_tsv_row = [
+            orig_name,
+            name_reads.left,
+            demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"],
+            assemble_refbased.assembly_mean_coverage,
+            assemble_refbased.assembly_length_unambiguous,
+            select_first([sarscov2_lineages.nextclade_clade, ""]),
+            select_first([sarscov2_lineages.nextclade_aa_subs, ""]),
+            select_first([sarscov2_lineages.nextclade_aa_dels, ""]),
+            select_first([sarscov2_lineages.pango_lineage, ""]),
+            assemble_refbased.dist_to_ref_snps,
+            assemble_refbased.dist_to_ref_indels,
+            select_first([vadr.num_alerts, ""]),
+            assemble_refbased.assembly_fasta,
+            assemble_refbased.align_to_ref_merged_coverage_plot,
+            assemble_refbased.align_to_ref_merged_aligned_trimmed_only_bam,
+            assemble_refbased.replicate_discordant_vcf,
+            select_first([sarscov2_lineages.nextclade_tsv, ""]),
+            select_first([sarscov2_lineages.pangolin_csv, ""]),
+            select_first([vadr.outputs_tgz, ""]),
+            assemble_refbased.replicate_concordant_sites,
+            assemble_refbased.replicate_discordant_snps,
+            assemble_refbased.replicate_discordant_indels,
+            assemble_refbased.num_read_groups,
+            assemble_refbased.num_libraries,
+        ]
+    }
+    Array[String] assembly_tsv_header = [
+        'sample', 'sample_sanitized', 'amplicon_set', 'assembly_mean_coverage', 'assembly_length_unambiguous',
+        'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels', 'pango_lineage',
+        'dist_to_ref_snps', 'dist_to_ref_indels', 'vadr_num_alerts',
+        'assembly_fasta', 'coverage_plot', 'aligned_bam', 'replicate_discordant_vcf',
+        'nextclade_tsv', 'pangolin_csv', 'vadr_tgz',
+        'replicate_concordant_sites', 'replicate_discordant_snps', 'replicate_discordant_indels', 'num_read_groups', 'num_libraries',
+        ]
 
+    call nextstrain.concatenate as assembly_meta_tsv {
+      input:
+        infiles = [write_tsv([assembly_tsv_header]), write_tsv(assembly_tsv_row)],
+        output_name = "assembly_metadata-~{flowcell_id}.tsv"
     }
 
-    # TO DO: filter out genomes from submission that are less than ntc_bases.max
-    call read_utils.max as ntc {
+
+    # TO DO: filter out genomes from submission that are less than ntc_max.out
+    call read_utils.max as ntc_max {
       input:
         list = select_all(ntc_bases)
     }
 
     ### prep genbank submission
-    call nextstrain.concatenate as submit_genomes {
-      input:
-        infiles = select_all(submittable_genomes),
-        output_name = "assemblies.fasta"
-    }
     call ncbi.biosample_to_genbank {
       input:
-        biosample_attributes = biosample_attributes,
+        biosample_attributes = biosample_merge.out_tsv,
         num_segments = 1,
         taxid = taxid,
         filter_to_ids = write_lines(select_all(submittable_id))
     }
     call ncbi.structured_comments {
       input:
-        assembly_stats_tsv = write_tsv(flatten([[['SeqID','Assembly Method','Coverage']],select_all(assembly_cmt)])),
-        filter_to_ids = write_lines(select_all(submittable_id))
+        assembly_stats_tsv = write_tsv(flatten([[['SeqID','Assembly Method','Coverage','Sequencing Technology']],select_all(assembly_cmt)])),
+        filter_to_ids = biosample_to_genbank.sample_ids
+    }
+    call nextstrain.concatenate as passing_genomes {
+      input:
+        infiles = select_all(submittable_genomes),
+        output_name = "assemblies.fasta"
+    }
+    call nextstrain.filter_sequences_to_list as submit_genomes {
+      input:
+        sequences = passing_genomes.combined,
+        keep_list = [biosample_to_genbank.sample_ids]
     }
     call ncbi.package_genbank_ftp_submission {
       input:
-        sequences_fasta = submit_genomes.combined,
+        sequences_fasta = submit_genomes.filtered_fasta,
         source_modifier_table = biosample_to_genbank.genbank_source_modifier_table,
-        structured_comment_table = structured_comments.structured_comment_table
+        structured_comment_table = structured_comments.structured_comment_table,
+        submission_name = flowcell_id,
+        submission_uid = flowcell_id
     }
 
     ### prep gisaid submission
     call ncbi.prefix_fasta_header as prefix_gisaid {
       input:
-        genome_fasta = submit_genomes.combined,
-        prefix = gisaid_prefix
+        genome_fasta = submit_genomes.filtered_fasta,
+        prefix = gisaid_prefix,
+        out_basename = "gisaid-sequences-~{flowcell_id}"
     }
     call ncbi.gisaid_meta_prep {
       input:
         source_modifier_table = biosample_to_genbank.genbank_source_modifier_table,
         structured_comments = structured_comments.structured_comment_table,
-        out_name = "gisaid_meta.tsv"
+        fasta_filename = "gisaid-sequences-~{flowcell_id}.fasta",
+        out_name = "gisaid-meta-~{flowcell_id}.tsv"
     }
 
     output {
@@ -212,12 +243,13 @@ workflow sarscov2_illumina_full {
         Array[Int]  read_counts_depleted  = demux_deplete.read_counts_depleted
 
         File        sra_metadata          = select_first([demux_deplete.sra_metadata])
+        File        cleaned_bam_uris      = select_first([demux_deplete.cleaned_bam_uris])
 
         Array[File] assemblies_fasta = assemble_refbased.assembly_fasta
         Array[File] passing_assemblies_fasta = select_all(passing_assemblies)
         Array[File] submittable_assemblies_fasta = select_all(submittable_genomes)
 
-        Int         max_ntc_bases = ntc.max
+        Int         max_ntc_bases = ntc_max.out
 
         Array[File] demux_metrics            = demux_deplete.demux_metrics
         Array[File] demux_commonBarcodes     = demux_deplete.demux_commonBarcodes
@@ -227,9 +259,7 @@ workflow sarscov2_illumina_full {
         File        multiqc_report_cleaned = demux_deplete.multiqc_report_cleaned
         File        spikein_counts         = demux_deplete.spikein_counts
 
-        Array[Map[String,String?]] per_assembly_stats = assembly_stats
-        Array[Map[String,File?]]   per_assembly_files = assembly_files
-        Array[Map[String,Int?]]    per_assembly_metrics = assembly_metrics
+        File assembly_stats_tsv = assembly_meta_tsv.combined
 
         File submission_zip = package_genbank_ftp_submission.submission_zip
         File submission_xml = package_genbank_ftp_submission.submission_xml

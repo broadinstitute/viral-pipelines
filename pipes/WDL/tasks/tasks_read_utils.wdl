@@ -12,7 +12,7 @@ task max {
     CODE
   >>>
   output {
-    Int max = read_int(stdout())
+    Int out = read_int(stdout())
   }
   runtime {
     docker: "python:slim"
