@@ -25,7 +25,7 @@ task download_fasta {
     Array[String]+ accessions
     String         emailAddress
 
-    String         docker="quay.io/broadinstitute/viral-phylo:2.1.16.0"
+    String         docker="quay.io/broadinstitute/viral-phylo:2.1.19.0"
   }
 
   command {
@@ -56,7 +56,7 @@ task download_annotations {
     String         emailAddress
     String         combined_out_prefix
 
-    String         docker="quay.io/broadinstitute/viral-phylo:2.1.16.0"
+    String         docker="quay.io/broadinstitute/viral-phylo:2.1.19.0"
   }
 
   command {
@@ -100,7 +100,7 @@ task annot_transfer {
     File         reference_fasta
     Array[File]+ reference_feature_table
 
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.16.0"
+    String  docker="quay.io/broadinstitute/viral-phylo:2.1.19.0"
   }
 
   parameter_meta {
@@ -153,7 +153,7 @@ task align_and_annot_transfer_single {
     Array[File]+ reference_fastas
     Array[File]+ reference_feature_tables
 
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.16.0"
+    String  docker="quay.io/broadinstitute/viral-phylo:2.1.19.0"
   }
 
   parameter_meta {
@@ -357,8 +357,11 @@ task gisaid_meta_prep {
             'covv_authors': "~{default='REQUIRED' authors}",
             'covv_orig_lab_addr': "~{default='REQUIRED' originating_lab_addr}",
             'covv_subm_lab_addr': "~{default='REQUIRED' submitting_lab_addr}",
+
             'submitter': "~{default='REQUIRED' username}",
             'fn': "~{default='REQUIRED' fasta_filename}",
+
+            'covv_add_host_info': row.get('note',''),
           })
 
           #covv_specimen
@@ -541,7 +544,8 @@ task biosample_to_genbank {
 
     File? filter_to_ids
 
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.16.0"
+    Boolean s_dropout_note=true
+    String  docker="quay.io/broadinstitute/viral-phylo:2.1.19.0"
   }
   String base = basename(biosample_attributes, ".txt")
   command {
@@ -556,6 +560,7 @@ task biosample_to_genbank {
         ${'--filter_to_samples ' + filter_to_ids} \
         --biosample_in_smt \
         --iso_dates \
+        ~{true="--sgtf_override" s_dropout_note} \
         --loglevel DEBUG
     cut -f 1 "${base}.genbank.src" | tail +2 > "${base}.sample_ids.txt"
   }
@@ -592,7 +597,7 @@ task prepare_genbank {
     String?      assembly_method_version
 
     Int?         machine_mem_gb
-    String       docker="quay.io/broadinstitute/viral-phylo:2.1.16.0"
+    String       docker="quay.io/broadinstitute/viral-phylo:2.1.19.0"
   }
 
   parameter_meta {
