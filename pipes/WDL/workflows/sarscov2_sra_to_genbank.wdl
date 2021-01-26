@@ -36,7 +36,7 @@ workflow sarscov2_sra_to_genbank {
         File          amplicon_bed_default
         File          spikein_db
 
-        Int           min_genome_bases = 20000
+        Int           min_genome_bases = 15000
         Int           min_reads_per_bam = 100
     }
     Int     taxid = 2697049

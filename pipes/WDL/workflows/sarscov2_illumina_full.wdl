@@ -46,7 +46,7 @@ workflow sarscov2_illumina_full {
         String        instrument_model
         String        sra_title
 
-        Int           min_genome_bases = 20000
+        Int           min_genome_bases = 15000
     }
     Int     taxid = 2697049
     String  gisaid_prefix = 'hCoV-19/'
@@ -131,37 +131,6 @@ workflow sarscov2_illumina_full {
         }
         if (assemble_refbased.assembly_length_unambiguous < min_genome_bases) {
             String failed_assembly_id = orig_name
-        }
-
-        Map[String,String?] assembly_stats = {
-            'sample_orig': orig_name,
-            'sample': name_reads.left,
-            'amplicon_set': demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"],
-            'assembly_mean_coverage': assemble_refbased.assembly_mean_coverage,
-            'nextclade_clade':   sarscov2_lineages.nextclade_clade,
-            'nextclade_aa_subs': sarscov2_lineages.nextclade_aa_subs,
-            'nextclade_aa_dels': sarscov2_lineages.nextclade_aa_dels,
-            'pango_lineage':     sarscov2_lineages.pango_lineage
-        }
-        Map[String,File?] assembly_files = {
-            'assembly_fasta':           assemble_refbased.assembly_fasta,
-            'coverage_plot':            assemble_refbased.align_to_ref_merged_coverage_plot,
-            'aligned_bam':              assemble_refbased.align_to_ref_merged_aligned_trimmed_only_bam,
-            'replicate_discordant_vcf': assemble_refbased.replicate_discordant_vcf,
-            'nextclade_tsv': sarscov2_lineages.nextclade_tsv,
-            'pangolin_csv':  sarscov2_lineages.pangolin_csv,
-            'vadr_tgz': vadr.outputs_tgz
-        }
-        Map[String,Int?] assembly_metrics = {
-            'assembly_length_unambiguous': assemble_refbased.assembly_length_unambiguous,
-            'dist_to_ref_snps':            assemble_refbased.dist_to_ref_snps,
-            'dist_to_ref_indels':          assemble_refbased.dist_to_ref_indels,
-            'replicate_concordant_sites':  assemble_refbased.replicate_concordant_sites,
-            'replicate_discordant_snps':   assemble_refbased.replicate_discordant_snps,
-            'replicate_discordant_indels': assemble_refbased.replicate_discordant_indels,
-            'num_read_groups':             assemble_refbased.num_read_groups,
-            'num_libraries':               assemble_refbased.num_libraries,
-            'vadr_num_alerts': vadr.num_alerts
         }
 
         Array[String] assembly_tsv_row = [
@@ -282,9 +251,6 @@ workflow sarscov2_illumina_full {
         File        multiqc_report_cleaned = demux_deplete.multiqc_report_cleaned
         File        spikein_counts         = demux_deplete.spikein_counts
 
-        Array[Map[String,String?]] per_assembly_stats = assembly_stats
-        Array[Map[String,File?]]   per_assembly_files = assembly_files
-        Array[Map[String,Int?]]    per_assembly_metrics = assembly_metrics
         File assembly_stats_tsv = assembly_meta_tsv.combined
 
         File submission_zip = package_genbank_ftp_submission.submission_zip
