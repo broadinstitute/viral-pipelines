@@ -38,6 +38,7 @@ workflow sarscov2_sra_to_genbank {
 
         Int           min_genome_bases = 15000
         Int           min_reads_per_bam = 100
+        Int           max_vadr_alerts = 0
     }
     Int     taxid = 2697049
     String  gisaid_prefix = 'hCoV-19/'
@@ -120,11 +121,11 @@ workflow sarscov2_sra_to_genbank {
               input:
                 genome_fasta = passing_assemblies
             }
-            if (vadr.num_alerts==0) {
+            if (vadr.num_alerts<=max_vadr_alerts) {
               File submittable_genomes = passing_assemblies
               String submittable_id = orig_name
             }
-            if (vadr.num_alerts>0) {
+            if (vadr.num_alerts>max_vadr_alerts) {
               String failed_annotation_id = orig_name
             }
         }
