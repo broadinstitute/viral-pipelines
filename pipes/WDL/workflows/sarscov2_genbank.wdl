@@ -58,7 +58,7 @@ workflow sarscov2_genbank {
         File renamed_assembly = select_first([rename_fasta_header.renamed_fasta, assembly])
         call reports.assembly_bases {
           input:
-            fasta = renamed_assembly
+            fasta = assembly
         }
         call ncbi.vadr {
           input:
