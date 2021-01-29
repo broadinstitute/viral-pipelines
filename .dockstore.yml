@@ -270,3 +270,8 @@ workflows:
    primaryDescriptorPath: /pipes/WDL/workflows/trimal.wdl
    testParameterFiles:
     - empty.json
+ - name: update_data_tables
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/update_data_tables.wdl
+   testParameterFiles:
+    - empty.json

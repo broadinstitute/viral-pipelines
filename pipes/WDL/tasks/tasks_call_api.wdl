@@ -11,7 +11,7 @@ task  upload_entities_tsv{
 
   command {
 
-    python3 create_data_tables.py -t ~{tsv_file} \
+    python3 /projects/cdc-sabeti-covid-19/create_data_tables.py -t ~{tsv_file} \
             -p ~{terra_project} \
             -w ~{workspace_name}
 
