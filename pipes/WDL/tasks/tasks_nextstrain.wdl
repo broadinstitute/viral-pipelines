@@ -162,15 +162,14 @@ task filter_segments {
 
 task nextstrain_build_subsample {
     meta {
-        description: "Filter and subsample a sequence set using a Nextstrain 'build.yml' file. See https://docs.nextstrain.org/en/latest/tutorials/SARS-CoV-2/steps/customizing-analysis.html#custom-subsampling-schemes"
+        description: "Filter and subsample a sequence set using a Nextstrain 'build.yaml' file. See https://docs.nextstrain.org/en/latest/tutorials/SARS-CoV-2/steps/customizing-analysis.html#custom-subsampling-schemes"
     }
     input {
         File     alignment_msa_fasta
         File     sample_metadata_tsv
-        File     reference_fasta
-        File     build_yml
         String   build_name
-        File?    parameters_yml
+        File?    builds_yaml
+        File?    parameters_yaml
 
         String   docker = "nextstrain/base:build-20201214T004216Z"
     }    
@@ -187,8 +186,8 @@ task nextstrain_build_subsample {
         # set the config file
         cat > my_profiles/config.yaml <<CONFIG
         configfile:
-          - ~{default="defaults/parameters.yaml" parameters_yml}
-          - ~{build_yml}
+          - ~{default="defaults/parameters.yaml" parameters_yaml}
+          - ~{default="defaults/my_profiles/examples/builds.yaml" builds_yaml}
         config:
           - sequences=~{alignment_msa_fasta}
           - metadata=~{sample_metadata_tsv}
@@ -204,7 +203,7 @@ task nextstrain_build_subsample {
         # execute snakemake on pre-iqtree target
         snakemake \
             -j $(nproc) \
-            --profile ../my_profiles \
+            --profile my_profiles \
             results/"~{build_name}"/subsampled_alignment.fasta
         cd ..
 
@@ -222,11 +221,11 @@ task nextstrain_build_subsample {
         dx_instance_type: "mem1_ssd1_v2_x4"
     }
     output {
-        File   filtered_fasta    = "ncov/results/~{build_name}/subsampled_alignment.fasta"
-        String augur_version     = read_string("VERSION")
-        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
-        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        String cpu_load = read_string("CPU_LOAD")
+        File   subsampled_msa = "ncov/results/~{build_name}/subsampled_alignment.fasta"
+        String augur_version  = read_string("VERSION")
+        Int    max_ram_gb     = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec    = ceil(read_float("UPTIME_SEC"))
+        String cpu_load       = read_string("CPU_LOAD")
     }
 }
 
