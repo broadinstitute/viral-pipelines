@@ -160,6 +160,76 @@ task filter_segments {
     }
 }
 
+task nextstrain_build_subsample {
+    meta {
+        description: "Filter and subsample a sequence set using a Nextstrain 'build.yml' file. See https://docs.nextstrain.org/en/latest/tutorials/SARS-CoV-2/steps/customizing-analysis.html#custom-subsampling-schemes"
+    }
+    input {
+        File     alignment_msa_fasta
+        File     sample_metadata_tsv
+        File     reference_fasta
+        File     build_yml
+        String   build_name
+        File?    parameters_yml
+
+        String   docker = "nextstrain/base:build-20201214T004216Z"
+    }    
+    command {
+        set -e -o pipefail
+        augur version > VERSION
+
+        # pull the ncov repo w/Snakemake rules at pinned version
+        apk add git
+        git clone https://github.com/nextstrain/ncov.git
+        cd ncov
+        git checkout 5dbca8a45a64e39057c22163f154db981f7ed5c1
+
+        # set the config file
+        cat > my_profiles/config.yaml <<CONFIG
+        configfile:
+          - ~{default="defaults/parameters.yaml" parameters_yml}
+          - ~{build_yml}
+        config:
+          - sequences=~{alignment_msa_fasta}
+          - metadata=~{sample_metadata_tsv}
+        printshellcmds: True
+        show-failed-logs: True
+        CONFIG
+        echo "cores: $(nproc)" >> my_profiles/config.yaml
+
+        # seed input data (skip some upstream steps in the DAG)
+        mkdir -p results
+        ln -s "~{alignment_msa_fasta}" results/aligned.fasta
+
+        # execute snakemake on pre-iqtree target
+        snakemake \
+            -j $(nproc) \
+            --profile ../my_profiles \
+            results/"~{build_name}"/subsampled_alignment.fasta
+        cd ..
+
+        # gather runtime metrics
+        set +o pipefail
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg > CPU_LOAD
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
+    }
+    runtime {
+        docker: docker
+        memory: "15 GB"
+        cpu :   4
+        disks:  "local-disk 200 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x4"
+    }
+    output {
+        File   filtered_fasta    = "ncov/results/~{build_name}/subsampled_alignment.fasta"
+        String augur_version     = read_string("VERSION")
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
+        String cpu_load = read_string("CPU_LOAD")
+    }
+}
+
 task filter_subsample_sequences {
     meta {
         description: "Filter and subsample a sequence set. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/filter.html"
