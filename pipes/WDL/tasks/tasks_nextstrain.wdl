@@ -187,7 +187,7 @@ task nextstrain_build_subsample {
         cat > my_profiles/config.yaml <<CONFIG
         configfile:
           - ~{default="defaults/parameters.yaml" parameters_yaml}
-          - ~{default="defaults/my_profiles/examples/builds.yaml" builds_yaml}
+          - ~{default="my_profiles/example/builds.yaml" builds_yaml}
         config:
           - sequences=~{alignment_msa_fasta}
           - metadata=~{sample_metadata_tsv}
