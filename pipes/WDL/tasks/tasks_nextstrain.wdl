@@ -198,7 +198,7 @@ task nextstrain_build_subsample {
 
         # seed input data (skip some upstream steps in the DAG)
         mkdir -p results
-        ln -s "~{alignment_msa_fasta}" results/aligned.fasta
+        ln -s "~{alignment_msa_fasta}" results/aligned-filtered.fasta
 
         # execute snakemake on pre-iqtree target
         snakemake \
