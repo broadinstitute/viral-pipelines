@@ -173,7 +173,28 @@ task nextstrain_build_subsample {
 
         String   docker = "nextstrain/base:build-20201214T004216Z"
         String   nextstrain_ncov_repo_commit = "5dbca8a45a64e39057c22163f154db981f7ed5c1"
-    }    
+    }
+    parameter_meta {
+        alignment_msa_fasta: {
+          description: "Multiple sequence alignment (aligned fasta)",
+          patterns: ["*.fasta"]
+        }
+        sample_metadata_tsv: {
+            description: "Tab-separated metadata file that contain binning variables and values. Must contain all samples: output will be filtered to the IDs present in this file.",
+            patterns: ["*.txt", "*.tsv"]
+        }
+        build_name: {
+            description: "Name of the nextstrain 'build' definition to use for subsampling, as defined in the builds_yaml file."
+        }
+        builds_yaml: {
+            description: "YAML-formatted nextstrain 'build' definitions. See https://docs.nextstrain.org/en/latest/tutorials/SARS-CoV-2/steps/customizing-analysis.html#custom-subsampling-schemes for details. If this is not specified, we will use this as a default: https://github.com/nextstrain/ncov/blob/master/my_profiles/example/builds.yaml",
+            patterns: ["*.yaml"]
+        }
+        parameters_yaml: {
+            description: "YAML-formatted nextstrain parameter override definitions. If this is not specified, we will use this as a default: https://github.com/nextstrain/ncov/blob/master/defaults/parameters.yaml",
+            patterns: ["*.yaml"]
+        }
+    }
     command {
         set -e -o pipefail
         augur version > VERSION
