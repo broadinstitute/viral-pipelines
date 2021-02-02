@@ -206,23 +206,35 @@ task nextstrain_build_subsample {
             -j $(nproc) \
             --profile my_profiles \
             results/"~{build_name}"/subsampled_alignment.fasta
-        cd ..
+
+        # grab logs and numbers
+        set +o pipefail
+        grep . logs/filtered.txt logs/subsample_"~{build_name}"_* > ../augur.filter.logs.txt
+        grep \> "results/~{build_name}/subsampled_alignment.fasta" | wc -l | tee ../OUT_COUNT
+        for i in results/"~{build_name}"/sample-*.fasta; do
+          group=$(basename $i .fasta | cut -f 2- -d -)
+          n=$(grep \> $i | wc -l)
+          echo -e "$group"'\t'$n
+        done > ../counts_by_group
 
         # gather runtime metrics
-        set +o pipefail
+        cd ..
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
         docker: docker
-        memory: "15 GB"
+        memory: "31 GB"
         cpu :   4
         disks:  "local-disk 200 HDD"
-        dx_instance_type: "mem1_ssd1_v2_x4"
+        dx_instance_type: "mem3_ssd1_v2_x4"
     }
     output {
         File   subsampled_msa = "ncov/results/~{build_name}/subsampled_alignment.fasta"
+        File   subsample_logs = "augur.filter.logs.txt"
+        Int    sequences_out  = read_int("OUT_COUNT")
+        Map[String,Int] counts_by_group = read_map("counts_by_group")
         String augur_version  = read_string("VERSION")
         Int    max_ram_gb     = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec    = ceil(read_float("UPTIME_SEC"))
