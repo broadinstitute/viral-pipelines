@@ -15,7 +15,7 @@ workflow sarscov2_nextstrain {
         Array[File]+    sample_metadata_tsvs
         File            ref_fasta
 
-        Int             min_unambig_genome = 25000
+        Int             min_unambig_genome = 27000
 
         File?           clades_tsv
         Array[String]?  ancestral_traits_to_infer
