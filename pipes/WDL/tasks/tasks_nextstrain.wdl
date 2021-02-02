@@ -200,9 +200,9 @@ task nextstrain_build_subsample {
         augur version > VERSION
 
         # pull the ncov repo w/Snakemake rules at pinned version
-        wget "https://github.com/nextstrain/ncov/archive/~{nextstrain_ncov_repo_commit}.tar.gz"
+        wget -q "https://github.com/nextstrain/ncov/archive/~{nextstrain_ncov_repo_commit}.tar.gz"
         mkdir -p ncov
-        tar -xvf "~{nextstrain_ncov_repo_commit}.tar.gz" -C ncov --strip-components=1
+        tar -xf "~{nextstrain_ncov_repo_commit}.tar.gz" -C ncov --strip-components=1
         cd ncov
 
         # set the config file
@@ -248,7 +248,7 @@ task nextstrain_build_subsample {
         docker: docker
         memory: "31 GB"
         cpu :   4
-        disks:  "local-disk 200 HDD"
+        disks:  "local-disk 375 HDD"
         dx_instance_type: "mem3_ssd1_v2_x4"
     }
     output {
