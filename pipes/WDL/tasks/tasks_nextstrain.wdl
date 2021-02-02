@@ -172,16 +172,17 @@ task nextstrain_build_subsample {
         File?    parameters_yaml
 
         String   docker = "nextstrain/base:build-20201214T004216Z"
+        String   nextstrain_ncov_repo_commit = "5dbca8a45a64e39057c22163f154db981f7ed5c1"
     }    
     command {
         set -e -o pipefail
         augur version > VERSION
 
         # pull the ncov repo w/Snakemake rules at pinned version
-        apk add git
-        git clone https://github.com/nextstrain/ncov.git
+        wget "https://github.com/nextstrain/ncov/archive/~{nextstrain_ncov_repo_commit}.tar.gz"
+        mkdir -p ncov
+        tar -xvf "~{nextstrain_ncov_repo_commit}.tar.gz" -C ncov --strip-components=1
         cd ncov
-        git checkout 5dbca8a45a64e39057c22163f154db981f7ed5c1
 
         # set the config file
         cat > my_profiles/config.yaml <<CONFIG
