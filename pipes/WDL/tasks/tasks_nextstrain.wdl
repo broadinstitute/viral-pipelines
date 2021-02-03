@@ -146,7 +146,7 @@ task derived_cols {
                         writer.writerow(row)
 
         lab_highlight_loc = "~{default='' lab_highlight_loc}"
-        table_map = "~{sep='*' table_map}".split('*')
+        table_map = list(x for x in "~{sep='*' table_map}".split('*') if x)
         tsv_derived_cols(
             "~{metadata_tsv}",
             "~{basename}.derived_cols.txt",

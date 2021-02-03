@@ -455,8 +455,8 @@ task sra_meta_prep {
     import util.file
 
     # WDL arrays to python arrays
-    bam_uris = '~{sep="*" cleaned_bam_filepaths}'.split('*')
-    library_metadata = '~{sep="*" library_metadata}'.split('*')
+    bam_uris = list(x for x in '~{sep="*" cleaned_bam_filepaths}'.split('*') if x)
+    library_metadata = list(x for x in '~{sep="*" library_metadata}'.split('*') if x)
 
     # lookup table files to dicts
     lib_to_bams = {}
