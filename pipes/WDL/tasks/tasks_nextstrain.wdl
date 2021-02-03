@@ -195,7 +195,7 @@ task nextstrain_build_subsample {
             patterns: ["*.yaml"]
         }
     }
-    command {
+    command <<<
         set -e -o pipefail
         augur version > VERSION
 
@@ -247,7 +247,7 @@ task nextstrain_build_subsample {
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
-    }
+    >>>
     runtime {
         docker: docker
         memory: "48 GB"   # priorities.py on 500k genomes
