@@ -43,7 +43,7 @@ task download_fasta {
   }
 
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: "7 GB"
     cpu: 2
     dx_instance_type: "mem2_ssd1_v2_x2"
@@ -83,7 +83,7 @@ task download_annotations {
   }
 
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: "7 GB"
     cpu: 2
     dx_instance_type: "mem2_ssd1_v2_x2"
@@ -136,7 +136,7 @@ task annot_transfer {
   }
 
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: "3 GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -191,7 +191,7 @@ task align_and_annot_transfer_single {
   }
 
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: "15 GB"
     cpu: 4
     dx_instance_type: "mem2_ssd1_v2_x4"
@@ -241,7 +241,7 @@ task structured_comments {
     File   structured_comment_table = "~{out_base}.cmt"
   }
   runtime {
-    docker: "~{docker}"
+    docker: docker
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -294,7 +294,7 @@ task rename_fasta_header {
     File renamed_fasta = "~{out_basename}.fasta"
   }
   runtime {
-    docker: "~{docker}"
+    docker: docker
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -400,7 +400,7 @@ task lookup_table_by_filename {
     String value = read_string("OUTVAL")
   }
   runtime {
-    docker: "~{docker}"
+    docker: docker
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -776,7 +776,7 @@ task package_genbank_ftp_submission {
     File submit_ready = "submit.ready"
   }
   runtime {
-    docker: "~{docker}"
+    docker: docker
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -822,7 +822,7 @@ task vadr {
     File outputs_tgz = "~{out_base}.vadr.tar.gz"
   }
   runtime {
-    docker: "~{docker}"
+    docker: docker
     memory: "64 GB"
     cpu: 8
     dx_instance_type: "mem3_ssd1_v2_x8"
