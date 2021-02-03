@@ -215,8 +215,9 @@ task nextstrain_build_subsample {
           - metadata=~{sample_metadata_tsv}
         printshellcmds: True
         show-failed-logs: True
+        reason: True
+        stats: stats.json
         CONFIG
-        echo "cores: $(nproc)" >> my_profiles/config.yaml
 
         # seed input data (skip some upstream steps in the DAG)
         mkdir -p results
@@ -224,8 +225,10 @@ task nextstrain_build_subsample {
         ln -s "~{alignment_msa_fasta}" results/filtered.fasta
 
         # execute snakemake on pre-iqtree target
+        RAM_MB=$(free -m | head -2 | tail -1 | awk '{print $2}')
         snakemake \
             -j $(nproc) \
+            --resources mem_mb=$RAM_MB \
             --profile my_profiles \
             results/"~{build_name}"/subsampled_alignment.fasta
 
@@ -247,14 +250,15 @@ task nextstrain_build_subsample {
     }
     runtime {
         docker: docker
-        memory: "31 GB"
+        memory: "48 GB"   # priorities.py on 500k genomes
         cpu :   4
         disks:  "local-disk 375 HDD"
-        dx_instance_type: "mem3_ssd1_v2_x4"
+        dx_instance_type: "mem3_ssd1_v2_x8"
     }
     output {
         File   subsampled_msa = "ncov/results/~{build_name}/subsampled_alignment.fasta"
         File   subsample_logs = "augur.filter.logs.txt"
+        File   job_stats_json = "ncov/stats.json"
         Int    sequences_out  = read_int("OUT_COUNT")
         Map[String,Int] counts_by_group = read_map("counts_by_group")
         String augur_version  = read_string("VERSION")
