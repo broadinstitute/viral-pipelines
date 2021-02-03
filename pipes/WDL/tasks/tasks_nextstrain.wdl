@@ -296,9 +296,9 @@ task nextstrain_build_subsample {
         CONFIG
 
         # seed input data (skip some upstream steps in the DAG)
+        # strip away anything after a space (esp in fasta headers--they break priorities.py)
         mkdir -p results
-        #ln -s "~{alignment_msa_fasta}" results/aligned-filtered.fasta
-        ln -s "~{alignment_msa_fasta}" results/filtered.fasta
+        cut -f 1 -d ' ' "~{alignment_msa_fasta}" > results/filtered.fasta
 
         # execute snakemake on pre-iqtree target
         RAM_MB=$(free -m | head -2 | tail -1 | awk '{print $2}')
