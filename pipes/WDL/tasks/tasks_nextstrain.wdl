@@ -30,20 +30,20 @@ task gzcat {
     input {
         Array[File] infiles
         String      output_name
-        String      docker="quay.io/broadinstitute/viral-core:2.1.19"
     }
     command <<<
         python3 <<CODE
-        import util.file
-        with util.file.open_or_gzopen("~{output_name}", 'wt') as outf:
+        import gzip
+        open_or_gzopen = lambda *args, **kwargs: gzip.open(*args, **kwargs) if args[0].endswith('.gz') else open(*args, **kwargs)
+        with open_or_gzopen("~{output_name}", 'wt') as outf:
             for infname in "~{sep=' ' infiles}".split(' '):
-                with util.file.open_or_gzopen(infname, 'rt') as inf:
+                with open_or_gzopen(infname, 'rt') as inf:
                     for line in inf:
                         outf.write(line)
         CODE
     >>>
     runtime {
-        docker: docker
+        docker: "python:slim"
         memory: "1 GB"
         cpu:    2
         disks: "local-disk 375 LOCAL"
@@ -56,7 +56,7 @@ task gzcat {
 
 task derived_cols {
     meta {
-        description: "Create derivative columns in nextstrain metadata file."
+        description: "Create derivative columns in nextstrain metadata file (optionally). TSV input and output files may be gzipped."
     }
     input {
         File          metadata_tsv
@@ -65,21 +65,97 @@ task derived_cols {
 
         String        docker="quay.io/broadinstitute/viral-core:2.1.19"
     }
-    String basename = basename(basename(metadata_tsv, ".txt"), ".tsv")
-    command {
-        set -e
-
-        TABLES="~{sep=' ' table_map}"
-        if [ -n "$TABLES" ]; then
-            TABLES="--table_map $TABLES"
-        fi
-
-        file_utils.py tsv_derived_cols \
-            "~{metadata_tsv}" \
-            "~{basename}.derived_cols.txt" \
-            $TABLES \
-            ~{'--lab_highlight_loc "' + lab_highlight_loc + '"'}
+    parameter_meta {
+        lab_highlight_loc: {
+          description: "This option copies the 'originating_lab' and 'submitting_lab' columns to new ones including a prefix, but only if they match certain criteria. The value of this string must be of the form prefix;col_header=value:col_header=value. For example, 'MA;country=USA:division=Massachusetts' will copy the originating_lab and submitting_lab columns to MA_originating_lab and MA_submitting_lab, but only for those rows where country=USA and division=Massachusetts."
+        }
+        table_map: {
+            description: "Mapping tables. Each mapping table is a tsv with a header. The first column is the output column name for this mapping (it will be created or overwritten). The subsequent columns are matching criteria. The value in the first column is written to the output column. The exception is in the case where all match columns are '*' -- in this case, the value in the first column is the column header name to copy over.",
+            patterns: ["*.txt", "*.tsv"]
+        }
     }
+    String basename = basename(basename(metadata_tsv, ".txt"), ".tsv")
+    command <<<
+        python3<<CODE
+        import csv, gzip
+
+        def open_or_gzopen(*args, **kwargs):
+            return gzip.open(*args, **kwargs) if args[0].endswith('.gz') else open(*args, **kwargs)
+
+        class Adder_Table_Map:
+            def __init__(self, tab_file):
+                self._mapper = {}
+                self._default_col = None
+                with open_or_gzopen(tab_file, 'rt') as inf:
+                    reader = csv.DictReader(inf, delimiter='\t')
+                    self._col_name = reader.fieldnames[0]
+                    self._orig_cols = reader.fieldnames[1:]
+                    for row in reader:
+                        if all(v=='*' for k,v in row.items() if k in self._orig_cols):
+                            self._default_col = row.get(self._col_name)
+                        else:
+                            k = self._make_key_str(row)
+                            v = row.get(self._col_name, '')
+                            log.debug("setting {}={} if {}".format(self._col_name, v, k))
+                            self._mapper[k] = v
+            def _make_key_str(self, row):
+                key_str = ':'.join('='.join((k,row.get(k,''))) for k in self._orig_cols)
+                return key_str
+            def extra_headers(self):
+                return (self._col_name,)
+            def modify_row(self, row):
+                k = self._make_key_str(row)
+                v = self._mapper.get(k)
+                if v is None and self._default_col:
+                   v = row.get(self._default_col, '')
+                row[self._col_name] = v
+                return row
+
+        class Adder_Source_Lab_Subset:
+            def __init__(self, restrict_string):
+                self._prefix = restrict_string.split(';')[0]
+                self._restrict_map = dict(kv.split('=') for kv in restrict_string.split(';')[1].split(':'))
+            def extra_headers(self):
+                return (self._prefix + '_originating_lab', self._prefix + '_submitting_lab')
+            def modify_row(self, row):
+                if all((row.get(k) == v) for k,v in self._restrict_map.items()):
+                    row[self._prefix + '_originating_lab'] = row['originating_lab']
+                    row[self._prefix + '_submitting_lab']  = row['submitting_lab']
+                return row
+
+        def tsv_derived_cols(in_tsv, out_tsv, table_map=None, lab_highlight_loc=None):
+            adders = []
+            if table_map:
+                for t in table_map:
+                    adders.append(Adder_Table_Map(t))
+            if lab_highlight_loc:
+               adders.append(Adder_Source_Lab_Subset(lab_highlight_loc))
+
+            with open_or_gzopen(in_tsv, 'rt') as inf:
+                reader = csv.DictReader(inf, delimiter='\t')
+                out_headers = reader.fieldnames
+                for adder in adders:
+                    out_headers.extend(adder.extra_headers())
+
+                with open_or_gzopen(out_tsv, 'wt') as outf:
+                    writer = csv.DictWriter(outf, out_headers, delimiter='\t')
+                    writer.writeheader()
+                    for row in reader:
+                        for adder in adders:
+                            adder.modify_row(row)
+                        writer.writerow(row)
+
+        lab_highlight_loc = "~{default='' lab_highlight_loc}"
+        table_map = "~{sep='*' table_map}".split('*')
+        tsv_derived_cols(
+            "~{metadata_tsv}",
+            "~{basename}.derived_cols.txt",
+            table_map = table_map,
+            lab_highlight_loc = lab_highlight_loc if lab_highlight_loc else None
+        )
+
+        CODE
+    >>>
     runtime {
         docker: docker
         memory: "1 GB"
@@ -387,11 +463,12 @@ task filter_sequences_by_length {
     command <<<
     python3 <<CODE
     import Bio.SeqIO
-    import util.file
+    import gzip
     n_total = 0
     n_kept = 0
-    with util.file.open_or_gzopen('~{sequences_fasta}', 'rt') as inf:
-        with util.file.open_or_gzopen('~{out_fname}', 'wt') as outf:
+    open_or_gzopen = lambda *args, **kwargs: gzip.open(*args, **kwargs) if args[0].endswith('.gz') else open(*args, **kwargs)
+    with open_or_gzopen('~{sequences_fasta}', 'rt') as inf:
+        with open_or_gzopen('~{out_fname}', 'wt') as outf:
             for seq in Bio.SeqIO.parse(inf, 'fasta'):
                 n_total += 1
                 ungapseq = seq.seq.ungap().upper()
@@ -409,8 +486,8 @@ task filter_sequences_by_length {
     >>>
     runtime {
         docker: docker
-        memory: "2 GB"
-        cpu :   2
+        memory: "1 GB"
+        cpu :   1
         disks:  "local-disk 300 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
     }
