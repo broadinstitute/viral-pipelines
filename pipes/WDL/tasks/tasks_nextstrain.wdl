@@ -96,7 +96,7 @@ task derived_cols {
                         else:
                             k = self._make_key_str(row)
                             v = row.get(self._col_name, '')
-                            log.debug("setting {}={} if {}".format(self._col_name, v, k))
+                            print("setting {}={} if {}".format(self._col_name, v, k))
                             self._mapper[k] = v
             def _make_key_str(self, row):
                 key_str = ':'.join('='.join((k,row.get(k,''))) for k in self._orig_cols)
