@@ -25,7 +25,7 @@ task concatenate {
 
 task gzcat {
     meta {
-        description: "Glue together a bunch of text files that may or may not be compressed (autodetect among gz, bz2, lz4, zstd or uncompressed inputs). Optionally compress the output (depending on requested file extension)"
+        description: "Glue together a bunch of text files that may or may not be compressed (autodetect among gz or uncompressed inputs). Optionally compress the output (depending on requested file extension)"
     }
     input {
         Array[File] infiles
