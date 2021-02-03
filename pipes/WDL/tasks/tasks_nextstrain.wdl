@@ -234,7 +234,7 @@ task nextstrain_build_subsample {
 
         # grab logs and numbers
         set +o pipefail
-        grep . logs/filtered.txt logs/subsample_"~{build_name}"_* > ../augur.filter.logs.txt
+        grep . logs/subsample_"~{build_name}"_* > ../augur.filter.logs.txt
         grep \> "results/~{build_name}/subsampled_alignment.fasta" | wc -l | tee ../OUT_COUNT
         for i in results/"~{build_name}"/sample-*.fasta; do
           group=$(basename $i .fasta | cut -f 2- -d -)
