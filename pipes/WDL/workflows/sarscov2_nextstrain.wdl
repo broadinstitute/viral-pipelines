@@ -2,6 +2,7 @@ version 1.0
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_reports.wdl" as reports
+import "../tasks/tasks_intrahost.wdl" as intrahost
 
 workflow sarscov2_nextstrain {
     meta {
@@ -15,10 +16,11 @@ workflow sarscov2_nextstrain {
         Array[File]+    sample_metadata_tsvs
         File            ref_fasta
 
-        Int             min_unambig_genome = 27000
-
         File?           clades_tsv
         Array[String]?  ancestral_traits_to_infer
+
+        Int             min_unambig_genome = 27000
+        String          ref_annot_acc = "MN908947.3"
     }
 
     parameter_meta {
@@ -47,7 +49,7 @@ workflow sarscov2_nextstrain {
     }
 
 
-    #### mafft_and_snp
+    #### mafft_and_snp_annotated
 
     call nextstrain.gzcat {
         input:
@@ -68,6 +70,12 @@ workflow sarscov2_nextstrain {
     call nextstrain.snp_sites {
         input:
             msa_fasta = mafft.aligned_sequences
+    }
+    call intrahost.annotate_vcf_snpeff {
+        input:
+            ref_fasta = ref_fasta,
+            in_vcf    = snp_sites.snps_vcf,
+            snpEffRef = [ref_annot_acc]
     }
 
 
@@ -154,7 +162,7 @@ workflow sarscov2_nextstrain {
     output {
       File  combined_assemblies   = filter_sequences_by_length.filtered_fasta
       File  multiple_alignment    = mafft.aligned_sequences
-      File  unmasked_snps         = snp_sites.snps_vcf
+      File  unmasked_snps         = annotate_vcf_snpeff.annot_vcf_gz
 
       File  metadata_merged       = derived_cols.derived_metadata
       File  keep_list             = fasta_to_ids.ids_txt
