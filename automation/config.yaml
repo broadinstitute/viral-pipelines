@@ -1,0 +1,7 @@
+---
+WORKSPACE_NAMESPACE: pathogen-genomic-surveillance
+WORKSPACE_NAME: Viral-Genomics-Lab-private_sushmac_dfe385
+METHOD_NAMESPACE: pathogen-genomic-surveillance
+METHOD_NAME: hello-world-plus
+SECRET_PATH: projects/115398405846/secrets/full_viral_workflow_sa_json_key/versions/1
+TRIGGER_PARAMETER_NAME: HelloWorldPlus.input_file

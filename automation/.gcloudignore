@@ -1,0 +1,8 @@
+# files/dirs not to upload to the CF environment
+*.sh
+*.wdl
+*.md
+__pycache__/
+quickstart-docker/
+test/
+.gcloudignore
