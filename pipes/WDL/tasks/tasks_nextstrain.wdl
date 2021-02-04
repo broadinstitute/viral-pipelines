@@ -1309,6 +1309,7 @@ task export_auspice_json {
             ~{"--description " + description_md} \
             ~{true="--include-root-sequence " false=""  include_root_sequence} \
             --output "~{out_basename}_auspice.json")
+        touch "~{out_basename}_auspice_root-sequence.json"
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
