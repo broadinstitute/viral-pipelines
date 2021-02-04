@@ -247,6 +247,7 @@ task nextstrain_build_subsample {
         File?    builds_yaml
         File?    parameters_yaml
 
+        Int?     machine_mem_gb
         String   docker = "nextstrain/base:build-20210127T135203Z"
         String   nextstrain_ncov_repo_commit = "5dbca8a45a64e39057c22163f154db981f7ed5c1"
     }
@@ -326,7 +327,7 @@ task nextstrain_build_subsample {
     >>>
     runtime {
         docker: docker
-        memory: "48 GB"   # priorities.py on 500k genomes
+        memory: select_first([machine_mem_gb, 60]) + " GB" # priorities.py on 500k genomes
         cpu :   4
         disks:  "local-disk 375 HDD"
         dx_instance_type: "mem3_ssd1_v2_x8"
