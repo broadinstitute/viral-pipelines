@@ -10,6 +10,7 @@ task  upload_entities_tsv{
     File          meta_by_filename_json
 
     String        docker="schaluvadi/pathogen-genomic-surveillance:api-wdl"
+    Int?          machine_mem_gb
   }
 
   command {
@@ -31,6 +32,7 @@ task  upload_entities_tsv{
   runtime {
     docker: docker
     preemptible: 0
+    memory: select_first([machine_mem_gb, 10]) + " GB"
   }
 
   output {
