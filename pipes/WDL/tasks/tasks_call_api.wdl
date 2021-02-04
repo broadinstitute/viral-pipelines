@@ -5,7 +5,6 @@ task  upload_entities_tsv{
     String        workspace_name
     String        terra_project
     File          tsv_file
-    # Array[File]   cleaned_reads_unaligned_bams
     Array[String] cleaned_reads_unaligned_bams_string
     File          meta_by_filename_json
 
@@ -14,12 +13,6 @@ task  upload_entities_tsv{
   }
 
   command {
-
-    # python3 /projects/cdc-sabeti-covid-19/create_data_tables.py -t ~{tsv_file} \
-    #         -p ~{terra_project} \
-    #         -w ~{workspace_name} \
-    #         -b ~{sep="," cleaned_reads_unaligned_bams_string} \
-    #         -j ~{meta_by_filename_json}
 
     python3 /projects/cdc-sabeti-covid-19/create_data_tables.py -t ~{tsv_file} \
             -p ~{terra_project} \

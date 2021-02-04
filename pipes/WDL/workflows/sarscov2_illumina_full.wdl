@@ -242,7 +242,6 @@ workflow sarscov2_illumina_full {
         workspace_name = workspace_name,
         terra_project = terra_project,
         tsv_file = assembly_meta_tsv.combined,
-        # cleaned_reads_unaligned_bams = demux_deplete.cleaned_reads_unaligned_bams,
         cleaned_reads_unaligned_bams_string = demux_deplete.cleaned_reads_unaligned_bams_string,
         meta_by_filename_json = demux_deplete.meta_by_filename_json
     }
