@@ -120,6 +120,17 @@ workflow sarscov2_nextstrain {
                 columns        = select_first([ancestral_traits_to_infer,[]])
         }
     }
+    call nextstrain.tip_frequencies {
+        input:
+            tree        = refine_augur_tree.tree_refined,
+            metadata    = derived_cols.derived_metadata,
+            min_date = 2020.0,
+            pivot_interval = 1,
+            pivot_interval_units = "weeks",
+            narrow_bandwidth = 0.05,
+            proportion_wide = 0.0
+
+    }
     call nextstrain.ancestral_tree {
         input:
             tree        = refine_augur_tree.tree_refined,
@@ -147,6 +158,7 @@ workflow sarscov2_nextstrain {
             node_data_jsons = select_all([
                                 refine_augur_tree.branch_lengths,
                                 ancestral_traits.node_data_json,
+                                tip_frequencies.node_data_json,
                                 ancestral_tree.nt_muts_json,
                                 translate_augur_tree.aa_muts_json,
                                 assign_clades_to_nodes.node_clade_data_json])

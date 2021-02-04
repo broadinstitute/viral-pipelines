@@ -1076,6 +1076,75 @@ task translate_augur_tree {
     }
 }
 
+task tip_frequencies {
+    meta {
+        description: "Estimating frequencies for tips. See https://docs.nextstrain.org/projects/augur/en/stable/usage/cli/frequencies.html"
+    }
+    input {
+        File     tree
+        File     metadata
+
+        String   method = "kde"
+
+        Float?   min_date
+        Float?   max_date
+        Int?     pivot_interval
+        String?  pivot_interval_units
+        Float?   narrow_bandwidth
+        Float?   wide_bandwidth
+        Float?   proportion_wide
+        Float?   minimal_frequency
+        Float?   stiffness
+        Float?   inertia
+        Boolean  censored = false
+        Boolean  include_internal_nodes = false
+
+        String   docker = "nextstrain/base:build-20201214T004216Z"
+    }
+    String out_basename = basename(tree, '.nwk')
+    command {
+        set -e
+        augur version > VERSION
+        AUGUR_RECURSION_LIMIT=10000 augur frequencies \
+            --method "~{method}" \
+            --tree "~{tree}" \
+            --metadata "~{metadata}" \
+            ~{'--min-date ' + min_date} \
+            ~{'--max-date ' + max_date} \
+            ~{'--pivot-interval ' + pivot_interval} \
+            ~{'--pivot-interval-units ' + pivot_interval_units} \
+            ~{'--narrow-bandwidth ' + narrow_bandwidth} \
+            ~{'--wide-bandwidth ' + wide_bandwidth} \
+            ~{'--proportion-wide ' + proportion_wide} \
+            ~{'--narrow-bandwidth ' + narrow_bandwidth} \
+            ~{'--minimal-frequency ' + minimal_frequency} \
+            ~{'--stiffness ' + stiffness} \
+            ~{'--inertia ' + inertia} \
+            ~{true='--censored' false='' censored} \
+            ~{true='--include-internal-nodes' false='' include_internal_nodes} \
+            --output-node-data "~{out_basename}_tip-frequencies.json"
+
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg > CPU_LOAD
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
+    }
+    runtime {
+        docker: docker
+        memory: "3 GB"
+        cpu :   2
+        disks:  "local-disk 100 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+        preemptible: 1
+    }
+    output {
+        File   node_data_json = "~{out_basename}_tip-frequencies.json"
+        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
+        String cpu_load = read_string("CPU_LOAD")
+        String augur_version = read_string("VERSION")
+    }
+}
+
 task assign_clades_to_nodes {
     meta {
         description: "Assign taxonomic clades to tree nodes based on mutation information"
