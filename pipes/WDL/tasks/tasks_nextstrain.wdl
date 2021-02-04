@@ -1100,8 +1100,8 @@ task tip_frequencies {
         Boolean  include_internal_nodes = false
 
         String   docker = "nextstrain/base:build-20210127T135203Z"
+        String   out_basename = basename(tree, '.nwk')
     }
-    String out_basename = basename(tree, '.nwk')
     command {
         set -e
         augur version > VERSION
@@ -1306,6 +1306,7 @@ task export_auspice_json {
             ~{"--lat-longs " + lat_longs_tsv} \
             ~{"--colors " + colors_tsv} \
             ~{"--description " + description_md} \
+            --include-root-sequence \
             --output "~{out_basename}_auspice.json")
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
@@ -1321,6 +1322,7 @@ task export_auspice_json {
     }
     output {
         File   virus_json = "~{out_basename}_auspice.json"
+        File   root_sequence_json = "~{out_basename}_auspice_root-sequence.json"
         Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
         String cpu_load = read_string("CPU_LOAD")
