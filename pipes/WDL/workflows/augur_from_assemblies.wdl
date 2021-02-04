@@ -191,6 +191,11 @@ workflow augur_from_assemblies {
             tree        = refine_augur_tree.tree_refined,
             nt_muts     = ancestral_tree.nt_muts_json
     }
+    call nextstrain.tip_frequencies {
+        input:
+            tree        = refine_augur_tree.tree_refined,
+            metadata    = derived_cols.derived_metadata
+    }
     if(defined(clades_tsv)) {
         call nextstrain.assign_clades_to_nodes {
             input:
@@ -209,6 +214,7 @@ workflow augur_from_assemblies {
                                 refine_augur_tree.branch_lengths,
                                 ancestral_traits.node_data_json,
                                 ancestral_tree.nt_muts_json,
+                                tip_frequencies.node_data_json,
                                 translate_augur_tree.aa_muts_json,
                                 assign_clades_to_nodes.node_clade_data_json])
     }
@@ -232,6 +238,7 @@ workflow augur_from_assemblies {
                     refine_augur_tree.branch_lengths,
                     ancestral_traits.node_data_json,
                     ancestral_tree.nt_muts_json,
+                    tip_frequencies.node_data_json,
                     translate_augur_tree.aa_muts_json,
                     assign_clades_to_nodes.node_clade_data_json])
       File  auspice_input_json    = export_auspice_json.virus_json

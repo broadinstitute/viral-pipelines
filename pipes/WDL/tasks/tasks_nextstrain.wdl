@@ -1122,7 +1122,7 @@ task tip_frequencies {
             ~{'--inertia ' + inertia} \
             ~{true='--censored' false='' censored} \
             ~{true='--include-internal-nodes' false='' include_internal_nodes} \
-            --output-node-data "~{out_basename}_tip-frequencies.json"
+            --output "~{out_basename}_tip-frequencies.json"
 
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
