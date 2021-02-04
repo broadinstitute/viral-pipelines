@@ -148,6 +148,7 @@ workflow demux_deplete {
         File meta_by_sample_json = meta_sample.merged_json
 
         Array[File] cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing)
+        Array[String] cleaned_reads_unaligned_bams_string = select_all(cleaned_bam_passing)
         Array[File] cleaned_bams_tiny = select_all(empty_bam)
         Array[Int]  read_counts_depleted = deplete.depletion_read_count_post
 
