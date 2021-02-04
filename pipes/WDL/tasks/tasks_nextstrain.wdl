@@ -327,7 +327,7 @@ task nextstrain_build_subsample {
     >>>
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 60]) + " GB" # priorities.py on 500k genomes
+        memory: select_first([machine_mem_gb, 90]) + " GB" # priorities.py on 500k genomes
         cpu :   4
         disks:  "local-disk 375 HDD"
         dx_instance_type: "mem3_ssd1_v2_x8"
