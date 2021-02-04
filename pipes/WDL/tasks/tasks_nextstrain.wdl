@@ -247,7 +247,7 @@ task nextstrain_build_subsample {
         File?    builds_yaml
         File?    parameters_yaml
 
-        String   docker = "nextstrain/base:build-20201214T004216Z"
+        String   docker = "nextstrain/base:build-20210127T135203Z"
         String   nextstrain_ncov_repo_commit = "5dbca8a45a64e39057c22163f154db981f7ed5c1"
     }
     parameter_meta {
@@ -367,7 +367,7 @@ task filter_subsample_sequences {
         Array[String]?  exclude_where
         Array[String]?  include_where
 
-        String   docker = "nextstrain/base:build-20201214T004216Z"
+        String   docker = "nextstrain/base:build-20210127T135203Z"
     }
     parameter_meta {
         sequences_fasta: {
@@ -507,7 +507,7 @@ task filter_sequences_to_list {
         File          sequences
         Array[File]?  keep_list
 
-        String   docker = "nextstrain/base:build-20201214T004216Z"
+        String   docker = "nextstrain/base:build-20210127T135203Z"
     }
     parameter_meta {
         sequences: {
@@ -681,7 +681,7 @@ task augur_mafft_align {
         Boolean  fill_gaps = true
         Boolean  remove_reference = true
 
-        String   docker = "nextstrain/base:build-20201214T004216Z"
+        String   docker = "nextstrain/base:build-20210127T135203Z"
     }
     command {
         set -e
@@ -748,7 +748,7 @@ task augur_mask_sites {
         File     sequences
         File?    mask_bed
 
-        String   docker = "nextstrain/base:build-20201214T004216Z"
+        String   docker = "nextstrain/base:build-20210127T135203Z"
     }
     parameter_meta {
         sequences: {
@@ -803,7 +803,7 @@ task draft_augur_tree {
         String?  tree_builder_args
 
         Int?     cpus
-        String   docker = "nextstrain/base:build-20201214T004216Z"
+        String   docker = "nextstrain/base:build-20210127T135203Z"
     }
     parameter_meta {
         msa_or_vcf: {
@@ -869,7 +869,7 @@ task refine_augur_tree {
         String?  divergence_units = "mutations"
         File?    vcf_reference
 
-        String   docker = "nextstrain/base:build-20201214T004216Z"
+        String   docker = "nextstrain/base:build-20210127T135203Z"
     }
     parameter_meta {
         msa_or_vcf: {
@@ -938,7 +938,7 @@ task ancestral_traits {
         File?          weights
         Float?         sampling_bias_correction
 
-        String   docker = "nextstrain/base:build-20201214T004216Z"
+        String   docker = "nextstrain/base:build-20210127T135203Z"
     }
     String out_basename = basename(tree, '.nwk')
     command {
@@ -988,7 +988,7 @@ task ancestral_tree {
         File?    vcf_reference
         File?    output_vcf
 
-        String   docker = "nextstrain/base:build-20201214T004216Z"
+        String   docker = "nextstrain/base:build-20210127T135203Z"
     }
     parameter_meta {
         msa_or_vcf: {
@@ -1046,7 +1046,7 @@ task translate_augur_tree {
         File?  vcf_reference_output
         File?  vcf_reference
 
-        String docker = "nextstrain/base:build-20201214T004216Z"
+        String docker = "nextstrain/base:build-20210127T135203Z"
     }
     String out_basename = basename(tree, '.nwk')
     command {
@@ -1099,7 +1099,7 @@ task tip_frequencies {
         Boolean  censored = false
         Boolean  include_internal_nodes = false
 
-        String   docker = "nextstrain/base:build-20201214T004216Z"
+        String   docker = "nextstrain/base:build-20210127T135203Z"
     }
     String out_basename = basename(tree, '.nwk')
     command {
@@ -1156,7 +1156,7 @@ task assign_clades_to_nodes {
         File ref_fasta
         File clades_tsv
 
-        String docker = "nextstrain/base:build-20201214T004216Z"
+        String docker = "nextstrain/base:build-20210127T135203Z"
     }
     String out_basename = basename(basename(tree_nwk, ".nwk"), "_timetree")
     command {
@@ -1198,7 +1198,7 @@ task augur_import_beast {
         String? tip_date_delimiter
 
         Int?    machine_mem_gb
-        String  docker = "nextstrain/base:build-20201214T004216Z"
+        String  docker = "nextstrain/base:build-20210127T135203Z"
     }
     String tree_basename = basename(beast_mcc_tree, ".tree")
     command {
@@ -1254,7 +1254,7 @@ task export_auspice_json {
 
         String out_basename = basename(basename(tree, ".nwk"), "_timetree")
 
-        String docker = "nextstrain/base:build-20201214T004216Z"
+        String docker = "nextstrain/base:build-20210127T135203Z"
     }
     
     command {
