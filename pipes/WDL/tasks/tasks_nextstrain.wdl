@@ -330,7 +330,7 @@ task nextstrain_build_subsample {
         memory: select_first([machine_mem_gb, 90]) + " GB" # priorities.py on 500k genomes
         cpu :   4
         disks:  "local-disk 375 HDD"
-        dx_instance_type: "mem3_ssd1_v2_x8"
+        dx_instance_type: "mem3_ssd1_v2_x16"
     }
     output {
         File   subsampled_msa = "ncov/results/~{build_name}/subsampled_alignment.fasta"
