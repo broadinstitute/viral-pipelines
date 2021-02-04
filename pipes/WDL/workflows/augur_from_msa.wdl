@@ -96,6 +96,11 @@ workflow augur_from_msa {
                 columns        = select_first([ancestral_traits_to_infer,[]])
         }
     }
+    call nextstrain.tip_frequencies {
+        input:
+            tree        = refine_augur_tree.tree_refined,
+            metadata    = select_first(flatten([[tsv_join.out_tsv], sample_metadata]))
+    }
     call nextstrain.ancestral_tree {
         input:
             tree        = refine_augur_tree.tree_refined,
@@ -141,5 +146,7 @@ workflow augur_from_msa {
                     translate_augur_tree.aa_muts_json,
                     assign_clades_to_nodes.node_clade_data_json])
         File  auspice_input_json  = export_auspice_json.virus_json
+        File  tip_frequencies_json = tip_frequencies.node_data_json
+        File  root_sequence_json   = export_auspice_json.root_sequence_json
     }
 }
