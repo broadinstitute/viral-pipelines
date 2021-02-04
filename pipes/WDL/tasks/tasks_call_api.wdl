@@ -18,7 +18,7 @@ task  upload_entities_tsv{
     # python3 /projects/cdc-sabeti-covid-19/create_data_tables.py -t ~{tsv_file} \
     #         -p ~{terra_project} \
     #         -w ~{workspace_name} \
-    #         -b ~{sep="," cleaned_reads_unaligned_bams} \
+    #         -b ~{sep="," cleaned_reads_unaligned_bams_string} \
     #         -j ~{meta_by_filename_json}
 
     python3 /projects/cdc-sabeti-covid-19/create_data_tables.py -t ~{tsv_file} \
