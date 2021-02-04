@@ -16,6 +16,8 @@ workflow sarscov2_nextstrain {
         Array[File]+    sample_metadata_tsvs
         File            ref_fasta
 
+        String          build_name
+
         File?           clades_tsv
         Array[String]?  ancestral_traits_to_infer
 
@@ -91,7 +93,8 @@ workflow sarscov2_nextstrain {
     call nextstrain.nextstrain_build_subsample as subsample {
         input:
             alignment_msa_fasta = mafft.aligned_sequences,
-            sample_metadata_tsv = derived_cols.derived_metadata
+            sample_metadata_tsv = derived_cols.derived_metadata,
+            build_name = build_name
     }
     call nextstrain.fasta_to_ids {
         input:
@@ -161,7 +164,8 @@ workflow sarscov2_nextstrain {
                                 tip_frequencies.node_data_json,
                                 ancestral_tree.nt_muts_json,
                                 translate_augur_tree.aa_muts_json,
-                                assign_clades_to_nodes.node_clade_data_json])
+                                assign_clades_to_nodes.node_clade_data_json]),
+            out_basename = "auspice-~{build_name}"
     }
 
     output {

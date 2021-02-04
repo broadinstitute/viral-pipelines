@@ -1252,9 +1252,11 @@ task export_auspice_json {
         Array[String]? maintainers
         String?        title
 
+        String out_basename = basename(basename(tree, ".nwk"), "_timetree")
+
         String docker = "nextstrain/base:build-20201214T004216Z"
     }
-    String out_basename = basename(basename(tree, ".nwk"), "_timetree")
+    
     command {
         set -e -o pipefail
         augur version > VERSION
