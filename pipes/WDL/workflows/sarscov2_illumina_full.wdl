@@ -249,7 +249,6 @@ workflow sarscov2_illumina_full {
     output {
         Array[File] raw_reads_unaligned_bams     = demux_deplete.raw_reads_unaligned_bams
         Array[File] cleaned_reads_unaligned_bams = demux_deplete.cleaned_reads_unaligned_bams
-        Array[String] cleaned_reads_unaligned_bams_string = demux_deplete.cleaned_reads_unaligned_bams_string
         Array[File] cleaned_bams_tiny            = demux_deplete.cleaned_bams_tiny
 
         File meta_by_filename_json = demux_deplete.meta_by_filename_json
