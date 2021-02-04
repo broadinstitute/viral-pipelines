@@ -162,11 +162,11 @@ task group_sra_bams_by_biosample {
     import json
 
     # WDL arrays to python arrays
-    bam_uris = '~{sep="*" bam_filepaths}'.split('*')
-    biosample_accs = '~{sep="*" biosamples}'.split('*')
-    attributes = '~{sep="*" biosample_attributes_jsons}'.split('*')
-    libstrats = '~{sep="*" library_strategies}'.split('*')
-    seqplats = '~{sep="*" seq_platforms}'.split('*')
+    bam_uris = list(x for x in '~{sep="*" bam_filepaths}'.split('*') if x)
+    biosample_accs = list(x for x in '~{sep="*" biosamples}'.split('*') if x)
+    attributes = list(x for x in '~{sep="*" biosample_attributes_jsons}'.split('*') if x)
+    libstrats = list(x for x in '~{sep="*" library_strategies}'.split('*') if x)
+    seqplats = list(x for x in '~{sep="*" seq_platforms}'.split('*') if x)
     assert len(bam_uris) == len(biosample_accs) == len(attributes) == len(libstrats) == len(seqplats)
 
     # lookup table files to dicts

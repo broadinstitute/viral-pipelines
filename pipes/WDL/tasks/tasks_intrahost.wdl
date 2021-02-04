@@ -195,13 +195,14 @@ task annotate_vcf_snpeff {
   }
 
   output {
-    File        annot_vcf_gz      = "${output_basename}.annot.vcf.gz"
-    File        annot_vcf_gz_tbi  = "${output_basename}.annot.vcf.gz.tbi"
+    File        annot_vcf_gz      = "~{output_basename}.annot.vcf.gz"
+    File        annot_vcf_gz_tbi  = "~{output_basename}.annot.vcf.gz.tbi"
     String      viralngs_version  = read_string("VERSION")
   }
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: select_first([machine_mem_gb, 4]) + " GB"
+    disks:  "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x4"
   }
 }
