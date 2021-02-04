@@ -5,7 +5,7 @@ task  upload_entities_tsv{
     String        workspace_name
     String        terra_project
     File          tsv_file
-    Array[File]   cleaned_reads_unaligned_bams
+    # Array[File]   cleaned_reads_unaligned_bams
     Array[String] cleaned_reads_unaligned_bams_string
     File          meta_by_filename_json
 
