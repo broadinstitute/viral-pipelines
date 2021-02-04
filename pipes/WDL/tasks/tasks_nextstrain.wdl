@@ -1251,6 +1251,7 @@ task export_auspice_json {
         File?          description_md
         Array[String]? maintainers
         String?        title
+        Boolean        include_root_sequence = true
 
         String out_basename = basename(basename(tree, ".nwk"), "_timetree")
 
@@ -1306,7 +1307,7 @@ task export_auspice_json {
             ~{"--lat-longs " + lat_longs_tsv} \
             ~{"--colors " + colors_tsv} \
             ~{"--description " + description_md} \
-            --include-root-sequence \
+            ~{true="--include-root-sequence " false=""  include_root_sequence} \
             --output "~{out_basename}_auspice.json")
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD

@@ -33,7 +33,8 @@ workflow augur_from_beast_mcc {
         input:
             tree            = augur_import_beast.tree_newick,
             node_data_jsons = [augur_import_beast.node_data_json],
-            auspice_config  = auspice_config
+            auspice_config  = auspice_config,
+            include_root_sequence = false
     }
 
     output {
