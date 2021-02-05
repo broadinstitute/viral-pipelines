@@ -348,6 +348,7 @@ task nextstrain_build_subsample {
 task nextstrain_ncov_defaults {
     input {
         String   nextstrain_ncov_repo_commit = "5dbca8a45a64e39057c22163f154db981f7ed5c1"
+        String   docker = "nextstrain/base:build-20210127T135203Z"
     }
     command {
         set -e
@@ -356,7 +357,7 @@ task nextstrain_ncov_defaults {
         cat defaults/clades.tsv defaults/subclades.tsv > clades-with-subclades.tsv
     }
     runtime {
-        docker: "ubuntu"
+        docker: docker
         memory: "1 GB"
         cpu :   1
         disks:  "local-disk 50 HDD"
