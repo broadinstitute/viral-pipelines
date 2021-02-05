@@ -104,9 +104,13 @@ workflow sarscov2_nextstrain {
 
     #### augur_from_msa
 
+    call nextstrain.augur_mask_sites {
+        input:
+            sequences = subsample.subsampled_msa
+    }
     call nextstrain.draft_augur_tree {
         input:
-            msa_or_vcf = subsample.subsampled_msa
+            msa_or_vcf = augur_mask_sites.masked_sequences
     }
 
     call nextstrain.refine_augur_tree {
