@@ -345,6 +345,34 @@ task nextstrain_build_subsample {
     }
 }
 
+task nextstrain_ncov_defaults {
+    input {
+        String   nextstrain_ncov_repo_commit = "5dbca8a45a64e39057c22163f154db981f7ed5c1"
+    }
+    command {
+        set -e
+        wget -q "https://github.com/nextstrain/ncov/archive/~{nextstrain_ncov_repo_commit}.tar.gz"
+        tar -xf "~{nextstrain_ncov_repo_commit}.tar.gz" --strip-components=1
+        cat defaults/clades.tsv defaults/subclades.tsv > clades-with-subclades.tsv
+    }
+    runtime {
+        docker: "ubuntu"
+        memory: "1 GB"
+        cpu :   1
+        disks:  "local-disk 50 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+    output {
+        File clades_tsv      = "clades-with-subclades.tsv"
+        File lat_longs_tsv   = "defaults/lat_longs.tsv"
+        File reference_fasta = "defaults/reference_seq.fasta"
+        File reference_gb    = "defaults/reference_seq.gb"
+        File ids_include     = "defaults/include.txt"
+        File ids_exclude     = "defaults/exclude.txt"
+        File auspice_config  = "defaults/auspice_config.json"
+    }
+}
+
 task filter_subsample_sequences {
     meta {
         description: "Filter and subsample a sequence set. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/filter.html"

@@ -14,12 +14,15 @@ workflow sarscov2_nextstrain {
     input {
         Array[File]+    assembly_fastas
         Array[File]+    sample_metadata_tsvs
-        File            ref_fasta
 
         String          build_name
+        File            builds_yaml
 
-        File?           clades_tsv
         Array[String]?  ancestral_traits_to_infer
+
+        File?           auspice_config
+        File?           ref_fasta
+        File?           clades_tsv
 
         Int             min_unambig_genome = 27000
     }
@@ -49,6 +52,7 @@ workflow sarscov2_nextstrain {
         }
     }
 
+    call nextstrain.nextstrain_ncov_defaults
 
     #### mafft_and_snp
 
@@ -65,7 +69,7 @@ workflow sarscov2_nextstrain {
     call nextstrain.mafft_one_chr as mafft {
         input:
             sequences = filter_sequences_by_length.filtered_fasta,
-            ref_fasta = ref_fasta,
+            ref_fasta = select_first([ref_fasta, nextstrain_ncov_defaults.reference_fasta]),
             basename  = "all_samples_aligned.fasta"
     }
     call nextstrain.snp_sites {
@@ -94,7 +98,8 @@ workflow sarscov2_nextstrain {
         input:
             alignment_msa_fasta = mafft.aligned_sequences,
             sample_metadata_tsv = derived_cols.derived_metadata,
-            build_name = build_name
+            build_name = build_name,
+            builds_yaml = builds_yaml
     }
     call nextstrain.fasta_to_ids {
         input:
@@ -146,17 +151,16 @@ workflow sarscov2_nextstrain {
     call nextstrain.translate_augur_tree {
         input:
             tree        = refine_augur_tree.tree_refined,
-            nt_muts     = ancestral_tree.nt_muts_json
+            nt_muts     = ancestral_tree.nt_muts_json,
+            genbank_gb  = nextstrain_ncov_defaults.reference_gb
     }
-    if(defined(clades_tsv)) {
-        call nextstrain.assign_clades_to_nodes {
-            input:
-                tree_nwk     = refine_augur_tree.tree_refined,
-                nt_muts_json = ancestral_tree.nt_muts_json,
-                aa_muts_json = translate_augur_tree.aa_muts_json,
-                ref_fasta    = ref_fasta,
-                clades_tsv   = select_first([clades_tsv])
-        }
+    call nextstrain.assign_clades_to_nodes {
+        input:
+            tree_nwk     = refine_augur_tree.tree_refined,
+            nt_muts_json = ancestral_tree.nt_muts_json,
+            aa_muts_json = translate_augur_tree.aa_muts_json,
+            ref_fasta    = select_first([ref_fasta, nextstrain_ncov_defaults.reference_fasta]),
+            clades_tsv   = select_first([clades_tsv, nextstrain_ncov_defaults.clades_tsv])
     }
     call nextstrain.export_auspice_json {
         input:
@@ -168,6 +172,7 @@ workflow sarscov2_nextstrain {
                                 ancestral_tree.nt_muts_json,
                                 translate_augur_tree.aa_muts_json,
                                 assign_clades_to_nodes.node_clade_data_json]),
+            auspice_config = select_first([auspice_config, nextstrain_ncov_defaults.auspice_config]),
             out_basename = "auspice-~{build_name}"
     }
 
