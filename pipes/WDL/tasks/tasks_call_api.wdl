@@ -27,7 +27,7 @@ task  upload_entities_tsv{
   runtime {
     docker: docker
     preemptible: 0
-    memory: select_first([machine_mem_gb, 10]) + " GB"
+    memory: select_first([machine_mem_gb, 2]) + " GB"
   }
 
   output {

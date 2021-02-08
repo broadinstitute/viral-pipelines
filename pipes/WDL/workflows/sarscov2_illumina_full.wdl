@@ -50,8 +50,8 @@ workflow sarscov2_illumina_full {
 
         Int           min_genome_bases = 15000
 
-        String        workspace_name
-        String        terra_project
+        String?       workspace_name
+        String?       terra_project
     }
     Int     taxid = 2697049
     String  gisaid_prefix = 'hCoV-19/'
@@ -236,14 +236,16 @@ workflow sarscov2_illumina_full {
         out_name = "gisaid-meta-~{flowcell_id}.tsv"
     }
 
-    # create data tables with assembly_meta_tsv
-    call fapi_tables.upload_entities_tsv as data_tables {
-      input:
-        workspace_name = workspace_name,
-        terra_project = terra_project,
-        tsv_file = assembly_meta_tsv.combined,
-        cleaned_reads_unaligned_bams_string = demux_deplete.cleaned_reads_unaligned_bams,
-        meta_by_filename_json = demux_deplete.meta_by_filename_json
+    # create data tables with assembly_meta_tsv if workspace name and project provided
+    if(defined(workspace_name) && defined(terra_project)) {
+      call fapi_tables.upload_entities_tsv as data_tables {
+        input:
+          workspace_name = workspace_name,
+          terra_project = terra_project,
+          tsv_file = assembly_meta_tsv.combined,
+          cleaned_reads_unaligned_bams_string = demux_deplete.cleaned_reads_unaligned_bams,
+          meta_by_filename_json = demux_deplete.meta_by_filename_json
+      }
     }
 
     output {
