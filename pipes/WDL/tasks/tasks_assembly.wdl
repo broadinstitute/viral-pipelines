@@ -146,7 +146,7 @@ task scaffold {
     }
 
     runtime {
-        docker: "${docker}"
+        docker: docker
         memory: select_first([machine_mem_gb, 15]) + " GB"
         cpu: 4
         disks: "local-disk 375 LOCAL"
@@ -167,7 +167,7 @@ task ivar_trim {
       Int?    min_quality=1
 
       Int?    machine_mem_gb
-      String  docker="andersenlabapps/ivar:1.3"
+      String  docker="andersenlabapps/ivar:1.3.1"
     }
 
     String  bam_basename=basename(aligned_bam, ".bam")
