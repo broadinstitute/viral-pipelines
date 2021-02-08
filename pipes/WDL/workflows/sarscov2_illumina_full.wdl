@@ -50,8 +50,8 @@ workflow sarscov2_illumina_full {
 
         Int           min_genome_bases = 15000
 
-        String    workspace_name
-        String    terra_project
+        String?       workspace_name
+        String?       terra_project
     }
     Int     taxid = 2697049
     String  gisaid_prefix = 'hCoV-19/'
@@ -236,8 +236,8 @@ workflow sarscov2_illumina_full {
         out_name = "gisaid-meta-~{flowcell_id}.tsv"
     }
 
-    create data tables with assembly_meta_tsv if workspace name and project provided
-    if(defined(workspace_name) && defined(terra_project)) {
+    # create data tables with assembly_meta_tsv if workspace name and project provided
+    if (defined(workspace_name) && defined(terra_project)) {
       call fapi_tables.upload_entities_tsv as data_tables {
         input:
           workspace_name = workspace_name,
@@ -296,6 +296,6 @@ workflow sarscov2_illumina_full {
         Int           num_submittable = length(select_all(submittable_id))
         Int           num_failed_annotation = length(select_all(failed_annotation_id))
         Int           num_samples = length(group_bams_by_sample.sample_names)
-        String        data_table_status = data_tables.status
+        String?       data_table_status = data_tables.status
     }
 }
