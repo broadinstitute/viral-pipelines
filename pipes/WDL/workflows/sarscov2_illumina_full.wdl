@@ -237,16 +237,16 @@ workflow sarscov2_illumina_full {
     }
 
     # create data tables with assembly_meta_tsv if workspace name and project provided
-    if(defined(workspace_name) && defined(terra_project)) {
-      call fapi_tables.upload_entities_tsv as data_tables {
-        input:
-          workspace_name = workspace_name,
-          terra_project = terra_project,
-          tsv_file = assembly_meta_tsv.combined,
-          cleaned_reads_unaligned_bams_string = demux_deplete.cleaned_reads_unaligned_bams,
-          meta_by_filename_json = demux_deplete.meta_by_filename_json
-      }
-    }
+    # if(defined(workspace_name) && defined(terra_project)) {
+    #   call fapi_tables.upload_entities_tsv as data_tables {
+    #     input:
+    #       workspace_name = workspace_name,
+    #       terra_project = terra_project,
+    #       tsv_file = assembly_meta_tsv.combined,
+    #       cleaned_reads_unaligned_bams_string = demux_deplete.cleaned_reads_unaligned_bams,
+    #       meta_by_filename_json = demux_deplete.meta_by_filename_json
+    #   }
+    # }
 
     output {
         Array[File] raw_reads_unaligned_bams     = demux_deplete.raw_reads_unaligned_bams
