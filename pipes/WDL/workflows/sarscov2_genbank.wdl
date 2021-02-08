@@ -20,7 +20,8 @@ workflow sarscov2_genbank {
         File          assembly_stats_tsv
         File?         fasta_rename_map
 
-        Int           min_genome_bases = 20000
+        Int           min_genome_bases = 15000
+        Int           max_vadr_alerts = 0
 
         Int           taxid = 2697049
         String        gisaid_prefix = 'hCoV-19/'
@@ -57,13 +58,13 @@ workflow sarscov2_genbank {
         File renamed_assembly = select_first([rename_fasta_header.renamed_fasta, assembly])
         call reports.assembly_bases {
           input:
-            fasta = renamed_assembly
+            fasta = assembly
         }
         call ncbi.vadr {
           input:
             genome_fasta = renamed_assembly
         }
-        if ( (vadr.num_alerts==0) && (assembly_bases.assembly_length_unambiguous >= min_genome_bases) ) {
+        if ( (vadr.num_alerts<=max_vadr_alerts) && (assembly_bases.assembly_length_unambiguous >= min_genome_bases) ) {
           File passing_assemblies = renamed_assembly
         }
     }

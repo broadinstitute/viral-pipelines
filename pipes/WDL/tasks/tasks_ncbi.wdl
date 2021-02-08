@@ -25,7 +25,7 @@ task download_fasta {
     Array[String]+ accessions
     String         emailAddress
 
-    String         docker="quay.io/broadinstitute/viral-phylo:2.1.16.0"
+    String         docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   command {
@@ -43,7 +43,7 @@ task download_fasta {
   }
 
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: "7 GB"
     cpu: 2
     dx_instance_type: "mem2_ssd1_v2_x2"
@@ -56,7 +56,7 @@ task download_annotations {
     String         emailAddress
     String         combined_out_prefix
 
-    String         docker="quay.io/broadinstitute/viral-phylo:2.1.16.0"
+    String         docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   command {
@@ -83,7 +83,7 @@ task download_annotations {
   }
 
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: "7 GB"
     cpu: 2
     dx_instance_type: "mem2_ssd1_v2_x2"
@@ -100,7 +100,7 @@ task annot_transfer {
     File         reference_fasta
     Array[File]+ reference_feature_table
 
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.16.0"
+    String  docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   parameter_meta {
@@ -136,7 +136,7 @@ task annot_transfer {
   }
 
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: "3 GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -153,7 +153,7 @@ task align_and_annot_transfer_single {
     Array[File]+ reference_fastas
     Array[File]+ reference_feature_tables
 
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.16.0"
+    String  docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   parameter_meta {
@@ -191,7 +191,7 @@ task align_and_annot_transfer_single {
   }
 
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: "15 GB"
     cpu: 4
     dx_instance_type: "mem2_ssd1_v2_x4"
@@ -241,7 +241,7 @@ task structured_comments {
     File   structured_comment_table = "~{out_base}.cmt"
   }
   runtime {
-    docker: "~{docker}"
+    docker: docker
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -294,7 +294,7 @@ task rename_fasta_header {
     File renamed_fasta = "~{out_basename}.fasta"
   }
   runtime {
-    docker: "~{docker}"
+    docker: docker
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -357,8 +357,11 @@ task gisaid_meta_prep {
             'covv_authors': "~{default='REQUIRED' authors}",
             'covv_orig_lab_addr': "~{default='REQUIRED' originating_lab_addr}",
             'covv_subm_lab_addr': "~{default='REQUIRED' submitting_lab_addr}",
+
             'submitter': "~{default='REQUIRED' username}",
             'fn': "~{default='REQUIRED' fasta_filename}",
+
+            'covv_add_host_info': row.get('note',''),
           })
 
           #covv_specimen
@@ -397,7 +400,7 @@ task lookup_table_by_filename {
     String value = read_string("OUTVAL")
   }
   runtime {
-    docker: "~{docker}"
+    docker: docker
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -452,8 +455,8 @@ task sra_meta_prep {
     import util.file
 
     # WDL arrays to python arrays
-    bam_uris = '~{sep="*" cleaned_bam_filepaths}'.split('*')
-    library_metadata = '~{sep="*" library_metadata}'.split('*')
+    bam_uris = list(x for x in '~{sep="*" cleaned_bam_filepaths}'.split('*') if x)
+    library_metadata = list(x for x in '~{sep="*" library_metadata}'.split('*') if x)
 
     # lookup table files to dicts
     lib_to_bams = {}
@@ -541,7 +544,8 @@ task biosample_to_genbank {
 
     File? filter_to_ids
 
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.16.0"
+    Boolean s_dropout_note=true
+    String  docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
   String base = basename(biosample_attributes, ".txt")
   command {
@@ -556,6 +560,7 @@ task biosample_to_genbank {
         ${'--filter_to_samples ' + filter_to_ids} \
         --biosample_in_smt \
         --iso_dates \
+        ~{true="--sgtf_override" false="" s_dropout_note} \
         --loglevel DEBUG
     cut -f 1 "${base}.genbank.src" | tail +2 > "${base}.sample_ids.txt"
   }
@@ -592,7 +597,7 @@ task prepare_genbank {
     String?      assembly_method_version
 
     Int?         machine_mem_gb
-    String       docker="quay.io/broadinstitute/viral-phylo:2.1.16.0"
+    String       docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   parameter_meta {
@@ -771,7 +776,7 @@ task package_genbank_ftp_submission {
     File submit_ready = "submit.ready"
   }
   runtime {
-    docker: "~{docker}"
+    docker: docker
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -817,7 +822,7 @@ task vadr {
     File outputs_tgz = "~{out_base}.vadr.tar.gz"
   }
   runtime {
-    docker: "~{docker}"
+    docker: docker
     memory: "64 GB"
     cpu: 8
     dx_instance_type: "mem3_ssd1_v2_x8"

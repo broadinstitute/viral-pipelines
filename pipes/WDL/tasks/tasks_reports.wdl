@@ -390,29 +390,68 @@ task MultiQC {
 }
 
 task tsv_join {
+  meta {
+      description: "Perform a full left outer join on multiple TSV tables. Each input tsv must have a header row, and each must must contain the value of id_col in its header. Inputs may or may not be gzipped. Unix/Mac/Win line endings are tolerated on input, Unix line endings are emitted as output. Unicode text safe."
+  }
+
   input {
     Array[File]+   input_tsvs
     String         id_col
-    String         out_basename
-
-    String         docker="quay.io/broadinstitute/viral-core:2.1.19"
+    String         out_basename = "merged"
   }
 
-  command {
-    file_utils.py tsv_join \
-      ~{sep=' ' input_tsvs} \
-      ~{out_basename}.txt \
-      --join_id ~{id_col}
-  }
+  command <<<
+    python3<<CODE
+    import collections
+    import csv
+    import gzip
+
+    out_basename = '~{out_basename}'
+    join_id = '~{id_col}'
+    in_tsvs = '~{sep="*" input_tsvs}'.split('*')
+    readers = list(
+      csv.DictReader(gzip.open(fn, 'rt') if fn.endswith('.gz') else open(fn, 'rt'), delimiter='\t')
+      for fn in in_tsvs)
+
+    # prep the output header
+    header = []
+    for reader in readers:
+        header.extend(reader.fieldnames)
+    header = list(collections.OrderedDict(((h,0) for h in header)).keys())
+    if not join_id or join_id not in header:
+        raise Exception()
+
+    # merge everything in-memory
+    out_ids = []
+    out_row_by_id = {}
+    for reader in readers:
+        for row in reader:
+            row_id = row[join_id]
+            row_out = out_row_by_id.get(row_id, {})
+            for h in header:
+                # prefer non-empty values from earlier files in in_tsvs, populate from subsequent files only if missing
+                if not row_out.get(h):
+                    row_out[h] = row.get(h, '')
+            out_row_by_id[row_id] = row_out
+            out_ids.append(row_id)
+    out_ids = list(collections.OrderedDict(((i,0) for i in out_ids)).keys())
+
+    # write output
+    with open(out_basename+'.txt', 'w', newline='') as outf:
+        writer = csv.DictWriter(outf, header, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
+        writer.writeheader()
+        writer.writerows(out_row_by_id[row_id] for row_id in out_ids)
+    CODE
+  >>>
 
   output {
     File   out_tsv = "${out_basename}.txt"
   }
 
   runtime {
-    memory: "3 GB"
+    memory: "7 GB"
     cpu: 1
-    docker: "${docker}"
+    docker: "python:slim"
     disks: "local-disk 100 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
   }

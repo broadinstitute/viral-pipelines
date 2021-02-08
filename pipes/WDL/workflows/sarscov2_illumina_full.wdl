@@ -49,9 +49,12 @@ workflow sarscov2_illumina_full {
         String        sra_title
 
         Int           min_genome_bases = 15000
+        Int           max_vadr_alerts = 0
+
 
         String?       workspace_name
         String?       terra_project
+
     }
     Int     taxid = 2697049
     String  gisaid_prefix = 'hCoV-19/'
@@ -128,11 +131,11 @@ workflow sarscov2_illumina_full {
               input:
                 genome_fasta = passing_assemblies
             }
-            if (vadr.num_alerts==0) {
+            if (vadr.num_alerts<=max_vadr_alerts) {
               File submittable_genomes = passing_assemblies
               String submittable_id = orig_name
             }
-            if (vadr.num_alerts>0) {
+            if (vadr.num_alerts>max_vadr_alerts) {
               String failed_annotation_id = orig_name
             }
         }
@@ -165,6 +168,8 @@ workflow sarscov2_illumina_full {
             assemble_refbased.replicate_discordant_indels,
             assemble_refbased.num_read_groups,
             assemble_refbased.num_libraries,
+            assemble_refbased.align_to_ref_merged_reads_aligned,
+            assemble_refbased.align_to_ref_merged_bases_aligned,
         ]
     }
     Array[String] assembly_tsv_header = [
@@ -174,6 +179,7 @@ workflow sarscov2_illumina_full {
         'assembly_fasta', 'coverage_plot', 'aligned_bam', 'replicate_discordant_vcf',
         'nextclade_tsv', 'pangolin_csv', 'vadr_tgz',
         'replicate_concordant_sites', 'replicate_discordant_snps', 'replicate_discordant_indels', 'num_read_groups', 'num_libraries',
+        'align_to_ref_merged_reads_aligned', 'align_to_ref_merged_bases_aligned',
         ]
 
     call nextstrain.concatenate as assembly_meta_tsv {
