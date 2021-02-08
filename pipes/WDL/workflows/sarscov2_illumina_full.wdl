@@ -50,8 +50,8 @@ workflow sarscov2_illumina_full {
 
         Int           min_genome_bases = 15000
 
-        String?       workspace_name
-        String?       terra_project
+        String?    workspace_name
+        String?    terra_project
     }
     Int     taxid = 2697049
     String  gisaid_prefix = 'hCoV-19/'
