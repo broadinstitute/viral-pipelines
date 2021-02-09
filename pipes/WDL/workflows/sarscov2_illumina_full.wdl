@@ -244,6 +244,14 @@ workflow sarscov2_illumina_full {
         out_name = "gisaid-meta-~{flowcell_id}.tsv"
     }
 
+    # prep nextmeta-style metadata for private nextstrain build
+    call nextstrain.nextmeta_prep {
+      input:
+        gisaid_meta = gisaid_meta_prep.meta_tsv,
+        assembly_meta = assembly_meta_tsv.combined,
+        out_name = "nextmeta-~{flowcell_id}.tsv"
+    }
+
     # create data tables with assembly_meta_tsv if workspace name and project provided
     if (defined(workspace_name) && defined(terra_project)) {
       call fapi_tables.upload_entities_tsv as data_tables {
@@ -293,6 +301,8 @@ workflow sarscov2_illumina_full {
 
         File gisaid_fasta = prefix_gisaid.renamed_fasta
         File gisaid_meta_tsv = gisaid_meta_prep.meta_tsv
+
+        File nextmeta_tsv = nextmeta_prep.nextmeta_tsv
 
         Array[String] assembled_ids = select_all(passing_assembly_ids)
         Array[String] submittable_ids = select_all(submittable_id)

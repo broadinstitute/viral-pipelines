@@ -54,6 +54,69 @@ task gzcat {
     }
 }
 
+task nextmeta_prep {
+  input {
+    File   gisaid_meta
+    File   assembly_meta
+    String out_name
+  }
+  command <<<
+    python3 << CODE
+    import os.path
+    import csv
+
+    # load inputs
+    samples = []
+    sample_to_gisaid = {}
+    sample_to_assembly = {}
+    with open('~{gisaid_meta}', 'rt') as inf:
+      for row in csv.DictReader(inf, delimiter='\t'):
+        s = row['covv_virus_name'][len('hCoV-19/'):]
+        samples.append(s)
+        sample_to_gisaid[s] = row
+    with open('~{assembly_meta}', 'rt') as inf:
+      for row in csv.DictReader(inf, delimiter='\t'):
+        sample_to_assembly[row['sample']] = row
+
+    # write outputs
+    out_headers = ('strain', 'date', 'region', 'country', 'division', 'location', 'length', 'host', 'Nextstrain_clade', 'pangolin_lineage', 'originating_lab', 'submitting_lab', 'authors', 'purpose_of_sequencing')
+
+    with open('~{out_name}', 'wt') as outf:
+      writer = csv.DictWriter(outf, out_headers, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
+      writer.writeheader()
+
+      for sample in samples:
+        geoloc = sample_to_gisaid[sample].split(' / ')
+        writer.writerow({
+          'strain': sample,
+          'host': 'Human',
+          'length': sample_to_assembly[sample]['assembly_length_unambiguous'],
+          'Nextstrain_clade': sample_to_assembly[sample]['nextclade_clade'],
+          'pangolin_lineage': sample_to_assembly[sample]['pango_lineage'],
+          'region': geoloc[0],
+          'country': geoloc[1] if len(geoloc)>1 else '',
+          'division': geoloc[2] if len(geoloc)>2 else '',
+          'location': geoloc[3] if len(geoloc)>3 else '',
+          'date': sample_to_gisaid[sample]['covv_collection_date'],
+          'originating_lab': sample_to_gisaid[sample]['covv_orig_lab'],
+          'submitting_lab': sample_to_gisaid[sample]['covv_subm_lab'],
+          'authors': sample_to_gisaid[sample]['covv_authors'],
+          'purpose_of_sequencing': sample_to_gisaid[sample]['covv_add_host_info'],
+        })
+
+    CODE
+  >>>
+  output {
+    File nextmeta_tsv = "~{out_name}"
+  }
+  runtime {
+    docker: "python:slim"
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task derived_cols {
     meta {
         description: "Create derivative columns in nextstrain metadata file (optionally). TSV input and output files may be gzipped."
