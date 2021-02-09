@@ -170,6 +170,7 @@ workflow sarscov2_illumina_full {
             assemble_refbased.num_libraries,
             assemble_refbased.align_to_ref_merged_reads_aligned,
             assemble_refbased.align_to_ref_merged_bases_aligned,
+            select_first([vadr.alerts_list]),
         ]
     }
     Array[String] assembly_tsv_header = [
@@ -180,6 +181,7 @@ workflow sarscov2_illumina_full {
         'nextclade_tsv', 'pangolin_csv', 'vadr_tgz',
         'replicate_concordant_sites', 'replicate_discordant_snps', 'replicate_discordant_indels', 'num_read_groups', 'num_libraries',
         'align_to_ref_merged_reads_aligned', 'align_to_ref_merged_bases_aligned',
+        'vadr_alerts',
         ]
 
     call nextstrain.concatenate as assembly_meta_tsv {
@@ -242,6 +244,14 @@ workflow sarscov2_illumina_full {
         out_name = "gisaid-meta-~{flowcell_id}.tsv"
     }
 
+    # prep nextmeta-style metadata for private nextstrain build
+    call nextstrain.nextmeta_prep {
+      input:
+        gisaid_meta = gisaid_meta_prep.meta_tsv,
+        assembly_meta = assembly_meta_tsv.combined,
+        out_name = "nextmeta-~{flowcell_id}.tsv"
+    }
+
     # create data tables with assembly_meta_tsv if workspace name and project provided
     if (defined(workspace_name) && defined(terra_project)) {
       call fapi_tables.upload_entities_tsv as data_tables {
@@ -291,6 +301,9 @@ workflow sarscov2_illumina_full {
 
         File gisaid_fasta = prefix_gisaid.renamed_fasta
         File gisaid_meta_tsv = gisaid_meta_prep.meta_tsv
+
+        File genbank_fasta = submit_genomes.filtered_fasta
+        File nextmeta_tsv = nextmeta_prep.nextmeta_tsv
 
         Array[String] assembled_ids = select_all(passing_assembly_ids)
         Array[String] submittable_ids = select_all(submittable_id)
