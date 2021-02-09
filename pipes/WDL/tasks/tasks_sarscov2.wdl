@@ -108,22 +108,17 @@ task pangolin_one_sample {
         File    genome_fasta
         Int?    min_length
         Float?  max_ambig
-        Boolean include_putative = true
     }
     String basename = basename(genome_fasta, ".fasta")
     command {
         set -e
         pangolin -v > VERSION_PANGOLIN
-        pangolin -lv > VERSION_LINEAGES
         pangolin -pv > VERSION_PANGOLEARN
 
         pangolin "~{genome_fasta}" \
             --outfile "~{basename}.pangolin_report.csv" \
-            -t "$(nproc)" \
-            --include-putative \
             ~{"--min-length " + min_length} \
             ~{"--max-ambig " + max_ambig} \
-            ~{true="--include-putative" false="" include_putative} \
             --verbose
 
         cp "~{basename}.pangolin_report.csv" input.csv
@@ -137,7 +132,7 @@ task pangolin_one_sample {
         grep ^lineage transposed.tsv | cut -f 2 | grep -v lineage > PANGOLIN_CLADE
     }
     runtime {
-        docker: "staphb/pangolin:2.1.11-pangolearn-2021-02-01"
+        docker: "staphb/pangolin:2.2.1-pangolearn-2021-02-06"
         memory: "3 GB"
         cpu:    2
         disks: "local-disk 50 HDD"
@@ -145,7 +140,6 @@ task pangolin_one_sample {
     }
     output {
         String pangolin_version   = read_string("VERSION_PANGOLIN")
-        String lineages_version   = read_string("VERSION_LINEAGES")
         String pangolearn_version = read_string("VERSION_PANGOLEARN")
         File   pangolin_csv       = "~{basename}.pangolin_report.csv"
         String pango_lineage      = read_string("PANGOLIN_CLADE")
