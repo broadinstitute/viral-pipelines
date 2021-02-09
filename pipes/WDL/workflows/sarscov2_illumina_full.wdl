@@ -170,6 +170,7 @@ workflow sarscov2_illumina_full {
             assemble_refbased.num_libraries,
             assemble_refbased.align_to_ref_merged_reads_aligned,
             assemble_refbased.align_to_ref_merged_bases_aligned,
+            select_first([vadr.alerts_list]),
         ]
     }
     Array[String] assembly_tsv_header = [
@@ -180,6 +181,7 @@ workflow sarscov2_illumina_full {
         'nextclade_tsv', 'pangolin_csv', 'vadr_tgz',
         'replicate_concordant_sites', 'replicate_discordant_snps', 'replicate_discordant_indels', 'num_read_groups', 'num_libraries',
         'align_to_ref_merged_reads_aligned', 'align_to_ref_merged_bases_aligned',
+        'vadr_alerts',
         ]
 
     call nextstrain.concatenate as assembly_meta_tsv {
