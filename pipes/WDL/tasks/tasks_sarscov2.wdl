@@ -114,7 +114,6 @@ task pangolin_one_sample {
     command {
         set -e
         pangolin -v > VERSION_PANGOLIN
-        pangolin -lv > VERSION_LINEAGES
         pangolin -pv > VERSION_PANGOLEARN
 
         pangolin "~{genome_fasta}" \
@@ -145,7 +144,6 @@ task pangolin_one_sample {
     }
     output {
         String pangolin_version   = read_string("VERSION_PANGOLIN")
-        String lineages_version   = read_string("VERSION_LINEAGES")
         String pangolearn_version = read_string("VERSION_PANGOLEARN")
         File   pangolin_csv       = "~{basename}.pangolin_report.csv"
         String pango_lineage      = read_string("PANGOLIN_CLADE")
