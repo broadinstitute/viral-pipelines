@@ -55,79 +55,137 @@ workflow sarscov2_genbank {
               new_name = read_map(select_first([fasta_rename_map]))[fasta_basename]
           }
         }
-        File renamed_assembly = select_first([rename_fasta_header.renamed_fasta, assembly])
         call reports.assembly_bases {
           input:
             fasta = assembly
         }
+        File renamed_assembly = select_first([rename_fasta_header.renamed_fasta, assembly])
         call ncbi.vadr {
           input:
             genome_fasta = renamed_assembly
         }
-        if ( (vadr.num_alerts<=max_vadr_alerts) && (assembly_bases.assembly_length_unambiguous >= min_genome_bases) ) {
-          File passing_assemblies = renamed_assembly
-        }
+        if (assembly_bases.assembly_length_unambiguous >= min_genome_bases) {
+          if (vadr.num_alerts <= max_vadr_alerts) {
+            File passing_assemblies = renamed_assembly
+          }
+          if (vadr.num_alerts > max_vadr_alerts) {
+            File weird_assemblies = renamed_assembly
+          }
+       }
     }
 
-    call nextstrain.concatenate {
+    # prep the good ones
+    call nextstrain.concatenate as passing_fasta {
       input:
         infiles = select_all(passing_assemblies),
-        output_name = "assemblies.fasta"
+        output_name = "assemblies-passing.fasta"
     }
-    call nextstrain.fasta_to_ids {
+    call nextstrain.fasta_to_ids as passing_ids {
       input:
-        sequences_fasta = concatenate.combined
+        sequences_fasta = passing_fasta.combined
     }
 
-    call ncbi.biosample_to_genbank {
+    # prep the weird ones
+    call nextstrain.concatenate as weird_fasta {
+      input:
+        infiles = select_all(weird_assemblies),
+        output_name = "assemblies-weird.fasta"
+    }
+    call nextstrain.fasta_to_ids as weird_ids {
+      input:
+        sequences_fasta = weird_fasta.combined
+    }
+
+    # package genbank
+    call ncbi.biosample_to_genbank as passing_source_modifiers {
       input:
         biosample_attributes = biosample_attributes,
         num_segments = 1,
         taxid = taxid,
-        filter_to_ids = fasta_to_ids.ids_txt
+        filter_to_ids = passing_ids.ids_txt
     }
-
-    call ncbi.structured_comments {
+    call ncbi.structured_comments as passing_structured_cmt {
       input:
         assembly_stats_tsv = assembly_stats_tsv,
-        filter_to_ids = fasta_to_ids.ids_txt
+        filter_to_ids = passing_ids.ids_txt
     }
-
-    call ncbi.package_genbank_ftp_submission {
+    call ncbi.package_genbank_ftp_submission as passing_package_genbank {
       input:
-        sequences_fasta = concatenate.combined,
-        source_modifier_table = biosample_to_genbank.genbank_source_modifier_table,
+        sequences_fasta = passing_fasta.combined,
+        source_modifier_table = passing_source_modifiers.genbank_source_modifier_table,
         author_template_sbt = authors_sbt,
-        structured_comment_table = structured_comments.structured_comment_table
+        structured_comment_table = passing_structured_cmt.structured_comment_table
     }
 
-    call ncbi.prefix_fasta_header as prefix_gisaid {
+    # translate to gisaid
+    call ncbi.prefix_fasta_header as passing_prefix_gisaid {
       input:
-        genome_fasta = concatenate.combined,
-        prefix = gisaid_prefix
+        genome_fasta = passing_fasta.combined,
+        prefix = gisaid_prefix,
+        out_basename = "gisaid-passing-sequences"
     }
-    call ncbi.gisaid_meta_prep {
+    call ncbi.gisaid_meta_prep as passing_gisaid_meta {
       input:
-        source_modifier_table = biosample_to_genbank.genbank_source_modifier_table,
-        structured_comments = structured_comments.structured_comment_table,
-        out_name = "gisaid_meta.tsv"
+        source_modifier_table = passing_source_modifiers.genbank_source_modifier_table,
+        structured_comments = passing_structured_cmt.structured_comment_table,
+        fasta_filename = "gisaid-passing-sequences.fasta",
+        out_name = "gisaid-passing-meta.tsv"
+    }
+
+    # package genbank
+    call ncbi.biosample_to_genbank as weird_source_modifiers {
+      input:
+        biosample_attributes = biosample_attributes,
+        num_segments = 1,
+        taxid = taxid,
+        filter_to_ids = weird_ids.ids_txt
+    }
+    call ncbi.structured_comments as weird_structured_cmt {
+      input:
+        assembly_stats_tsv = assembly_stats_tsv,
+        filter_to_ids = weird_ids.ids_txt
+    }
+    call ncbi.package_genbank_ftp_submission as weird_package_genbank {
+      input:
+        sequences_fasta = weird_fasta.combined,
+        source_modifier_table = weird_source_modifiers.genbank_source_modifier_table,
+        author_template_sbt = authors_sbt,
+        structured_comment_table = weird_structured_cmt.structured_comment_table
+    }
+
+    # translate to gisaid
+    call ncbi.prefix_fasta_header as weird_prefix_gisaid {
+      input:
+        genome_fasta = weird_fasta.combined,
+        prefix = gisaid_prefix,
+        out_basename = "gisaid-weird-sequences"
+    }
+    call ncbi.gisaid_meta_prep as weird_gisaid_meta {
+      input:
+        source_modifier_table = weird_source_modifiers.genbank_source_modifier_table,
+        structured_comments = weird_structured_cmt.structured_comment_table,
+        fasta_filename = "gisaid-weird-sequences.fasta",
+        out_name = "gisaid-weird-meta.tsv"
     }
 
     output {
-        File submission_zip = package_genbank_ftp_submission.submission_zip
-        File submission_xml    = package_genbank_ftp_submission.submission_xml
-        File submit_ready   = package_genbank_ftp_submission.submit_ready
+        File submission_zip = passing_package_genbank.submission_zip
+        File submission_xml = passing_package_genbank.submission_xml
+        File submit_ready   = passing_package_genbank.submit_ready
 
         Int  num_successful = length(select_all(passing_assemblies))
+        Int  num_weird = length(select_all(weird_assemblies))
         Int  num_input = length(assemblies_fasta)
 
         Array[File] vadr_outputs = vadr.outputs_tgz
 
-        File biosample_map = biosample_to_genbank.biosample_map
-        File genbank_source_table = biosample_to_genbank.genbank_source_modifier_table
+        File gisaid_fasta = passing_prefix_gisaid.renamed_fasta
+        File gisaid_meta_tsv = passing_gisaid_meta.meta_tsv
 
-        File gisaid_fasta = prefix_gisaid.renamed_fasta
-        File gisaid_meta_tsv = gisaid_meta_prep.meta_tsv
+        File weird_genbank_zip = weird_package_genbank.submission_zip
+        File weird_genbank_xml = weird_package_genbank.submission_xml
+        File weird_gisaid_fasta = weird_prefix_gisaid.renamed_fasta
+        File weird_gisaid_meta_tsv = weird_gisaid_meta.meta_tsv
     }
 
 }
