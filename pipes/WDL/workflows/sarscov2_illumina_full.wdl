@@ -302,6 +302,7 @@ workflow sarscov2_illumina_full {
         File gisaid_fasta = prefix_gisaid.renamed_fasta
         File gisaid_meta_tsv = gisaid_meta_prep.meta_tsv
 
+        File genbank_fasta = submit_genomes.filtered_fasta
         File nextmeta_tsv = nextmeta_prep.nextmeta_tsv
 
         Array[String] assembled_ids = select_all(passing_assembly_ids)
