@@ -170,7 +170,7 @@ workflow sarscov2_illumina_full {
             assemble_refbased.num_libraries,
             assemble_refbased.align_to_ref_merged_reads_aligned,
             assemble_refbased.align_to_ref_merged_bases_aligned,
-            select_first([vadr.alerts_list]),
+            select_first([vadr.alerts_list, ""]),
         ]
     }
     Array[String] assembly_tsv_header = [

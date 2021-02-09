@@ -86,7 +86,7 @@ task nextmeta_prep {
       writer.writeheader()
 
       for sample in samples:
-        geoloc = sample_to_gisaid[sample].split(' / ')
+        geoloc = sample_to_gisaid[sample]['covv_location'].split(' / ')
         writer.writerow({
           'strain': sample,
           'host': 'Human',
