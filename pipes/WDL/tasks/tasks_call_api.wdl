@@ -8,7 +8,7 @@ task  upload_entities_tsv{
     Array[String] cleaned_reads_unaligned_bams_string
     File          meta_by_filename_json
 
-    String        docker="schaluvadi/pathogen-genomic-surveillance:api-wdl"
+    String        docker="broadinstitute/horsefish"
     Int?          machine_mem_gb
   }
 
