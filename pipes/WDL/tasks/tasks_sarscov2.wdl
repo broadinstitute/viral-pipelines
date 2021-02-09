@@ -108,7 +108,6 @@ task pangolin_one_sample {
         File    genome_fasta
         Int?    min_length
         Float?  max_ambig
-        Boolean include_putative = true
     }
     String basename = basename(genome_fasta, ".fasta")
     command {
@@ -118,11 +117,8 @@ task pangolin_one_sample {
 
         pangolin "~{genome_fasta}" \
             --outfile "~{basename}.pangolin_report.csv" \
-            -t "$(nproc)" \
-            --include-putative \
             ~{"--min-length " + min_length} \
             ~{"--max-ambig " + max_ambig} \
-            ~{true="--include-putative" false="" include_putative} \
             --verbose
 
         cp "~{basename}.pangolin_report.csv" input.csv
