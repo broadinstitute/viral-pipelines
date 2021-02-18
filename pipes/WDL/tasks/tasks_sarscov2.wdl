@@ -119,8 +119,10 @@ task pangolin_one_sample {
             --outfile "~{basename}.pangolin_report.csv" \
             ~{"--min-length " + min_length} \
             ~{"--max-ambig " + max_ambig} \
+            --alignment \
             --verbose
 
+        cp sequences.aln.fasta "~{basename}.pangolin_msa.fasta"
         cp "~{basename}.pangolin_report.csv" input.csv
         python3 <<CODE
         # transpose table and convert csv to tsv
@@ -132,7 +134,7 @@ task pangolin_one_sample {
         grep ^lineage transposed.tsv | cut -f 2 | grep -v lineage > PANGOLIN_CLADE
     }
     runtime {
-        docker: "staphb/pangolin:2.2.2-pangolearn-2021-02-12"
+        docker: "staphb/pangolin:2.3.0-pangolearn-2021-02-12"
         memory: "3 GB"
         cpu:    2
         disks: "local-disk 50 HDD"
@@ -143,5 +145,6 @@ task pangolin_one_sample {
         String pangolearn_version = read_string("VERSION_PANGOLEARN")
         File   pangolin_csv       = "~{basename}.pangolin_report.csv"
         String pango_lineage      = read_string("PANGOLIN_CLADE")
+        File   msa_fasta          = "~{basename}.pangolin_msa.fasta"
     }
 }
