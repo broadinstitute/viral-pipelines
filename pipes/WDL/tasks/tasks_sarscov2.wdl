@@ -134,7 +134,7 @@ task pangolin_one_sample {
         grep ^lineage transposed.tsv | cut -f 2 | grep -v lineage > PANGOLIN_CLADE
     }
     runtime {
-        docker: "staphb/pangolin:2.3.0-pangolearn-2021-02-18"
+        docker: "staphb/pangolin:2.3.0-pangolearn-2021-02-21"
         memory: "3 GB"
         cpu:    2
         disks: "local-disk 50 HDD"
