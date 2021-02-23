@@ -23,6 +23,7 @@ workflow sarscov2_nextstrain {
         File?           auspice_config
         File?           ref_fasta
         File?           clades_tsv
+        File?           lat_longs_tsv
 
         Int             min_unambig_genome = 27000
     }
@@ -166,7 +167,7 @@ workflow sarscov2_nextstrain {
         input:
             tree            = refine_augur_tree.tree_refined,
             sample_metadata = derived_cols.derived_metadata,
-            lat_longs_tsv   = nextstrain_ncov_defaults.lat_longs_tsv,
+            lat_longs_tsv   = select_first([lat_longs_tsv, nextstrain_ncov_defaults.lat_longs_tsv]),
             node_data_jsons = select_all([
                                 refine_augur_tree.branch_lengths,
                                 ancestral_traits.node_data_json,
