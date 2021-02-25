@@ -160,6 +160,11 @@ workflows:
    primaryDescriptorPath: /pipes/WDL/workflows/genbank.wdl
    testParameterFiles:
     - /test/input/WDL/test_inputs-genbank-local.json
+- name: genbank_dump
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/genbank_dump.wdl
+   testParameterFiles:
+    - empty.json    
  - name: isnvs_merge_to_vcf
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/isnvs_merge_to_vcf.wdl
