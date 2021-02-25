@@ -162,6 +162,8 @@ workflow demux_deplete {
         File        multiqc_report_cleaned = multiqc_cleaned.multiqc_report
         File        spikein_counts         = spike_summary.count_summary
 
+        String      run_date = illumina_demux.run_info[0]['run_start_date']
+
         String      demux_viral_core_version = illumina_demux.viralngs_version[0]
     }
 }

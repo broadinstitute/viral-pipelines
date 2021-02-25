@@ -146,13 +146,15 @@ workflow sarscov2_illumina_full {
         Array[String] assembly_tsv_row = [
             orig_name,
             name_reads.left,
-            demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"],
-            assemble_refbased.assembly_mean_coverage,
+            flowcell_id,
+            demux_deplete.run_date,
             assemble_refbased.assembly_length_unambiguous,
+            assemble_refbased.assembly_mean_coverage,
+            select_first([sarscov2_lineages.pango_lineage, ""]),
             select_first([sarscov2_lineages.nextclade_clade, ""]),
             select_first([sarscov2_lineages.nextclade_aa_subs, ""]),
             select_first([sarscov2_lineages.nextclade_aa_dels, ""]),
-            select_first([sarscov2_lineages.pango_lineage, ""]),
+            select_first([sarscov2_lineages.pangolin_docker, ""]),
             assemble_refbased.dist_to_ref_snps,
             assemble_refbased.dist_to_ref_indels,
             select_first([vadr.num_alerts, ""]),
@@ -163,6 +165,7 @@ workflow sarscov2_illumina_full {
             select_first([sarscov2_lineages.nextclade_tsv, ""]),
             select_first([sarscov2_lineages.pangolin_csv, ""]),
             select_first([vadr.outputs_tgz, ""]),
+            demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"],
             assemble_refbased.replicate_concordant_sites,
             assemble_refbased.replicate_discordant_snps,
             assemble_refbased.replicate_discordant_indels,
@@ -174,11 +177,13 @@ workflow sarscov2_illumina_full {
         ]
     }
     Array[String] assembly_tsv_header = [
-        'sample', 'sample_sanitized', 'amplicon_set', 'assembly_mean_coverage', 'assembly_length_unambiguous',
-        'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels', 'pango_lineage',
+        'sample', 'sample_sanitized', 'flowcell_id', 'run_date',
+        'assembly_length_unambiguous', 'assembly_mean_coverage',
+        'pango_lineage', 'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels', 'pangolin_version',
         'dist_to_ref_snps', 'dist_to_ref_indels', 'vadr_num_alerts',
         'assembly_fasta', 'coverage_plot', 'aligned_bam', 'replicate_discordant_vcf',
         'nextclade_tsv', 'pangolin_csv', 'vadr_tgz',
+        'amplicon_set',
         'replicate_concordant_sites', 'replicate_discordant_snps', 'replicate_discordant_indels', 'num_read_groups', 'num_libraries',
         'align_to_ref_merged_reads_aligned', 'align_to_ref_merged_bases_aligned',
         'vadr_alerts',
@@ -315,6 +320,9 @@ workflow sarscov2_illumina_full {
         Int           num_submittable = length(select_all(submittable_id))
         Int           num_failed_annotation = length(select_all(failed_annotation_id))
         Int           num_samples = length(group_bams_by_sample.sample_names)
+
+        String        run_date = demux_deplete.run_date
+
         String?       data_table_status = data_tables.status
     }
 }
