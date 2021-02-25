@@ -480,6 +480,7 @@ task sra_meta_prep {
     out_headers = ['biosample_accession', 'library_ID', 'title', 'library_strategy', 'library_source', 'library_selection', 'library_layout', 'platform', 'instrument_model', 'design_description', 'filetype', 'assembly', 'filename']
 
     # iterate through library_metadata entries and produce an output row for each entry
+    libs_written = set()
     for libfile in library_metadata:
       with open(libfile, 'rt') as inf:
         for row in csv.DictReader(inf, delimiter='\t'):
@@ -487,7 +488,8 @@ task sra_meta_prep {
           biosample = sample_to_biosample.get(row['sample'],'')
           bams = lib_to_bams.get(lib,[])
           print("debug: sample={} lib={} biosample={}, bams={}".format(row['sample'], lib, biosample, bams))
-          if biosample and bams:
+          if biosample and bams and lib not in libs_written:
+            libs_written.add(lib)
             outrows.append({
               'biosample_accession': sample_to_biosample[row['sample']],
               'library_ID': lib,
