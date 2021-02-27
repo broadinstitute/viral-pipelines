@@ -108,6 +108,7 @@ task pangolin_one_sample {
         File    genome_fasta
         Int?    min_length
         Float?  max_ambig
+        String  docker = "staphb/pangolin:2.3.2-pangolearn-2021-02-21"
     }
     String basename = basename(genome_fasta, ".fasta")
     command {
@@ -134,7 +135,7 @@ task pangolin_one_sample {
         grep ^lineage transposed.tsv | cut -f 2 | grep -v lineage > PANGOLIN_CLADE
     }
     runtime {
-        docker: "staphb/pangolin:2.3.2-pangolearn-2021-02-21"
+        docker: docker
         memory: "3 GB"
         cpu:    2
         disks: "local-disk 50 HDD"
@@ -146,5 +147,6 @@ task pangolin_one_sample {
         File   pangolin_csv       = "~{basename}.pangolin_report.csv"
         String pango_lineage      = read_string("PANGOLIN_CLADE")
         File   msa_fasta          = "~{basename}.pangolin_msa.fasta"
+        String pangolin_docker    = docker
     }
 }

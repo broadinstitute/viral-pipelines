@@ -535,6 +535,42 @@ task sra_meta_prep {
   }
 }
 
+task fetch_row_from_tsv {
+  input {
+    File   tsv
+    String idx_col
+    String idx_val
+    Array[String] set_default_keys = []
+  }
+  command <<<
+    python3 << CODE
+    import csv, gzip, json
+    open_or_gzopen = lambda *args, **kwargs: gzip.open(*args, **kwargs) if args[0].endswith('.gz') else open(*args, **kwargs)
+    out_dict = {}
+    with open_or_gzopen('~{tsv}', 'rt') as inf:
+      for row in csv.DictReader(inf, delimiter='\t'):
+        if row.get('~{idx_col}') == '~{idx_val}':
+          out_dict = row
+          break
+    for k in '~{sep="*" set_default_keys}'.split('*'):
+      if k and k not in out_dict:
+        out_dict[k] = ''
+    with open('out.json', 'wt') as outf:
+      json.dump(out_dict, outf)
+    CODE
+  >>>
+  output {
+    Map[String,String] map = read_json('out.json')
+  }
+  runtime {
+    docker: "python:slim"
+    memory: "1 GB"
+    cpu: 1
+    disks: "local-disk 50 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task biosample_to_genbank {
   meta {
     description: "Prepares two input metadata files for Genbank submission based on a BioSample registration attributes table (attributes.tsv) since all of the necessary values are there. This produces both a Genbank Source Modifier Table and a BioSample ID map file that can be fed into the prepare_genbank task."

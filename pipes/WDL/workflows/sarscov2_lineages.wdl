@@ -26,7 +26,11 @@ workflow sarscov2_lineages {
         File   nextclade_tsv   = nextclade_one_sample.nextclade_tsv
         String nextclade_aa_subs = nextclade_one_sample.aa_subs_csv
         String nextclade_aa_dels = nextclade_one_sample.aa_dels_csv
+        String nextclade_version = nextclade_one_sample.nextclade_version
         String pango_lineage   = pangolin_one_sample.pango_lineage
         File   pangolin_csv    = pangolin_one_sample.pangolin_csv
+        String pangolin_docker = pangolin_one_sample.pangolin_docker
+        String pangolin_version = pangolin_one_sample.pangolin_version
+        String pangolearn_version = pangolin_one_sample.pangolearn_version
     }
 }
