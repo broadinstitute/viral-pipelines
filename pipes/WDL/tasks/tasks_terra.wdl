@@ -10,11 +10,8 @@ task upload_entities_tsv {
     File          meta_by_filename_json
 
     String        docker="schaluvadi/pathogen-genomic-surveillance:api-wdl"
-    Int?          machine_mem_gb
   }
-
   command {
-    
     echo ~{sep="," cleaned_reads_unaligned_bams_string} > cleaned_bam_strings.txt
 
     python3 /projects/cdc-sabeti-covid-19/create_data_tables.py -t ~{tsv_file} \
@@ -22,16 +19,65 @@ task upload_entities_tsv {
             -w ~{workspace_name} \
             -b cleaned_bam_strings.txt \
             -j ~{meta_by_filename_json}
-
   }
-
   runtime {
     docker: docker
-    preemptible: 0
-    memory: select_first([machine_mem_gb, 2]) + " GB"
+    memory: "2 GB"
+    cpu: 1
   }
-
   output {
     String  status  = read_string(stdout())
+  }
+}
+
+task download_entities_tsv {
+  input {
+    String        workspace_name
+    String        terra_project
+    String        outname = "~{terra_project}-~{workspace_name}.tsv"
+
+    String        docker="schaluvadi/pathogen-genomic-surveillance:api-wdl"
+  }
+
+  command {
+    python3<<CODE
+    import csv
+    import json
+    import collections
+
+    from firecloud import api as fapi
+
+    workspace_name = '~{workspace_name}'
+    workspace_project = '~{terra_project}'
+    out_fname = '~{outname}'
+
+    # load terra table and convert to list of dicts
+    # I've found that fapi.get_entities_tsv produces malformed outputs if funky chars are in any of the cells of the table
+    table = json.loads(fapi.get_entities(workspace_project, workspace_name, table_name).text)
+    headers = collections.OrderedDict()
+    rows = []
+    for row in table:
+        outrow = row['attributes']
+        for x in outrow.keys():
+            headers[x] = 0
+            if type(outrow[x]) == dict and set(outrow[x].keys()) == set(('itemsType', 'items')):
+                outrow[x] = outrow[x]['items']
+        outrow[table_name + "_id"] = row['name']
+        rows.append(outrow)
+
+    # dump to tsv
+    with open(out_fname, 'wt') as outf:
+      writer = csv.DictWriter(outf, headers.keys(), delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
+      writer.writeheader()
+      writer.writerows(rows)
+    CODE
+  }
+  runtime {
+    docker: docker
+    memory: "2 GB"
+    cpu: 1
+  }
+  output {
+    File  tsv_file = '~{outname}'
   }
 }
