@@ -32,11 +32,12 @@ task upload_entities_tsv {
 
 task download_entities_tsv {
   input {
-    String        workspace_name
-    String        terra_project
-    String        outname = "~{terra_project}-~{workspace_name}.tsv"
+    String  terra_project
+    String  workspace_name
+    String  table_name
+    String  outname = "~{terra_project}-~{workspace_name}-~{table_name}.tsv"
 
-    String        docker="schaluvadi/pathogen-genomic-surveillance:api-wdl"
+    String  docker="schaluvadi/pathogen-genomic-surveillance:api-wdl"
   }
 
   command {
@@ -47,8 +48,9 @@ task download_entities_tsv {
 
     from firecloud import api as fapi
 
-    workspace_name = '~{workspace_name}'
     workspace_project = '~{terra_project}'
+    workspace_name = '~{workspace_name}'
+    table_name = '~{table_name}'
     out_fname = '~{outname}'
 
     # load terra table and convert to list of dicts
