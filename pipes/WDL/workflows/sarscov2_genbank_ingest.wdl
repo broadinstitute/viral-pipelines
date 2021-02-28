@@ -28,17 +28,17 @@ task pull_data {
         python3 ~/scripts/genbank_dump.py -k ~{Google_Maps_API_Key_File} -e ~{user_email}
     }
 
-  output {
-    File genbank_seqs_fasta    = 'genbank_seqs.fasta'
-    File genbank_seqs_metadata = 'genbank_seq_metadata.tsv'
-}
+    output {
+      File genbank_seqs_fasta    = 'genbank_seqs.fasta'
+      File genbank_seqs_metadata = 'genbank_seq_metadata.tsv'
+    }
 
-  runtime {
-    docker: "cmloreth/pathogen-genomics:test"
-    memory: "1 GB"
-    cpu: 1
-    disks: "local-disk 100 HDD"
-    dx_instance_type: "mem1_ssd1_v2_x2"
-  }
+    runtime {
+      docker: "cmloreth/pathogen-genomics:test"
+      memory: "1 GB"
+      cpu: 1
+      disks: "local-disk 100 HDD"
+      dx_instance_type: "mem1_ssd1_v2_x2"
+    }
 }
 
