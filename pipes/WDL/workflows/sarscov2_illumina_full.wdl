@@ -108,6 +108,15 @@ workflow sarscov2_illumina_full {
             Int ntc_bases = assemble_refbased.assembly_length_unambiguous
         }
 
+        # grab biosample metadata
+        call ncbi.fetch_row_from_tsv as biosample {
+            input:
+                tsv = biosample_merge.out_tsv,
+                idx_col = "sample_name",
+                idx_val = orig_name,
+                set_default_keys = ["collection_date", "bioproject_accession", "accession", "collected_by", "geo_loc_name", "host_subject_id", "purpose_of_sequencing"]
+        }
+
         # for genomes that somewhat assemble
         if (assemble_refbased.assembly_length_unambiguous >= min_genome_bases) {
             call ncbi.rename_fasta_header {
@@ -146,13 +155,19 @@ workflow sarscov2_illumina_full {
         Array[String] assembly_tsv_row = [
             orig_name,
             name_reads.left,
-            demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"],
-            assemble_refbased.assembly_mean_coverage,
+            biosample.map["accession"],
+            flowcell_id,
+            demux_deplete.run_date,
+            biosample.map["collection_date"],
+            biosample.map["geo_loc_name"],
+            biosample.map["host_subject_id"],
             assemble_refbased.assembly_length_unambiguous,
+            assemble_refbased.assembly_mean_coverage,
+            select_first([sarscov2_lineages.pango_lineage, ""]),
             select_first([sarscov2_lineages.nextclade_clade, ""]),
             select_first([sarscov2_lineages.nextclade_aa_subs, ""]),
             select_first([sarscov2_lineages.nextclade_aa_dels, ""]),
-            select_first([sarscov2_lineages.pango_lineage, ""]),
+            select_first([sarscov2_lineages.pangolin_docker, ""]),
             assemble_refbased.dist_to_ref_snps,
             assemble_refbased.dist_to_ref_indels,
             select_first([vadr.num_alerts, ""]),
@@ -163,6 +178,7 @@ workflow sarscov2_illumina_full {
             select_first([sarscov2_lineages.nextclade_tsv, ""]),
             select_first([sarscov2_lineages.pangolin_csv, ""]),
             select_first([vadr.outputs_tgz, ""]),
+            demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"],
             assemble_refbased.replicate_concordant_sites,
             assemble_refbased.replicate_discordant_snps,
             assemble_refbased.replicate_discordant_indels,
@@ -171,17 +187,22 @@ workflow sarscov2_illumina_full {
             assemble_refbased.align_to_ref_merged_reads_aligned,
             assemble_refbased.align_to_ref_merged_bases_aligned,
             select_first([vadr.alerts_list, ""]),
+            biosample.map["purpose_of_sequencing"],
+            biosample.map["collected_by"],
+            biosample.map["bioproject_accession"],
         ]
     }
     Array[String] assembly_tsv_header = [
-        'sample', 'sample_sanitized', 'amplicon_set', 'assembly_mean_coverage', 'assembly_length_unambiguous',
-        'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels', 'pango_lineage',
+        'sample', 'sample_sanitized', 'biosample_accession', 'flowcell_id', 'run_date', 'collection_date', 'geo_loc_name', 'host_subject_id',
+        'assembly_length_unambiguous', 'assembly_mean_coverage',
+        'pango_lineage', 'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels', 'pangolin_version',
         'dist_to_ref_snps', 'dist_to_ref_indels', 'vadr_num_alerts',
         'assembly_fasta', 'coverage_plot', 'aligned_bam', 'replicate_discordant_vcf',
         'nextclade_tsv', 'pangolin_csv', 'vadr_tgz',
+        'amplicon_set',
         'replicate_concordant_sites', 'replicate_discordant_snps', 'replicate_discordant_indels', 'num_read_groups', 'num_libraries',
         'align_to_ref_merged_reads_aligned', 'align_to_ref_merged_bases_aligned',
-        'vadr_alerts',
+        'vadr_alerts', 'purpose_of_sequencing', 'collected_by', 'bioproject_accession'
         ]
 
     call nextstrain.concatenate as assembly_meta_tsv {
@@ -190,8 +211,6 @@ workflow sarscov2_illumina_full {
         output_name = "assembly_metadata-~{flowcell_id}.tsv"
     }
 
-
-    # TO DO: filter out genomes from submission that are less than ntc_max.out
     call read_utils.max as ntc_max {
       input:
         list = select_all(ntc_bases)
@@ -315,6 +334,9 @@ workflow sarscov2_illumina_full {
         Int           num_submittable = length(select_all(submittable_id))
         Int           num_failed_annotation = length(select_all(failed_annotation_id))
         Int           num_samples = length(group_bams_by_sample.sample_names)
+
+        String        run_date = demux_deplete.run_date
+
         String?       data_table_status = data_tables.status
     }
 }
