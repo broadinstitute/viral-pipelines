@@ -58,6 +58,7 @@ task download_entities_tsv {
     table = json.loads(fapi.get_entities(workspace_project, workspace_name, table_name).text)
     headers = collections.OrderedDict()
     rows = []
+    headers[table_name + "_id"] = 0
     for row in table:
         outrow = row['attributes']
         for x in outrow.keys():
