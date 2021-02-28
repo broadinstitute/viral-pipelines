@@ -1,6 +1,6 @@
 version 1.0
 
-import "../tasks/tasks_call_api.wdl" as update_entities_api
+import "../tasks/tasks_terra.wdl" as terra
 
 workflow update_data_tables {
     meta {
@@ -15,7 +15,7 @@ workflow update_data_tables {
         File        tsv_file
     }
 
-    call update_entities_api.upload_entities_tsv as create_table {
+    call terra.upload_entities_tsv as create_table {
         input:
             workspace_name = workspace_name,
             terra_project = terra_project,

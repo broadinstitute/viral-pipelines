@@ -4,7 +4,7 @@ import "../tasks/tasks_read_utils.wdl" as read_utils
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_reports.wdl" as reports
-import "../tasks/tasks_call_api.wdl" as fapi_tables
+import "../tasks/tasks_terra.wdl" as terra
 
 import "demux_deplete.wdl"
 import "assemble_refbased.wdl"
@@ -273,7 +273,7 @@ workflow sarscov2_illumina_full {
 
     # create data tables with assembly_meta_tsv if workspace name and project provided
     if (defined(workspace_name) && defined(terra_project)) {
-      call fapi_tables.upload_entities_tsv as data_tables {
+      call terra.upload_entities_tsv as data_tables {
         input:
           workspace_name = select_first([workspace_name]),
           terra_project = select_first([terra_project]),

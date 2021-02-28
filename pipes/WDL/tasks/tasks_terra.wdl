@@ -1,6 +1,7 @@
 version 1.0
 
-task  upload_entities_tsv{
+
+task upload_entities_tsv {
   input {
     String        workspace_name
     String        terra_project
