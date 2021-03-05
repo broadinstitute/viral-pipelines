@@ -390,7 +390,7 @@ task nextstrain_build_subsample {
     >>>
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 90]) + " GB" # priorities.py on 500k genomes
+        memory: select_first([machine_mem_gb, 200]) + " GB" # priorities.py on 700k genomes
         cpu :   4
         disks:  "local-disk 375 HDD"
         dx_instance_type: "mem3_ssd1_v2_x16"
@@ -691,8 +691,8 @@ task mafft_one_chr {
         Boolean  memsavetree = false
 
         String   docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
-        Int      mem_size = 500
-        Int      cpus = 64
+        Int      mem_size = 640
+        Int      cpus = 80
     }
     command {
         set -e
