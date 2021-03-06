@@ -255,6 +255,11 @@ workflows:
    primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_nextstrain.wdl
    testParameterFiles:
     - empty.json
+ - name: sarscov2_sequencing_reports
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_sequencing_reports.wdl
+   testParameterFiles:
+    - empty.json
  - name: sarscov2_sra_to_genbank
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_sra_to_genbank.wdl
@@ -275,13 +280,18 @@ workflows:
    primaryDescriptorPath: /pipes/WDL/workflows/subsample_by_metadata_with_focal.wdl
    testParameterFiles:
     - empty.json
+ - name: terra_table_to_tsv
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/terra_table_to_tsv.wdl
+   testParameterFiles:
+    - empty.json
+ - name: terra_update_assemblies
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/terra_update_assemblies.wdl
+   testParameterFiles:
+    - empty.json
  - name: trimal
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/trimal.wdl
-   testParameterFiles:
-    - empty.json
- - name: update_data_tables
-   subclass: WDL
-   primaryDescriptorPath: /pipes/WDL/workflows/update_data_tables.wdl
    testParameterFiles:
     - empty.json

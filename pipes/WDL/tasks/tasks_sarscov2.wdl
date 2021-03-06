@@ -150,3 +150,34 @@ task pangolin_one_sample {
         String pangolin_docker    = docker
     }
 }
+
+
+task sequencing_report {
+    meta {
+        description: "Produce sequencing progress report."
+    }
+    input {
+        File           assembly_stats_tsv
+        File           collab_ids_tsv
+
+        String  docker = "quay.io/broadinstitute/sc2-rmd:latest"
+    }
+    command {
+        set -e
+        /reports.py "~{assembly_stats_tsv}" "~{collab_ids_tsv}"
+    }
+    runtime {
+        docker: docker
+        memory: "2 GB"
+        cpu:    2
+        disks: "local-disk 50 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+    output {
+        Array[File] reports = glob("*.pdf")
+        Array[File] sheets = glob("*.xlsx")
+    }
+}
+
+
+

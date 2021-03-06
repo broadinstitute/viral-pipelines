@@ -4,7 +4,7 @@ import "../tasks/tasks_read_utils.wdl" as read_utils
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_reports.wdl" as reports
-import "../tasks/tasks_call_api.wdl" as fapi_tables
+import "../tasks/tasks_terra.wdl" as terra
 
 import "demux_deplete.wdl"
 import "assemble_refbased.wdl"
@@ -175,6 +175,7 @@ workflow sarscov2_illumina_full {
             assemble_refbased.align_to_ref_merged_coverage_plot,
             assemble_refbased.align_to_ref_merged_aligned_trimmed_only_bam,
             assemble_refbased.replicate_discordant_vcf,
+            assemble_refbased.align_to_ref_variants_vcf_gz,
             select_first([sarscov2_lineages.nextclade_tsv, ""]),
             select_first([sarscov2_lineages.pangolin_csv, ""]),
             select_first([vadr.outputs_tgz, ""]),
@@ -197,7 +198,8 @@ workflow sarscov2_illumina_full {
         'assembly_length_unambiguous', 'assembly_mean_coverage',
         'pango_lineage', 'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels', 'pangolin_version',
         'dist_to_ref_snps', 'dist_to_ref_indels', 'vadr_num_alerts',
-        'assembly_fasta', 'coverage_plot', 'aligned_bam', 'replicate_discordant_vcf',
+        'assembly_fasta', 'coverage_plot', 'aligned_bam',
+        'replicate_discordant_vcf', 'variants_from_ref_vcf',
         'nextclade_tsv', 'pangolin_csv', 'vadr_tgz',
         'amplicon_set',
         'replicate_concordant_sites', 'replicate_discordant_snps', 'replicate_discordant_indels', 'num_read_groups', 'num_libraries',
@@ -273,7 +275,7 @@ workflow sarscov2_illumina_full {
 
     # create data tables with assembly_meta_tsv if workspace name and project provided
     if (defined(workspace_name) && defined(terra_project)) {
-      call fapi_tables.upload_entities_tsv as data_tables {
+      call terra.upload_entities_tsv as data_tables {
         input:
           workspace_name = select_first([workspace_name]),
           terra_project = select_first([terra_project]),
