@@ -159,17 +159,12 @@ task sequencing_report {
     input {
         File           assembly_stats_tsv
         File           collab_ids_tsv
-        Array[String]  states
 
         String  docker = "quay.io/broadinstitute/sc2-rmd:latest"
     }
     command {
         set -e
-        STATE_NAME_FILE="~{write_lines(states)}"
-        while read -r STATE; do
-            R --vanilla --no-save \
-                -e "rmarkdown::render('covid_seq_report.Rmd', output_file='report-$STATE.pdf', params = list(state = '$STATE', assemblies_tsv = '~{assembly_stats_tsv}', collab_ids_tsv = '~{collab_ids_tsv}'))"
-        done < $STATE_NAME_FILE
+        /reports.py "~{assembly_stats_tsv}" "~{collab_ids_tsv}"
     }
     runtime {
         docker: docker
@@ -180,6 +175,7 @@ task sequencing_report {
     }
     output {
         Array[File] reports = glob("*.pdf")
+        Array[File] sheets = glob("*.xlsx")
     }
 }
 
