@@ -255,6 +255,11 @@ workflows:
    primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_nextstrain.wdl
    testParameterFiles:
     - empty.json
+ - name: sarscov2_sequencing_reports
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_sequencing_reports.wdl
+   testParameterFiles:
+    - empty.json
  - name: sarscov2_sra_to_genbank
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_sra_to_genbank.wdl
