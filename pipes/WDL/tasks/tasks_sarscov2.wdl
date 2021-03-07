@@ -160,11 +160,21 @@ task sequencing_report {
         File           assembly_stats_tsv
         File           collab_ids_tsv
 
+        String?        sequencing_lab
+        String?        intro_blurb
+        String?        min_date
+        Int?           min_unambig
+
         String  docker = "quay.io/broadinstitute/sc2-rmd:latest"
     }
     command {
         set -e
-        /docker/reports.py "~{assembly_stats_tsv}" "~{collab_ids_tsv}"
+        /docker/reports.py \
+            "~{assembly_stats_tsv}" "~{collab_ids_tsv}" \
+            ~{'--sequencing_lab="' + sequencing_lab + '"'} \
+            ~{'--intro_blurb="' + intro_blurb + '"'} \
+            ~{'--min_date=' + min_date} \
+            ~{'--min_unambig=' + min_unambig}
     }
     runtime {
         docker: docker

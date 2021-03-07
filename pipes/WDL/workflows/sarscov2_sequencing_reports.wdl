@@ -10,7 +10,7 @@ workflow sarscov2_sequencing_reports {
     call sarscov2.sequencing_report 
 
     output {
-        Array[File]  reports = sequencing_report.reports
-        Array[File]  sheets  = sequencing_report.sheets
+        Array[File]  sequencing_reports_pdfs  = sequencing_report.reports
+        Array[File]  sequencing_reports_xlsxs = sequencing_report.sheets
     }
 }
