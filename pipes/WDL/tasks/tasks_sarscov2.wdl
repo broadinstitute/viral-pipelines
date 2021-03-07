@@ -165,7 +165,7 @@ task sequencing_report {
         String?        min_date
         Int?           min_unambig
 
-        String  docker = "quay.io/broadinstitute/sc2-rmd:latest"
+        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.1"
     }
     command {
         set -e
