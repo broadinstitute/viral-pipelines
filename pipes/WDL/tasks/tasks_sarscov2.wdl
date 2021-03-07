@@ -164,7 +164,7 @@ task sequencing_report {
     }
     command {
         set -e
-        /reports.py "~{assembly_stats_tsv}" "~{collab_ids_tsv}"
+        /docker/reports.py "~{assembly_stats_tsv}" "~{collab_ids_tsv}"
     }
     runtime {
         docker: docker
