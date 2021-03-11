@@ -85,7 +85,8 @@ workflow sarscov2_nextstrain {
             input:
                 input_tsvs = sample_metadata_tsvs,
                 id_col = 'strain',
-                out_basename = "metadata-merged"
+                out_basename = "metadata-merged",
+                placeholder_for_missing = "?"
         }
     }
     call nextstrain.derived_cols {
