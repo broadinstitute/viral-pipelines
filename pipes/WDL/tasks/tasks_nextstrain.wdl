@@ -36,7 +36,7 @@ task gzcat {
         import gzip
         open_or_gzopen = lambda *args, **kwargs: gzip.open(*args, **kwargs) if args[0].endswith('.gz') else open(*args, **kwargs)
         with open_or_gzopen("~{output_name}", 'wt') as outf:
-            for infname in "~{sep=' ' infiles}".split(' '):
+            for infname in "~{sep='*' infiles}".split('*'):
                 with open_or_gzopen(infname, 'rt') as inf:
                     for line in inf:
                         outf.write(line)
