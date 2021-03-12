@@ -1051,7 +1051,7 @@ task ancestral_traits {
     }
     runtime {
         docker: docker
-        memory: "3 GB"
+        memory: "7 GB"
         cpu :   2
         disks:  "local-disk 50 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
@@ -1223,7 +1223,7 @@ task tip_frequencies {
     }
     runtime {
         docker: docker
-        memory: "3 GB"
+        memory: "7 GB"
         cpu :   2
         disks:  "local-disk 100 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
@@ -1409,7 +1409,7 @@ task export_auspice_json {
     }
     runtime {
         docker: docker
-        memory: "3 GB"
+        memory: "7 GB"
         cpu :   2
         disks:  "local-disk 100 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
