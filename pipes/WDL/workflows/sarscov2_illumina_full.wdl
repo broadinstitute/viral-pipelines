@@ -4,6 +4,7 @@ import "../tasks/tasks_read_utils.wdl" as read_utils
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_reports.wdl" as reports
+import "../tasks/tasks_sarscov2.wdl" as sarscov2
 import "../tasks/tasks_terra.wdl" as terra
 
 import "demux_deplete.wdl"
@@ -285,6 +286,13 @@ workflow sarscov2_illumina_full {
       }
     }
 
+    # create full nextclade trees on full data set
+    call sarscov2.nextclade_many_samples {
+        input:
+            genome_fastas = assemble_refbased.assembly_fasta,
+            basename = "nextclade-~{flowcell_id}"
+    }
+
     output {
         Array[File] raw_reads_unaligned_bams     = demux_deplete.raw_reads_unaligned_bams
         Array[File] cleaned_reads_unaligned_bams = demux_deplete.cleaned_reads_unaligned_bams
@@ -325,6 +333,9 @@ workflow sarscov2_illumina_full {
 
         File genbank_fasta = submit_genomes.filtered_fasta
         File nextmeta_tsv = nextmeta_prep.nextmeta_tsv
+
+        File nextclade_all_json = nextclade_many_samples.nextclade_json
+        File nextclade_auspice_json = nextclade_many_samples.auspice_json
 
         Array[String] assembled_ids = select_all(passing_assembly_ids)
         Array[String] submittable_ids = select_all(submittable_id)
