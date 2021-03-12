@@ -79,7 +79,7 @@ task nextmeta_prep {
         sample_to_assembly[row['sample']] = row
 
     # write outputs
-    out_headers = ('strain', 'date', 'region', 'country', 'division', 'location', 'length', 'host', 'Nextstrain_clade', 'pangolin_lineage', 'originating_lab', 'submitting_lab', 'authors', 'purpose_of_sequencing')
+    out_headers = ('strain', 'date', 'region', 'country', 'division', 'location', 'length', 'host', 'Nextstrain_clade', 'pango_lineage', 'originating_lab', 'submitting_lab', 'authors', 'purpose_of_sequencing')
 
     with open('~{out_name}', 'wt') as outf:
       writer = csv.DictWriter(outf, out_headers, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
@@ -92,7 +92,7 @@ task nextmeta_prep {
           'host': 'Human',
           'length': sample_to_assembly[sample]['assembly_length_unambiguous'],
           'Nextstrain_clade': sample_to_assembly[sample]['nextclade_clade'],
-          'pangolin_lineage': sample_to_assembly[sample]['pango_lineage'],
+          'pango_lineage': sample_to_assembly[sample]['pango_lineage'],
           'region': geoloc[0],
           'country': geoloc[1] if len(geoloc)>1 else '',
           'division': geoloc[2] if len(geoloc)>2 else '',
