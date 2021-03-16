@@ -162,10 +162,11 @@ task sequencing_report {
 
         String?        sequencing_lab
         String?        intro_blurb
+        String?        max_date
         String?        min_date
         Int?           min_unambig
 
-        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.5"
+        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.6"
     }
     command {
         set -e
@@ -173,6 +174,7 @@ task sequencing_report {
             "~{assembly_stats_tsv}" "~{collab_ids_tsv}" \
             ~{'--sequencing_lab="' + sequencing_lab + '"'} \
             ~{'--intro_blurb="' + intro_blurb + '"'} \
+            ~{'--max_date=' + max_date} \
             ~{'--min_date=' + min_date} \
             ~{'--min_unambig=' + min_unambig}
     }
