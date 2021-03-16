@@ -297,7 +297,7 @@ workflow sarscov2_illumina_full {
             assembly_stats_tsv = download_entities_tsv.tsv_file,
             #collab_ids_tsv = ,
             max_date = demux_deplete.run_date,
-            min_unmabig = min_genome_bases
+            min_unambig = min_genome_bases
       }
     }
 
@@ -365,7 +365,7 @@ workflow sarscov2_illumina_full {
 
         String        run_date = demux_deplete.run_date
 
-        Array[File]   sequencing_reports = select_first([sequencing_report.all_zip, []])
+        File?         sequencing_reports = sequencing_report.all_zip
 
         String?       data_table_status = data_tables.status
     }
