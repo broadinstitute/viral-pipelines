@@ -55,6 +55,7 @@ workflow sarscov2_illumina_full {
 
         String?       workspace_name
         String?       terra_project
+        File?         collab_ids_tsv
 
     }
     Int     taxid = 2697049
@@ -295,7 +296,7 @@ workflow sarscov2_illumina_full {
       call sarscov2.sequencing_report {
         input:
             assembly_stats_tsv = download_entities_tsv.tsv_file,
-            #collab_ids_tsv = ,
+            collab_ids_tsv = select_first([collab_ids_tsv]),
             max_date = demux_deplete.run_date,
             min_unambig = min_genome_bases
       }
