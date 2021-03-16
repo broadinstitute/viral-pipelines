@@ -177,6 +177,7 @@ task sequencing_report {
             ~{'--max_date=' + max_date} \
             ~{'--min_date=' + min_date} \
             ~{'--min_unambig=' + min_unambig}
+        zip all_reports.zip *.pdf *.xlsx
     }
     runtime {
         docker: docker
@@ -188,6 +189,7 @@ task sequencing_report {
     output {
         Array[File] reports = glob("*.pdf")
         Array[File] sheets = glob("*.xlsx")
+        File        all_zip = "all_reports.zip"
     }
 }
 

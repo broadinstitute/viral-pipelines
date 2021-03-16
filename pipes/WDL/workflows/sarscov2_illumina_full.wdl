@@ -49,7 +49,7 @@ workflow sarscov2_illumina_full {
         String        instrument_model
         String        sra_title
 
-        Int           min_genome_bases = 15000
+        Int           min_genome_bases = 24000
         Int           max_vadr_alerts = 0
 
 
@@ -284,6 +284,21 @@ workflow sarscov2_illumina_full {
           cleaned_reads_unaligned_bams_string = demux_deplete.cleaned_reads_unaligned_bams,
           meta_by_filename_json = demux_deplete.meta_by_filename_json
       }
+
+      call terra.download_entities_tsv {
+        input:
+          workspace_name = select_first([workspace_name]),
+          terra_project = select_first([terra_project]),
+          table_name = 'assemblies'
+      }
+
+      call sarscov2.sequencing_report {
+        input:
+            assembly_stats_tsv = download_entities_tsv.tsv_file,
+            #collab_ids_tsv = ,
+            max_date = demux_deplete.run_date,
+            min_unmabig = min_genome_bases
+      }
     }
 
     # create full nextclade trees on full data set
@@ -349,6 +364,8 @@ workflow sarscov2_illumina_full {
         Int           num_samples = length(group_bams_by_sample.sample_names)
 
         String        run_date = demux_deplete.run_date
+
+        Array[File]   sequencing_reports = select_first([sequencing_report.all_zip, []])
 
         String?       data_table_status = data_tables.status
     }
