@@ -160,8 +160,8 @@ task sequencing_report {
         File           assembly_stats_tsv
         File?          collab_ids_tsv
 
-        String?        sequencing_lab
-        String?        intro_blurb
+        String?        sequencing_lab = "Broad Institute"
+        String?        intro_blurb = "The Broad Institute Viral Genomics group, in partnership with the Genomics Platform and Data Sciences Platform, has been engaged in viral sequencing of COVID-19 patients since March 2020."
         String?        max_date
         String?        min_date
         Int?           min_unambig
