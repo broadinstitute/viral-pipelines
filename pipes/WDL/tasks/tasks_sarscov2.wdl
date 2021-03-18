@@ -165,8 +165,10 @@ task sequencing_report {
         String?        max_date
         String?        min_date
         Int?           min_unambig
+        String?        voc_list
+        String?        voi_list
 
-        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.7"
+        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.8"
     }
     command {
         set -e
@@ -177,7 +179,9 @@ task sequencing_report {
             ~{'--intro_blurb="' + intro_blurb + '"'} \
             ~{'--max_date=' + max_date} \
             ~{'--min_date=' + min_date} \
-            ~{'--min_unambig=' + min_unambig}
+            ~{'--min_unambig=' + min_unambig} \
+            ~{'--voc_list=' + voc_list} \
+            ~{'--voi_list=' + voi_list}
         zip all_reports.zip *.pdf *.xlsx
     }
     runtime {
