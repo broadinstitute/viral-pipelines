@@ -187,6 +187,7 @@ workflow sarscov2_illumina_full {
             assemble_refbased.replicate_discordant_indels,
             assemble_refbased.num_read_groups,
             assemble_refbased.num_libraries,
+            select_first(assemble_refbased.primer_trimmed_read_percent),
             assemble_refbased.align_to_ref_merged_reads_aligned,
             assemble_refbased.align_to_ref_merged_bases_aligned,
             select_first([vadr.alerts_list, ""]),
@@ -205,6 +206,7 @@ workflow sarscov2_illumina_full {
         'nextclade_tsv', 'pangolin_csv', 'vadr_tgz',
         'amplicon_set',
         'replicate_concordant_sites', 'replicate_discordant_snps', 'replicate_discordant_indels', 'num_read_groups', 'num_libraries',
+        'primer_trimmed_read_percent',
         'align_to_ref_merged_reads_aligned', 'align_to_ref_merged_bases_aligned',
         'vadr_alerts', 'purpose_of_sequencing', 'collected_by', 'bioproject_accession'
         ]
