@@ -165,6 +165,7 @@ task ivar_trim {
       Int?    min_keep_length
       Int?    sliding_window
       Int?    min_quality=1
+      Int?    primer_offset
 
       Int?    machine_mem_gb
       String  docker="andersenlabapps/ivar:1.3.1"
@@ -188,17 +189,23 @@ task ivar_trim {
             ${'-m ' + min_keep_length} \
             ${'-s ' + sliding_window} \
             ${'-q ' + min_quality} \
-            -i ${aligned_bam} -p trim
+            ${'-x ' + primer_offset} \
+            -i ${aligned_bam} -p trim | tee IVAR_OUT
           samtools sort -@ $(nproc) -m 1000M -o ${bam_basename}.trimmed.bam trim.bam
         else
           echo "skipping ivar trim"
           cp "${aligned_bam}" "${bam_basename}.trimmed.bam"
+          echo "Trimmed primers from 0% (0) of reads." > IVAR_OUT
         fi
+        grep "Trimmed primers from" IVAR_OUT | perl -lape 's/Trimmed primers from (\S+)%.*/$1/' > IVAR_TRIM_PCT
+        grep "Trimmed primers from" IVAR_OUT | perl -lape 's/Trimmed primers from \S+% \((\d+)\).*/$1/' > IVAR_TRIM_COUNT
     }
 
     output {
-        File   aligned_trimmed_bam = "${bam_basename}.trimmed.bam"
-        String ivar_version        = read_string("VERSION")
+        File   aligned_trimmed_bam    = "${bam_basename}.trimmed.bam"
+        Float  percent_primer_trimmed = read_float("IVAR_TRIM_PCT")
+        Int    reads_primer_trimmed   = read_int("IVAR_TRIM_COUNT")
+        String ivar_version           = read_string("VERSION")
     }
 
     runtime {
