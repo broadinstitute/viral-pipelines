@@ -156,6 +156,9 @@ workflow assemble_refbased {
         Int    dist_to_ref_snps   = call_consensus.dist_to_ref_snps
         Int    dist_to_ref_indels = call_consensus.dist_to_ref_indels
 
+        Array[Int]   primer_trimmed_read_count   = ivar_trim.primer_trimmed_read_count
+        Array[Float] primer_trimmed_read_percent = ivar_trim.primer_trimmed_read_percent
+
         Int    replicate_concordant_sites  = run_discordance.concordant_sites
         Int    replicate_discordant_snps   = run_discordance.discordant_snps
         Int    replicate_discordant_indels = run_discordance.discordant_indels

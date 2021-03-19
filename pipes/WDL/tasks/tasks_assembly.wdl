@@ -202,10 +202,10 @@ task ivar_trim {
     }
 
     output {
-        File   aligned_trimmed_bam    = "${bam_basename}.trimmed.bam"
-        Float  percent_primer_trimmed = read_float("IVAR_TRIM_PCT")
-        Int    reads_primer_trimmed   = read_int("IVAR_TRIM_COUNT")
-        String ivar_version           = read_string("VERSION")
+        File   aligned_trimmed_bam         = "${bam_basename}.trimmed.bam"
+        Float  primer_trimmed_read_percent = read_float("IVAR_TRIM_PCT")
+        Int    primer_trimmed_read_count   = read_int("IVAR_TRIM_COUNT")
+        String ivar_version                = read_string("VERSION")
     }
 
     runtime {

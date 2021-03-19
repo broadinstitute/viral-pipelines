@@ -332,6 +332,9 @@ workflow sarscov2_illumina_full {
         Array[File] demux_commonBarcodes     = demux_deplete.demux_commonBarcodes
         Array[File] demux_outlierBarcodes    = demux_deplete.demux_outlierBarcodes
 
+        Array[Int]   primer_trimmed_read_count   = flatten(assemble_refbased.primer_trimmed_read_count)
+        Array[Float] primer_trimmed_read_percent = flatten(assemble_refbased.primer_trimmed_read_percent)
+
         File        multiqc_report_raw     = demux_deplete.multiqc_report_raw
         File        multiqc_report_cleaned = demux_deplete.multiqc_report_cleaned
         File        spikein_counts         = demux_deplete.spikein_counts
