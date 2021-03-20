@@ -365,7 +365,7 @@ task nextstrain_build_subsample {
         cut -f 1 -d ' ' "~{alignment_msa_fasta}" > results/filtered.fasta
 
         # execute snakemake on pre-iqtree target
-        RAM_MB=$(free -m | head -2 | tail -1 | awk '{print $2}')
+        RAM_MB=$(cat /proc/meminfo | grep MemTotal | perl -lape 's/MemTotal:\s+(\d+)\d\d\d\s+kB/$1/')
         snakemake \
             -j $(nproc) \
             --resources mem_mb=$RAM_MB \
