@@ -508,8 +508,8 @@ task filter_subsample_sequences {
         set +o pipefail
 
         #cat ~{sequences_fasta} | grep \> | wc -l > IN_COUNT
-        grep "sequences were dropped during filtering" STDOUT | cut -f 1 -d ' ' > DROP_COUNT
-        grep "sequences have been written out to" STDOUT | cut -f 1 -d ' ' > OUT_COUNT
+        grep "strains were dropped during filtering" STDOUT | cut -f 1 -d ' ' > DROP_COUNT
+        grep "strains passed all filters" STDOUT | cut -f 1 -d ' ' > OUT_COUNT
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
