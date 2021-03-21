@@ -197,7 +197,8 @@ task ivar_trim {
           cp "${aligned_bam}" "${bam_basename}.trimmed.bam"
           echo "Trimmed primers from 0% (0) of reads." > IVAR_OUT
         fi
-        grep "Trimmed primers from" IVAR_OUT | perl -lape 's/Trimmed primers from (\S+)%.*/$1/' > IVAR_TRIM_PCT
+        PCT=$(grep "Trimmed primers from" IVAR_OUT | perl -lape 's/Trimmed primers from (\S+)%.*/$1/')
+        if [[ $PCT = -* ]]; then echo 0; else echo $PCT; fi > IVAR_TRIM_PCT
         grep "Trimmed primers from" IVAR_OUT | perl -lape 's/Trimmed primers from \S+% \((\d+)\).*/$1/' > IVAR_TRIM_COUNT
     }
 
