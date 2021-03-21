@@ -370,12 +370,12 @@ task nextstrain_build_subsample {
             -j $(nproc) \
             --resources mem_mb=$RAM_MB \
             --profile my_profiles \
-            results/"~{build_name}"/subsampled_alignment.fasta
+            results/"~{build_name}"/subsampled_sequences.fasta
 
         # grab logs and numbers
         set +o pipefail
         grep . logs/subsample_"~{build_name}"_* > ../augur.filter.logs.txt
-        grep \> "results/~{build_name}/subsampled_alignment.fasta" | wc -l | tee ../OUT_COUNT
+        grep \> "results/~{build_name}/subsampled_sequences.fasta" | wc -l | tee ../OUT_COUNT
         for i in results/"~{build_name}"/sample-*.fasta; do
           group=$(basename $i .fasta | cut -f 2- -d -)
           n=$(grep \> $i | wc -l)
