@@ -246,7 +246,7 @@ task ivar_trim_stats {
 
       # make plot
       flowcell = "~{flowcell}"
-      title = "ivar trim: percent of reads trimmed vs number of reads trimmed, per sample"
+      title = "ivar trim: % vs # of reads trimmed per sample"
       if flowcell:
         title += " ({})".format(flowcell)
       p = px.scatter(df,
