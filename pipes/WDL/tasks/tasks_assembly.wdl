@@ -223,6 +223,7 @@ task ivar_trim_stats {
     input {
       File    ivar_trim_stats_json
       String  out_basename = "ivar_trim_stats"
+      String  flowcell = ""
 
       String  docker="quay.io/broadinstitute/py3-bio:0.1.1"
     }
@@ -244,7 +245,15 @@ task ivar_trim_stats {
       df = pd.DataFrame.from_dict(trim_stats)
 
       # make plot
-      p = px.scatter(df, x='trim_count', y='trim_percent', opacity=0.7, hover_data=df.columns)
+      flowcell = "~{flowcell}"
+      title = "ivar trim: percent of reads trimmed vs number of reads trimmed, per sample"
+      if flowcell:
+        title += " ({})".format(flowcell)
+      p = px.scatter(df,
+        x='trim_count', y='trim_percent',
+        title=title,
+        opacity=0.7,
+        hover_data=df.columns)
 
       # export
       out_basename = "~{out_basename}"
