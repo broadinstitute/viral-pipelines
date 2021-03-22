@@ -390,10 +390,10 @@ task nextstrain_build_subsample {
     >>>
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 200]) + " GB" # priorities.py on 700k genomes
+        memory: select_first([machine_mem_gb, 50]) + " GB"
         cpu :   4
         disks:  "local-disk 375 HDD"
-        dx_instance_type: "mem3_ssd1_v2_x16"
+        dx_instance_type: "mem3_ssd1_v2_x8"
     }
     output {
         File   subsampled_msa = "ncov/results/~{build_name}/subsampled_sequences.fasta"
