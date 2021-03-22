@@ -222,7 +222,7 @@ workflow sarscov2_illumina_full {
     }
     call assembly.ivar_trim_stats {
       input:
-        ivar_trim_stats_json = write_json(assemble_refbased.ivar_trim_stats)
+        ivar_trim_stats_json = write_json(flatten(assemble_refbased.ivar_trim_stats))
     }
 
     ### prep genbank submission
