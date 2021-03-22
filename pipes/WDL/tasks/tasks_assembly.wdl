@@ -224,7 +224,7 @@ task ivar_trim_stats {
       File    ivar_trim_stats_json
       String  out_basename = "ivar_trim_stats"
 
-      String  docker="quay.io/broadinstitute/py3-bio:0.1"
+      String  docker="quay.io/broadinstitute/py3-bio:0.1.1"
     }
 
     command <<<
@@ -248,9 +248,9 @@ task ivar_trim_stats {
 
       # export
       out_basename = "~{out_basename}"
+      df.to_csv(out_basename + ".txt", sep='\t')
       p.write_html(out_basename + ".html")
       p.write_image(out_basename + ".png")
-      df.to_csv(out_basename + ".txt", sep='\t')
 
       CODE
     >>>
