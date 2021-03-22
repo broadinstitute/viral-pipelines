@@ -221,7 +221,8 @@ task ivar_trim {
 task ivar_trim_stats {
 
     input {
-      File    ivar_trim_stats_json
+      #File    ivar_trim_stats_json
+      Array[Map[String,String]] ivar_trim_stats_table
       String  out_basename = "ivar_trim_stats"
       String  flowcell = ""
 
@@ -237,7 +238,7 @@ task ivar_trim_stats {
       import plotly.express as px
 
       # load and clean up data
-      with open("~{ivar_trim_stats_json}", 'rt') as inf:
+      with open("~{write_json(ivar_trim_stats_table)}", 'rt') as inf:
         trim_stats = json.load(inf)
       for x in trim_stats:
         x['trim_percent'] = float(x['trim_percent'])
