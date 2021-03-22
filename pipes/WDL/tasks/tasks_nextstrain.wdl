@@ -396,7 +396,7 @@ task nextstrain_build_subsample {
         dx_instance_type: "mem3_ssd1_v2_x16"
     }
     output {
-        File   subsampled_msa = "ncov/results/~{build_name}/subsampled_alignment.fasta"
+        File   subsampled_msa = "ncov/results/~{build_name}/subsampled_sequences.fasta"
         File   subsample_logs = "augur.filter.logs.txt"
         File   job_stats_json = "ncov/stats.json"
         Int    sequences_out  = read_int("OUT_COUNT")
