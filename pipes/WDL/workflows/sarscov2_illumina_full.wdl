@@ -1,5 +1,7 @@
 version 1.0
 
+# DX_SKIP_WORKFLOW -- this fails on dxWDL which doesn't support write_json
+
 import "../tasks/tasks_read_utils.wdl" as read_utils
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
@@ -217,8 +219,7 @@ workflow sarscov2_illumina_full {
     }
     call assembly.ivar_trim_stats {
       input:
-        #ivar_trim_stats_json = write_json(flatten(assemble_refbased.ivar_trim_stats)),
-        ivar_trim_stats_table = flatten(assemble_refbased.ivar_trim_stats),
+        ivar_trim_stats_json = write_json(flatten(assemble_refbased.ivar_trim_stats)),
         flowcell = flowcell_id,
         out_basename = "ivar_trim_stats-~{flowcell_id}"
     }
