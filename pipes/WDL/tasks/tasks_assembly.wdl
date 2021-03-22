@@ -218,6 +218,57 @@ task ivar_trim {
     }
 }
 
+task ivar_trim_stats {
+
+    input {
+      File    ivar_trim_stats_json
+      String  out_basename = "ivar_trim_stats"
+
+      String  docker="quay.io/broadinstitute/py3-bio:0.1"
+    }
+
+    command <<<
+      set -e
+      python3<<CODE
+
+      import json
+      import pandas as pd
+      import plotly.express as px
+
+      # load and clean up data
+      trim_stats = json.load("~{ivar_trim_stats_json}")
+      for x in trim_stats:
+        x['trim_percent'] = float(x['trim_percent'])
+        x['trim_count']   = int(x['trim_count'])
+      df = pd.DataFrame.from_dict(trim_stats)
+
+      # make plot
+      p = px.scatter(df, x='trim_count', y='trim_percent', opacity=0.7, hover_data=df.columns)
+
+      # export
+      out_basename = "~{out_basename}"
+      p.write_html(out_basename + ".html")
+      p.write_image(out_basename + ".png")
+      df.to_csv(out_basename + ".txt", sep='\t')
+
+      CODE
+    >>>
+
+    output {
+      File trim_stats_html = "~{out_basename}.html"
+      File trim_stats_png  = "~{out_basename}.png"
+      File trim_stats_tsv  = "~{out_basename}.txt"
+    }
+
+    runtime {
+        docker: "${docker}"
+        memory: "1 GB"
+        cpu: 1
+        disks: "local-disk 50 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+}
+
 task align_reads {
   meta {
     description: "Align unmapped reads to a reference genome, either using novoalign (default), minimap2, or bwa. Produces an aligned bam file (including all unmapped reads), an aligned-only bam file, both sorted and indexed, along with samtools flagstat output, fastqc stats (on mapped only reads), and some basic figures of merit."

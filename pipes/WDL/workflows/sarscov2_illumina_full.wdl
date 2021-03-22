@@ -6,6 +6,7 @@ import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_sarscov2.wdl" as sarscov2
 import "../tasks/tasks_terra.wdl" as terra
+import "../tasks/tasks_assembly.wdl" as assembly
 
 import "demux_deplete.wdl"
 import "assemble_refbased.wdl"
@@ -209,15 +210,19 @@ workflow sarscov2_illumina_full {
         'vadr_alerts', 'purpose_of_sequencing', 'collected_by', 'bioproject_accession'
         ]
 
+    ### summary stats and QC metrics
     call nextstrain.concatenate as assembly_meta_tsv {
       input:
         infiles = [write_tsv([assembly_tsv_header]), write_tsv(assembly_tsv_row)],
         output_name = "assembly_metadata-~{flowcell_id}.tsv"
     }
-
     call read_utils.max as ntc_max {
       input:
         list = select_all(ntc_bases)
+    }
+    call assembly.ivar_trim_stats {
+      input:
+        ivar_trim_stats_json = write_json(assemble_refbased.ivar_trim_stats)
     }
 
     ### prep genbank submission
@@ -334,6 +339,9 @@ workflow sarscov2_illumina_full {
 
         Array[Int]   primer_trimmed_read_count   = flatten(assemble_refbased.primer_trimmed_read_count)
         Array[Float] primer_trimmed_read_percent = flatten(assemble_refbased.primer_trimmed_read_percent)
+        File ivar_trim_stats_html = ivar_trim_stats.trim_stats_html
+        File ivar_trim_stats_png = ivar_trim_stats.trim_stats_png
+        File ivar_trim_stats_tsv = ivar_trim_stats.trim_stats_tsv
 
         File        multiqc_report_raw     = demux_deplete.multiqc_report_raw
         File        multiqc_report_cleaned = demux_deplete.multiqc_report_cleaned

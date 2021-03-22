@@ -89,13 +89,18 @@ workflow assemble_refbased {
                 aligned_bam = align_to_ref.aligned_only_reads_bam,
                 trim_coords_bed = trim_coords_bed
         }
+        Map[String,String] ivar_stats = {
+            'file': basename(reads_unmapped_bam, '.bam'),
+            'trim_percent': ivar_trim.primer_trimmed_read_percent,
+            'trim_count':   ivar_trim.primer_trimmed_read_count
+        }
     }
 
     call read_utils.merge_and_reheader_bams as merge_align_to_ref {
         input:
             in_bams             = ivar_trim.aligned_trimmed_bam,
             sample_name         = sample_name,
-            out_basename        = "${sample_name}.align_to_ref.trimmed"
+            out_basename        = "~{sample_name}.align_to_ref.trimmed"
     }
 
     call assembly.run_discordance {
@@ -136,7 +141,7 @@ workflow assemble_refbased {
         input:
             in_bams             = align_to_self.aligned_only_reads_bam,
             sample_name         = sample_name,
-            out_basename        = "${sample_name}.merge_align_to_self"
+            out_basename        = "~{sample_name}.merge_align_to_self"
     }
 
     call reports.plot_coverage as plot_self_coverage {
@@ -158,6 +163,7 @@ workflow assemble_refbased {
 
         Array[Int]   primer_trimmed_read_count   = ivar_trim.primer_trimmed_read_count
         Array[Float] primer_trimmed_read_percent = ivar_trim.primer_trimmed_read_percent
+        Array[Map[String,String]] ivar_trim_stats = ivar_stats
 
         Int    replicate_concordant_sites  = run_discordance.concordant_sites
         Int    replicate_discordant_snps   = run_discordance.discordant_snps
