@@ -1,5 +1,48 @@
 version 1.0
 
+task alignment_metrics {
+  input {
+    File  aligned_bam
+    File  ref_fasta
+    File? primers_bed
+
+    String   docker="quay.io/broadinstitute/viral-core:2.1.19"
+  }
+
+  String out_basename = basename(aligned_bam, ".bam")
+
+  command {
+    set -e
+
+    cp "~{ref_fasta}" reference.fasta
+    picard CreateSequenceDictionary -R reference.fasta
+
+    if [ -n "~{primers_bed}" ]; then
+      picard BedToIntervalList \
+        -I "~{primers_bed}" \
+        -O primers.interval.list \
+        -SD reference.dict
+    fi
+
+    picard CollectAlignmentSummaryMetrics \
+      -R reference.fasta \
+      -I "~{aligned_bam}" \
+      -O "~{out_basename}".alignment_metrics.txt
+  }
+
+  output {
+    File   alignment_metrics = "~{out_basename}.alignment_metrics.txt"
+  }
+
+  runtime {
+    docker: "~{docker}"
+    memory: "1 GB"
+    cpu: 1
+    disks: "local-disk 100 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task plot_coverage {
   input {
     File     aligned_reads_bam
