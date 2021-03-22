@@ -9,7 +9,7 @@ task concatenate {
         String      output_name
     }
     command {
-        cat ~{sep=" " infiles} > "${output_name}"
+        cat ~{sep=" " infiles} > "~{output_name}"
     }
     runtime {
         docker: "ubuntu"

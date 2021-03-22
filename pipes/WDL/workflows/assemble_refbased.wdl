@@ -52,9 +52,9 @@ workflow assemble_refbased {
     }
 
     input {
-        String          sample_name = basename(reads_unmapped_bams[0], '.bam')
         Array[File]+    reads_unmapped_bams
         File            reference_fasta
+        String          sample_name = basename(reads_unmapped_bams[0], '.bam')
 
         String          aligner="minimap2"
         File?           novocraft_license
