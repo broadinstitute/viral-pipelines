@@ -236,7 +236,8 @@ task ivar_trim_stats {
       import plotly.express as px
 
       # load and clean up data
-      trim_stats = json.load("~{ivar_trim_stats_json}")
+      with open("~{ivar_trim_stats_json}", 'rt') as inf:
+        trim_stats = json.load(inf)
       for x in trim_stats:
         x['trim_percent'] = float(x['trim_percent'])
         x['trim_count']   = int(x['trim_count'])
