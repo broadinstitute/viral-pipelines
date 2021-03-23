@@ -223,6 +223,12 @@ workflow sarscov2_illumina_full {
         flowcell = flowcell_id,
         out_basename = "ivar_trim_stats-~{flowcell_id}"
     }
+    call reports.tsv_join as picard_wgs_merge {
+      input:
+        input_tsvs = assemble_refbased.picard_metrics_wgs,
+        id_col = 'sample_sanitized',
+        out_basename = "picard_metrics_wgs-~{flowcell_id}"
+    }
 
     ### prep genbank submission
     call ncbi.biosample_to_genbank {
@@ -345,6 +351,7 @@ workflow sarscov2_illumina_full {
         File        multiqc_report_raw     = demux_deplete.multiqc_report_raw
         File        multiqc_report_cleaned = demux_deplete.multiqc_report_cleaned
         File        spikein_counts         = demux_deplete.spikein_counts
+        File        picard_metrics_wgs     = picard_wgs_merge.out_tsv
 
         File assembly_stats_tsv = assembly_meta_tsv.combined
 

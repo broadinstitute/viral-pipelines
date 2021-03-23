@@ -103,6 +103,12 @@ workflow assemble_refbased {
             out_basename        = "~{sample_name}.align_to_ref.trimmed"
     }
 
+    call reports.alignment_metrics {
+        input:
+            aligned_bam = merge_align_to_ref.out_bam,
+            ref_fasta   = reference_fasta
+    }
+
     call assembly.run_discordance {
         input:
             reads_aligned_bam = merge_align_to_ref.out_bam,
@@ -183,6 +189,9 @@ workflow assemble_refbased {
         Int    align_to_ref_merged_reads_aligned            = plot_ref_coverage.reads_aligned
         Int    align_to_ref_merged_read_pairs_aligned       = plot_ref_coverage.read_pairs_aligned
         Float  align_to_ref_merged_bases_aligned            = plot_ref_coverage.bases_aligned
+
+        File   picard_metrics_wgs       = alignment_metrics.wgs_metrics
+        File   picard_metrics_alignment = alignment_metrics.alignment_metrics
 
         File   align_to_self_merged_aligned_only_bam   = merge_align_to_self.out_bam
         File   align_to_self_merged_coverage_plot      = plot_self_coverage.coverage_plot
