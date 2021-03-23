@@ -14,29 +14,49 @@ task alignment_metrics {
   command {
     set -e
 
+    # requisite Picard fasta indexing
     cp "~{ref_fasta}" reference.fasta
     picard CreateSequenceDictionary -R reference.fasta
 
+    # get Picard metrics and clean up the junky outputs
+    picard CollectRawWgsMetrics \
+      -R reference.fasta \
+      -I "~{aligned_bam}" \
+      -O picard_raw.raw_wgs_metrics.txt
+    grep -v \# picard_raw.raw_wgs_metrics.txt | grep . | head -2 > picard_clean.raw_wgs_metrics.txt
+
+    picard CollectAlignmentSummaryMetrics \
+      -R reference.fasta \
+      -I "~{aligned_bam}" \
+      -O picard_raw.alignment_metrics.txt
+    grep -v \# picard_raw.alignment_metrics.txt | grep . | head -4 > picard_clean.alignment_metrics.txt 
+
+    # prepend the sample name in order to facilitate tsv joining later
+    SAMPLE=$(samtools view -H "~{aligned_bam}" | grep ^@RG | perl -lape 's/^@RG.*SM:(\S+).*$/$1/' | sort | uniq)
+    echo -e "sample_sanitized\tbam" > prepend.txt
+    echo -e "$SAMPLE\t~{out_basename}" >> prepend.txt
+    paste prepend.txt picard_clean.raw_wgs_metrics.txt > "~{out_basename}".raw_wgs_metrics.txt
+    echo -e "$SAMPLE\t~{out_basename}" >> prepend.txt
+    echo -e "$SAMPLE\t~{out_basename}" >> prepend.txt
+    paste prepend.txt picard_clean.alignment_metrics.txt > "~{out_basename}".alignment_metrics.txt
+
+    # actually don't know how to do CollectTargetedPcrMetrics yet
     if [ -n "~{primers_bed}" ]; then
       picard BedToIntervalList \
         -I "~{primers_bed}" \
         -O primers.interval.list \
         -SD reference.dict
     fi
-
-    picard CollectAlignmentSummaryMetrics \
-      -R reference.fasta \
-      -I "~{aligned_bam}" \
-      -O "~{out_basename}".alignment_metrics.txt
   }
 
   output {
+    File   wgs_metrics       = "~{out_basename}.raw_wgs_metrics.txt"
     File   alignment_metrics = "~{out_basename}.alignment_metrics.txt"
   }
 
   runtime {
     docker: "~{docker}"
-    memory: "1 GB"
+    memory: "2 GB"
     cpu: 1
     disks: "local-disk 100 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
