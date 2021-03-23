@@ -14,11 +14,12 @@ task upload_entities_tsv {
   command {
     echo ~{sep="," cleaned_reads_unaligned_bams_string} > cleaned_bam_strings.txt
 
-    python3 /projects/cdc-sabeti-covid-19/create_data_tables.py -t ~{tsv_file} \
-            -p ~{terra_project} \
-            -w ~{workspace_name} \
-            -b cleaned_bam_strings.txt \
-            -j ~{meta_by_filename_json}
+    python3 /projects/cdc-sabeti-covid-19/create_data_tables.py \
+        -t "~{tsv_file}" \
+        -p "~{terra_project}" \
+        -w "~{workspace_name}" \
+        -b cleaned_bam_strings.txt \
+        -j "~{meta_by_filename_json}"
   }
   runtime {
     docker: docker
