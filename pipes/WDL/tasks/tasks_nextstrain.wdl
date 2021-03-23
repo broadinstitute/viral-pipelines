@@ -126,7 +126,7 @@ task derived_cols {
         String?       lab_highlight_loc
         Array[File]   table_map=[]
 
-        String        docker="quay.io/broadinstitute/viral-core:2.1.19"
+        String        docker="quay.io/broadinstitute/viral-core:2.1.20"
     }
     parameter_meta {
         lab_highlight_loc: {
@@ -541,7 +541,7 @@ task filter_sequences_by_length {
         File    sequences_fasta
         Int     min_non_N = 1
 
-        String  docker="quay.io/broadinstitute/viral-core:2.1.19"
+        String  docker="quay.io/broadinstitute/viral-core:2.1.20"
     }
     parameter_meta {
         sequences_fasta: {
@@ -690,7 +690,7 @@ task mafft_one_chr {
         Boolean  large = false
         Boolean  memsavetree = false
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
+        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.20.0"
         Int      mem_size = 500
         Int      cpus = 64
     }
