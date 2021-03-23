@@ -300,7 +300,8 @@ workflow sarscov2_illumina_full {
         input:
           workspace_name = select_first([workspace_name]),
           terra_project = select_first([terra_project]),
-          table_name = 'assemblies'
+          table_name = 'assemblies',
+          nop_input_string = data_tables.status
       }
 
       call sarscov2.sequencing_report {
