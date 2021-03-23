@@ -1,6 +1,5 @@
 version 1.0
 
-
 task upload_entities_tsv {
   input {
     String        workspace_name
@@ -14,11 +13,12 @@ task upload_entities_tsv {
   command {
     echo ~{sep="," cleaned_reads_unaligned_bams_string} > cleaned_bam_strings.txt
 
-    python3 /projects/cdc-sabeti-covid-19/create_data_tables.py -t ~{tsv_file} \
-            -p ~{terra_project} \
-            -w ~{workspace_name} \
-            -b cleaned_bam_strings.txt \
-            -j ~{meta_by_filename_json}
+    python3 /projects/cdc-sabeti-covid-19/create_data_tables.py \
+        -t "~{tsv_file}" \
+        -p "~{terra_project}" \
+        -w "~{workspace_name}" \
+        -b cleaned_bam_strings.txt \
+        -j "~{meta_by_filename_json}"
   }
   runtime {
     docker: docker
@@ -36,6 +36,7 @@ task download_entities_tsv {
     String  workspace_name
     String  table_name
     String  outname = "~{terra_project}-~{workspace_name}-~{table_name}.tsv"
+    String? nop_input_string # this does absolutely nothing, except that it allows an optional mechanism for you to block execution of this step upon the completion of another task in your workflow
 
     String  docker="schaluvadi/pathogen-genomic-surveillance:api-wdl"
   }
@@ -56,6 +57,7 @@ task download_entities_tsv {
     workspace_name = '~{workspace_name}'
     table_name = '~{table_name}'
     out_fname = '~{outname}'
+    nop_string = '~{default="" nop_input_string}'
 
     # load terra table and convert to list of dicts
     # I've found that fapi.get_entities_tsv produces malformed outputs if funky chars are in any of the cells of the table
