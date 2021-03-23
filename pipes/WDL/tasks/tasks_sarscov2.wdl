@@ -108,7 +108,7 @@ task pangolin_one_sample {
         File    genome_fasta
         Int?    min_length
         Float?  max_ambig
-        String  docker = "staphb/pangolin:2.3.2-pangolearn-2021-02-21"
+        String  docker = "staphb/pangolin:2.3.5-pangolearn-2021-03-16"
     }
     String basename = basename(genome_fasta, ".fasta")
     command {
