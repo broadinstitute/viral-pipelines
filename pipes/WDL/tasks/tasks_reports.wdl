@@ -10,7 +10,7 @@ task plot_coverage {
     Boolean bin_large_plots=false
     String?  binning_summary_statistic="max" # max or min
 
-    String   docker="quay.io/broadinstitute/viral-core:2.1.19"
+    String   docker="quay.io/broadinstitute/viral-core:2.1.20"
   }
   
   command {
@@ -85,7 +85,7 @@ task coverage_report {
     Array[File]  mapped_bam_idx # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name="coverage_report.txt"
 
-    String       docker="quay.io/broadinstitute/viral-core:2.1.19"
+    String       docker="quay.io/broadinstitute/viral-core:2.1.20"
   }
 
   command {
@@ -144,7 +144,7 @@ task fastqc {
   input {
     File     reads_bam
 
-    String   docker="quay.io/broadinstitute/viral-core:2.1.19"
+    String   docker="quay.io/broadinstitute/viral-core:2.1.20"
   }
 
   String   reads_basename=basename(reads_bam, ".bam")
@@ -177,7 +177,7 @@ task align_and_count {
     Int     topNHits = 3
 
     Int?    machine_mem_gb
-    String  docker="quay.io/broadinstitute/viral-core:2.1.19"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.20"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
@@ -222,7 +222,7 @@ task align_and_count_summary {
 
     String       output_prefix="count_summary"
 
-    String        docker="quay.io/broadinstitute/viral-core:2.1.19"
+    String        docker="quay.io/broadinstitute/viral-core:2.1.20"
   }
 
   command {
@@ -253,7 +253,7 @@ task aggregate_metagenomics_reports {
     String       aggregate_taxlevel_focus                 = "species"
     Int          aggregate_top_N_hits                     = 5
 
-    String       docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
+    String       docker="quay.io/broadinstitute/viral-classify:2.1.20.0"
   }
 
   parameter_meta {
@@ -461,7 +461,7 @@ task tsv_stack {
   input {
     Array[File]+   input_tsvs
     String         out_basename
-    String         docker="quay.io/broadinstitute/viral-core:2.1.19"
+    String         docker="quay.io/broadinstitute/viral-core:2.1.20"
   }
 
   command {
@@ -491,7 +491,7 @@ task compare_two_genomes {
     File          genome_two
     String        out_basename
 
-    String        docker="quay.io/broadinstitute/viral-assemble:2.1.16.1"
+    String        docker="quay.io/broadinstitute/viral-assemble:2.1.20.0"
   }
 
   command {
