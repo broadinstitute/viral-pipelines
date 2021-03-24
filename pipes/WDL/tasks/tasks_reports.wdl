@@ -6,7 +6,7 @@ task alignment_metrics {
     File  ref_fasta
     File? primers_bed
 
-    String   docker="quay.io/broadinstitute/viral-core:2.1.20"
+    String   docker="quay.io/broadinstitute/viral-core:2.1.19"
   }
 
   String out_basename = basename(aligned_bam, ".bam")
