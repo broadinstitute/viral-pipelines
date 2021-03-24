@@ -98,7 +98,6 @@ task illumina_demux {
     String? runStartDate
     Int?    maxReadsInRamPerTile
     Int?    maxRecordsInRam
-    Boolean? forceGC=true
 
     Int?    machine_mem_gb
     String  docker="quay.io/broadinstitute/viral-core:2.1.20"
@@ -240,7 +239,6 @@ task illumina_demux {
       $max_records_in_ram \
       --JVMmemory="$mem_in_mb"m \
       $demux_threads \
-      ~{true='--force_gc=true' false="--force_gc=false" forceGC} \
       --append_run_id \
       --compression_level=5 \
       --out_meta_by_sample meta_by_sample.json \
