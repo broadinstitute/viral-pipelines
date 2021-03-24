@@ -25,7 +25,7 @@ task download_fasta {
     Array[String]+ accessions
     String         emailAddress
 
-    String         docker="quay.io/broadinstitute/viral-phylo:2.1.20.0"
+    String         docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   command {
@@ -56,7 +56,7 @@ task download_annotations {
     String         emailAddress
     String         combined_out_prefix
 
-    String         docker="quay.io/broadinstitute/viral-phylo:2.1.20.0"
+    String         docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   command {
@@ -100,7 +100,7 @@ task annot_transfer {
     File         reference_fasta
     Array[File]+ reference_feature_table
 
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.20.0"
+    String  docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   parameter_meta {
@@ -153,7 +153,7 @@ task align_and_annot_transfer_single {
     Array[File]+ reference_fastas
     Array[File]+ reference_feature_tables
 
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.20.0"
+    String  docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   parameter_meta {
@@ -205,7 +205,7 @@ task structured_comments {
 
     File?   filter_to_ids
 
-    String  docker="quay.io/broadinstitute/viral-core:2.1.20"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.19"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -283,7 +283,7 @@ task rename_fasta_header {
 
     String  out_basename = basename(genome_fasta, ".fasta")
 
-    String  docker="quay.io/broadinstitute/viral-core:2.1.20"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.19"
   }
   command {
     set -e
@@ -421,7 +421,7 @@ task sra_meta_prep {
     Boolean        paired
 
     String         out_name = "sra_metadata.tsv"
-    String  docker="quay.io/broadinstitute/viral-core:2.1.20"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.19"
   }
   parameter_meta {
     cleaned_bam_filepaths: {
@@ -583,7 +583,7 @@ task biosample_to_genbank {
     File? filter_to_ids
 
     Boolean s_dropout_note=true
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.20.0"
+    String  docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
   String base = basename(biosample_attributes, ".txt")
   command {
@@ -635,7 +635,7 @@ task prepare_genbank {
     String?      assembly_method_version
 
     Int?         machine_mem_gb
-    String       docker="quay.io/broadinstitute/viral-phylo:2.1.20.0"
+    String       docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   parameter_meta {
