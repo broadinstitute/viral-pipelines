@@ -57,7 +57,7 @@ task download_entities_tsv {
     workspace_name = '~{workspace_name}'
     table_name = '~{table_name}'
     out_fname = '~{outname}'
-    nop_string = '~{default="" nop_input_string}'
+    nop_string = '''~{default="" nop_input_string}'''
 
     # load terra table and convert to list of dicts
     # I've found that fapi.get_entities_tsv produces malformed outputs if funky chars are in any of the cells of the table
