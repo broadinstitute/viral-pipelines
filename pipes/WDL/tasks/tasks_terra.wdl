@@ -11,6 +11,8 @@ task upload_entities_tsv {
     String        docker="schaluvadi/pathogen-genomic-surveillance:api-wdl"
   }
   command {
+    set -e
+
     echo ~{sep="," cleaned_reads_unaligned_bams_string} > cleaned_bam_strings.txt
 
     python3 /projects/cdc-sabeti-covid-19/create_data_tables.py \
@@ -18,7 +20,9 @@ task upload_entities_tsv {
         -p "~{terra_project}" \
         -w "~{workspace_name}" \
         -b cleaned_bam_strings.txt \
-        -j "~{meta_by_filename_json}"
+        -j "~{meta_by_filename_json}" \
+        | perl -lape 's/^.*Check your workspace for new (\S+) table.*/$1/' \
+        > TABLES_MODIFIED
   }
   runtime {
     docker: docker
@@ -26,7 +30,7 @@ task upload_entities_tsv {
     cpu: 1
   }
   output {
-    String  status  = read_string(stdout())
+    Array[String] tables = read_lines('TABLES_MODIFIED')
   }
 }
 
