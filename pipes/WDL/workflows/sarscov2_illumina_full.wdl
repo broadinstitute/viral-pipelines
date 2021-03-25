@@ -301,7 +301,7 @@ workflow sarscov2_illumina_full {
           workspace_name = select_first([workspace_name]),
           terra_project = select_first([terra_project]),
           table_name = 'assemblies',
-          nop_input_string = data_tables.status
+          nop_input_string = data_tables.tables[0]
       }
 
       call sarscov2.sequencing_report {
@@ -386,6 +386,6 @@ workflow sarscov2_illumina_full {
 
         File?         sequencing_reports = sequencing_report.all_zip
 
-        String?       data_table_status = data_tables.status
+        Array[String] data_tables_out = select_first([data_tables.tables, []])
     }
 }
