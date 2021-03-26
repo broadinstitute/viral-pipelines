@@ -849,8 +849,8 @@ task vadr {
     # set +e allows for grep to match or not match the pattern and not fail either way
     set +e
     cat "~{out_base}/~{out_base}.vadr.alt.list" \
-      | grep -v "DELETION_OF_FEATURE\t\*sequence\*\tinternal deletion of a complete feature \[stem_loop feature number 1: stem_loop.1" \
-      | grep -v "INDEFINITE_ANNOTATION_START\tnucleocapsid phosphoprotein\tprotein-based alignment does not extend close enough to nucleotide-based alignment 5' endpoint \[6 > 5" \
+      | grep -P -v "DELETION_OF_FEATURE\t\*sequence\*\tinternal deletion of a complete feature \[stem_loop feature number 1: stem_loop.1" \
+      | grep -P -v "INDEFINITE_ANNOTATION_START\tnucleocapsid phosphoprotein\tprotein-based alignment does not extend close enough to nucleotide-based alignment 5' endpoint \[6 > 5" \
       > "~{out_base}/~{out_base}.vadr.alt.list.filtered"
     set -e
 
