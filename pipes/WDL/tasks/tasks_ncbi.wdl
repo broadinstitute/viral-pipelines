@@ -823,7 +823,7 @@ task package_genbank_ftp_submission {
 
 task vadr {
   meta {
-    description: "Runs NCBI's Viral Annotation DefineR for annotation and QC. See https://github.com/ncbi/vadr/wiki/Coronavirus-annotation"
+    description: "Runs NCBI's Viral Annotation DefineR for annotation and QC. Defaults here are for SARS-CoV-2 (see https://github.com/ncbi/vadr/wiki/Coronavirus-annotation), but VADR itself is applicable to a larger number of viral taxa (change the vadr_opts accordingly)."
   }
   input {
     File   genome_fasta
@@ -845,17 +845,27 @@ task vadr {
       "~{genome_fasta}" \
       "~{out_base}"
 
+    # manually ignore certain alert patterns based on conversation with NCBI Genbank team
+    # set +e allows for grep to match or not match the pattern and not fail either way
+    set +e
+    cat "~{out_base}/~{out_base}.vadr.alt.list" \
+      | grep -P -v "DELETION_OF_FEATURE\t\*sequence\*\tinternal deletion of a complete feature \[stem_loop feature number 1: stem_loop.1" \
+      | grep -P -v "INDEFINITE_ANNOTATION_START\tnucleocapsid phosphoprotein\tprotein-based alignment does not extend close enough to nucleotide-based alignment 5' endpoint \[6 > 5" \
+      > "~{out_base}/~{out_base}.vadr.alt.list.filtered"
+    set -e
+
     # package everything for output
     tar -C "~{out_base}" -czvf "~{out_base}.vadr.tar.gz" .
 
     # prep alerts into a tsv file for parsing
-    cat "~{out_base}/~{out_base}.vadr.alt.list" | cut -f 2 | tail -n +2 > "~{out_base}.vadr.alerts.tsv"
+    cat "~{out_base}/~{out_base}.vadr.alt.list.filtered" | cut -f 2 | tail -n +2 \
+      > "~{out_base}.vadr.alerts.tsv"
     cat "~{out_base}.vadr.alerts.tsv" | wc -l > NUM_ALERTS
   >>>
   output {
     File feature_tbl  = "~{out_base}/~{out_base}.vadr.pass.tbl"
     Int  num_alerts = read_int("NUM_ALERTS")
-    File alerts_list = "~{out_base}/~{out_base}.vadr.alt.list"
+    File alerts_list = "~{out_base}/~{out_base}.vadr.alt.list.filtered"
     Array[Array[String]] alerts = read_tsv("~{out_base}.vadr.alerts.tsv")
     File outputs_tgz = "~{out_base}.vadr.tar.gz"
   }
