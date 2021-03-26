@@ -6,6 +6,7 @@ task alignment_metrics {
     File  ref_fasta
     File? primers_bed
 
+    Int?     machine_mem_gb
     String   docker="quay.io/broadinstitute/viral-core:2.1.19"
   }
 
@@ -15,6 +16,7 @@ task alignment_metrics {
     set -e
     MEM_MB=$(free -m | head -2 | tail -1 | awk '{print $4}')
     XMX=$(echo "-Xmx"$MEM_MB"m")
+    echo "Requesting $MEM_MB MB of RAM for Java"
 
     # requisite Picard fasta indexing
     cp "~{ref_fasta}" reference.fasta
@@ -58,9 +60,9 @@ task alignment_metrics {
 
   runtime {
     docker: "~{docker}"
-    memory: "7 GB"
+    memory: select_first([machine_mem_gb, 13]) + " GB"
     cpu: 2
-    disks: "local-disk 100 HDD"
+    disks: "local-disk 150 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
