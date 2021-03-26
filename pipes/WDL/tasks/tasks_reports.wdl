@@ -6,26 +6,30 @@ task alignment_metrics {
     File  ref_fasta
     File? primers_bed
 
+    Int?     machine_mem_gb
     String   docker="quay.io/broadinstitute/viral-core:2.1.19"
   }
 
   String out_basename = basename(aligned_bam, ".bam")
 
-  command {
+  command <<<
     set -e
+    MEM_MB=$(free -m | head -2 | tail -1 | awk '{print $4}')
+    XMX=$(echo "-Xmx"$MEM_MB"m")
+    echo "Requesting $MEM_MB MB of RAM for Java"
 
     # requisite Picard fasta indexing
     cp "~{ref_fasta}" reference.fasta
-    picard CreateSequenceDictionary -R reference.fasta
+    picard $XMX CreateSequenceDictionary -R reference.fasta
 
     # get Picard metrics and clean up the junky outputs
-    picard CollectRawWgsMetrics \
+    picard $XMX CollectRawWgsMetrics \
       -R reference.fasta \
       -I "~{aligned_bam}" \
       -O picard_raw.raw_wgs_metrics.txt
     grep -v \# picard_raw.raw_wgs_metrics.txt | grep . | head -2 > picard_clean.raw_wgs_metrics.txt
 
-    picard CollectAlignmentSummaryMetrics \
+    picard $XMX CollectAlignmentSummaryMetrics \
       -R reference.fasta \
       -I "~{aligned_bam}" \
       -O picard_raw.alignment_metrics.txt
@@ -42,12 +46,12 @@ task alignment_metrics {
 
     # actually don't know how to do CollectTargetedPcrMetrics yet
     if [ -n "~{primers_bed}" ]; then
-      picard BedToIntervalList \
+      picard $XMX BedToIntervalList \
         -I "~{primers_bed}" \
         -O primers.interval.list \
         -SD reference.dict
     fi
-  }
+  >>>
 
   output {
     File   wgs_metrics       = "~{out_basename}.raw_wgs_metrics.txt"
@@ -56,9 +60,9 @@ task alignment_metrics {
 
   runtime {
     docker: "~{docker}"
-    memory: "2 GB"
-    cpu: 1
-    disks: "local-disk 100 HDD"
+    memory: select_first([machine_mem_gb, 13]) + " GB"
+    cpu: 2
+    disks: "local-disk 150 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
