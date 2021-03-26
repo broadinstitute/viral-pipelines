@@ -312,7 +312,7 @@ task nextstrain_build_subsample {
 
         Int?     machine_mem_gb
         String   docker = "nextstrain/base:build-20210318T204019Z"
-        String   nextstrain_ncov_repo_commit = "6855390c89e6215fb50d261405df2850e7cb7764"
+        String   nextstrain_ncov_repo_commit = "0e935c42ec4407a4f437c092352181cf3cca1a41"
     }
     parameter_meta {
         alignment_msa_fasta: {
