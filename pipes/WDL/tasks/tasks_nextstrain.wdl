@@ -352,10 +352,10 @@ task nextstrain_build_subsample {
           - ~{default="defaults/parameters.yaml" parameters_yaml}
           - ~{default="my_profiles/example/builds.yaml" builds_yaml}
         config:
-          - sequences=~{alignment_msa_fasta}
-          - metadata=~{sample_metadata_tsv}
-        filter:
-          - min_length=100
+          sequences: "~{alignment_msa_fasta}"
+          metadata: "~{sample_metadata_tsv}"
+          filter:
+            min_length: 100
         printshellcmds: True
         show-failed-logs: True
         reason: True
