@@ -362,7 +362,7 @@ task nextstrain_build_subsample {
         # seed input data (skip some upstream steps in the DAG)
         # strip away anything after a space (esp in fasta headers--they break priorities.py)
         mkdir -p results
-        cut -f 1 -d ' ' "~{alignment_msa_fasta}" > results/filtered.fasta
+        cut -f 1 -d ' ' "~{alignment_msa_fasta}" > results/masked.fasta
 
         # execute snakemake on pre-iqtree target
         RAM_MB=$(cat /proc/meminfo | grep MemTotal | perl -lape 's/MemTotal:\s+(\d+)\d\d\d\s+kB/$1/')
