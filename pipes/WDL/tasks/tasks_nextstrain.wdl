@@ -309,6 +309,7 @@ task nextstrain_build_subsample {
         String   build_name
         File?    builds_yaml
         File?    parameters_yaml
+        File?    keep_list
 
         Int?     machine_mem_gb
         String   docker = "nextstrain/base:build-20210318T204019Z"
@@ -353,11 +354,19 @@ task nextstrain_build_subsample {
         config:
           - sequences=~{alignment_msa_fasta}
           - metadata=~{sample_metadata_tsv}
+        filter:
+          - min_length=100
         printshellcmds: True
         show-failed-logs: True
         reason: True
         stats: stats.json
         CONFIG
+
+        # hard inclusion list
+        KEEP_LIST="~{default='' keep_list}"
+        if [ -n "$KEEP_LIST" ]; then
+            cat $KEEP_LIST >> defaults/include.txt
+        fi
 
         # seed input data (skip some upstream steps in the DAG)
         # strip away anything after a space (esp in fasta headers--they break priorities.py)
