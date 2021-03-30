@@ -1,10 +1,14 @@
 version 1.0
 
+# DX_SKIP_WORKFLOW -- this fails on dxWDL which doesn't support write_json
+
 import "../tasks/tasks_read_utils.wdl" as read_utils
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_reports.wdl" as reports
+import "../tasks/tasks_sarscov2.wdl" as sarscov2
 import "../tasks/tasks_terra.wdl" as terra
+import "../tasks/tasks_assembly.wdl" as assembly
 
 import "demux_deplete.wdl"
 import "assemble_refbased.wdl"
@@ -18,11 +22,6 @@ workflow sarscov2_illumina_full {
     }
 
     parameter_meta {
-        samplesheets: {
-            description: "Custom formatted 'extended' format tsv samplesheets that will override any SampleSheet.csv in the illumina BCL directory. Must supply one file per lane of the flowcell, and must provide them in lane order. Required tsv column headings are: sample, library_id_per_sample, barcode_1, barcode_2 (if paired reads, omit if single-end), library_strategy, library_source, library_selection, design_description. 'sample' must correspond to a biological sample. 'sample' x 'library_id_per_sample' must be unique within a samplesheet and correspond to independent libraries from the same original sample. barcode_1 and barcode_2 must correspond to the actual index sequence. Remaining columns must follow strict ontology: see 3rd tab of https://www.ncbi.nlm.nih.gov/core/assets/sra/files/SRA_metadata_acc_example.xlsx for controlled vocabulary and term definitions.",
-            patterns: ["*.txt", "*.tsv"]
-        }
-
         reference_fasta: {
             description: "Reference genome to align reads to.",
             patterns: ["*.fasta"]
@@ -48,12 +47,13 @@ workflow sarscov2_illumina_full {
         String        instrument_model
         String        sra_title
 
-        Int           min_genome_bases = 15000
+        Int           min_genome_bases = 24000
         Int           max_vadr_alerts = 0
 
 
         String?       workspace_name
         String?       terra_project
+        File?         collab_ids_tsv
 
     }
     Int     taxid = 2697049
@@ -207,15 +207,27 @@ workflow sarscov2_illumina_full {
         'vadr_alerts', 'purpose_of_sequencing', 'collected_by', 'bioproject_accession'
         ]
 
+    ### summary stats and QC metrics
     call nextstrain.concatenate as assembly_meta_tsv {
       input:
         infiles = [write_tsv([assembly_tsv_header]), write_tsv(assembly_tsv_row)],
         output_name = "assembly_metadata-~{flowcell_id}.tsv"
     }
-
     call read_utils.max as ntc_max {
       input:
         list = select_all(ntc_bases)
+    }
+    call assembly.ivar_trim_stats {
+      input:
+        ivar_trim_stats_json = write_json(flatten(assemble_refbased.ivar_trim_stats)),
+        flowcell = flowcell_id,
+        out_basename = "ivar_trim_stats-~{flowcell_id}"
+    }
+    call reports.tsv_join as picard_wgs_merge {
+      input:
+        input_tsvs = assemble_refbased.picard_metrics_wgs,
+        id_col = 'sample_sanitized',
+        out_basename = "picard_metrics_wgs-~{flowcell_id}"
     }
 
     ### prep genbank submission
@@ -283,6 +295,29 @@ workflow sarscov2_illumina_full {
           cleaned_reads_unaligned_bams_string = demux_deplete.cleaned_reads_unaligned_bams,
           meta_by_filename_json = demux_deplete.meta_by_filename_json
       }
+
+      call terra.download_entities_tsv {
+        input:
+          workspace_name = select_first([workspace_name]),
+          terra_project = select_first([terra_project]),
+          table_name = 'assemblies',
+          nop_input_string = data_tables.tables[0]
+      }
+
+      call sarscov2.sequencing_report {
+        input:
+            assembly_stats_tsv = download_entities_tsv.tsv_file,
+            collab_ids_tsv = collab_ids_tsv,
+            max_date = demux_deplete.run_date,
+            min_unambig = min_genome_bases
+      }
+    }
+
+    # create full nextclade trees on full data set
+    call sarscov2.nextclade_many_samples {
+        input:
+            genome_fastas = assemble_refbased.assembly_fasta,
+            basename = "nextclade-~{flowcell_id}"
     }
 
     output {
@@ -308,9 +343,16 @@ workflow sarscov2_illumina_full {
         Array[File] demux_commonBarcodes     = demux_deplete.demux_commonBarcodes
         Array[File] demux_outlierBarcodes    = demux_deplete.demux_outlierBarcodes
 
+        Array[Int]   primer_trimmed_read_count   = flatten(assemble_refbased.primer_trimmed_read_count)
+        Array[Float] primer_trimmed_read_percent = flatten(assemble_refbased.primer_trimmed_read_percent)
+        File ivar_trim_stats_html = ivar_trim_stats.trim_stats_html
+        File ivar_trim_stats_png = ivar_trim_stats.trim_stats_png
+        File ivar_trim_stats_tsv = ivar_trim_stats.trim_stats_tsv
+
         File        multiqc_report_raw     = demux_deplete.multiqc_report_raw
         File        multiqc_report_cleaned = demux_deplete.multiqc_report_cleaned
         File        spikein_counts         = demux_deplete.spikein_counts
+        File        picard_metrics_wgs     = picard_wgs_merge.out_tsv
 
         File assembly_stats_tsv = assembly_meta_tsv.combined
 
@@ -326,6 +368,9 @@ workflow sarscov2_illumina_full {
         File genbank_fasta = submit_genomes.filtered_fasta
         File nextmeta_tsv = nextmeta_prep.nextmeta_tsv
 
+        File nextclade_all_json = nextclade_many_samples.nextclade_json
+        File nextclade_auspice_json = nextclade_many_samples.auspice_json
+
         Array[String] assembled_ids = select_all(passing_assembly_ids)
         Array[String] submittable_ids = select_all(submittable_id)
         Array[String] failed_assembly_ids = select_all(failed_assembly_id)
@@ -339,6 +384,8 @@ workflow sarscov2_illumina_full {
 
         String        run_date = demux_deplete.run_date
 
-        String?       data_table_status = data_tables.status
+        File?         sequencing_reports = sequencing_report.all_zip
+
+        Array[String] data_tables_out = select_first([data_tables.tables, []])
     }
 }

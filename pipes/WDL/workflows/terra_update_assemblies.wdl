@@ -12,6 +12,6 @@ workflow update_data_tables {
     call terra.upload_entities_tsv
 
     output {
-        String status_message = upload_entities_tsv.status
+        Array[String] tables = upload_entities_tsv.tables
     }
 }

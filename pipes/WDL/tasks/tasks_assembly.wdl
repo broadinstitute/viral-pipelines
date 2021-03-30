@@ -165,6 +165,7 @@ task ivar_trim {
       Int?    min_keep_length
       Int?    sliding_window
       Int?    min_quality=1
+      Int?    primer_offset
 
       Int?    machine_mem_gb
       String  docker="andersenlabapps/ivar:1.3.1"
@@ -188,17 +189,24 @@ task ivar_trim {
             ${'-m ' + min_keep_length} \
             ${'-s ' + sliding_window} \
             ${'-q ' + min_quality} \
-            -i ${aligned_bam} -p trim
+            ${'-x ' + primer_offset} \
+            -i ${aligned_bam} -p trim | tee IVAR_OUT
           samtools sort -@ $(nproc) -m 1000M -o ${bam_basename}.trimmed.bam trim.bam
         else
           echo "skipping ivar trim"
           cp "${aligned_bam}" "${bam_basename}.trimmed.bam"
+          echo "Trimmed primers from 0% (0) of reads." > IVAR_OUT
         fi
+        PCT=$(grep "Trimmed primers from" IVAR_OUT | perl -lape 's/Trimmed primers from (\S+)%.*/$1/')
+        if [[ $PCT = -* ]]; then echo 0; else echo $PCT; fi > IVAR_TRIM_PCT
+        grep "Trimmed primers from" IVAR_OUT | perl -lape 's/Trimmed primers from \S+% \((\d+)\).*/$1/' > IVAR_TRIM_COUNT
     }
 
     output {
-        File   aligned_trimmed_bam = "${bam_basename}.trimmed.bam"
-        String ivar_version        = read_string("VERSION")
+        File   aligned_trimmed_bam         = "${bam_basename}.trimmed.bam"
+        Float  primer_trimmed_read_percent = read_float("IVAR_TRIM_PCT")
+        Int    primer_trimmed_read_count   = read_int("IVAR_TRIM_COUNT")
+        String ivar_version                = read_string("VERSION")
     }
 
     runtime {
@@ -207,6 +215,67 @@ task ivar_trim {
         cpu: 4
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x4"
+    }
+}
+
+task ivar_trim_stats {
+
+    input {
+      File    ivar_trim_stats_json
+      String  out_basename = "ivar_trim_stats"
+      String  flowcell = ""
+
+      String  docker="quay.io/broadinstitute/py3-bio:0.1.1"
+    }
+
+    command <<<
+      set -e
+      python3<<CODE
+
+      import json
+      import pandas as pd
+      import plotly.express as px
+
+      # load and clean up data
+      with open("~{ivar_trim_stats_json}", 'rt') as inf:
+        trim_stats = json.load(inf)
+      for x in trim_stats:
+        x['trim_percent'] = float(x['trim_percent'])
+        x['trim_count']   = int(x['trim_count'])
+      df = pd.DataFrame.from_dict(trim_stats)
+
+      # make plot
+      flowcell = "~{flowcell}"
+      title = "ivar trim: % vs # of reads trimmed per sample"
+      if flowcell:
+        title += " ({})".format(flowcell)
+      p = px.scatter(df,
+        x='trim_count', y='trim_percent',
+        title=title,
+        opacity=0.7,
+        hover_data=df.columns)
+
+      # export
+      out_basename = "~{out_basename}"
+      df.to_csv(out_basename + ".txt", sep='\t')
+      p.write_html(out_basename + ".html")
+      p.write_image(out_basename + ".png")
+
+      CODE
+    >>>
+
+    output {
+      File trim_stats_html = "~{out_basename}.html"
+      File trim_stats_png  = "~{out_basename}.png"
+      File trim_stats_tsv  = "~{out_basename}.txt"
+    }
+
+    runtime {
+        docker: "${docker}"
+        memory: "1 GB"
+        cpu: 1
+        disks: "local-disk 50 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
     }
 }
 

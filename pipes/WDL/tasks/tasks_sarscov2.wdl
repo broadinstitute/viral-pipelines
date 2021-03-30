@@ -108,7 +108,7 @@ task pangolin_one_sample {
         File    genome_fasta
         Int?    min_length
         Float?  max_ambig
-        String  docker = "staphb/pangolin:2.3.2-pangolearn-2021-02-21"
+        String  docker = "staphb/pangolin:2.3.5-pangolearn-2021-03-16"
     }
     String basename = basename(genome_fasta, ".fasta")
     command {
@@ -158,13 +158,31 @@ task sequencing_report {
     }
     input {
         File           assembly_stats_tsv
-        File           collab_ids_tsv
+        File?          collab_ids_tsv
 
-        String  docker = "quay.io/broadinstitute/sc2-rmd:latest"
+        String?        sequencing_lab = "Broad Institute"
+        String?        intro_blurb = "The Broad Institute Viral Genomics group, in partnership with the Genomics Platform and Data Sciences Platform, has been engaged in viral sequencing of COVID-19 patients since March 2020."
+        String?        max_date
+        String?        min_date
+        Int?           min_unambig
+        String?        voc_list
+        String?        voi_list
+
+        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.10"
     }
     command {
         set -e
-        /reports.py "~{assembly_stats_tsv}" "~{collab_ids_tsv}"
+        /docker/reports.py \
+            "~{assembly_stats_tsv}" \
+            ~{'--collab_tsv="' + collab_ids_tsv + '"'} \
+            ~{'--sequencing_lab="' + sequencing_lab + '"'} \
+            ~{'--intro_blurb="' + intro_blurb + '"'} \
+            ~{'--max_date=' + max_date} \
+            ~{'--min_date=' + min_date} \
+            ~{'--min_unambig=' + min_unambig} \
+            ~{'--voc_list=' + voc_list} \
+            ~{'--voi_list=' + voi_list}
+        zip all_reports.zip *.pdf *.xlsx
     }
     runtime {
         docker: docker
@@ -176,6 +194,7 @@ task sequencing_report {
     output {
         Array[File] reports = glob("*.pdf")
         Array[File] sheets = glob("*.xlsx")
+        File        all_zip = "all_reports.zip"
     }
 }
 

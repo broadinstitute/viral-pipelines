@@ -238,6 +238,9 @@ workflow sarscov2_sra_to_genbank {
         Array[Int]  read_counts_raw       = select_all(num_reads)
         Array[Int]  read_counts_depleted  = select_all(num_reads)
 
+        Array[Int]   primer_trimmed_read_count   = flatten(assemble_refbased.primer_trimmed_read_count)
+        Array[Float] primer_trimmed_read_percent = flatten(assemble_refbased.primer_trimmed_read_percent)
+
         Array[File] assemblies_fasta = assemble_refbased.assembly_fasta
         Array[File] passing_assemblies_fasta = select_all(passing_assemblies)
         Array[File] submittable_assemblies_fasta = select_all(submittable_genomes)

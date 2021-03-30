@@ -52,9 +52,9 @@ workflow assemble_refbased {
     }
 
     input {
-        String          sample_name = basename(reads_unmapped_bams[0], '.bam')
         Array[File]+    reads_unmapped_bams
         File            reference_fasta
+        String          sample_name = basename(reads_unmapped_bams[0], '.bam')
 
         String          aligner="minimap2"
         File?           novocraft_license
@@ -89,13 +89,24 @@ workflow assemble_refbased {
                 aligned_bam = align_to_ref.aligned_only_reads_bam,
                 trim_coords_bed = trim_coords_bed
         }
+        Map[String,String] ivar_stats = {
+            'file': basename(reads_unmapped_bam, '.bam'),
+            'trim_percent': ivar_trim.primer_trimmed_read_percent,
+            'trim_count':   ivar_trim.primer_trimmed_read_count
+        }
     }
 
     call read_utils.merge_and_reheader_bams as merge_align_to_ref {
         input:
             in_bams             = ivar_trim.aligned_trimmed_bam,
             sample_name         = sample_name,
-            out_basename        = "${sample_name}.align_to_ref.trimmed"
+            out_basename        = "~{sample_name}.align_to_ref.trimmed"
+    }
+
+    call reports.alignment_metrics {
+        input:
+            aligned_bam = merge_align_to_ref.out_bam,
+            ref_fasta   = reference_fasta
     }
 
     call assembly.run_discordance {
@@ -136,7 +147,7 @@ workflow assemble_refbased {
         input:
             in_bams             = align_to_self.aligned_only_reads_bam,
             sample_name         = sample_name,
-            out_basename        = "${sample_name}.merge_align_to_self"
+            out_basename        = "~{sample_name}.merge_align_to_self"
     }
 
     call reports.plot_coverage as plot_self_coverage {
@@ -156,6 +167,10 @@ workflow assemble_refbased {
         Int    dist_to_ref_snps   = call_consensus.dist_to_ref_snps
         Int    dist_to_ref_indels = call_consensus.dist_to_ref_indels
 
+        Array[Int]   primer_trimmed_read_count   = ivar_trim.primer_trimmed_read_count
+        Array[Float] primer_trimmed_read_percent = ivar_trim.primer_trimmed_read_percent
+        Array[Map[String,String]] ivar_trim_stats = ivar_stats
+
         Int    replicate_concordant_sites  = run_discordance.concordant_sites
         Int    replicate_discordant_snps   = run_discordance.discordant_snps
         Int    replicate_discordant_indels = run_discordance.discordant_indels
@@ -174,6 +189,9 @@ workflow assemble_refbased {
         Int    align_to_ref_merged_reads_aligned            = plot_ref_coverage.reads_aligned
         Int    align_to_ref_merged_read_pairs_aligned       = plot_ref_coverage.read_pairs_aligned
         Float  align_to_ref_merged_bases_aligned            = plot_ref_coverage.bases_aligned
+
+        File   picard_metrics_wgs       = alignment_metrics.wgs_metrics
+        File   picard_metrics_alignment = alignment_metrics.alignment_metrics
 
         File   align_to_self_merged_aligned_only_bam   = merge_align_to_self.out_bam
         File   align_to_self_merged_coverage_plot      = plot_self_coverage.coverage_plot
