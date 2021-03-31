@@ -309,10 +309,11 @@ task nextstrain_build_subsample {
         String   build_name
         File?    builds_yaml
         File?    parameters_yaml
+        File?    keep_list
 
         Int?     machine_mem_gb
         String   docker = "nextstrain/base:build-20210318T204019Z"
-        String   nextstrain_ncov_repo_commit = "0e935c42ec4407a4f437c092352181cf3cca1a41"
+        String   nextstrain_ncov_repo_commit = "0f30b1c801384fbf871f644ca241336a1d8fa04a"
     }
     parameter_meta {
         alignment_msa_fasta: {
@@ -351,18 +352,24 @@ task nextstrain_build_subsample {
           - ~{default="defaults/parameters.yaml" parameters_yaml}
           - ~{default="my_profiles/example/builds.yaml" builds_yaml}
         config:
-          - sequences=~{alignment_msa_fasta}
-          - metadata=~{sample_metadata_tsv}
+          - sequences="~{alignment_msa_fasta}"
+          - metadata="~{sample_metadata_tsv}"
         printshellcmds: True
         show-failed-logs: True
         reason: True
         stats: stats.json
         CONFIG
 
+        # hard inclusion list
+        KEEP_LIST="~{default='' keep_list}"
+        if [ -n "$KEEP_LIST" ]; then
+            cat $KEEP_LIST >> defaults/include.txt
+        fi
+
         # seed input data (skip some upstream steps in the DAG)
         # strip away anything after a space (esp in fasta headers--they break priorities.py)
         mkdir -p results
-        cut -f 1 -d ' ' "~{alignment_msa_fasta}" > results/filtered.fasta
+        cut -f 1 -d ' ' "~{alignment_msa_fasta}" > results/aligned.fasta
 
         # execute snakemake on pre-iqtree target
         RAM_MB=$(cat /proc/meminfo | grep MemTotal | perl -lape 's/MemTotal:\s+(\d+)\d\d\d\s+kB/$1/')
