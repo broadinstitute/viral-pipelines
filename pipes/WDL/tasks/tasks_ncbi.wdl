@@ -615,6 +615,98 @@ task biosample_to_genbank {
   }
 }
 
+task generate_author_sbt_file {
+  input {
+    String? author_list
+    File    defaults_yaml
+    File    j2_template
+    String? out_base="authors"
+
+    String  docker="quay.io/broadinstitute/viral-core:2.1.20-1-g687391f-ct-add-jinja2"
+  }
+  
+  command <<<
+    set -e
+
+    python3 << CODE
+    # generates an sbt file of the format returned by:
+    # http://www.ncbi.nlm.nih.gov/WebSub/template.cgi
+    import re
+    # external dependencies
+    import yaml # pyyaml
+    from jinja2 import Template #jinja2
+
+    def render_sbt(author_string, defaults_yaml=None, sbt_out_path="authors.sbt", j2_template="author_template.sbt.j2"):
+        # simple version for only initials: #author_re=re.compile(r"\s?(?P<lastname>[\w\'\-\ ]+),(?P<initials>(?:[A-Z]\.){1,3})")
+        author_re=re.compile(r"\s?(?P<lastname>[\w\'\-\ ]+),((?P<first>\w\w+\.?),|(?P<initials>(?:[A-Z]\.)+))(?P<initials_ext>(?:[A-Z]\.)*)")
+
+        defaults_data = {}
+        if defaults_yaml is not None:
+            with open(defaults_yaml) as defaults_yaml:
+                defaults_data = yaml.load(defaults_yaml, Loader=yaml.FullLoader)
+
+        authors=[]
+        submitter     = defaults_data.get("submitter")
+        bioproject    = defaults_data.get("bioproject")
+        title         = defaults_data.get("title")
+        citation      = defaults_data.get("citation")
+        authors_affil = defaults_data.get("authors_affil")
+        
+        authors.extend(defaults_data.get("authors_start",[]))
+        
+        for author_match in author_re.finditer(author_string):
+            author = {}
+            lastname=author_match.group("lastname")
+            initials=[]
+            if author_match.group("initials"):
+                initials.extend(list(filter(None,author_match.group("initials").split("."))))
+            if author_match.group("initials_ext"):
+                initials.extend(list(filter(None,author_match.group("initials_ext").split("."))))
+
+            first=""
+            if author_match.group("first"):
+                first=author_match.group("first")
+            else:
+                first=initials[0]+"."
+            author["last"]     = author_match.group("lastname")
+            author["first"]    = first
+            author["middle"]   = ".".join(initials[1:]) if not author_match.group("first") else ".".join(initials)
+            author["middle"]   = author["middle"]+"." if len(author["middle"])>0 else author["middle"]
+            
+            if author not in authors: # could use less exact match
+                authors.append(author)
+
+        for author in defaults_data.get("authors_last",[]):
+            if author not in authors:
+                authors.append(author)
+
+        with open(j2_template) as sbt_template:
+            template = Template(sbt_template.read())
+        rendered = template.render( authors=authors, 
+                                    authors_affil=authors_affil, 
+                                    title=title, 
+                                    submitter=submitter, 
+                                    citation=citation, 
+                                    bioproject=bioproject)
+        
+        #print(rendered)
+        with open(sbt_out_path,"w") as sbt_out:
+            sbt_out.write(rendered)
+
+    render_sbt("~{author_list}", defaults_yaml="~{defaults_yaml}", sbt_out_path="~{out_base}.sbt", j2_template="~{j2_template}")
+    CODE
+  >>>
+  output {
+    File   sbt_file = "~{out_base}.sbt"
+  }
+  runtime {
+    docker: docker
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task prepare_genbank {
   meta {
     description: "this task runs NCBI's tbl2asn"
