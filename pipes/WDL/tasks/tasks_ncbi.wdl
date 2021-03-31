@@ -622,7 +622,7 @@ task generate_author_sbt_file {
     File    j2_template
     String? out_base="authors"
 
-    String  docker="quay.io/broadinstitute/viral-core:2.1.20-1-g687391f-ct-add-jinja2"
+    String  docker="quay.io/broadinstitute/py3-bio:0.1.2"
   }
   
   command <<<
