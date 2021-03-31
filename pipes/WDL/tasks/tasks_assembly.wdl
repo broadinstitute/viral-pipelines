@@ -225,7 +225,7 @@ task ivar_trim_stats {
       String  out_basename = "ivar_trim_stats"
       String  flowcell = ""
 
-      String  docker="quay.io/broadinstitute/py3-bio:0.1.1"
+      String  docker="quay.io/broadinstitute/py3-bio:0.1.2"
     }
 
     command <<<
