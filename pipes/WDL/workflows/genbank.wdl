@@ -16,7 +16,9 @@ workflow genbank {
         Array[File]+  reference_feature_tables
         Array[File]+  assemblies_fasta
 
-        File          authors_sbt
+        String?       author_list # of the form "Lastname,A.B., Lastname,C.,"; optional alternative to names in author_sbt_defaults_yaml
+        File          author_sbt_defaults_yaml # defaults to fill in for author_sbt file (including both author and non-author fields)
+        File          author_sbt_j2_template
         File          biosample_attributes
         Int           taxid
         File?         coverage_table
@@ -88,12 +90,19 @@ workflow genbank {
                 reference_feature_tables = reference_feature_tables
         }
     }
- 
+
+    call ncbi.generate_author_sbt_file as generate_author_sbt {
+        input:
+            author_list   = author_list,
+            defaults_yaml = author_sbt_defaults_yaml,
+            j2_template   = author_sbt_j2_template
+    }
+
     call ncbi.prepare_genbank as prep_genbank {
         input:
             assemblies_fasta = assemblies_fasta,
             annotations_tbl = flatten(annot.genome_per_chr_tbls),
-            authors_sbt = authors_sbt,
+            authors_sbt = generate_author_sbt.sbt_file,
             biosampleMap = biosample_to_genbank.biosample_map,
             genbankSourceTable = biosample_to_genbank.genbank_source_modifier_table,
             coverage_table = coverage_table,
