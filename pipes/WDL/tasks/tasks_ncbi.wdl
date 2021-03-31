@@ -670,8 +670,8 @@ task generate_author_sbt_file {
                 first=initials[0]+"."
             author["last"]     = author_match.group("lastname")
             author["first"]    = first
-            author["middle"]   = ".".join(initials[1:]) if not author_match.group("first") else ".".join(initials)
-            author["middle"]   = author["middle"]+"." if len(author["middle"])>0 else author["middle"]
+            author["initials"]   = ".".join(initials[1:]) if not author_match.group("first") else ".".join(initials)
+            author["initials"]   = author["initials"]+"." if len(author["initials"])>0 else author["initials"]
             
             if author not in authors: # could use less exact match
                 authors.append(author)

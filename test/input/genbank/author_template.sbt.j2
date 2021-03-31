@@ -1,0 +1,108 @@
+Submit-block ::= {
+  contact {
+    contact {
+      name name {
+        last "{{ submitter.last }}",
+        first "{{ submitter.first }}",
+        middle "",
+        initials "{{ submitter.initials }}",
+        suffix "",
+        title ""
+      },
+      affil std {
+        affil "{{ submitter.affil }}",
+        div "{{ submitter.div }}",
+        city "{{ submitter.city }}",
+        sub "{{ submitter.sub }}",
+        country "{{ submitter.country }}",
+        street "{{ submitter.street }}",
+        email "{{ submitter.email }}",
+        phone "{{ submitter.phone }}",
+        postal-code "{{ submitter.postal_code }}"
+      }
+    }
+  },
+  cit {
+    authors {
+      names std {
+        {%- for author in authors %}
+        {
+          name name {
+            last "{{ author.last }}",
+            first "{{ author.first }}",
+            middle "{{ author.middle }}",
+            initials "{{ author.initials }}",
+            suffix "{{ author.suffix }}",
+            title "{{ author.title }}"
+          }
+        }{% if not loop.last %},{% endif %}
+{%- endfor %}
+      },
+      affil std {
+        affil "{{ authors_affil.affil }}",
+        div "{{ authors_affil.div }}",
+        city "{{ authors_affil.city }}",
+        sub "{{ authors_affil.sub }}",
+        country "{{ authors_affil.country }}",
+        street "{{ authors_affil.street }}",
+        postal-code "{{ authors_affil.postal_code }}"
+      }
+    }
+  },
+  subtype new
+}
+Seqdesc ::= pub {
+  pub {
+    gen {
+      cit "{{ citation }}",
+      authors {
+        names std {
+          {%- for author in authors %}
+          {
+            name name {
+              last "{{ author.last }}",
+              first "{{ author.first }}",
+              middle "{{ author.middle }}",
+              initials "{{ author.initials }}",
+              suffix "{{ author.suffix }}",
+              title "{{ author.title }}"
+            }
+          }{% if not loop.last %},{% endif %}
+{%- endfor %}
+        }
+      },
+      title "{{ title }}"
+    }
+  }
+}
+Seqdesc ::= user {
+  type str "DBLink",
+  data {
+    {
+      label str "BioProject",
+      num 1,
+      data strs {
+        "{{ bioproject }}"
+      }
+    }
+  }
+}
+Seqdesc ::= user {
+  type str "Submission",
+  data {
+    {
+      label str "AdditionalComment",
+      data str "ALT EMAIL:{{ submitter.alt_email }}"
+    }
+  }
+}
+Seqdesc ::= user {
+  type str "Submission",
+  data {
+    {
+      label str "AdditionalComment",
+      data str "Submission Title:None"
+    }
+  }
+}
+
