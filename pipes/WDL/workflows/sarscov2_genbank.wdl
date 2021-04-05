@@ -163,7 +163,7 @@ workflow sarscov2_genbank {
       input:
         sequences_fasta = weird_fasta.combined,
         source_modifier_table = weird_source_modifiers.genbank_source_modifier_table,
-        author_template_sbt = authors_sbt,
+        author_template_sbt = generate_author_sbt.sbt_file,
         structured_comment_table = weird_structured_cmt.structured_comment_table
     }
 
