@@ -73,10 +73,6 @@ workflow sarscov2_nextstrain {
             ref_fasta = select_first([ref_fasta, nextstrain_ncov_defaults.reference_fasta]),
             basename  = "all_samples_aligned.fasta"
     }
-    call nextstrain.snp_sites {
-        input:
-            msa_fasta = mafft.aligned_sequences
-    }
 
 
     #### merge metadata, compute derived cols
@@ -105,6 +101,10 @@ workflow sarscov2_nextstrain {
     call nextstrain.fasta_to_ids {
         input:
             sequences_fasta = subsample.subsampled_msa
+    }
+    call nextstrain.snp_sites {
+        input:
+            msa_fasta = subsample.subsampled_msa
     }
 
 
