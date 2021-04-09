@@ -297,6 +297,6 @@ workflows:
     - empty.json
  - name: workflow_launcher_sarscov2_illumina_full
    subclass: WDL
-   primaryDescriptorPath: /pipes/WDL/workflows/worfklow_launcher_sarscov2_illumina_full.wdl
+   primaryDescriptorPath: /pipes/WDL/workflows/workflow_launcher_sarscov2_illumina_full.wdl
    testParameterFiles:
     - empty.json
