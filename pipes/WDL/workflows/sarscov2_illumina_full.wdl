@@ -191,6 +191,10 @@ workflow sarscov2_illumina_full {
             biosample.map["purpose_of_sequencing"],
             biosample.map["collected_by"],
             biosample.map["bioproject_accession"],
+            biosample.map["host_age"],
+            biosample.map["host_sex"],
+            "",
+            demux_deplete.meta_by_sample[name_reads.left]["viral_ct"]
         ]
     }
     Array[String] assembly_tsv_header = [
@@ -204,7 +208,9 @@ workflow sarscov2_illumina_full {
         'amplicon_set',
         'replicate_concordant_sites', 'replicate_discordant_snps', 'replicate_discordant_indels', 'num_read_groups', 'num_libraries',
         'align_to_ref_merged_reads_aligned', 'align_to_ref_merged_bases_aligned',
-        'vadr_alerts', 'purpose_of_sequencing', 'collected_by', 'bioproject_accession'
+        'vadr_alerts', 'purpose_of_sequencing', 'collected_by', 'bioproject_accession',
+        'age', 'sex', 'zip',
+        'Ct'
         ]
 
     ### summary stats and QC metrics
@@ -229,6 +235,12 @@ workflow sarscov2_illumina_full {
         id_col = 'sample_sanitized',
         out_basename = "picard_metrics_wgs-~{flowcell_id}"
     }
+    call nextstrain.concatenate as passing_cat {
+      input:
+        infiles = select_all(passing_assemblies),
+        output_name = "assemblies_passing-~{flowcell_id}.fasta"
+    }
+
 
     ### prep genbank submission
     call ncbi.biosample_to_genbank {
@@ -370,6 +382,8 @@ workflow sarscov2_illumina_full {
 
         File nextclade_all_json = nextclade_many_samples.nextclade_json
         File nextclade_auspice_json = nextclade_many_samples.auspice_json
+
+        File passing_fasta = passing_cat.combined
 
         Array[String] assembled_ids = select_all(passing_assembly_ids)
         Array[String] submittable_ids = select_all(submittable_id)
