@@ -57,6 +57,13 @@ workflow sarscov2_illumina_full {
         String?       gcs_out_metrics
         String?       gcs_out_cdc
         String?       gcs_out_sra
+        Array[File]+  samplesheets
+        File          spikein_db
+
+        File          author_template_sbt
+        String        spuid_namespace
+        String        account_name
+
     }
     Int     taxid = 2697049
     String  gisaid_prefix = 'hCoV-19/'
@@ -73,6 +80,8 @@ workflow sarscov2_illumina_full {
     ### demux, deplete, SRA submission prep, fastqc/multiqc
     call demux_deplete.demux_deplete {
         input:
+            samplesheets = samplesheets,
+            spikein_db = spikein_db,
             flowcell_tgz = flowcell_tgz,
             biosample_map = biosample_merge.out_tsv,
             instrument_model = instrument_model,
@@ -268,6 +277,9 @@ workflow sarscov2_illumina_full {
     }
     call ncbi.package_genbank_ftp_submission {
       input:
+        author_template_sbt = author_template_sbt,
+        spuid_namespace = spuid_namespace,
+        account_name = account_name,
         sequences_fasta = submit_genomes.filtered_fasta,
         source_modifier_table = biosample_to_genbank.genbank_source_modifier_table,
         structured_comment_table = structured_comments.structured_comment_table,
