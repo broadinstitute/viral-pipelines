@@ -53,6 +53,9 @@ workflow sarscov2_illumina_full {
         String?       terra_project
         File?         collab_ids_tsv
 
+        String?       gcs_out_metrics
+        String?       gcs_out_cdc
+        String?       gcs_out_sra
     }
     Int     taxid = 2697049
     String  gisaid_prefix = 'hCoV-19/'
@@ -239,7 +242,6 @@ workflow sarscov2_illumina_full {
         output_name = "assemblies_passing-~{flowcell_id}.fasta"
     }
 
-
     ### prep genbank submission
     call ncbi.biosample_to_genbank {
       input:
@@ -328,6 +330,39 @@ workflow sarscov2_illumina_full {
         input:
             genome_fastas = assemble_refbased.assembly_fasta,
             basename = "nextclade-~{flowcell_id}"
+    }
+
+    # bucket deliveries
+    if(defined(gcs_out_metrics)) {
+        call terra.gcs_copy as gcs_metrics_dump {
+            input:
+              infiles = flatten([[assembly_meta_tsv.combined, ivar_trim_stats.trim_stats_tsv, demux_deplete.multiqc_report_raw, demux_deplete.multiqc_report_cleaned, demux_deplete.spikein_counts, picard_wgs_merge.out_tsv, nextclade_many_samples.nextclade_json, nextclade_many_samples.nextclade_tsv], demux_deplete.demux_metrics]),
+              gcs_uri_prefix = "~{gcs_out_metrics}/~{flowcell_id}/"
+        }
+    }
+    if(defined(gcs_out_cdc)) {
+        call terra.gcs_copy as gcs_cdc_dump {
+            input:
+                infiles = [assembly_meta_tsv.combined, passing_cat.combined],
+                gcs_uri_prefix = "~{gcs_out_cdc}/~{flowcell_id}/"
+        }
+        call terra.gcs_copy as gcs_cdc_dump_reads {
+            input:
+                infiles = assemble_refbased.align_to_ref_merged_aligned_trimmed_only_bam,
+                gcs_uri_prefix = "~{gcs_out_cdc}/~{flowcell_id}/rawfiles/"
+        }
+    }
+    if(defined(gcs_out_sra)) {
+        call terra.gcs_copy as gcs_sra_dump_reads {
+            input:
+                infiles = demux_deplete.cleaned_reads_unaligned_bams,
+                gcs_uri_prefix = "~{gcs_out_sra}/~{flowcell_id}/"
+        }
+        call terra.gcs_copy as gcs_sra_dump {
+            input:
+                infiles = [select_first([demux_deplete.sra_metadata])],
+                gcs_uri_prefix = "~{gcs_out_sra}/"
+        }
     }
 
     output {
