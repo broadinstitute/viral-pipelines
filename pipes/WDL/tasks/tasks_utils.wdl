@@ -200,3 +200,29 @@ task tsv_join {
   }
 }
 
+task tsv_stack {
+  input {
+    Array[File]+   input_tsvs
+    String         out_basename
+    String         docker="quay.io/broadinstitute/viral-core:2.1.19"
+  }
+
+  command {
+    csvstack -t --filenames \
+      ${sep=' ' input_tsvs} \
+      | tr , '\t' \
+      > ${out_basename}.txt
+  }
+
+  output {
+    File   out_tsv = "${out_basename}.txt"
+  }
+
+  runtime {
+    memory: "1 GB"
+    cpu: 1
+    docker: "${docker}"
+    disks: "local-disk 50 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}

@@ -1,6 +1,7 @@
 version 1.0
 
 import "../tasks/tasks_reports.wdl" as reports
+import "../tasks/tasks_utils.wdl" as utils
 
 workflow diff_genome_sets {
 
@@ -18,7 +19,7 @@ workflow diff_genome_sets {
         }
     }
 
-    call reports.tsv_stack {
+    call utils.tsv_stack {
         input:
             input_tsvs = compare_two_genomes.comparison_table,
             out_basename = "diff_genome_sets"
