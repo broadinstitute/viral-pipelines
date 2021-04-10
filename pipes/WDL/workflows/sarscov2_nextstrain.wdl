@@ -3,6 +3,7 @@ version 1.0
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_intrahost.wdl" as intrahost
+import "../tasks/tasks_utils.wdl" as utils
 
 workflow sarscov2_nextstrain {
     meta {
@@ -57,7 +58,7 @@ workflow sarscov2_nextstrain {
 
     #### mafft_and_snp
 
-    call nextstrain.gzcat {
+    call utils.gzcat {
         input:
             infiles     = assembly_fastas,
             output_name = "all_samples_combined_assembly.fasta"
@@ -77,7 +78,7 @@ workflow sarscov2_nextstrain {
 
     #### merge metadata, compute derived cols
     if(length(sample_metadata_tsvs)>1) {
-        call reports.tsv_join {
+        call utils.tsv_join {
             input:
                 input_tsvs = sample_metadata_tsvs,
                 id_col = 'strain',
@@ -98,7 +99,7 @@ workflow sarscov2_nextstrain {
             build_name = build_name,
             builds_yaml = builds_yaml
     }
-    call nextstrain.fasta_to_ids {
+    call utils.fasta_to_ids {
         input:
             sequences_fasta = subsample.subsampled_msa
     }

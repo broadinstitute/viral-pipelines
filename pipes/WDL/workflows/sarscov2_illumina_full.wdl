@@ -1,7 +1,5 @@
 version 1.0
 
-# DX_SKIP_WORKFLOW -- this fails on dxWDL which doesn't support write_json
-
 import "../tasks/tasks_read_utils.wdl" as read_utils
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
@@ -9,6 +7,7 @@ import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_sarscov2.wdl" as sarscov2
 import "../tasks/tasks_terra.wdl" as terra
 import "../tasks/tasks_assembly.wdl" as assembly
+import "../tasks/tasks_utils.wdl" as utils
 
 import "demux_deplete.wdl"
 import "assemble_refbased.wdl"
@@ -55,13 +54,16 @@ workflow sarscov2_illumina_full {
         String?       terra_project
         File?         collab_ids_tsv
 
+        String?       gcs_out_metrics
+        String?       gcs_out_cdc
+        String?       gcs_out_sra
     }
     Int     taxid = 2697049
     String  gisaid_prefix = 'hCoV-19/'
     String  flowcell_id = basename(basename(basename(basename(flowcell_tgz, ".gz"), ".zst"), ".tar"), ".tgz")
 
     # merge biosample attributes tables
-    call reports.tsv_join as biosample_merge {
+    call utils.tsv_join as biosample_merge {
         input:
             input_tsvs = biosample_attributes,
             id_col = 'accession',
@@ -109,12 +111,12 @@ workflow sarscov2_illumina_full {
         }
 
         # grab biosample metadata
-        call ncbi.fetch_row_from_tsv as biosample {
+        call utils.fetch_row_from_tsv as biosample {
             input:
                 tsv = biosample_merge.out_tsv,
                 idx_col = "sample_name",
                 idx_val = orig_name,
-                set_default_keys = ["collection_date", "bioproject_accession", "accession", "collected_by", "geo_loc_name", "host_subject_id", "purpose_of_sequencing"]
+                set_default_keys = ["collection_date", "bioproject_accession", "accession", "collected_by", "geo_loc_name", "host_subject_id", "host_age", "host_sex", "purpose_of_sequencing"]
         }
 
         # for genomes that somewhat assemble
@@ -191,6 +193,10 @@ workflow sarscov2_illumina_full {
             biosample.map["purpose_of_sequencing"],
             biosample.map["collected_by"],
             biosample.map["bioproject_accession"],
+            biosample.map["host_age"],
+            biosample.map["host_sex"],
+            "",
+            demux_deplete.meta_by_sample[name_reads.left]["viral_ct"]
         ]
     }
     Array[String] assembly_tsv_header = [
@@ -204,11 +210,13 @@ workflow sarscov2_illumina_full {
         'amplicon_set',
         'replicate_concordant_sites', 'replicate_discordant_snps', 'replicate_discordant_indels', 'num_read_groups', 'num_libraries',
         'align_to_ref_merged_reads_aligned', 'align_to_ref_merged_bases_aligned',
-        'vadr_alerts', 'purpose_of_sequencing', 'collected_by', 'bioproject_accession'
+        'vadr_alerts', 'purpose_of_sequencing', 'collected_by', 'bioproject_accession',
+        'age', 'sex', 'zip',
+        'Ct'
         ]
 
     ### summary stats and QC metrics
-    call nextstrain.concatenate as assembly_meta_tsv {
+    call utils.concatenate as assembly_meta_tsv {
       input:
         infiles = [write_tsv([assembly_tsv_header]), write_tsv(assembly_tsv_row)],
         output_name = "assembly_metadata-~{flowcell_id}.tsv"
@@ -219,15 +227,20 @@ workflow sarscov2_illumina_full {
     }
     call assembly.ivar_trim_stats {
       input:
-        ivar_trim_stats_json = write_json(flatten(assemble_refbased.ivar_trim_stats)),
+        ivar_trim_stats_tsv = write_tsv(flatten(assemble_refbased.ivar_trim_stats_tsv)),
         flowcell = flowcell_id,
         out_basename = "ivar_trim_stats-~{flowcell_id}"
     }
-    call reports.tsv_join as picard_wgs_merge {
+    call utils.tsv_join as picard_wgs_merge {
       input:
         input_tsvs = assemble_refbased.picard_metrics_wgs,
         id_col = 'sample_sanitized',
         out_basename = "picard_metrics_wgs-~{flowcell_id}"
+    }
+    call utils.concatenate as passing_cat {
+      input:
+        infiles = select_all(passing_assemblies),
+        output_name = "assemblies_passing-~{flowcell_id}.fasta"
     }
 
     ### prep genbank submission
@@ -243,7 +256,7 @@ workflow sarscov2_illumina_full {
         assembly_stats_tsv = write_tsv(flatten([[['SeqID','Assembly Method','Coverage','Sequencing Technology']],select_all(assembly_cmt)])),
         filter_to_ids = biosample_to_genbank.sample_ids
     }
-    call nextstrain.concatenate as passing_genomes {
+    call utils.concatenate as passing_genomes {
       input:
         infiles = select_all(submittable_genomes),
         output_name = "assemblies.fasta"
@@ -320,6 +333,39 @@ workflow sarscov2_illumina_full {
             basename = "nextclade-~{flowcell_id}"
     }
 
+    # bucket deliveries
+    if(defined(gcs_out_metrics)) {
+        call terra.gcs_copy as gcs_metrics_dump {
+            input:
+              infiles = flatten([[assembly_meta_tsv.combined, ivar_trim_stats.trim_stats_tsv, demux_deplete.multiqc_report_raw, demux_deplete.multiqc_report_cleaned, demux_deplete.spikein_counts, picard_wgs_merge.out_tsv, nextclade_many_samples.nextclade_json, nextclade_many_samples.nextclade_tsv], demux_deplete.demux_metrics]),
+              gcs_uri_prefix = "~{gcs_out_metrics}/~{flowcell_id}/"
+        }
+    }
+    if(defined(gcs_out_cdc)) {
+        call terra.gcs_copy as gcs_cdc_dump {
+            input:
+                infiles = [assembly_meta_tsv.combined, passing_cat.combined],
+                gcs_uri_prefix = "~{gcs_out_cdc}/~{flowcell_id}/"
+        }
+        call terra.gcs_copy as gcs_cdc_dump_reads {
+            input:
+                infiles = assemble_refbased.align_to_ref_merged_aligned_trimmed_only_bam,
+                gcs_uri_prefix = "~{gcs_out_cdc}/~{flowcell_id}/rawfiles/"
+        }
+    }
+    if(defined(gcs_out_sra)) {
+        call terra.gcs_copy as gcs_sra_dump_reads {
+            input:
+                infiles = demux_deplete.cleaned_reads_unaligned_bams,
+                gcs_uri_prefix = "~{gcs_out_sra}/~{flowcell_id}/"
+        }
+        call terra.gcs_copy as gcs_sra_dump {
+            input:
+                infiles = [select_first([demux_deplete.sra_metadata])],
+                gcs_uri_prefix = "~{gcs_out_sra}/"
+        }
+    }
+
     output {
         Array[File] raw_reads_unaligned_bams     = demux_deplete.raw_reads_unaligned_bams
         Array[File] cleaned_reads_unaligned_bams = demux_deplete.cleaned_reads_unaligned_bams
@@ -370,6 +416,8 @@ workflow sarscov2_illumina_full {
 
         File nextclade_all_json = nextclade_many_samples.nextclade_json
         File nextclade_auspice_json = nextclade_many_samples.auspice_json
+
+        File passing_fasta = passing_cat.combined
 
         Array[String] assembled_ids = select_all(passing_assembly_ids)
         Array[String] submittable_ids = select_all(submittable_id)

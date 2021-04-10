@@ -2,6 +2,7 @@ version 1.0
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_reports.wdl" as reports
+import "../tasks/tasks_utils.wdl" as utils
 
 workflow augur_from_assemblies {
     meta {
@@ -80,7 +81,7 @@ workflow augur_from_assemblies {
 
     #### mafft_and_snp
 
-    call nextstrain.gzcat {
+    call utils.gzcat {
         input:
             infiles     = assembly_fastas,
             output_name = "all_samples_combined_assembly.fasta"
@@ -105,7 +106,7 @@ workflow augur_from_assemblies {
     #### subsample_by_metadata_with_focal
 
     if(length(sample_metadata_tsvs)>1) {
-        call reports.tsv_join {
+        call utils.tsv_join {
             input:
                 input_tsvs = sample_metadata_tsvs,
                 id_col = 'strain',
@@ -142,7 +143,7 @@ workflow augur_from_assemblies {
             group_by = global_bin_variable
     }
 
-    call nextstrain.concatenate as cat_fasta {
+    call utils.concatenate as cat_fasta {
         input:
             infiles = [
                 subsample_focal.filtered_fasta, subsample_global.filtered_fasta
@@ -150,7 +151,7 @@ workflow augur_from_assemblies {
             output_name = "subsampled.fasta"
     }
 
-    call nextstrain.fasta_to_ids {
+    call utils.fasta_to_ids {
         input:
             sequences_fasta = cat_fasta.combined
     }

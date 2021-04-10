@@ -1,24 +1,5 @@
 version 1.0
 
-task md5sum {
-  input {
-    File in_file
-  }
-  command {
-    md5sum ${in_file} | cut -f 1 | tee MD5
-  }
-  output {
-    String md5 = read_string("MD5")
-  }
-  runtime {
-    docker: "ubuntu"
-    memory: "1 GB"
-    cpu: 1
-    disks: "local-disk 100 HDD"
-    dx_instance_type: "mem1_ssd2_v2_x2"
-  }
-}
-
 task download_fasta {
   input {
     String         out_prefix
@@ -531,42 +512,6 @@ task sra_meta_prep {
     memory: "1 GB"
     cpu: 1
     disks: "local-disk 100 HDD"
-    dx_instance_type: "mem1_ssd1_v2_x2"
-  }
-}
-
-task fetch_row_from_tsv {
-  input {
-    File   tsv
-    String idx_col
-    String idx_val
-    Array[String] set_default_keys = []
-  }
-  command <<<
-    python3 << CODE
-    import csv, gzip, json
-    open_or_gzopen = lambda *args, **kwargs: gzip.open(*args, **kwargs) if args[0].endswith('.gz') else open(*args, **kwargs)
-    out_dict = {}
-    with open_or_gzopen('~{tsv}', 'rt') as inf:
-      for row in csv.DictReader(inf, delimiter='\t'):
-        if row.get('~{idx_col}') == '~{idx_val}':
-          out_dict = row
-          break
-    for k in '~{sep="*" set_default_keys}'.split('*'):
-      if k and k not in out_dict:
-        out_dict[k] = ''
-    with open('out.json', 'wt') as outf:
-      json.dump(out_dict, outf)
-    CODE
-  >>>
-  output {
-    Map[String,String] map = read_json('out.json')
-  }
-  runtime {
-    docker: "python:slim"
-    memory: "1 GB"
-    cpu: 1
-    disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }

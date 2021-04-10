@@ -94,6 +94,7 @@ workflow assemble_refbased {
             'trim_percent': ivar_trim.primer_trimmed_read_percent,
             'trim_count':   ivar_trim.primer_trimmed_read_count
         }
+        Array[String] ivar_stats_row = [ivar_stats['file'], ivar_stats['trim_percent'], ivar_stats['trim_count']]
     }
 
     call read_utils.merge_and_reheader_bams as merge_align_to_ref {
@@ -170,6 +171,7 @@ workflow assemble_refbased {
         Array[Int]   primer_trimmed_read_count   = ivar_trim.primer_trimmed_read_count
         Array[Float] primer_trimmed_read_percent = ivar_trim.primer_trimmed_read_percent
         Array[Map[String,String]] ivar_trim_stats = ivar_stats
+        Array[Array[String]]      ivar_trim_stats_tsv = ivar_stats_row
 
         Int    replicate_concordant_sites  = run_discordance.concordant_sites
         Int    replicate_discordant_snps   = run_discordance.discordant_snps

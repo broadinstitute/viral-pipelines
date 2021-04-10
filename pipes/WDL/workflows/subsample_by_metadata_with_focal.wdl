@@ -2,6 +2,7 @@ version 1.0
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_reports.wdl" as reports
+import "../tasks/tasks_utils.wdl" as utils
 
 workflow subsample_by_metadata_with_focal {
     meta {
@@ -56,7 +57,7 @@ workflow subsample_by_metadata_with_focal {
     }
 
     if(length(sample_metadata_tsvs)>1) {
-        call reports.tsv_join {
+        call utils.tsv_join {
             input:
                 input_tsvs = sample_metadata_tsvs,
                 id_col = 'strain',
@@ -95,7 +96,7 @@ workflow subsample_by_metadata_with_focal {
             priority = priorities
     }
 
-    call nextstrain.concatenate as cat_fasta {
+    call utils.concatenate as cat_fasta {
         input:
             infiles = [
                 subsample_focal.filtered_fasta, subsample_global.filtered_fasta
@@ -103,7 +104,7 @@ workflow subsample_by_metadata_with_focal {
             output_name = "subsampled.fasta"
     }
 
-    call nextstrain.fasta_to_ids {
+    call utils.fasta_to_ids {
         input:
             sequences_fasta = cat_fasta.combined
     }

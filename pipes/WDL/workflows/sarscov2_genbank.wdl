@@ -1,8 +1,8 @@
 version 1.0
 
 import "../tasks/tasks_ncbi.wdl" as ncbi
-import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_reports.wdl" as reports
+import "../tasks/tasks_utils.wdl" as utils
 
 workflow sarscov2_genbank {
 
@@ -75,23 +75,23 @@ workflow sarscov2_genbank {
     }
 
     # prep the good ones
-    call nextstrain.concatenate as passing_fasta {
+    call utils.concatenate as passing_fasta {
       input:
         infiles = select_all(passing_assemblies),
         output_name = "assemblies-passing.fasta"
     }
-    call nextstrain.fasta_to_ids as passing_ids {
+    call utils.fasta_to_ids as passing_ids {
       input:
         sequences_fasta = passing_fasta.combined
     }
 
     # prep the weird ones
-    call nextstrain.concatenate as weird_fasta {
+    call utils.concatenate as weird_fasta {
       input:
         infiles = select_all(weird_assemblies),
         output_name = "assemblies-weird.fasta"
     }
-    call nextstrain.fasta_to_ids as weird_ids {
+    call utils.fasta_to_ids as weird_ids {
       input:
         sequences_fasta = weird_fasta.combined
     }

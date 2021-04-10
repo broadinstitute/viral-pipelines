@@ -1,58 +1,5 @@
 version 1.0
 
-task concatenate {
-    meta {
-        description: "This is nothing more than unix cat."
-    }
-    input {
-        Array[File] infiles
-        String      output_name
-    }
-    command {
-        cat ~{sep=" " infiles} > "~{output_name}"
-    }
-    runtime {
-        docker: "ubuntu"
-        memory: "1 GB"
-        cpu:    1
-        disks: "local-disk 375 LOCAL"
-        dx_instance_type: "mem1_ssd1_v2_x2"
-    }
-    output {
-        File combined = "${output_name}"
-    }
-}
-
-task gzcat {
-    meta {
-        description: "Glue together a bunch of text files that may or may not be compressed (autodetect among gz or uncompressed inputs). Optionally compress the output (depending on requested file extension)"
-    }
-    input {
-        Array[File] infiles
-        String      output_name
-    }
-    command <<<
-        python3 <<CODE
-        import gzip
-        open_or_gzopen = lambda *args, **kwargs: gzip.open(*args, **kwargs) if args[0].endswith('.gz') else open(*args, **kwargs)
-        with open_or_gzopen("~{output_name}", 'wt') as outf:
-            for infname in "~{sep='*' infiles}".split('*'):
-                with open_or_gzopen(infname, 'rt') as inf:
-                    for line in inf:
-                        outf.write(line)
-        CODE
-    >>>
-    runtime {
-        docker: "python:slim"
-        memory: "1 GB"
-        cpu:    2
-        disks: "local-disk 375 LOCAL"
-        dx_instance_type: "mem1_ssd1_v2_x2"
-    }
-    output {
-        File combined = "${output_name}"
-    }
-}
 
 task nextmeta_prep {
   input {
@@ -228,29 +175,6 @@ task derived_cols {
     }
     output {
         File derived_metadata = "~{basename}.derived_cols.txt"
-    }
-}
-
-task fasta_to_ids {
-    meta {
-        description: "Return the headers only from a fasta file"
-    }
-    input {
-        File sequences_fasta
-    }
-    String basename = basename(sequences_fasta, ".fasta")
-    command {
-        cat "~{sequences_fasta}" | grep \> | cut -c 2- > "~{basename}.txt"
-    }
-    runtime {
-        docker: "ubuntu"
-        memory: "1 GB"
-        cpu:    1
-        disks: "local-disk 375 LOCAL"
-        dx_instance_type: "mem1_ssd1_v2_x2"
-    }
-    output {
-        File ids_txt = "~{basename}.txt"
     }
 }
 
