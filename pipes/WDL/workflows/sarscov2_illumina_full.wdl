@@ -115,7 +115,7 @@ workflow sarscov2_illumina_full {
                 tsv = biosample_merge.out_tsv,
                 idx_col = "sample_name",
                 idx_val = orig_name,
-                set_default_keys = ["collection_date", "bioproject_accession", "accession", "collected_by", "geo_loc_name", "host_subject_id", "purpose_of_sequencing"]
+                set_default_keys = ["collection_date", "bioproject_accession", "accession", "collected_by", "geo_loc_name", "host_subject_id", "host_age", "host_sex", purpose_of_sequencing"]
         }
 
         # for genomes that somewhat assemble
