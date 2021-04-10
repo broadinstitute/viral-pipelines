@@ -7,6 +7,7 @@ import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_sarscov2.wdl" as sarscov2
 import "../tasks/tasks_terra.wdl" as terra
 import "../tasks/tasks_assembly.wdl" as assembly
+import "../tasks/tasks_utils.wdl" as utils
 
 import "demux_deplete.wdl"
 import "assemble_refbased.wdl"
@@ -62,7 +63,7 @@ workflow sarscov2_illumina_full {
     String  flowcell_id = basename(basename(basename(basename(flowcell_tgz, ".gz"), ".zst"), ".tar"), ".tgz")
 
     # merge biosample attributes tables
-    call reports.tsv_join as biosample_merge {
+    call utils.tsv_join as biosample_merge {
         input:
             input_tsvs = biosample_attributes,
             id_col = 'accession',
@@ -110,7 +111,7 @@ workflow sarscov2_illumina_full {
         }
 
         # grab biosample metadata
-        call ncbi.fetch_row_from_tsv as biosample {
+        call utils.fetch_row_from_tsv as biosample {
             input:
                 tsv = biosample_merge.out_tsv,
                 idx_col = "sample_name",
@@ -215,7 +216,7 @@ workflow sarscov2_illumina_full {
         ]
 
     ### summary stats and QC metrics
-    call nextstrain.concatenate as assembly_meta_tsv {
+    call utils.concatenate as assembly_meta_tsv {
       input:
         infiles = [write_tsv([assembly_tsv_header]), write_tsv(assembly_tsv_row)],
         output_name = "assembly_metadata-~{flowcell_id}.tsv"
@@ -230,13 +231,13 @@ workflow sarscov2_illumina_full {
         flowcell = flowcell_id,
         out_basename = "ivar_trim_stats-~{flowcell_id}"
     }
-    call reports.tsv_join as picard_wgs_merge {
+    call utils.tsv_join as picard_wgs_merge {
       input:
         input_tsvs = assemble_refbased.picard_metrics_wgs,
         id_col = 'sample_sanitized',
         out_basename = "picard_metrics_wgs-~{flowcell_id}"
     }
-    call nextstrain.concatenate as passing_cat {
+    call utils.concatenate as passing_cat {
       input:
         infiles = select_all(passing_assemblies),
         output_name = "assemblies_passing-~{flowcell_id}.fasta"
@@ -255,7 +256,7 @@ workflow sarscov2_illumina_full {
         assembly_stats_tsv = write_tsv(flatten([[['SeqID','Assembly Method','Coverage','Sequencing Technology']],select_all(assembly_cmt)])),
         filter_to_ids = biosample_to_genbank.sample_ids
     }
-    call nextstrain.concatenate as passing_genomes {
+    call utils.concatenate as passing_genomes {
       input:
         infiles = select_all(submittable_genomes),
         output_name = "assemblies.fasta"

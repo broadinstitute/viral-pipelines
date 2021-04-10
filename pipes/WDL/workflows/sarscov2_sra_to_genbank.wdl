@@ -4,6 +4,7 @@ import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_ncbi_tools.wdl" as ncbi_tools
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_reports.wdl" as reports
+import "../tasks/tasks_utils.wdl" as utils
 
 import "assemble_refbased.wdl"
 import "sarscov2_lineages.wdl"
@@ -173,14 +174,14 @@ workflow sarscov2_sra_to_genbank {
         'align_to_ref_merged_reads_aligned', 'align_to_ref_merged_bases_aligned',
         ]
 
-    call nextstrain.concatenate as assembly_meta_tsv {
+    call utils.concatenate as assembly_meta_tsv {
       input:
         infiles = [write_tsv([assembly_tsv_header]), write_tsv(assembly_tsv_row)],
         output_name = "assembly_metadata.tsv"
     }
 
     ### prep genbank submission
-    call nextstrain.concatenate as submit_genomes {
+    call utils.concatenate as submit_genomes {
       input:
         infiles = select_all(submittable_genomes),
         output_name = "assemblies.fasta"

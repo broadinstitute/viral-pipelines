@@ -2,6 +2,7 @@ version 1.0
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_intrahost.wdl" as intrahost
+import "../tasks/tasks_utils.wdl" as utils
 
 workflow mafft_and_snp_annotated {
     meta {
@@ -31,7 +32,7 @@ workflow mafft_and_snp_annotated {
         }
     }
 
-    call nextstrain.gzcat {
+    call utils.gzcat {
         input:
             infiles     = assembly_fastas,
             output_name = "all_samples_combined_assembly.fasta.gz"
