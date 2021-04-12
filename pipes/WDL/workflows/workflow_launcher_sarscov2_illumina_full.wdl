@@ -28,6 +28,10 @@ workflow workflow_launcher_sarscov2_illumina_full {
         Array[File]+  samplesheets
         File          spikein_db
 
+        String?       gcs_out_metrics
+        String?       gcs_out_cdc
+        String?       gcs_out_sra
+
         String        account_name
         File          author_template_sbt
         String        spuid_namespace
@@ -46,11 +50,14 @@ workflow workflow_launcher_sarscov2_illumina_full {
             workspace_name = workspace_name,
             terra_project = terra_project,
             collab_ids_tsv = collab_ids_tsv,
-            author_template_sbt = author_template_sbt,
-            spuid_namespace = spuid_namespace,
             samplesheets = samplesheets,
+            spikein_db = spikein_db,
+            gcs_out_metrics = gcs_out_metrics,
+            gcs_out_cdc = gcs_out_cdc,
+            gcs_out_sra = gcs_out_sra,
             account_name = account_name,
-            spikein_db = spikein_db
+            author_template_sbt = author_template_sbt,
+            spuid_namespace = spuid_namespace
     }
 
     call gather_sarscov2_outputs {

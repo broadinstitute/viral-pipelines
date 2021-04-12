@@ -49,6 +49,7 @@ workflow sarscov2_illumina_full {
         Int           min_genome_bases = 24000
         Int           max_vadr_alerts = 0
 
+
         String?       workspace_name
         String?       terra_project
         File?         collab_ids_tsv
@@ -56,9 +57,15 @@ workflow sarscov2_illumina_full {
         Array[File]+  samplesheets
         File          spikein_db
 
+        String?       gcs_out_metrics
+        String?       gcs_out_cdc
+        String?       gcs_out_sra
+
+        String        account_name
         File          author_template_sbt
         String        spuid_namespace
-        String        account_name
+
+
     }
     Int     taxid = 2697049
     String  gisaid_prefix = 'hCoV-19/'
@@ -272,9 +279,9 @@ workflow sarscov2_illumina_full {
     }
     call ncbi.package_genbank_ftp_submission {
       input:
+        account_name = account_name,
         author_template_sbt = author_template_sbt,
         spuid_namespace = spuid_namespace,
-        account_name = account_name,
         sequences_fasta = submit_genomes.filtered_fasta,
         source_modifier_table = biosample_to_genbank.genbank_source_modifier_table,
         structured_comment_table = structured_comments.structured_comment_table,
