@@ -49,7 +49,6 @@ workflow sarscov2_illumina_full {
         Int           min_genome_bases = 24000
         Int           max_vadr_alerts = 0
 
-
         String?       workspace_name
         String?       terra_project
         File?         collab_ids_tsv
@@ -63,7 +62,6 @@ workflow sarscov2_illumina_full {
         File          author_template_sbt
         String        spuid_namespace
         String        account_name
-
     }
     Int     taxid = 2697049
     String  gisaid_prefix = 'hCoV-19/'
