@@ -2,7 +2,7 @@ version 1.0
 
 import "sarscov2_illumina_full.wdl" as full_viral
 import "../tasks/tasks_utils.wdl" as utils
-import "../tasks/tasks_terra.wdl" as terra
+# import "../tasks/tasks_terra.wdl" as terra
 
 workflow workflow_launcher_sarscov2_illumina_full {
     meta {
@@ -120,12 +120,12 @@ workflow workflow_launcher_sarscov2_illumina_full {
     }
 
      # upload concatenated .tsv file to flowcell table
-    call terra.upload_data_table_tsv as upload_flowcell_table {
-        input:
-            input_tsv = flowcell_meta_tsv.combined,
-            terra_project = terra_project,
-            workspace_name = workspace_name
-    }
+    # call terra.upload_data_table_tsv as upload_flowcell_table {
+    #     input:
+    #         input_tsv = flowcell_meta_tsv.combined,
+    #         terra_project = terra_project,
+    #         workspace_name = workspace_name
+    # }
 
     call gather_sarscov2_outputs {
         input:
@@ -183,7 +183,7 @@ workflow workflow_launcher_sarscov2_illumina_full {
     output {
         File flowcell_load_tsv = gather_sarscov2_outputs.flowcell_load_tsv
         File flowcell_load_concatenated_tsv = flowcell_meta_tsv.combined
-        String flowcell_upload_tsv_status = upload_flowcell_table.upload_table_response
+        # String flowcell_upload_tsv_status = upload_flowcell_table.upload_table_response
     }
 }
 
