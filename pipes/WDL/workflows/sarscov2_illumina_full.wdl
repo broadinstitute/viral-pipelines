@@ -53,9 +53,6 @@ workflow sarscov2_illumina_full {
         String?       terra_project
         File?         collab_ids_tsv
 
-        String?       gcs_out_metrics
-        String?       gcs_out_cdc
-        String?       gcs_out_sra
         Array[File]+  samplesheets
         File          spikein_db
 
