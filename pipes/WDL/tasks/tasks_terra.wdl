@@ -123,3 +123,31 @@ task download_entities_tsv {
     File  tsv_file = '~{outname}'
   }
 }
+
+task upload_data_table_tsv {
+  input {
+    File input_tsv
+    String terra_project
+    String workspace_name
+  }
+    String        docker="schaluvadi/pathogen-genomic-surveillance:api-wdl"
+
+  command {
+  python3<<CODE 
+    from firecloud import api as fapi
+
+    response = fapi.upload_entities_tsv(~{terra_project}, ~{workspace_name}, ~{input_tsv}, model="flexible")
+    print(response.text)
+
+  CODE
+  }
+
+  runtime {
+    docker : docker
+  }
+
+  output {
+    String upload_table_response = stdout()
+  }
+
+}
