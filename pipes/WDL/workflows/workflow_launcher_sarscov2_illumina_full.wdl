@@ -41,6 +41,8 @@ workflow workflow_launcher_sarscov2_illumina_full {
         Array[File]?  blastDbs
         Array[File]?  bwaDbs
         Array[File]?  bmtaggerDbs
+
+        File          sample_rename_map
     }
     String  flowcell_id = basename(basename(basename(basename(flowcell_tgz, ".gz"), ".zst"), ".tar"), ".tgz")
 
