@@ -104,22 +104,23 @@ workflow workflow_launcher_sarscov2_illumina_full {
                 sarscov2_illumina_full.primer_trimmed_read_count, sarscov2_illumina_full.primer_trimmed_read_percent,
                 sarscov2_illumina_full.raw_reads_unaligned_bams, sarscov2_illumina_full.read_counts_depleted,
                 sarscov2_illumina_full.read_counts_raw, sarscov2_illumina_full.run_date,
-                sarscov2_illumina_full.sequencing_reports, sarscov2_illumina_full.spikein_counts,
+                select_first([sarscov2_illumina_full.sequencing_reports, ""]), sarscov2_illumina_full.spikein_counts,
                 sarscov2_illumina_full.sra_metadata, sarscov2_illumina_full.submission_xml,
                 sarscov2_illumina_full.submission_zip, sarscov2_illumina_full.submit_ready,
                 sarscov2_illumina_full.submittable_assemblies_fasta, sarscov2_illumina_full.submittable_ids,
                 sarscov2_illumina_full.vadr_outputs, sarscov2_illumina_full.data_tables_out
                 ]
 
+
     # concatenate header and row tsv files
     call utils.concatenate as flowcell_meta_tsv {
         input:
-            infiles = [write_tsv([flowcell_tsv_header]), write_tsv(flowcell_tsv_row)],
+            infiles = [write_tsv([flowcell_tsv_header]), write_tsv([flowcell_tsv_row])],
             output_name = "flowcell_metadata-~{flowcell_id}.tsv"
     }
 
-    # upload concatenated .tsv file to flowcell table
-    call terra.upload_data_table_tsv as update_flowcell_table {
+     # upload concatenated .tsv file to flowcell table
+    call terra.upload_data_table_tsv as upload_flowcell_table {
         input:
             input_tsv = flowcell_meta_tsv.combined,
             terra_project = terra_project,
@@ -180,8 +181,9 @@ workflow workflow_launcher_sarscov2_illumina_full {
     }
 
     output {
-        File flowcell_load_tsv = gather_sarscov2_outputs.output_paths_file
-        File flowcell_load_tsv_method2 = flowcell_meta_tsv.combined
+        File flowcell_load_tsv = gather_sarscov2_outputs.flowcell_load_tsv
+        File flowcell_load_concatenated_tsv = flowcell_meta_tsv.combined
+        String flowcell_upload_tsv_status = upload_flowcell_table.upload_table_response
     }
 }
 
@@ -270,8 +272,6 @@ task gather_sarscov2_outputs {
                 read_counts_depleted\tread_counts_raw\trun_date\tsamplesheets\tsequencing_reports\t
                 spikein_counts\tsra_metadata\tsubmission_xml\tsubmission_zip\tsubmit_ready\t
                 submittable_assemblies_fasta\tsubmittable_ids\ttitle\tvadr_outputs" > flowcell_load_table.tsv
-        
-
 
         echo -e "my_test_unique_identifier_snapshot\t
                 ~{sep="," raw_reads_unaligned_bams}\t
@@ -322,9 +322,7 @@ task gather_sarscov2_outputs {
                 ~{num_samples}\t
                 ~{run_date}\t
                 ~{sequencing_reports}\t
-                ~{sep=","data_tables_out}" >> flowcell_load_table.tsv
-
-        # insert a column to the 
+                ~{sep=","data_tables_out}" >> flowcell_load_table
     >>>
 
     runtime {
@@ -333,7 +331,7 @@ task gather_sarscov2_outputs {
     }
 
     output {
-        File output_paths_file = "flowcell_load_table.tsv"
+        File flowcell_load_tsv = "flowcell_load_table.tsv"
     }
 
 }
