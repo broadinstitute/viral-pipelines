@@ -65,6 +65,9 @@ workflow sarscov2_illumina_full {
         File          author_template_sbt
         String        spuid_namespace
 
+        Array[File]?  blastDbs
+        Array[File]?  bwaDbs
+        Array[File]?  bmtaggerDbs
 
     }
     Int     taxid = 2697049
@@ -87,7 +90,10 @@ workflow sarscov2_illumina_full {
             flowcell_tgz = flowcell_tgz,
             biosample_map = biosample_merge.out_tsv,
             instrument_model = instrument_model,
-            sra_title = sra_title
+            sra_title = sra_title,
+            blastDbs = blastDbs,
+            bwaDbs = bwaDbs,
+            bmtaggerDbs = bmtaggerDbs
     }
 
     ### gather data by biosample

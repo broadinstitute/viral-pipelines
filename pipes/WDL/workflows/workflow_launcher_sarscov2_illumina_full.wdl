@@ -37,6 +37,10 @@ workflow workflow_launcher_sarscov2_illumina_full {
         String        account_name
         File          author_template_sbt
         String        spuid_namespace
+
+        Array[File]?  blastDbs
+        Array[File]?  bwaDbs
+        Array[File]?  bmtaggerDbs
     }
     String  flowcell_id = basename(basename(basename(basename(flowcell_tgz, ".gz"), ".zst"), ".tar"), ".tgz")
 
@@ -60,7 +64,10 @@ workflow workflow_launcher_sarscov2_illumina_full {
             gcs_out_sra = gcs_out_sra,
             account_name = account_name,
             author_template_sbt = author_template_sbt,
-            spuid_namespace = spuid_namespace
+            spuid_namespace = spuid_namespace,
+            blastDbs = blastDbs,
+            bwaDbs = bwaDbs,
+            bmtaggerDbs = bmtaggerDbs
     }
 
     Array[String] flowcell_tsv_header = [
