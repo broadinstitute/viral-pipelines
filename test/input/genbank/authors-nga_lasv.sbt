@@ -335,16 +335,16 @@ Seqdesc ::= pub {
               title ""
             }
           },
-        {
-          name name {
-            last "Yozwiak",
-            first "Nathan",
-            middle "",
-            initials "",
-            suffix "",
-            title ""
-          }
-        },
+          {
+            name name {
+              last "Yozwiak",
+              first "Nathan",
+              middle "",
+              initials "",
+              suffix "",
+              title ""
+            }
+          },
           {
             name name {
               last "Amao",
