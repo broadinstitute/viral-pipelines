@@ -211,7 +211,7 @@ task gather_sarscov2_outputs {
         spikein_counts\tsra_metadata\tsubmission_xml\tsubmission_zip\tsubmit_ready\t\
         submittable_assemblies_fasta\tsubmittable_ids\tvadr_outputs\tdata_tables_out" > flowcell_load_table.tsv
 
-        echo -e "testing_unique_ID\t~{sep="," assembled_ids}]\t~{sep="," assemblies_fasta}]\t\
+        echo -e "testing_unique_ID\t[~{sep="," assembled_ids}]\t[~{sep="," assemblies_fasta}]\t\
         ~{assembly_stats_tsv}\t~{cleaned_bam_uris}\t[~{sep="," cleaned_reads_unaligned_bams}]\t\
         [~{sep="," cleaned_bams_tiny}]\t[~{sep="," demux_commonBarcodes}]\t[~{sep="," demux_metrics}]\t\
         [~{sep="," demux_outlierBarcodes}]\t[~{sep="," failed_annotation_ids}]\t\
@@ -227,7 +227,7 @@ task gather_sarscov2_outputs {
         [~{sep="," read_counts_raw}]\t~{run_date}\t~{sequencing_reports}\t\
         ~{spikein_counts}\t~{sra_metadata}\t~{submission_xml}\t~{submission_zip}\t\
         ~{submit_ready}\t[~{sep="," submittable_assemblies_fasta}]\t\
-        [~{sep="," submittable_ids}]\t~{sep="," vadr_outputs}]\t\
+        [~{sep="," submittable_ids}]\t[~{sep="," vadr_outputs}]\t\
         [~{sep="," data_tables_out}]" >> flowcell_load_table.tsv
 
     >>>
