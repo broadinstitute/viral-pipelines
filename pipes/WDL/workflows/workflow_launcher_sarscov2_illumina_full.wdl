@@ -269,7 +269,7 @@ task gather_sarscov2_outputs {
         submittable_assemblies_fasta\tsubmittable_ids\tvadr_outputs\tdata_tables_out" > flowcell_load_table.tsv
 
         # create the row for the flowcell and append to final output load file
-        echo -e "~{flowcell_id}\t["'"~{sep="','" assembled_ids}"'"]\t[~{sep="," assemblies_fasta}]\t\
+        echo -e "~{flowcell_id}\t['"'~{sep='","' assembled_ids}'"']\t[~{sep="," assemblies_fasta}]\t\
         ~{assembly_stats_tsv}\t~{cleaned_bam_uris}\t[~{sep="," cleaned_reads_unaligned_bams}]\t\
         [~{sep="," cleaned_bams_tiny}]\t[~{sep="," demux_commonBarcodes}]\t[~{sep="," demux_metrics}]\t\
         [~{sep="," demux_outlierBarcodes}]\t[~{sep="," failed_annotation_ids}]\t\
