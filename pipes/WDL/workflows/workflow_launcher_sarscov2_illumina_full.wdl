@@ -262,7 +262,7 @@ task gather_sarscov2_outputs {
             [~{sep="," vadr_outputs}]\t\
             [~{sep="," data_tables_out}]" >> flowcell_load_table.tsv
 
-        write_tsv(header)
+        # write_tsv(header)
     >>>
 
     runtime {
