@@ -303,7 +303,7 @@ task gather_sarscov2_outputs {
                 spikein_counts\tsra_metadata\tsubmission_xml\tsubmission_zip\tsubmit_ready\t
                 submittable_assemblies_fasta\tsubmittable_ids\ttitle\tvadr_outputs" > flowcell_load_table.tsv
 
-        write_tsv(header) > test_write_tsv_header.txt
+        # write_tsv(header) > test_write_tsv_header.txt
 
         echo -e "my_test_unique_identifier_snapshot\t
                 ~{sep="," raw_reads_unaligned_bams}\t
