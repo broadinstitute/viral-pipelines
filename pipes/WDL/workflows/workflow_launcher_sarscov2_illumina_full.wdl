@@ -196,73 +196,40 @@ task gather_sarscov2_outputs {
 
     command <<<
         # create header line in final output load file
-        echo -e "entity:flowcell_id\tassembled_ids\tassemblies_fasta\tassembly_stats_tsv\t
-            cleaned_bam_uris\tcleaned_reads_unaligned_bams\tcleaned_bams_tiny\t
-            demux_commonBarcodes\tdemux_metrics\tdemux_outlierBarcodes\t
-            failed_annotation_ids\tfailed_assembly_ids\tgenbank_fasta\t
-            genbank_source_table\tgisaid_fasta\tgisaid_meta_tsv\t
-            ivar_trim_stats_html\tivar_trim_stats_png\tivar_trim_stats_tsv\tmax_ntc_bases\t
-            meta_by_filename_json\tmultiqc_report_cleaned\tmultiqc_report_raw\t
-            nextclade_all_json\tnextclade_auspice_json\tnextmeta_tsv\tnum_assembled\t
-            num_failed_annotation\tnum_failed_assembly\tnum_read_files\tnum_samples\t
-            num_submittable\tpassing_assemblies_fasta\tpicard_metrics_wgs\t
-            primer_trimmed_read_count\tprimer_trimmed_read_percent\traw_reads_unaligned_bams\t
-            read_counts_depleted\tread_counts_raw\trun_date\tsequencing_reports\t
-            spikein_counts\tsra_metadata\tsubmission_xml\tsubmission_zip\tsubmit_ready\t
-            submittable_assemblies_fasta\tsubmittable_ids\tvadr_outputs\tdata_tables_out" > flowcell_load_table.tsv
+        echo -e "entity:flowcell_id\tassembled_ids\tassemblies_fasta\tassembly_stats_tsv\t\
+        cleaned_bam_uris\tcleaned_reads_unaligned_bams\tcleaned_bams_tiny\t\
+        demux_commonBarcodes\tdemux_metrics\tdemux_outlierBarcodes\t\
+        failed_annotation_ids\tfailed_assembly_ids\tgenbank_fasta\t\
+        genbank_source_table\tgisaid_fasta\tgisaid_meta_tsv\t\
+        ivar_trim_stats_html\tivar_trim_stats_png\tivar_trim_stats_tsv\tmax_ntc_bases\t\
+        meta_by_filename_json\tmultiqc_report_cleaned\tmultiqc_report_raw\t\
+        nextclade_all_json\tnextclade_auspice_json\tnextmeta_tsv\tnum_assembled\t\
+        num_failed_annotation\tnum_failed_assembly\tnum_read_files\tnum_samples\t\
+        num_submittable\tpassing_assemblies_fasta\tpicard_metrics_wgs\t\
+        primer_trimmed_read_count\tprimer_trimmed_read_percent\traw_reads_unaligned_bams\t\
+        read_counts_depleted\tread_counts_raw\trun_date\tsequencing_reports\t\
+        spikein_counts\tsra_metadata\tsubmission_xml\tsubmission_zip\tsubmit_ready\t\
+        submittable_assemblies_fasta\tsubmittable_ids\tvadr_outputs\tdata_tables_out" > flowcell_load_table.tsv
 
-        echo -e "testing_unique_ID\t\
-            [~{sep="," assembled_ids}]\t\
-            [~{sep="," assemblies_fasta}]\t\
-            ~{assembly_stats_tsv}\t\
-            ~{cleaned_bam_uris}\t\
-            [~{sep="," cleaned_reads_unaligned_bams}]\t\
-            [~{sep="," cleaned_bams_tiny}]\t\
-            [~{sep="," demux_commonBarcodes}]\t\
-            [~{sep="," demux_metrics}]\t\
-            [~{sep="," demux_outlierBarcodes}]\t\
-            [~{sep="," failed_annotation_ids}]\t\
-            [~{sep="," failed_assembly_ids}]\t\
-            ~{genbank_fasta}\t\
-            ~{genbank_source_table}\t\
-            ~{gisaid_fasta}\t\
-            ~{gisaid_meta_tsv}\t\
-            ~{ivar_trim_stats_html}\t\
-            ~{ivar_trim_stats_png}\t\
-            ~{ivar_trim_stats_tsv}\t\
-            ~{max_ntc_bases}\t\
-            ~{meta_by_filename_json}\t\
-            ~{multiqc_report_cleaned}\t\
-            ~{multiqc_report_raw}\t\
-            ~{nextclade_all_json}\t\
-            ~{nextclade_auspice_json}\t\
-            ~{nextmeta_tsv}\t\
-            ~{num_assembled}\t\
-            ~{num_failed_annotation}\t\
-            ~{num_failed_assembly}\t\
-            ~{num_read_files}\t\
-            ~{num_samples}\t\
-            ~{num_submittable}\t\
-            [~{sep="," passing_assemblies_fasta}]\t\
-            ~{picard_metrics_wgs}\t\
-            [~{sep="," primer_trimmed_read_count}]\t\
-            [~{sep="," primer_trimmed_read_percent}]\t\
-            [~{sep="," raw_reads_unaligned_bams}]\t\
-            [~{sep="," read_counts_depleted}]\t\
-            [~{sep="," read_counts_raw}]\t\
-            ~{run_date}\t\
-            ~{sequencing_reports}\t\
-            ~{spikein_counts}\t\
-            ~{sra_metadata}\t\
-            ~{submission_xml}\t\
-            ~{submission_zip}\t\
-            ~{submit_ready}\t\
-            [~{sep="," submittable_assemblies_fasta}]\t\
-            [~{sep="," submittable_ids}]\t\
-            [~{sep="," vadr_outputs}]\t\
-            [~{sep="," data_tables_out}]" >> flowcell_load_table.tsv
+        echo -e "testing_unique_ID\t~{sep="," assembled_ids}]\t~{sep="," assemblies_fasta}]\t\
+        ~{assembly_stats_tsv}\t~{cleaned_bam_uris}\t[~{sep="," cleaned_reads_unaligned_bams}]\t\
+        [~{sep="," cleaned_bams_tiny}]\t[~{sep="," demux_commonBarcodes}]\t[~{sep="," demux_metrics}]\t\
+        [~{sep="," demux_outlierBarcodes}]\t[~{sep="," failed_annotation_ids}]\t\
+        [~{sep="," failed_assembly_ids}]\t~{genbank_fasta}\t~{genbank_source_table}\t\
+        ~{gisaid_fasta}\t~{gisaid_meta_tsv}\t~{ivar_trim_stats_html}\t~{ivar_trim_stats_png}\t~{ivar_trim_stats_tsv}\t\
+        ~{max_ntc_bases}\t~{meta_by_filename_json}\t~{multiqc_report_cleaned}\t~{multiqc_report_raw}\t\
+        ~{nextclade_all_json}\t~{nextclade_auspice_json}\t~{nextmeta_tsv}\t\
+        ~{num_assembled}\t~{num_failed_annotation}\t~{num_failed_assembly}\t\
+        ~{num_read_files}\t~{num_samples}\t~{num_submittable}\t\
+        [~{sep="," passing_assemblies_fasta}]\t~{picard_metrics_wgs}\t\
+        [~{sep="," primer_trimmed_read_count}]\t[~{sep="," primer_trimmed_read_percent}]\t\
+        [~{sep="," raw_reads_unaligned_bams}]\t[~{sep="," read_counts_depleted}]\t\
+        [~{sep="," read_counts_raw}]\t~{run_date}\t~{sequencing_reports}\t\
+        ~{spikein_counts}\t~{sra_metadata}\t~{submission_xml}\t~{submission_zip}\t\
+        ~{submit_ready}\t[~{sep="," submittable_assemblies_fasta}]\t\
+        [~{sep="," submittable_ids}]\t~{sep="," vadr_outputs}]\t\
+        [~{sep="," data_tables_out}]" >> flowcell_load_table.tsv
 
-        # write_tsv(header)
     >>>
 
     runtime {
