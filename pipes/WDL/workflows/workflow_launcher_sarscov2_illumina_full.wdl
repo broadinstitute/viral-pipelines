@@ -192,6 +192,7 @@ workflow workflow_launcher_sarscov2_illumina_full {
 
     output {
         File flowcell_load_tsv = gather_sarscov2_outputs.flowcell_load_tsv
+        File test_write_tsv_function_tsv = gather_sarscov2_outputs.test_write_tsv_header_file
         # File flowcell_load_concatenated_tsv = flowcell_meta_tsv.combined
         # String flowcell_upload_tsv_status = upload_flowcell_table.upload_table_response
     }
@@ -265,7 +266,26 @@ task gather_sarscov2_outputs {
 
         Array[String]           data_tables_out
     }
-
+        Array[String] header = [
+            "entity:flowcell_id", "assembled_ids", "assemblies_fasta", "assembly_stats_tsv",
+            "cleaned_bam_uris", "cleaned_reads_unaligned_bams", "cleaned_bams_tiny",
+            "demux_commonBarcodes", "demux_metrics", "demux_outlierBarcodes",
+            "failed_annotation_ids", "failed_assembly_ids", "genbank_fasta",
+            "genbank_source_table", "gisaid_fasta", "gisaid_meta_tsv",
+            "ivar_trim_stats_html", "ivar_trim_stats_png", "ivar_trim_stats_tsv",
+            "max_ntc_bases", "meta_by_filename_json", "multiqc_report_cleaned",
+            "multiqc_report_raw", "nextclade_all_json", "nextclade_auspice_json",
+            "nextmeta_tsv", "num_assembled", "num_failed_annotation", "num_failed_assembly",
+            "num_read_files", "num_samples", "num_submittable",
+            "passing_assemblies_fasta", "picard_metrics_wgs",
+            "primer_trimmed_read_count", "primer_trimmed_read_percent",
+            "raw_reads_unaligned_bams", "read_counts_depleted", "read_counts_raw",
+            "run_date", "sequencing_reports", "spikein_counts", "sra_metadata",
+            "submission_xml", "submission_zip", "submit_ready",
+            "submittable_assemblies_fasta", "submittable_ids", "vadr_outputs",
+            "data_tables_out"
+            ]
+        
     command <<<
         # create header line in final output load file
         echo -e "entity:flowcell_id\tassembled_ids\tassemblies_fasta\tassembly_stats_tsv\tauthors_sbt\t
@@ -282,6 +302,8 @@ task gather_sarscov2_outputs {
                 read_counts_depleted\tread_counts_raw\trun_date\tsamplesheets\tsequencing_reports\t
                 spikein_counts\tsra_metadata\tsubmission_xml\tsubmission_zip\tsubmit_ready\t
                 submittable_assemblies_fasta\tsubmittable_ids\ttitle\tvadr_outputs" > flowcell_load_table.tsv
+
+        write_tsv(header) > test_write_tsv_header.txt
 
         echo -e "my_test_unique_identifier_snapshot\t
                 ~{sep="," raw_reads_unaligned_bams}\t
@@ -332,7 +354,7 @@ task gather_sarscov2_outputs {
                 ~{num_samples}\t
                 ~{run_date}\t
                 ~{sequencing_reports}\t
-                ~{sep=","data_tables_out}" >> flowcell_load_table
+                ~{sep=","data_tables_out}" >> flowcell_load_table.tsv
     >>>
 
     runtime {
@@ -342,6 +364,7 @@ task gather_sarscov2_outputs {
 
     output {
         File flowcell_load_tsv = "flowcell_load_table.tsv"
+        File test_write_tsv_header_file = "test_write_tsv_header.tsv"
     }
 
 }
