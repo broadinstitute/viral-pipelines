@@ -69,8 +69,7 @@ workflow sarscov2_illumina_full {
         Array[File]?  bwaDbs
         Array[File]?  bmtaggerDbs
 
-        File          sample_rename_map
-
+        File?         sample_rename_map
     }
     Int     taxid = 2697049
     String  gisaid_prefix = 'hCoV-19/'
