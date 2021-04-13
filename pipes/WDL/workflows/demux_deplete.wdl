@@ -29,8 +29,8 @@ workflow demux_deplete {
         Array[File]? blastDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
         Array[File]? bwaDbs
 
-        Array[String] default_sample_keys = ["amplicon_set", "control"]
-        Array[String] default_filename_keys = ["spike_in"]
+        Array[String] default_sample_keys = ["amplicon_set", "control", "batch_lib", "viral_ct"]
+        Array[String] default_filename_keys = ["spike_in", "batch_lib"]
     }
 
     parameter_meta {

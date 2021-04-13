@@ -2,6 +2,7 @@ version 1.0
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_reports.wdl" as reports
+import "../tasks/tasks_utils.wdl" as utils
 
 workflow augur_from_msa {
     meta {
@@ -75,7 +76,7 @@ workflow augur_from_msa {
             msa_or_vcf = augur_mask_sites.masked_sequences
     }
     if(length(sample_metadata)>1) {
-        call reports.tsv_join {
+        call utils.tsv_join {
             input:
                 input_tsvs = sample_metadata,
                 id_col = 'strain',

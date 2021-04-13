@@ -82,7 +82,7 @@ task samplesheet_rename_ids {
 task illumina_demux {
   input {
     File    flowcell_tgz
-    Int?    lane=1
+    Int     lane=1
     File?   samplesheet
     File?   runinfo
     String? sequencingCenter
@@ -108,6 +108,8 @@ task illumina_demux {
           patterns: ["*.tar.gz", ".tar.zst", ".tar.bz2", ".tar.lz4", ".tgz"]
       }
   }
+
+  String out_base = "~{basename(basename(basename(basename(flowcell_tgz, '.zst'), '.gz'), '.tar'), '.tgz')}-L~{lane}"
 
   command {
     set -ex -o pipefail
@@ -289,13 +291,16 @@ task illumina_demux {
         --threads $num_fastqc_threads" \
       ::: $(cat $OUT_BASENAMES)
 
+    mv metrics.txt "~{out_base}-demux_metrics.txt"
+    mv runinfo.json "~{out_base}-runinfo.json"
+
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
     cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
   }
 
   output {
-    File        metrics                  = "metrics.txt"
+    File        metrics                  = "~{out_base}-demux_metrics.txt"
     File        commonBarcodes           = "barcodes.txt"
     File        outlierBarcodes          = "barcodes_outliers.txt"
     Array[File] raw_reads_unaligned_bams = glob("*.bam")
@@ -309,10 +314,10 @@ task illumina_demux {
 
     Map[String,Map[String,String]] meta_by_sample   = read_json('meta_by_sample.json')
     Map[String,Map[String,String]] meta_by_filename = read_json('meta_by_fname.json')
-    Map[String,String]             run_info         = read_json('runinfo.json')
+    Map[String,String]             run_info         = read_json("~{out_base}-runinfo.json")
     File meta_by_sample_json   = 'meta_by_sample.json'
     File meta_by_filename_json = 'meta_by_fname.json'
-    File run_info_json         = 'runinfo.json'
+    File run_info_json         = "~{out_base}-runinfo.json"
   }
 
   runtime {

@@ -1,7 +1,7 @@
 version 1.0
 
 import "../tasks/tasks_sarscov2.wdl" as sarscov2
-import "../tasks/tasks_reports.wdl" as reports
+import "../tasks/tasks_utils.wdl" as utils
 
 workflow sarscov2_sequencing_reports {
     meta {
@@ -13,7 +13,7 @@ workflow sarscov2_sequencing_reports {
         String      max_date
     }
 
-    call reports.tsv_join {
+    call utils.tsv_join {
         input:
             input_tsvs = assembly_stats_tsvs,
             id_col = 'sample',
