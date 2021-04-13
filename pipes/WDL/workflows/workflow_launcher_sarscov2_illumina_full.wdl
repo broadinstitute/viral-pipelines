@@ -192,7 +192,7 @@ workflow workflow_launcher_sarscov2_illumina_full {
 
     output {
         File flowcell_load_tsv = gather_sarscov2_outputs.flowcell_load_tsv
-        File test_write_tsv_function_tsv = gather_sarscov2_outputs.test_write_tsv_header_file
+        # File test_write_tsv_function_tsv = gather_sarscov2_outputs.test_write_tsv_header_file
         # File flowcell_load_concatenated_tsv = flowcell_meta_tsv.combined
         # String flowcell_upload_tsv_status = upload_flowcell_table.upload_table_response
     }
@@ -364,7 +364,7 @@ task gather_sarscov2_outputs {
 
     output {
         File flowcell_load_tsv = "flowcell_load_table.tsv"
-        File test_write_tsv_header_file = "test_write_tsv_header.tsv"
+        # File test_write_tsv_header_file = "test_write_tsv_header.tsv"
     }
 
 }
