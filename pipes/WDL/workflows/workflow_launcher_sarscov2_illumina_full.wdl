@@ -176,8 +176,8 @@ workflow workflow_launcher_sarscov2_illumina_full {
     # }
 
     output {
-        # File flowcell_load_tsv = gather_sarscov2_outputs.flowcell_load_tsv
-        File tsv_with_write_tsv = create_output_tsv.tsv_with_write_tsv
+        File flowcell_load_tsv = gather_sarscov2_outputs.flowcell_load_tsv
+        # File tsv_with_write_tsv = create_output_tsv.tsv_with_write_tsv
     }
 }
 
@@ -279,7 +279,7 @@ task gather_sarscov2_outputs {
         ~{num_assembled}\t~{num_failed_annotation}\t~{num_failed_assembly}\t\
         ~{num_read_files}\t~{num_samples}\t~{num_submittable}\t\
         [~{sep="," passing_assemblies_fasta}]\t~{picard_metrics_wgs}\t\
-        [~{sep="," primer_strimmed_read_count}]\t[~{sep="," primer_trimmed_read_percent}]\t\
+        [~{sep="," primer_trimmed_read_count}]\t[~{sep="," primer_trimmed_read_percent}]\t\
         [~{sep="," raw_reads_unaligned_bams}]\t[~{sep="," read_counts_depleted}]\t\
         [~{sep="," read_counts_raw}]\t~{run_date}\t~{sequencing_reports}\t\
         ~{spikein_counts}\t~{sra_metadata}\t~{submission_xml}\t~{submission_zip}\t\
