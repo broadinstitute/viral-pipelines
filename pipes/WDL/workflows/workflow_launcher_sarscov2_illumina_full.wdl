@@ -25,31 +25,18 @@ workflow workflow_launcher_sarscov2_illumina_full {
 
         String        workspace_name
         String        terra_project
-        # File?         collab_ids_tsv
 
         Array[File]+  samplesheets
         File          spikein_db
 
-        # String?       gcs_out_metrics
-        # String?       gcs_out_cdc
-        # String?       gcs_out_sra
-
         String        account_name
         File          author_template_sbt
         String        spuid_namespace
-
-        # Array[File]?  blastDbs
-        # Array[File]?  bwaDbs
-        # Array[File]?  bmtaggerDbs
-
-        # File?         sample_rename_map
     }
     String  flowcell_id = basename(basename(basename(basename(flowcell_tgz, ".gz"), ".zst"), ".tar"), ".tgz")
 
     call full_viral.sarscov2_illumina_full {
         input:
-            # min_genome_bases = min_genome_bases,
-            # max_vadr_alerts = max_vadr_alerts,
             flowcell_tgz = flowcell_tgz,
             reference_fasta = reference_fasta,
             amplicon_bed_prefix = amplicon_bed_prefix,
@@ -58,22 +45,14 @@ workflow workflow_launcher_sarscov2_illumina_full {
             sra_title = sra_title,
             workspace_name = workspace_name,
             terra_project = terra_project,
-            # collab_ids_tsv = collab_ids_tsv,
             samplesheets = samplesheets,
             spikein_db = spikein_db,
-            # gcs_out_metrics = gcs_out_metrics,
-            # gcs_out_cdc = gcs_out_cdc,
-            # gcs_out_sra = gcs_out_sra,
             account_name = account_name,
             author_template_sbt = author_template_sbt,
             spuid_namespace = spuid_namespace
-            # blastDbs = blastDbs,
-            # bwaDbs = bwaDbs,
-            # bmtaggerDbs = bmtaggerDbs,
-            # sample_rename_map = sample_rename_map
     }
 
-    Array[String] flowcell_tsv_header = [
+    # Array[String] flowcell_tsv_header = [
                 "entity:flowcell_id", "assembled_ids", "assemblies_fasta", "assembly_stats_tsv",
                 "cleaned_bam_uris", "cleaned_reads_unaligned_bams", "cleaned_bams_tiny",
                 "demux_commonBarcodes", "demux_metrics", "demux_outlierBarcodes",
@@ -94,34 +73,39 @@ workflow workflow_launcher_sarscov2_illumina_full {
                 ]
     
     # Array[String] flowcell_tsv_row = [
-    #             flowcell_id, sarscov2_illumina_full.assembled_ids,
-    #             sarscov2_illumina_full.assemblies_fasta, sarscov2_illumina_full.assembly_stats_tsv,
-    #             sarscov2_illumina_full.cleaned_bam_uris, sarscov2_illumina_full.cleaned_reads_unaligned_bams,
-    #             sarscov2_illumina_full.cleaned_bams_tiny, sarscov2_illumina_full.demux_commonBarcodes,
-    #             sarscov2_illumina_full.demux_metrics, sarscov2_illumina_full.demux_outlierBarcodes,
-    #             sarscov2_illumina_full.failed_annotation_ids, sarscov2_illumina_full.failed_assembly_ids,
-    #             sarscov2_illumina_full.genbank_fasta, sarscov2_illumina_full.genbank_source_table,
-    #             sarscov2_illumina_full.gisaid_fasta, sarscov2_illumina_full.gisaid_meta_tsv,
-    #             sarscov2_illumina_full.ivar_trim_stats_html, sarscov2_illumina_full.ivar_trim_stats_png,
-    #             sarscov2_illumina_full.ivar_trim_stats_tsv, sarscov2_illumina_full.max_ntc_bases,
-    #             sarscov2_illumina_full.meta_by_filename_json, sarscov2_illumina_full.multiqc_report_cleaned,
-    #             sarscov2_illumina_full.multiqc_report_raw, sarscov2_illumina_full.nextclade_all_json,
-    #             sarscov2_illumina_full.nextclade_auspice_json, sarscov2_illumina_full.nextmeta_tsv,
-    #             sarscov2_illumina_full.num_assembled, sarscov2_illumina_full.num_failed_annotation,
-    #             sarscov2_illumina_full.num_failed_assembly, sarscov2_illumina_full.num_read_files,
-    #             sarscov2_illumina_full.num_samples, sarscov2_illumina_full.num_submittable,
-    #             sarscov2_illumina_full.passing_assemblies_fasta, sarscov2_illumina_full.picard_metrics_wgs,
-    #             sarscov2_illumina_full.primer_trimmed_read_count, sarscov2_illumina_full.primer_trimmed_read_percent,
-    #             sarscov2_illumina_full.raw_reads_unaligned_bams, sarscov2_illumina_full.read_counts_depleted,
-    #             sarscov2_illumina_full.read_counts_raw, sarscov2_illumina_full.run_date,
-    #             select_first([sarscov2_illumina_full.sequencing_reports, ""]), sarscov2_illumina_full.spikein_counts,
-    #             sarscov2_illumina_full.sra_metadata, sarscov2_illumina_full.submission_xml,
-    #             sarscov2_illumina_full.submission_zip, sarscov2_illumina_full.submit_ready,
-    #             sarscov2_illumina_full.submittable_assemblies_fasta, sarscov2_illumina_full.submittable_ids,
-    #             sarscov2_illumina_full.vadr_outputs, sarscov2_illumina_full.data_tables_out
-    #             ]
+                flowcell_id, sarscov2_illumina_full.assembled_ids,
+                sarscov2_illumina_full.assemblies_fasta, sarscov2_illumina_full.assembly_stats_tsv,
+                sarscov2_illumina_full.cleaned_bam_uris, sarscov2_illumina_full.cleaned_reads_unaligned_bams,
+                sarscov2_illumina_full.cleaned_bams_tiny, sarscov2_illumina_full.demux_commonBarcodes,
+                sarscov2_illumina_full.demux_metrics, sarscov2_illumina_full.demux_outlierBarcodes,
+                sarscov2_illumina_full.failed_annotation_ids, sarscov2_illumina_full.failed_assembly_ids,
+                sarscov2_illumina_full.genbank_fasta, sarscov2_illumina_full.genbank_source_table,
+                sarscov2_illumina_full.gisaid_fasta, sarscov2_illumina_full.gisaid_meta_tsv,
+                sarscov2_illumina_full.ivar_trim_stats_html, sarscov2_illumina_full.ivar_trim_stats_png,
+                sarscov2_illumina_full.ivar_trim_stats_tsv, sarscov2_illumina_full.max_ntc_bases,
+                sarscov2_illumina_full.meta_by_filename_json, sarscov2_illumina_full.multiqc_report_cleaned,
+                sarscov2_illumina_full.multiqc_report_raw, sarscov2_illumina_full.nextclade_all_json,
+                sarscov2_illumina_full.nextclade_auspice_json, sarscov2_illumina_full.nextmeta_tsv,
+                sarscov2_illumina_full.num_assembled, sarscov2_illumina_full.num_failed_annotation,
+                sarscov2_illumina_full.num_failed_assembly, sarscov2_illumina_full.num_read_files,
+                sarscov2_illumina_full.num_samples, sarscov2_illumina_full.num_submittable,
+                sarscov2_illumina_full.passing_assemblies_fasta, sarscov2_illumina_full.picard_metrics_wgs,
+                sarscov2_illumina_full.primer_trimmed_read_count, sarscov2_illumina_full.primer_trimmed_read_percent,
+                sarscov2_illumina_full.raw_reads_unaligned_bams, sarscov2_illumina_full.read_counts_depleted,
+                sarscov2_illumina_full.read_counts_raw, sarscov2_illumina_full.run_date,
+                select_first([sarscov2_illumina_full.sequencing_reports, ""]), sarscov2_illumina_full.spikein_counts,
+                sarscov2_illumina_full.sra_metadata, sarscov2_illumina_full.submission_xml,
+                sarscov2_illumina_full.submission_zip, sarscov2_illumina_full.submit_ready,
+                sarscov2_illumina_full.submittable_assemblies_fasta, sarscov2_illumina_full.submittable_ids,
+                sarscov2_illumina_full.vadr_outputs, sarscov2_illumina_full.data_tables_out
+                ]
 
 
+    
+    
+    
+    
+    
     # concatenate header and row tsv files
     # call utils.concatenate as flowcell_meta_tsv {
     #     input:
