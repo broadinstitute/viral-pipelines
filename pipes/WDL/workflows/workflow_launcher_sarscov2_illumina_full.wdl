@@ -52,60 +52,6 @@ workflow workflow_launcher_sarscov2_illumina_full {
             spuid_namespace = spuid_namespace
     }
 
-    # Array[String] flowcell_tsv_header = [
-                # "entity:flowcell_id", "assembled_ids", "assemblies_fasta", "assembly_stats_tsv",
-                # "cleaned_bam_uris", "cleaned_reads_unaligned_bams", "cleaned_bams_tiny",
-                # "demux_commonBarcodes", "demux_metrics", "demux_outlierBarcodes",
-                # "failed_annotation_ids", "failed_assembly_ids", "genbank_fasta",
-                # "genbank_source_table", "gisaid_fasta", "gisaid_meta_tsv",
-                # "ivar_trim_stats_html", "ivar_trim_stats_png", "ivar_trim_stats_tsv",
-                # "max_ntc_bases", "meta_by_filename_json", "multiqc_report_cleaned",
-                # "multiqc_report_raw", "nextclade_all_json", "nextclade_auspice_json",
-                # "nextmeta_tsv", "num_assembled", "num_failed_annotation", "num_failed_assembly",
-                # "num_read_files", "num_samples", "num_submittable",
-                # "passing_assemblies_fasta", "picard_metrics_wgs",
-                # "primer_trimmed_read_count", "primer_trimmed_read_percent",
-                # "raw_reads_unaligned_bams", "read_counts_depleted", "read_counts_raw",
-                # "run_date", "sequencing_reports", "spikein_counts", "sra_metadata",
-                # "submission_xml", "submission_zip", "submit_ready",
-                # "submittable_assemblies_fasta", "submittable_ids", "vadr_outputs",
-                # "data_tables_out"
-                # ]
-    
-    # Array[String] flowcell_tsv_row = [
-                # flowcell_id, sarscov2_illumina_full.assembled_ids,
-                # sarscov2_illumina_full.assemblies_fasta, sarscov2_illumina_full.assembly_stats_tsv,
-                # sarscov2_illumina_full.cleaned_bam_uris, sarscov2_illumina_full.cleaned_reads_unaligned_bams,
-                # sarscov2_illumina_full.cleaned_bams_tiny, sarscov2_illumina_full.demux_commonBarcodes,
-                # sarscov2_illumina_full.demux_metrics, sarscov2_illumina_full.demux_outlierBarcodes,
-                # sarscov2_illumina_full.failed_annotation_ids, sarscov2_illumina_full.failed_assembly_ids,
-                # sarscov2_illumina_full.genbank_fasta, sarscov2_illumina_full.genbank_source_table,
-                # sarscov2_illumina_full.gisaid_fasta, sarscov2_illumina_full.gisaid_meta_tsv,
-                # sarscov2_illumina_full.ivar_trim_stats_html, sarscov2_illumina_full.ivar_trim_stats_png,
-                # sarscov2_illumina_full.ivar_trim_stats_tsv, sarscov2_illumina_full.max_ntc_bases,
-                # sarscov2_illumina_full.meta_by_filename_json, sarscov2_illumina_full.multiqc_report_cleaned,
-                # sarscov2_illumina_full.multiqc_report_raw, sarscov2_illumina_full.nextclade_all_json,
-                # sarscov2_illumina_full.nextclade_auspice_json, sarscov2_illumina_full.nextmeta_tsv,
-                # sarscov2_illumina_full.num_assembled, sarscov2_illumina_full.num_failed_annotation,
-                # sarscov2_illumina_full.num_failed_assembly, sarscov2_illumina_full.num_read_files,
-                # sarscov2_illumina_full.num_samples, sarscov2_illumina_full.num_submittable,
-                # sarscov2_illumina_full.passing_assemblies_fasta, sarscov2_illumina_full.picard_metrics_wgs,
-                # sarscov2_illumina_full.primer_trimmed_read_count, sarscov2_illumina_full.primer_trimmed_read_percent,
-                # sarscov2_illumina_full.raw_reads_unaligned_bams, sarscov2_illumina_full.read_counts_depleted,
-                # sarscov2_illumina_full.read_counts_raw, sarscov2_illumina_full.run_date,
-                # select_first([sarscov2_illumina_full.sequencing_reports, ""]), sarscov2_illumina_full.spikein_counts,
-                # sarscov2_illumina_full.sra_metadata, sarscov2_illumina_full.submission_xml,
-                # sarscov2_illumina_full.submission_zip, sarscov2_illumina_full.submit_ready,
-                # sarscov2_illumina_full.submittable_assemblies_fasta, sarscov2_illumina_full.submittable_ids,
-                # sarscov2_illumina_full.vadr_outputs, sarscov2_illumina_full.data_tables_out
-                # ]
-
-
-    
-    
-    
-    
-    
     # concatenate header and row tsv files
     # call utils.concatenate as flowcell_meta_tsv {
     #     input:
@@ -176,9 +122,6 @@ workflow workflow_launcher_sarscov2_illumina_full {
 
     output {
         File flowcell_load_tsv = gather_sarscov2_outputs.flowcell_load_tsv
-        # File test_write_tsv_function_tsv = gather_sarscov2_outputs.test_write_tsv_header_file
-        # File flowcell_load_concatenated_tsv = flowcell_meta_tsv.combined
-        # String flowcell_upload_tsv_status = upload_flowcell_table.upload_table_response
     }
 }
 
@@ -250,26 +193,7 @@ task gather_sarscov2_outputs {
 
         Array[String]           data_tables_out
     }
-        Array[String] header = [
-            "entity:flowcell_id", "assembled_ids", "assemblies_fasta", "assembly_stats_tsv",
-            "cleaned_bam_uris", "cleaned_reads_unaligned_bams", "cleaned_bams_tiny",
-            "demux_commonBarcodes", "demux_metrics", "demux_outlierBarcodes",
-            "failed_annotation_ids", "failed_assembly_ids", "genbank_fasta",
-            "genbank_source_table", "gisaid_fasta", "gisaid_meta_tsv",
-            "ivar_trim_stats_html", "ivar_trim_stats_png", "ivar_trim_stats_tsv",
-            "max_ntc_bases", "meta_by_filename_json", "multiqc_report_cleaned",
-            "multiqc_report_raw", "nextclade_all_json", "nextclade_auspice_json",
-            "nextmeta_tsv", "num_assembled", "num_failed_annotation", "num_failed_assembly",
-            "num_read_files", "num_samples", "num_submittable",
-            "passing_assemblies_fasta", "picard_metrics_wgs",
-            "primer_trimmed_read_count", "primer_trimmed_read_percent",
-            "raw_reads_unaligned_bams", "read_counts_depleted", "read_counts_raw",
-            "run_date", "sequencing_reports", "spikein_counts", "sra_metadata",
-            "submission_xml", "submission_zip", "submit_ready",
-            "submittable_assemblies_fasta", "submittable_ids", "vadr_outputs",
-            "data_tables_out"
-            ]
-        
+
     command <<<
         # create header line in final output load file
         echo -e "entity:flowcell_id\tassembled_ids\tassemblies_fasta\tassembly_stats_tsv\tauthors_sbt\t
@@ -286,8 +210,6 @@ task gather_sarscov2_outputs {
                 read_counts_depleted\tread_counts_raw\trun_date\tsamplesheets\tsequencing_reports\t
                 spikein_counts\tsra_metadata\tsubmission_xml\tsubmission_zip\tsubmit_ready\t
                 submittable_assemblies_fasta\tsubmittable_ids\ttitle\tvadr_outputs" > flowcell_load_table.tsv
-
-        # write_tsv(header) > test_write_tsv_header.txt
 
         echo -e "my_test_unique_identifier_snapshot\t
                 ~{sep="," raw_reads_unaligned_bams}\t
@@ -348,7 +270,5 @@ task gather_sarscov2_outputs {
 
     output {
         File flowcell_load_tsv = "flowcell_load_table.tsv"
-        # File test_write_tsv_header_file = "test_write_tsv_header.tsv"
     }
-
 }
