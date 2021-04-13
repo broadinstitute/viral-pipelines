@@ -42,7 +42,7 @@ workflow workflow_launcher_sarscov2_illumina_full {
         Array[File]?  bwaDbs
         Array[File]?  bmtaggerDbs
 
-        File?         sample_rename_map
+        # File?         sample_rename_map
     }
     String  flowcell_id = basename(basename(basename(basename(flowcell_tgz, ".gz"), ".zst"), ".tar"), ".tgz")
 
@@ -69,8 +69,8 @@ workflow workflow_launcher_sarscov2_illumina_full {
             spuid_namespace = spuid_namespace,
             blastDbs = blastDbs,
             bwaDbs = bwaDbs,
-            bmtaggerDbs = bmtaggerDbs,
-            sample_rename_map = sample_rename_map
+            bmtaggerDbs = bmtaggerDbs
+            # sample_rename_map = sample_rename_map
     }
 
     Array[String] flowcell_tsv_header = [
