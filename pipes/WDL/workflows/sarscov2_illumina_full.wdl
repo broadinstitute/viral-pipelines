@@ -237,6 +237,12 @@ workflow sarscov2_illumina_full {
         id_col = 'sample_sanitized',
         out_basename = "picard_metrics_wgs-~{flowcell_id}"
     }
+    call utils.tsv_join as picard_alignment_merge {
+      input:
+        input_tsvs = assemble_refbased.picard_metrics_alignment,
+        id_col = 'sample_sanitized',
+        out_basename = "picard_metrics_alignment-~{flowcell_id}"
+    }
     call utils.concatenate as passing_cat {
       input:
         infiles = select_all(passing_assemblies),
@@ -398,7 +404,8 @@ workflow sarscov2_illumina_full {
         File        multiqc_report_raw     = demux_deplete.multiqc_report_raw
         File        multiqc_report_cleaned = demux_deplete.multiqc_report_cleaned
         File        spikein_counts         = demux_deplete.spikein_counts
-        File        picard_metrics_wgs     = picard_wgs_merge.out_tsv
+        File        picard_metrics_wgs       = picard_wgs_merge.out_tsv
+        File        picard_metrics_alignment = picard_alignment_merge.out_tsv
 
         File assembly_stats_tsv = assembly_meta_tsv.combined
 
