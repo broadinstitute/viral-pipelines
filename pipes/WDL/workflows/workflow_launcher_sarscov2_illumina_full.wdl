@@ -20,27 +20,27 @@ workflow workflow_launcher_sarscov2_illumina_full {
         String        instrument_model
         String        sra_title
 
-        Int           min_genome_bases
-        Int           max_vadr_alerts
+        # Int           min_genome_bases
+        # Int           max_vadr_alerts
 
         String        workspace_name
         String        terra_project
-        File?         collab_ids_tsv
+        # File?         collab_ids_tsv
 
         Array[File]+  samplesheets
         File          spikein_db
 
-        String?       gcs_out_metrics
-        String?       gcs_out_cdc
-        String?       gcs_out_sra
+        # String?       gcs_out_metrics
+        # String?       gcs_out_cdc
+        # String?       gcs_out_sra
 
         String        account_name
         File          author_template_sbt
         String        spuid_namespace
 
-        Array[File]?  blastDbs
-        Array[File]?  bwaDbs
-        Array[File]?  bmtaggerDbs
+        # Array[File]?  blastDbs
+        # Array[File]?  bwaDbs
+        # Array[File]?  bmtaggerDbs
 
         # File?         sample_rename_map
     }
@@ -48,8 +48,8 @@ workflow workflow_launcher_sarscov2_illumina_full {
 
     call full_viral.sarscov2_illumina_full {
         input:
-            min_genome_bases = min_genome_bases,
-            max_vadr_alerts = max_vadr_alerts,
+            # min_genome_bases = min_genome_bases,
+            # max_vadr_alerts = max_vadr_alerts,
             flowcell_tgz = flowcell_tgz,
             reference_fasta = reference_fasta,
             amplicon_bed_prefix = amplicon_bed_prefix,
@@ -58,18 +58,18 @@ workflow workflow_launcher_sarscov2_illumina_full {
             sra_title = sra_title,
             workspace_name = workspace_name,
             terra_project = terra_project,
-            collab_ids_tsv = collab_ids_tsv,
+            # collab_ids_tsv = collab_ids_tsv,
             samplesheets = samplesheets,
             spikein_db = spikein_db,
-            gcs_out_metrics = gcs_out_metrics,
-            gcs_out_cdc = gcs_out_cdc,
-            gcs_out_sra = gcs_out_sra,
+            # gcs_out_metrics = gcs_out_metrics,
+            # gcs_out_cdc = gcs_out_cdc,
+            # gcs_out_sra = gcs_out_sra,
             account_name = account_name,
             author_template_sbt = author_template_sbt,
-            spuid_namespace = spuid_namespace,
-            blastDbs = blastDbs,
-            bwaDbs = bwaDbs,
-            bmtaggerDbs = bmtaggerDbs
+            spuid_namespace = spuid_namespace
+            # blastDbs = blastDbs,
+            # bwaDbs = bwaDbs,
+            # bmtaggerDbs = bmtaggerDbs,
             # sample_rename_map = sample_rename_map
     }
 
