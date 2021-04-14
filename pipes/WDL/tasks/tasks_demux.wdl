@@ -6,7 +6,7 @@ task merge_tarballs {
     String        out_filename
 
     Int?          machine_mem_gb
-    String        docker="quay.io/broadinstitute/viral-core:2.1.19"
+    String        docker="quay.io/broadinstitute/viral-core:2.1.21"
   }
 
   command {
@@ -100,7 +100,7 @@ task illumina_demux {
     Int?    maxRecordsInRam
 
     Int?    machine_mem_gb
-    String  docker="quay.io/broadinstitute/viral-core:2.1.19"
+    String  docker="quay.io/broadinstitute/viral-core:2.1.21"
   }
   parameter_meta {
       flowcell_tgz: {
@@ -250,6 +250,12 @@ task illumina_demux {
 
     illumina.py guess_barcodes --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
 
+    illumina.py flowcell_metadata --inDir $FLOWCELL_DIR flowcellMetadataFile.tsv
+
+    # output machine model and lane count
+    grep "machine" flowcellMetadataFile.tsv | cut -f2 | tee MACHINE_MODEL
+    grep "lane_count" flowcellMetadataFile.tsv | cut -f2 | tee LANE_COUNT
+
     mkdir -p unmatched
     mv Unmatched.bam unmatched/
 
@@ -307,9 +313,11 @@ task illumina_demux {
     File        unmatched_reads_bam      = "unmatched/Unmatched.bam"
     Array[File] raw_reads_fastqc         = glob("*_fastqc.html")
     Array[File] raw_reads_fastqc_zip     = glob("*_fastqc.zip")
-    Int         max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
-    Int         runtime_sec = ceil(read_float("UPTIME_SEC"))
-    Int         cpu_load_15min = ceil(read_float("LOAD_15M"))
+    Int         max_ram_gb               = ceil(read_float("MEM_BYTES")/1000000000)
+    Int         runtime_sec              = ceil(read_float("UPTIME_SEC"))
+    Int         cpu_load_15min           = ceil(read_float("LOAD_15M"))
+    String      instrument_model         = read_string("MACHINE_MODEL")
+    String      flowcell_lane_count      = read_string("LANE_COUNT")
     String      viralngs_version         = read_string("VERSION")
 
     Map[String,Map[String,String]] meta_by_sample   = read_json('meta_by_sample.json')

@@ -23,6 +23,7 @@ workflow demux_only {
         File        demux_commonBarcodes     = illumina_demux.commonBarcodes
         File        demux_outlierBarcodes    = illumina_demux.outlierBarcodes
         File        multiqc_report_raw       = MultiQC.multiqc_report
+        String      instrument_model         = select_first([illumina_demux.instrument_model,""])
         String      demux_viral_core_version = illumina_demux.viralngs_version
     }
 }

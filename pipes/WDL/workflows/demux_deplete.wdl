@@ -115,7 +115,7 @@ workflow demux_deplete {
                 platform = "ILLUMINA",
                 paired = (illumina_demux.run_info[0]['indexes'] == '2'),
                 out_name = "sra_metadata-~{basename(flowcell_tgz, '.tar.gz')}.tsv",
-                instrument_model = select_first([instrument_model]),
+                instrument_model = select_first(flatten([illumina_demux.instrument_model,[""]])),
                 title = select_first([sra_title])
         }
     }
@@ -163,6 +163,7 @@ workflow demux_deplete {
         File        spikein_counts         = spike_summary.count_summary
 
         String      run_date = illumina_demux.run_info[0]['run_start_date']
+        String      instrument_model = select_first(flatten([illumina_demux.instrument_model,[""]]))
 
         String      demux_viral_core_version = illumina_demux.viralngs_version[0]
     }
