@@ -16,7 +16,9 @@ workflow genbank {
         Array[File]+  reference_feature_tables
         Array[File]+  assemblies_fasta
 
-        File          authors_sbt
+        String?       author_list # of the form "Lastname,A.B., Lastname,C.,"; optional alternative to names in author_sbt_defaults_yaml
+        File          author_sbt_defaults_yaml # defaults to fill in for author_sbt file (including both author and non-author fields)
+        File          author_sbt_j2_template
         File          biosample_attributes
         Int           taxid
         File?         coverage_table
@@ -39,9 +41,15 @@ workflow genbank {
           description: "NCBI Genbank feature table, each segment/chromosome in a separate TBL file, in the exact same count and order as the segments/chromosomes described in genome_fasta and reference_fastas. Accession numbers in the TBL files must correspond exactly to those in reference_fasta.",
           patterns: ["*.tbl"]
         }
-        authors_sbt: {
-          description: "A genbank submission template file (SBT) with the author list, created at https://submit.ncbi.nlm.nih.gov/genbank/template/submission/",
-          patterns: ["*.sbt"]
+        author_list: {
+          description: "A string containing a space-delimited list with of author surnames separated by first name and (optional) middle initial. Ex. 'Lastname,Firstname, Last-hypenated,First,M., Last,F.'"
+        }
+        author_sbt_defaults_yaml: {
+          description: "A YAML file with default values to use for the submitter, submitter affiliation, and author affiliation. Optionally including authors at the start and end of the author_list. Example: gs://pathogen-public-dbs/other-related/default_sbt_values.yaml",
+          patterns: ["*.yaml","*.yml"]
+        }
+        author_sbt_j2_template: {
+          description: "A jinja2-format template for the sbt file expected by NCBI. Example: gs://pathogen-public-dbs/other-related/author_template.sbt.j2"
         }
         biosample_attributes: {
           description: "A post-submission attributes file from NCBI BioSample, which is available at https://submit.ncbi.nlm.nih.gov/subs/ and clicking on 'Download attributes file with BioSample accessions'.",
@@ -88,12 +96,19 @@ workflow genbank {
                 reference_feature_tables = reference_feature_tables
         }
     }
- 
+
+    call ncbi.generate_author_sbt_file as generate_author_sbt {
+        input:
+            author_list   = author_list,
+            defaults_yaml = author_sbt_defaults_yaml,
+            j2_template   = author_sbt_j2_template
+    }
+
     call ncbi.prepare_genbank as prep_genbank {
         input:
             assemblies_fasta = assemblies_fasta,
             annotations_tbl = flatten(annot.genome_per_chr_tbls),
-            authors_sbt = authors_sbt,
+            authors_sbt = generate_author_sbt.sbt_file,
             biosampleMap = biosample_to_genbank.biosample_map,
             genbankSourceTable = biosample_to_genbank.genbank_source_modifier_table,
             coverage_table = coverage_table,
