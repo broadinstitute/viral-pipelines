@@ -74,9 +74,9 @@ task download_entities_tsv {
     String  docker="schaluvadi/pathogen-genomic-surveillance:api-wdl"
   }
 
-  # meta {
-  #   volatile: true
-  # }
+  meta {
+    volatile: true
+  }
 
   command {
     python3<<CODE
