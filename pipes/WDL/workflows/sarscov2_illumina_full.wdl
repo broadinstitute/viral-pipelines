@@ -343,7 +343,7 @@ workflow sarscov2_illumina_full {
     if(defined(gcs_out_metrics)) {
         call terra.gcs_copy as gcs_metrics_dump {
             input:
-              infiles = flatten([[assembly_meta_tsv.combined, ivar_trim_stats.trim_stats_tsv, demux_deplete.multiqc_report_raw, demux_deplete.multiqc_report_cleaned, demux_deplete.spikein_counts, picard_wgs_merge.out_tsv, nextclade_many_samples.nextclade_json, nextclade_many_samples.nextclade_tsv], demux_deplete.demux_metrics]),
+              infiles = flatten([[assembly_meta_tsv.combined, ivar_trim_stats.trim_stats_tsv, demux_deplete.multiqc_report_raw, demux_deplete.multiqc_report_cleaned, demux_deplete.spikein_counts, picard_wgs_merge.out_tsv, picard_alignment_merge.out_tsv, nextclade_many_samples.nextclade_json, nextclade_many_samples.nextclade_tsv], demux_deplete.demux_metrics]),
               gcs_uri_prefix = "~{gcs_out_metrics}/~{flowcell_id}/"
         }
     }
@@ -351,12 +351,12 @@ workflow sarscov2_illumina_full {
         call terra.gcs_copy as gcs_cdc_dump {
             input:
                 infiles = [assembly_meta_tsv.combined, passing_cat.combined],
-                gcs_uri_prefix = "~{gcs_out_cdc}/~{flowcell_id}/"
+                gcs_uri_prefix = "~{gcs_out_cdc}/~{demux_deplete.run_date}/~{flowcell_id}/"
         }
         call terra.gcs_copy as gcs_cdc_dump_reads {
             input:
                 infiles = assemble_refbased.align_to_ref_merged_aligned_trimmed_only_bam,
-                gcs_uri_prefix = "~{gcs_out_cdc}/~{flowcell_id}/rawfiles/"
+                gcs_uri_prefix = "~{gcs_out_cdc}/~{demux_deplete.run_date}/~{flowcell_id}/rawfiles/"
         }
     }
     if(defined(gcs_out_sra)) {
