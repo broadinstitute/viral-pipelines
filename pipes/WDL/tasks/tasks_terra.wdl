@@ -124,30 +124,31 @@ task download_entities_tsv {
   }
 }
 
-task upload_data_table_tsv {
+task entities_batch_upsert {
   input {
-    File input_tsv
-    String terra_project
-    String workspace_name
+    File      tsv_file
+    String    terra_project
+    String    workspace_name
   }
-    String        docker="schaluvadi/pathogen-genomic-surveillance:api-wdl"
+    String    docker="schaluvadi/pathogen-genomic-surveillance:batch_upsert"
 
   command {
-  python3<<CODE 
-    from firecloud import api as fapi
+    set -e
 
-    response = fapi.upload_entities_tsv(~{terra_project}, ~{workspace_name}, ~{input_tsv}, model="flexible")
-    print(response.text)
-
-  CODE
+    python3 /projects/cdc-sabeti-covid-19/batch_upsert_entities.py \
+        -t "~{tsv_file}" \
+        -p "~{terra_project}" \
+        -w "~{workspace_name}" \
   }
 
   runtime {
     docker : docker
+    memory: "2 GB"
+    cpu: 1
   }
 
   output {
-    String upload_table_response = stdout()
+    File batch_upsert_json = "batch_upsert_request.json"
+    String upsert_entities_response = stdout()
   }
-
 }
