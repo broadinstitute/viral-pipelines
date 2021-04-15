@@ -135,7 +135,7 @@ task entities_batch_upsert {
   command {
     set -e
 
-    python3 /projects/covid-19-fasta-tools/batch_upsert_entities.py \
+    python3 /scripts/cdc-sabeti-covid-19/batch_upsert_entities.py \
         -t "~{tsv_file}" \
         -p "~{terra_project}" \
         -w "~{workspace_name}"
