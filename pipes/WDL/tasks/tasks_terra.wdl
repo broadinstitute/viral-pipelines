@@ -138,7 +138,7 @@ task entities_batch_upsert {
     python3 /projects/covid-19-fasta-tools/batch_upsert_entities.py \
         -t "~{tsv_file}" \
         -p "~{terra_project}" \
-        -w "~{workspace_name}" \
+        -w "~{workspace_name}"
   }
 
   runtime {
@@ -148,7 +148,7 @@ task entities_batch_upsert {
   }
 
   output {
-    File batch_upsert_json = "batch_upsert_request.json"
+    File   batch_upsert_json = "batch_upsert_request.json"
     String upsert_entities_response = stdout()
   }
 }

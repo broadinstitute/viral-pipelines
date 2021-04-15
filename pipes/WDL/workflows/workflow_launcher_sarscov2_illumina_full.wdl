@@ -30,7 +30,8 @@ workflow workflow_launcher_sarscov2_illumina_full {
         File          author_template_sbt
         String        spuid_namespace
     }
-    String  flowcell_id = basename(basename(basename(basename(flowcell_tgz, ".gz"), ".zst"), ".tar"), ".tgz")
+    String flowcell_id = "testing_snapshot_run_flowcell"
+    # String  flowcell_id = basename(basename(basename(basename(flowcell_tgz, ".gz"), ".zst"), ".tar"), ".tgz")
 
     call full_viral.sarscov2_illumina_full {
         input:
@@ -111,8 +112,8 @@ workflow workflow_launcher_sarscov2_illumina_full {
     }
 
     output {
-        File flowcell_load_tsv = gather_sarscov2_outputs.flowcell_load_tsv
-        File flowcell_upsert_json = load_flowcell_entity.batch_upsert_json
+        File    flowcell_load_tsv = gather_sarscov2_outputs.flowcell_load_tsv
+        File?   flowcell_upsert_json = load_flowcell_entity.batch_upsert_json
     }
 }
 
