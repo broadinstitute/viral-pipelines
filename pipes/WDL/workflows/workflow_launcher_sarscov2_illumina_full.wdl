@@ -30,8 +30,7 @@ workflow workflow_launcher_sarscov2_illumina_full {
         File          author_template_sbt
         String        spuid_namespace
     }
-    String flowcell_id = "testing_snapshot_run_flowcell"
-    # String  flowcell_id = basename(basename(basename(basename(flowcell_tgz, ".gz"), ".zst"), ".tar"), ".tgz")
+    String  flowcell_id = basename(basename(basename(basename(flowcell_tgz, ".gz"), ".zst"), ".tar"), ".tgz")
 
     call full_viral.sarscov2_illumina_full {
         input:
@@ -189,7 +188,8 @@ task gather_sarscov2_outputs {
 
     command <<<
         # create header line in final output load file
-        echo -e "entity:flowcell_id\tassembled_ids\tassemblies_fasta\tassembly_stats_tsv\t\
+        # TODO: swap back to "flowcell_id"
+        echo -e "entity:testing_snapshot_run_flowcell_id\tassembled_ids\tassemblies_fasta\tassembly_stats_tsv\t\
         cleaned_bam_uris\tcleaned_reads_unaligned_bams\tcleaned_bams_tiny\t\
         demux_commonBarcodes\tdemux_metrics\tdemux_outlierBarcodes\t\
         failed_annotation_ids\tfailed_assembly_ids\tgenbank_fasta\t\
