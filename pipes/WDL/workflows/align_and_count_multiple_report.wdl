@@ -11,7 +11,7 @@ workflow align_and_count_multiple_report {
 
     input {
         Array[File]+ reads_unmapped_bams
-        File ref_db
+        File         ref_db
     }
 
     parameter_meta {
@@ -45,8 +45,8 @@ workflow align_and_count_multiple_report {
     }
 
     output {
-        File report               = align_and_count_summary.count_summary
-        File report_top_hits      = align_and_count_summary_top_hits.count_summary
+        File   report             = align_and_count_summary.count_summary
+        File   report_top_hits    = align_and_count_summary_top_hits.count_summary
         String viral_core_version = align_and_count_summary.viralngs_version
     }
 }
