@@ -237,7 +237,6 @@ task illumina_demux {
       ~{'--read_structure=' + readStructure} \
       ~{'--minimum_quality=' + minimumQuality} \
       ~{'--run_start_date=' + runStartDate} \
-      $max_reads_in_ram_per_tile \
       $max_records_in_ram \
       --JVMmemory="$mem_in_mb"m \
       $demux_threads \
@@ -247,6 +246,10 @@ task illumina_demux {
       --out_meta_by_filename meta_by_fname.json \
       --out_runinfo runinfo.json \
       --loglevel=DEBUG
+      # $max_reads_in_ram_per_tile \ # deprecated
+
+    # print bam file sizes
+    ls -lah *.bam
 
     illumina.py guess_barcodes --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
 
