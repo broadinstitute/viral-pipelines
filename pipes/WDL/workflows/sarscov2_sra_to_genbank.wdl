@@ -152,6 +152,7 @@ workflow sarscov2_sra_to_genbank {
             assemble_refbased.align_to_ref_merged_aligned_trimmed_only_bam,
             assemble_refbased.replicate_discordant_vcf,
             select_first([sarscov2_lineages.nextclade_tsv, ""]),
+            select_first([sarscov2_lineages.nextclade_json, ""]),
             select_first([sarscov2_lineages.pangolin_csv, ""]),
             select_first([vadr.outputs_tgz, ""]),
             assemble_refbased.replicate_concordant_sites,
@@ -169,7 +170,7 @@ workflow sarscov2_sra_to_genbank {
         'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels', 'pango_lineage',
         'dist_to_ref_snps', 'dist_to_ref_indels', 'vadr_num_alerts',
         'assembly_fasta', 'coverage_plot', 'aligned_bam', 'replicate_discordant_vcf',
-        'nextclade_tsv', 'pangolin_csv', 'vadr_tgz',
+        'nextclade_tsv', 'nextclade_json', 'pangolin_csv', 'vadr_tgz',
         'replicate_concordant_sites', 'replicate_discordant_snps', 'replicate_discordant_indels', 'num_read_groups', 'num_libraries',
         'align_to_ref_merged_reads_aligned', 'align_to_ref_merged_bases_aligned',
         ]

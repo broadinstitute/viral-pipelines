@@ -192,6 +192,7 @@ workflow sarscov2_illumina_full {
             assemble_refbased.replicate_discordant_vcf,
             assemble_refbased.align_to_ref_variants_vcf_gz,
             select_first([sarscov2_lineages.nextclade_tsv, ""]),
+            select_first([sarscov2_lineages.nextclade_json, ""]),
             select_first([sarscov2_lineages.pangolin_csv, ""]),
             select_first([vadr.outputs_tgz, ""]),
             demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"],
@@ -219,7 +220,7 @@ workflow sarscov2_illumina_full {
         'dist_to_ref_snps', 'dist_to_ref_indels', 'vadr_num_alerts',
         'assembly_fasta', 'coverage_plot', 'aligned_bam',
         'replicate_discordant_vcf', 'variants_from_ref_vcf',
-        'nextclade_tsv', 'pangolin_csv', 'vadr_tgz',
+        'nextclade_tsv', 'nextclade_json', 'pangolin_csv', 'vadr_tgz',
         'amplicon_set',
         'replicate_concordant_sites', 'replicate_discordant_snps', 'replicate_discordant_indels', 'num_read_groups', 'num_libraries',
         'align_to_ref_merged_reads_aligned', 'align_to_ref_merged_bases_aligned',
@@ -363,7 +364,7 @@ workflow sarscov2_illumina_full {
     if(defined(gcs_out_metrics)) {
         call terra.gcs_copy as gcs_metrics_dump {
             input:
-              infiles = flatten([[assembly_meta_tsv.combined, ivar_trim_stats.trim_stats_tsv, demux_deplete.multiqc_report_raw, demux_deplete.multiqc_report_cleaned, demux_deplete.spikein_counts, picard_wgs_merge.out_tsv, nextclade_many_samples.nextclade_json, nextclade_many_samples.nextclade_tsv], demux_deplete.demux_metrics]),
+              infiles = flatten([[assembly_meta_tsv.combined, ivar_trim_stats.trim_stats_tsv, demux_deplete.multiqc_report_raw, demux_deplete.multiqc_report_cleaned, demux_deplete.spikein_counts, picard_wgs_merge.out_tsv, picard_alignment_merge.out_tsv, nextclade_many_samples.nextclade_json, nextclade_many_samples.nextclade_tsv], demux_deplete.demux_metrics]),
               gcs_uri_prefix = "~{gcs_out_metrics}/~{flowcell_id}/"
         }
     }
@@ -371,12 +372,12 @@ workflow sarscov2_illumina_full {
         call terra.gcs_copy as gcs_cdc_dump {
             input:
                 infiles = [assembly_meta_tsv.combined, passing_cat.combined],
-                gcs_uri_prefix = "~{gcs_out_cdc}/~{flowcell_id}/"
+                gcs_uri_prefix = "~{gcs_out_cdc}/~{demux_deplete.run_date}/~{flowcell_id}/"
         }
         call terra.gcs_copy as gcs_cdc_dump_reads {
             input:
                 infiles = assemble_refbased.align_to_ref_merged_aligned_trimmed_only_bam,
-                gcs_uri_prefix = "~{gcs_out_cdc}/~{flowcell_id}/rawfiles/"
+                gcs_uri_prefix = "~{gcs_out_cdc}/~{demux_deplete.run_date}/~{flowcell_id}/rawfiles/"
         }
     }
     if(defined(gcs_out_sra)) {
