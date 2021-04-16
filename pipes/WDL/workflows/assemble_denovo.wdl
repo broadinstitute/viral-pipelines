@@ -130,7 +130,7 @@ workflow assemble_denovo {
     Int   reads_aligned               = refine_2x_and_plot.reads_aligned
     Float mean_coverage               = refine_2x_and_plot.mean_coverage
 
-    File?  cleaned_bam               = select_first([deplete_taxa.cleaned_bam, reads_unmapped_bam])
+    File   cleaned_bam               = select_first([deplete_taxa.cleaned_bam, reads_unmapped_bam])
     File?  cleaned_fastqc            = deplete_taxa.cleaned_fastqc
     Int?   depletion_read_count_pre  = deplete_taxa.depletion_read_count_pre
     Int?   depletion_read_count_post = deplete_taxa.depletion_read_count_post

@@ -1,8 +1,6 @@
 version 1.0
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
-import "../tasks/tasks_reports.wdl" as reports
-import "../tasks/tasks_intrahost.wdl" as intrahost
 import "../tasks/tasks_utils.wdl" as utils
 
 workflow sarscov2_nextstrain {
