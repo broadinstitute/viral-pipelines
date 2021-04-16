@@ -24,6 +24,7 @@ workflow sarscov2_lineages {
     output {
         String nextclade_clade    = nextclade_one_sample.nextclade_clade
         File   nextclade_tsv      = nextclade_one_sample.nextclade_tsv
+        File   nextclade_json     = nextclade_one_sample.nextclade_json
         String nextclade_aa_subs  = nextclade_one_sample.aa_subs_csv
         String nextclade_aa_dels  = nextclade_one_sample.aa_dels_csv
         String nextclade_version  = nextclade_one_sample.nextclade_version
