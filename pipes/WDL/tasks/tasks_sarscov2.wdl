@@ -199,4 +199,99 @@ task sequencing_report {
 }
 
 
+task sc2_meta_final {
+    meta {
+        description: "Final wash and cleanup of assembly metadata prior to delivery."
+    }
+    input {
+        File      assembly_stats_tsv
+        File?     collab_ids_tsv
+
+        String?   max_date
+        String?   min_date
+        Int?      min_unambig=24000
+
+        String    docker = "quay.io/broadinstitute/py3-bio:0.1.2"
+    }
+    String out_basename = basename(basename(assembly_stats_tsv, '.txt'), '.tsv')
+    command <<<
+        set -e
+        python3<<CODE
+        import os
+        import sys
+        import subprocess
+        import argparse
+        import datetime
+
+        #import epiweeks
+        import pandas as pd
+        import numpy as np
+
+
+        def load_data(assemblies_tsv, collab_tsv=None, min_unambig=0, min_date=None, max_date=None):
+
+            df_assemblies = pd.read_csv(assemblies_tsv, sep='\t')
+            if collab_tsv and os.path.isfile(collab_tsv) and os.path.getsize(collab_tsv):
+                collab_ids = pd.read_csv(collab_tsv, sep='\t')[list(['external_id', 'collaborator_id'])]
+                collab_ids.columns = ['sample', 'collaborator_id']
+            else:
+                collab_ids = pd.DataFrame(columns = ['sample', 'collaborator_id'])
+
+
+            # format dates properly
+            df_assemblies = df_assemblies.loc[
+                ~df_assemblies['run_date'].isna() &
+                ~df_assemblies['collection_date'].isna() &
+                (df_assemblies['run_date'] != 'missing') &
+                (df_assemblies['collection_date'] != 'missing')]
+            df_assemblies = df_assemblies.astype({'collection_date':np.datetime64,'run_date':np.datetime64})
+
+            # subset by date range
+            if min_date:
+                df_assemblies = df_assemblies.loc[~df_assemblies['run_date'].isna() & (np.datetime64(min_date) <= df_assemblies['run_date'])]
+            if max_date:
+                df_assemblies = df_assemblies.loc[~df_assemblies['run_date'].isna() & (df_assemblies['run_date'] <= np.datetime64(max_date))]
+
+            # fix missing data in purpose_of_sequencing
+            df_assemblies.loc[:,'purpose_of_sequencing'] = df_assemblies.loc[:,'purpose_of_sequencing'].fillna('Missing').replace('', 'Missing')
+
+            # derived column: genome_status
+            df_assemblies.loc[:,'genome_status'] = list(
+                    'failed_sequencing' if df_assemblies.loc[id, 'assembly_length_unambiguous'] < min_unambig
+                    else 'failed_annotation' if df_assemblies.loc[id, 'vadr_num_alerts'] > 0
+                    else 'submittable'
+                    for id in df_assemblies.index)
+
+            # derived columns: geo_country, geo_state, geo_locality, geo_state_abbr
+            df_assemblies.loc[:,'geo_country'] = list(g.split(': ')[0] if not pd.isna(g) else '' for g in df_assemblies.loc[:,'geo_loc_name'])
+            df_assemblies.loc[:,'geo_state'] = list(g.split(': ')[1].split(', ')[0] if not pd.isna(g) else '' for g in df_assemblies.loc[:,'geo_loc_name'])
+            df_assemblies.loc[:,'geo_locality'] = list(g.split(': ')[1].split(', ')[1] if not pd.isna(g) and ', ' in g else '' for g in df_assemblies.loc[:,'geo_loc_name'])
+            df_assemblies.loc[:,'geo_state_abbr'] = list(s.split('/')[1].split('-')[0] for s in df_assemblies.loc[:,'sample'])
+
+            # join column: collaborator_id
+            df_assemblies = df_assemblies.merge(collab_ids, on='sample', how='left', validate='one_to_one')
+
+            return df_assemblies
+
+        df_assemblies = load_data(
+            "~{assembly_stats_tsv}",
+            collab_tsv = ~{default='None' '"' + collab_ids_tsv + '"'},
+            min_unambig = ~{default='0' min_unambig},
+            min_date = ~{default='None' '"' + min_date + '"'},
+            max_date = ~{default='None' '"' + max_date + '"'}
+        )
+        df_assemblies.to_csv("~{out_basename}.final.tsv", sep='\t', index=False)
+        CODE
+    >>>
+    runtime {
+        docker: docker
+        memory: "2 GB"
+        cpu:    2
+        disks: "local-disk 50 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+    output {
+        File meta_tsv = "~{out_basename}.final.tsv"
+    }
+}
 
