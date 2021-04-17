@@ -5,12 +5,12 @@ task nextclade_one_sample {
         description: "Nextclade classification of one sample. Leaving optional inputs unspecified will use SARS-CoV-2 defaults."
     }
     input {
-        File   genome_fasta
-        File?  root_sequence
-        File?  auspice_reference_tree_json
-        File?  qc_config_json
-        File?  gene_annotations_json
-        File?  pcr_primers_csv
+        File  genome_fasta
+        File? root_sequence
+        File? auspice_reference_tree_json
+        File? qc_config_json
+        File? gene_annotations_json
+        File? pcr_primers_csv
     }
     String basename = basename(genome_fasta, ".fasta")
     command {
@@ -47,13 +47,13 @@ task nextclade_one_sample {
         dx_instance_type: "mem1_ssd1_v2_x2"
     }
     output {
-        String nextclade_version  = read_string("VERSION")
-        File   nextclade_json     = "~{basename}.nextclade.json"
-        File   auspice_json       = "~{basename}.nextclade.auspice.json"
-        File   nextclade_tsv      = "~{basename}.nextclade.tsv"
-        String nextclade_clade    = read_string("NEXTCLADE_CLADE")
-        String aa_subs_csv        = read_string("NEXTCLADE_AASUBS")
-        String aa_dels_csv        = read_string("NEXTCLADE_AADELS")
+        String nextclade_version = read_string("VERSION")
+        File   nextclade_json    = "~{basename}.nextclade.json"
+        File   auspice_json      = "~{basename}.nextclade.auspice.json"
+        File   nextclade_tsv     = "~{basename}.nextclade.tsv"
+        String nextclade_clade   = read_string("NEXTCLADE_CLADE")
+        String aa_subs_csv       = read_string("NEXTCLADE_AASUBS")
+        String aa_dels_csv       = read_string("NEXTCLADE_AADELS")
     }
 }
 
@@ -63,12 +63,12 @@ task nextclade_many_samples {
     }
     input {
         Array[File]+ genome_fastas
-        File?  root_sequence
-        File?  auspice_reference_tree_json
-        File?  qc_config_json
-        File?  gene_annotations_json
-        File?  pcr_primers_csv
-        String basename
+        File?        root_sequence
+        File?        auspice_reference_tree_json
+        File?        qc_config_json
+        File?        gene_annotations_json
+        File?        pcr_primers_csv
+        String       basename
     }
     command {
         set -e
@@ -93,10 +93,10 @@ task nextclade_many_samples {
         dx_instance_type: "mem1_ssd1_v2_x16"
     }
     output {
-        String nextclade_version  = read_string("VERSION")
-        File   nextclade_json     = "~{basename}.nextclade.json"
-        File   auspice_json       = "~{basename}.nextclade.auspice.json"
-        File   nextclade_tsv      = "~{basename}.nextclade.tsv"
+        String nextclade_version = read_string("VERSION")
+        File   nextclade_json    = "~{basename}.nextclade.json"
+        File   auspice_json      = "~{basename}.nextclade.auspice.json"
+        File   nextclade_tsv     = "~{basename}.nextclade.tsv"
     }
 }
 
@@ -105,10 +105,10 @@ task pangolin_one_sample {
         description: "Pangolin classification of one SARS-CoV-2 sample."
     }
     input {
-        File    genome_fasta
-        Int?    min_length
-        Float?  max_ambig
-        String  docker = "staphb/pangolin:2.3.8-pangolearn-2021-04-01"
+        File   genome_fasta
+        Int?   min_length
+        Float? max_ambig
+        String docker = "staphb/pangolin:2.3.8-pangolearn-2021-04-01"
     }
     String basename = basename(genome_fasta, ".fasta")
     command {
@@ -157,16 +157,16 @@ task sequencing_report {
         description: "Produce sequencing progress report."
     }
     input {
-        File           assembly_stats_tsv
-        File?          collab_ids_tsv
+        File    assembly_stats_tsv
+        File?   collab_ids_tsv
 
-        String?        sequencing_lab = "Broad Institute"
-        String?        intro_blurb = "The Broad Institute Viral Genomics group, in partnership with the Genomics Platform and Data Sciences Platform, has been engaged in viral sequencing of COVID-19 patients since March 2020."
-        String?        max_date
-        String?        min_date
-        Int?           min_unambig
-        String?        voc_list
-        String?        voi_list
+        String? sequencing_lab = "Broad Institute"
+        String? intro_blurb = "The Broad Institute Viral Genomics group, in partnership with the Genomics Platform and Data Sciences Platform, has been engaged in viral sequencing of COVID-19 patients since March 2020."
+        String? max_date
+        String? min_date
+        Int?    min_unambig
+        String? voc_list
+        String? voi_list
 
         String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.10"
     }
@@ -193,7 +193,7 @@ task sequencing_report {
     }
     output {
         Array[File] reports = glob("*.pdf")
-        Array[File] sheets = glob("*.xlsx")
+        Array[File] sheets  = glob("*.xlsx")
         File        all_zip = "all_reports.zip"
     }
 }
