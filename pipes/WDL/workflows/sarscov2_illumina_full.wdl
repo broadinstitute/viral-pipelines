@@ -3,7 +3,6 @@ version 1.0
 import "../tasks/tasks_read_utils.wdl" as read_utils
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
-import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_sarscov2.wdl" as sarscov2
 import "../tasks/tasks_terra.wdl" as terra
 import "../tasks/tasks_assembly.wdl" as assembly
@@ -222,6 +221,12 @@ workflow sarscov2_illumina_full {
         infiles     = [write_tsv([assembly_tsv_header]), write_tsv(assembly_tsv_row)],
         output_name = "assembly_metadata-~{flowcell_id}.tsv"
     }
+    call sarscov2.sc2_meta_final {
+      input:
+        assembly_stats_tsv = assembly_meta_tsv.combined,
+        collab_ids_tsv = collab_ids_tsv,
+        drop_file_cols = true
+    }
     call read_utils.max as ntc_max {
       input:
         list = select_all(ntc_bases)
@@ -344,14 +349,14 @@ workflow sarscov2_illumina_full {
     if(defined(gcs_out_metrics)) {
         call terra.gcs_copy as gcs_metrics_dump {
             input:
-              infiles        = flatten([[assembly_meta_tsv.combined, ivar_trim_stats.trim_stats_tsv, demux_deplete.multiqc_report_raw, demux_deplete.multiqc_report_cleaned, demux_deplete.spikein_counts, picard_wgs_merge.out_tsv, picard_alignment_merge.out_tsv, nextclade_many_samples.nextclade_json, nextclade_many_samples.nextclade_tsv], demux_deplete.demux_metrics]),
+              infiles        = flatten([[assembly_meta_tsv.combined, sc2_meta_final.meta_tsv, ivar_trim_stats.trim_stats_tsv, demux_deplete.multiqc_report_raw, demux_deplete.multiqc_report_cleaned, demux_deplete.spikein_counts, picard_wgs_merge.out_tsv, picard_alignment_merge.out_tsv, nextclade_many_samples.nextclade_json, nextclade_many_samples.nextclade_tsv], demux_deplete.demux_metrics]),
               gcs_uri_prefix = "~{gcs_out_metrics}/~{flowcell_id}/"
         }
     }
     if(defined(gcs_out_cdc)) {
         call terra.gcs_copy as gcs_cdc_dump {
             input:
-                infiles        = [assembly_meta_tsv.combined, passing_cat.combined],
+                infiles        = [assembly_meta_tsv.combined, sc2_meta_final.meta_tsv, passing_cat.combined],
                 gcs_uri_prefix = "~{gcs_out_cdc}/~{demux_deplete.run_date}/~{flowcell_id}/"
         }
         call terra.gcs_copy as gcs_cdc_dump_reads {
@@ -374,14 +379,14 @@ workflow sarscov2_illumina_full {
     }
 
     output {
-        Array[File] raw_reads_unaligned_bams       = demux_deplete.raw_reads_unaligned_bams
-        Array[File] cleaned_reads_unaligned_bams   = demux_deplete.cleaned_reads_unaligned_bams
-        Array[File] cleaned_bams_tiny              = demux_deplete.cleaned_bams_tiny
+        Array[File]  raw_reads_unaligned_bams      = demux_deplete.raw_reads_unaligned_bams
+        Array[File]  cleaned_reads_unaligned_bams  = demux_deplete.cleaned_reads_unaligned_bams
+        Array[File]  cleaned_bams_tiny             = demux_deplete.cleaned_bams_tiny
         
-        File        meta_by_filename_json          = demux_deplete.meta_by_filename_json
+        File         meta_by_filename_json         = demux_deplete.meta_by_filename_json
         
-        Array[Int]  read_counts_raw                = demux_deplete.read_counts_raw
-        Array[Int]  read_counts_depleted           = demux_deplete.read_counts_depleted
+        Array[Int]   read_counts_raw               = demux_deplete.read_counts_raw
+        Array[Int]   read_counts_depleted          = demux_deplete.read_counts_depleted
         
         File          sra_metadata                 = select_first([demux_deplete.sra_metadata])
         File          cleaned_bam_uris             = select_first([demux_deplete.cleaned_bam_uris])
@@ -409,6 +414,7 @@ workflow sarscov2_illumina_full {
         File          picard_metrics_alignment     = picard_alignment_merge.out_tsv
         
         File          assembly_stats_tsv           = assembly_meta_tsv.combined
+        File          assembly_stats_final_tsv     = sc2_meta_final.meta_tsv
         
         File          submission_zip               = package_genbank_ftp_submission.submission_zip
         File          submission_xml               = package_genbank_ftp_submission.submission_xml

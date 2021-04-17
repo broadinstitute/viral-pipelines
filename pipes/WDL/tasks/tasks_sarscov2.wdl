@@ -199,4 +199,244 @@ task sequencing_report {
 }
 
 
+task sc2_meta_final {
+    meta {
+        description: "Final wash and cleanup of assembly metadata prior to delivery."
+    }
+    input {
+        File          assembly_stats_tsv
+        File?         collab_ids_tsv
+
+        String        collab_ids_idcol = 'external_id'
+        Array[String] collab_ids_addcols = ['collaborator_id']
+
+        String?       max_date
+        String?       min_date
+        Int?          min_unambig=24000
+        Boolean       drop_file_cols=false
+
+        String        docker = "quay.io/broadinstitute/py3-bio:0.1.2"
+    }
+    String out_basename = basename(basename(assembly_stats_tsv, '.txt'), '.tsv')
+    command <<<
+        set -e
+        python3<<CODE
+        import os
+        import datetime
+        import epiweeks
+        import pandas as pd
+        import numpy as np
+
+        # set inputs
+        collab_idcol = '~{collab_ids_idcol}'
+        collab_addcols = list(x for x in '~{sep="*" collab_ids_addcols}'.split('*') if x)
+        assemblies_tsv = "~{assembly_stats_tsv}"
+        collab_tsv = ~{default='None' '"' + collab_ids_tsv + '"'}
+        min_unambig = ~{default='0' min_unambig}
+        min_date = ~{default='None' '"' + min_date + '"'}
+        max_date = ~{default='None' '"' + max_date + '"'}
+        drop_file_cols = ~{true='True' false='False' drop_file_cols}
+
+        # read input files
+        df_assemblies = pd.read_csv(assemblies_tsv, sep='\t')
+        if collab_tsv and os.path.isfile(collab_tsv) and os.path.getsize(collab_tsv):
+            collab_ids = pd.read_csv(collab_tsv, sep='\t')
+            if collab_addcols:
+                collab_ids = collab_ids[[collab_idcol] + collab_addcols]
+            if collab_idcol != 'sample':
+                collab_ids = collab_ids.rename(columns={collab_idcol: 'sample'})
+        else:
+            collab_ids = pd.DataFrame(columns = ['sample'] + collab_addcols)
+
+        # remove columns with File URIs if requested
+        if drop_file_cols:
+            df_assemblies.drop(columns=[
+                'assembly_fasta','coverage_plot','aligned_bam','replicate_discordant_vcf',
+                'variants_from_ref_vcf','nextclade_tsv','pangolin_csv','vadr_tgz','vadr_alerts',
+                ], inplace=True)
+
+        # format dates properly and remove all rows with missing or bad dates
+        df_assemblies = df_assemblies.loc[
+            ~df_assemblies['run_date'].isna() &
+            ~df_assemblies['collection_date'].isna() &
+            (df_assemblies['run_date'] != 'missing') &
+            (df_assemblies['collection_date'] != 'missing')]
+        df_assemblies = df_assemblies.astype({'collection_date':'datetime64[D]','run_date':'datetime64[D]'})
+
+        # fix vadr_num_alerts
+        df_assemblies = df_assemblies.astype({'vadr_num_alerts':'Int64'})
+
+        # subset by date range
+        if min_date:
+            df_assemblies = df_assemblies.loc[~df_assemblies['run_date'].isna() & (np.datetime64(min_date) <= df_assemblies['run_date'])]
+        if max_date:
+            df_assemblies = df_assemblies.loc[~df_assemblies['run_date'].isna() & (df_assemblies['run_date'] <= np.datetime64(max_date))]
+
+        # fix missing data in purpose_of_sequencing
+        df_assemblies.loc[:,'purpose_of_sequencing'] = df_assemblies.loc[:,'purpose_of_sequencing'].fillna('Missing').replace('', 'Missing')
+
+        # derived column: genome_status
+        df_assemblies.loc[:,'genome_status'] = list(
+                'failed_sequencing' if df_assemblies.loc[id, 'assembly_length_unambiguous'] < min_unambig
+                else 'failed_annotation' if df_assemblies.loc[id, 'vadr_num_alerts'] > 0
+                else 'submittable'
+                for id in df_assemblies.index)
+
+        # derived columns: geo_country, geo_state, geo_locality, geo_state_abbr
+        df_assemblies.loc[:,'geo_country'] = list(g.split(': ')[0] if not pd.isna(g) else '' for g in df_assemblies.loc[:,'geo_loc_name'])
+        df_assemblies.loc[:,'geo_state'] = list(g.split(': ')[1].split(', ')[0] if not pd.isna(g) else '' for g in df_assemblies.loc[:,'geo_loc_name'])
+        df_assemblies.loc[:,'geo_locality'] = list(g.split(': ')[1].split(', ')[1] if not pd.isna(g) and ', ' in g else '' for g in df_assemblies.loc[:,'geo_loc_name'])
+        df_assemblies.loc[:,'geo_state_abbr'] = list(s.split('/')[1].split('-')[0] for s in df_assemblies.loc[:,'sample'])
+
+        # join column: collaborator_id
+        df_assemblies = df_assemblies.merge(collab_ids, on='sample', how='left', validate='one_to_one')
+
+        # write final output
+        df_assemblies.to_csv("~{out_basename}.final.tsv", sep='\t', index=False)
+        CODE
+    >>>
+    runtime {
+        docker: docker
+        memory: "2 GB"
+        cpu:    2
+        disks: "local-disk 50 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+    output {
+        File meta_tsv = "~{out_basename}.final.tsv"
+    }
+}
+
+
+task crsp_meta_etl {
+    meta {
+        description: "Initial cleanup of CRSP sample metadata."
+    }
+    input {
+        File          sample_meta_crsp
+        String        salt
+        String        bioproject
+
+        String        country = 'USA'
+        String        collected_by = 'Broad Institute Clinical Research Sequencing Platform'
+        String        ontology_map_states = '{"AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California", "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "DC": "District of Columbia", "FL": "Florida", "GA": "Georgia", "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois", "IN": "Indiana", "IA": "Iowa", "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine", "MD": "Maryland", "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi", "MO": "Missouri", "MT": "Montana", "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire", "NJ": "New Jersey", "NM": "New Mexico", "NY": "New York", "NC": "North Carolina", "ND": "North Dakota", "OH": "Ohio", "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania", "RI": "Rhode Island", "SC": "South Carolina", "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah", "VT": "Vermont", "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"}'
+        String        ontology_map_body_part = '{"AN SWAB": "Anterior Nares", "AN Swab": "Anterior Nares", "Swab": "Upper respiratory tract", "Viral": "Upper respiratory tract", "Null": "Anterior Nares", "NP Swab": "Nasopharynx (NP)"}'
+
+        String        docker = "quay.io/broadinstitute/py3-bio:0.1.2"
+    }
+    String out_basename = basename(basename(basename(sample_meta_crsp, '.txt'), '.tsv'), '.metadata')
+    command <<<
+        set -e
+        python3<<CODE
+        import base64
+        import datetime
+        import hashlib
+        import json
+        import pandas as pd
+
+        # load some inputs
+        salt = '~{salt}'
+        ontology_map_states = json.loads('~{ontology_map_states}')
+        ontology_map_body_part = json.loads('~{ontology_map_body_part}')
+
+        # read input files
+        sample_meta = pd.read_csv('~{sample_meta_crsp}', sep='\t')
+
+        # clean collection_date
+        sample_meta = sample_meta.astype({'collection_date':'datetime64[D]'})
+        sample_meta.loc[:,'collection_year'] = list(d.year for d in sample_meta.loc[:,'collection_date'])
+
+        # validation checks
+        assert sample_meta.geo_loc_name.isna().sum() == 0, "error: some samples missing geo_loc_name"
+        assert sample_meta.collection_date.isna().sum() == 0, "error: some samples missing collection_date"
+        assert sample_meta.collected_by.isna().sum() == 0, "error: some samples missing collected_by"
+        assert all(sample_meta.collected_by == '~{collected_by}'), "error: not all samples collected by same lab"
+        assert sample_meta.anatomical_part.isna().sum() == 0, "error: some samples missing anatomical_part"
+        assert sample_meta.hl7_message_id.isna().sum() == 0, "error: some samples missing hl7_message_id"
+        assert sample_meta.internal_id.isna().sum() == 0, "error: some samples missing internal_id"
+
+        # clean geoloc
+        sample_meta.loc[:,'geo_loc_state_abbr'] = sample_meta.loc[:,'geo_loc_name']
+        sample_meta = sample_meta.assign(geo_loc_country = '~{country}')
+        sample_meta.loc[:,'geo_loc_name'] = ["~{country}: " + ontology_map_states[x] for x in sample_meta.loc[:,'geo_loc_state_abbr']]
+
+        # translate specimen type
+        sample_meta.loc[:,'anatomical_part'] = [ontology_map_body_part[x] for x in sample_meta.loc[:,'anatomical_part']]
+        sample_meta = sample_meta.assign(body_product = 'Mucus')
+
+        # construct IDs
+        ''' The hl7_message_id is a 10-byte b32encoded unique sample
+            identifier provided by CRSP to link and report diagnostic
+            results to Public Health and also to submitting labs and
+            patients. These IDs may be known to patients and providers.
+            We want to report genomic results to Public Health, but not
+            to patients or providers. We will use hl7_message_id to
+            derive a new hashed ID that we will use for public data release.
+            1: No member of the public should be able to infer the
+            hl7_message_id from the public ID.
+            2: The patient must not be able to derive the public ID from
+            information available to them (e.g. hl7_message_id).
+            3: The hashes should not collide across the range of
+            hl7_message_id inputs.
+        '''
+        sample_meta.loc[:,'hl7_hashed'] = [
+            base64.b32encode(hashlib.pbkdf2_hmac('sha256', id.encode('UTF-8'), salt.encode('UTF-8'), 20000, dklen=10)).decode('UTF-8')
+            for id in sample_meta.loc[:,'hl7_message_id']
+        ]
+        sample_meta['host_subject_id'] = [
+            f'CDCBI-CRSP_{id}' for id
+            in sample_meta['hl7_hashed']]
+        sample_meta['sample_name'] = [
+            f'{country}/{state}-{id}/{year}'
+            for country, state, id, year
+            in zip(sample_meta['geo_loc_country'], sample_meta['geo_loc_state_abbr'], sample_meta['host_subject_id'], sample_meta['collection_year'])]
+        sample_meta['isolate'] = [f'SARS-CoV-2/Human/{id}'
+            for id in sample_meta['sample_name']]
+
+        # prep biosample submission table
+        biosample = sample_meta[['sample_name', 'isolate', 'collected_by', 'collection_date', 'geo_loc_name', 'host_subject_id']]
+        biosample = biosample.assign(
+            bioproject_accession = '~{bioproject}',
+            attribute_package = 'Pathogen.cl',
+            organism = 'Severe acute respiratory syndrome coronavirus 2',
+            isolation_source = 'Clinical',
+            lat_lon = 'missing',
+            host = 'Homo sapiens',
+            host_disease = 'COVID-19',
+            purpose_of_sampling = 'Diagnostic Testing',
+            purpose_of_sequencing = 'Baseline surveillance (random sampling)'
+        )
+        biosample = biosample.reindex(columns= biosample.columns.tolist() + [
+            'host_health_state',' host_disease_outcome', 'host_age', 'host_sex',
+            'anatomical_material', 'collection_device', 'collection_method',
+            'passage_history', 'lab_host', 'passage_method',
+            'culture_collection', 'host_speciman_voucher',
+            'environmental_material', 'environmental_site',
+            'description'
+        ])
+
+        # create ID map
+        collab_ids = sample_meta[['sample_name','hl7_message_id','internal_id']]
+        collab_ids = collab_ids.rename(columns={'sample_name': 'external_id'})
+
+        # write final output
+        biosample.to_csv("biosample_meta_submit-~{out_basename}.tsv", sep='\t', index=False)
+        collab_ids.to_csv("collab_ids-~{out_basename}.tsv", sep='\t', index=False)
+        CODE
+    >>>
+    runtime {
+        docker: docker
+        memory: "2 GB"
+        cpu:    2
+        disks: "local-disk 50 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+    output {
+        File          biosample_submit_tsv = "biosample_meta_submit-~{out_basename}.tsv"
+        File          collab_ids_tsv       = "collab_ids-~{out_basename}.tsv"
+
+        String        collab_ids_idcols    = 'external_id'
+        Array[String] collab_ids_addcols   = ['hl7_message_id','internal_id']
+    }
+}
 

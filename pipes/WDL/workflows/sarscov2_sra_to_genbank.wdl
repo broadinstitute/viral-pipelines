@@ -2,7 +2,6 @@ version 1.0
 
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_ncbi_tools.wdl" as ncbi_tools
-import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_utils.wdl" as utils
 
