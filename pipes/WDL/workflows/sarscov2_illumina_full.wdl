@@ -413,6 +413,7 @@ workflow sarscov2_illumina_full {
         File        picard_metrics_alignment = picard_alignment_merge.out_tsv
 
         File assembly_stats_tsv = assembly_meta_tsv.combined
+        File assembly_stats_final_tsv = sc2_meta_final.meta_tsv
 
         File submission_zip = package_genbank_ftp_submission.submission_zip
         File submission_xml = package_genbank_ftp_submission.submission_xml
