@@ -380,18 +380,18 @@ task crsp_meta_etl {
             hl7_message_id inputs.
         '''
         sample_meta.loc[:,'hl7_hashed'] = [
-            base64.b32encode(hashlib.pbkdf2_hmac('sha256', id.encode('UTF-8'), salt.encode('UTF-8'), 1000000, dklen=10)).decode('UTF-8')
+            base64.b32encode(hashlib.pbkdf2_hmac('sha256', id.encode('UTF-8'), salt.encode('UTF-8'), 20000, dklen=10)).decode('UTF-8')
             for id in sample_meta.loc[:,'hl7_message_id']
         ]
+        sample_meta['host_subject_id'] = [
+            f'CDCBI-CRSP_{id}' for id
+            in sample_meta['hl7_hashed']]
         sample_meta['sample_name'] = [
-            f'{country}/{state}-{prefix}_{id}/{year}'
-            for country, state, prefix, id, year
-            in zip(sample_meta['geo_loc_country'], sample_meta['geo_loc_state_abbr'], 'CDCBI-CRSP_', sample_meta['hl7_hashed'], sample_meta['collection_year'])]
+            f'{country}/{state}-{id}/{year}'
+            for country, state, id, year
+            in zip(sample_meta['geo_loc_country'], sample_meta['geo_loc_state_abbr'], sample_meta['host_subject_id'], sample_meta['collection_year'])]
         sample_meta['isolate'] = [f'SARS-CoV-2/Human/{id}'
             for id in sample_meta['sample_name']]
-        sample_meta['host_subject_id'] = [
-            f'{prefix}_{id}'for prefix, id
-            in zip('CDCBI-CRSP_', sample_meta['hl7_hashed'])]
 
         # prep biosample submission table
         biosample = sample_meta[['sample_name', 'isolate', 'collected_by', 'collection_date', 'geo_loc_name', 'host_subject_id']]
@@ -406,7 +406,7 @@ task crsp_meta_etl {
             purpose_of_sampling = 'Diagnostic Testing',
             purpose_of_sequencing = 'Baseline surveillance (random sampling)'
         )
-        biosample = biosample.reindex(columns=[
+        biosample = biosample.reindex(columns= biosample.columns.tolist() + [
             'host_health_state',' host_disease_outcome', 'host_age', 'host_sex',
             'anatomical_material', 'collection_device', 'collection_method',
             'passage_history', 'lab_host', 'passage_method',
