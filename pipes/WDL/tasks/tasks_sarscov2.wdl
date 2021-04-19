@@ -252,7 +252,8 @@ task sc2_meta_final {
         if drop_file_cols:
             df_assemblies.drop(columns=[
                 'assembly_fasta','coverage_plot','aligned_bam','replicate_discordant_vcf',
-                'variants_from_ref_vcf','nextclade_tsv','pangolin_csv','vadr_tgz','vadr_alerts',
+                'variants_from_ref_vcf','nextclade_tsv','nextclade_json',
+                'pangolin_csv','vadr_tgz','vadr_alerts',
                 ], inplace=True)
 
         # format dates properly and remove all rows with missing or bad dates
