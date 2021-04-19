@@ -238,9 +238,9 @@ task sc2_meta_final {
         drop_file_cols = ~{true='True' false='False' drop_file_cols}
 
         # read input files
-        df_assemblies = pd.read_csv(assemblies_tsv, sep='\t')
+        df_assemblies = pd.read_csv(assemblies_tsv, sep='\t').dropna(how='all')
         if collab_tsv and os.path.isfile(collab_tsv) and os.path.getsize(collab_tsv):
-            collab_ids = pd.read_csv(collab_tsv, sep='\t')
+            collab_ids = pd.read_csv(collab_tsv, sep='\t').dropna(how='all')
             if collab_addcols:
                 collab_ids = collab_ids[[collab_idcol] + collab_addcols]
             if collab_idcol != 'sample':
