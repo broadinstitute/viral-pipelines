@@ -929,53 +929,52 @@ task vadr {
   }
   input {
     File   genome_fasta
-    String vadr_opts = "-s -r --nomisc --mkey NC_045512 --fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf,insertnn,deletinn"
+    String vadr_opts = "--glsearch -s -r --nomisc --mkey sarscov2 --alt_fail lowscore,fstukcnf,insertnn,deletinn"
 
-    String docker = "staphb/vadr:1.1.3"
+    String docker = "staphb/vadr:1.2"
+    Int    minlen = 50
+    Int    maxlen = 30000
   }
   String out_base = basename(genome_fasta, '.fasta')
   command <<<
     set -e
 
-    # find available RAM
-    RAM_MB=$(free -m | head -2 | tail -1 | awk '{print $2}')
+    # remove terminal ambiguous nucleotides
+    /opt/vadr/vadr/miniscripts/fasta-trim-terminal-ambigs.pl \
+      "~{genome_fasta}" \
+      --minlen ~{minlen} \
+      --maxlen ~{maxlen} \
+      > "~{out_base}.fasta"
 
     # run VADR
     v-annotate.pl \
       ~{vadr_opts} \
-      --mxsize $RAM_MB \
-      "~{genome_fasta}" \
+      --mdir /opt/vadr/vadr-models/ \
+      "~{out_base}.fasta" \
       "~{out_base}"
-
-    # manually ignore certain alert patterns based on conversation with NCBI Genbank team
-    # set +e allows for grep to match or not match the pattern and not fail either way
-    set +e
-    cat "~{out_base}/~{out_base}.vadr.alt.list" \
-      | grep -P -v "DELETION_OF_FEATURE\t\*sequence\*\tinternal deletion of a complete feature \[stem_loop feature number 1: stem_loop.1" \
-      | grep -P -v "INDEFINITE_ANNOTATION_START\tnucleocapsid phosphoprotein\tprotein-based alignment does not extend close enough to nucleotide-based alignment 5' endpoint \[6 > 5" \
-      > "~{out_base}/~{out_base}.vadr.alt.list.filtered"
-    set -e
 
     # package everything for output
     tar -C "~{out_base}" -czvf "~{out_base}.vadr.tar.gz" .
 
     # prep alerts into a tsv file for parsing
-    cat "~{out_base}/~{out_base}.vadr.alt.list.filtered" | cut -f 2 | tail -n +2 \
+    cat "~{out_base}/~{out_base}.vadr.alt.list" | cut -f 2 | tail -n +2 \
       > "~{out_base}.vadr.alerts.tsv"
     cat "~{out_base}.vadr.alerts.tsv" | wc -l > NUM_ALERTS
   >>>
   output {
     File                 feature_tbl = "~{out_base}/~{out_base}.vadr.pass.tbl"
     Int                  num_alerts  = read_int("NUM_ALERTS")
-    File                 alerts_list = "~{out_base}/~{out_base}.vadr.alt.list.filtered"
+    File                 alerts_list = "~{out_base}/~{out_base}.vadr.alt.list"
     Array[Array[String]] alerts      = read_tsv("~{out_base}.vadr.alerts.tsv")
     File                 outputs_tgz = "~{out_base}.vadr.tar.gz"
+    Boolean              pass        = num_alerts==0
+    String               vadr_docker = docker
   }
   runtime {
     docker: docker
-    memory: "64 GB"
-    cpu: 8
-    dx_instance_type: "mem3_ssd1_v2_x8"
+    memory: "2 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
 
