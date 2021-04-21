@@ -225,7 +225,8 @@ workflow sarscov2_illumina_full {
       input:
         assembly_stats_tsv = assembly_meta_tsv.combined,
         collab_ids_tsv = collab_ids_tsv,
-        drop_file_cols = true
+        drop_file_cols = true,
+        min_unambig = min_genome_bases
     }
     call read_utils.max as ntc_max {
       input:

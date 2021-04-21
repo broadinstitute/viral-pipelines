@@ -31,5 +31,6 @@ workflow sarscov2_sequencing_reports {
         Array[File] sequencing_reports_pdfs       = sequencing_report.reports
         Array[File] sequencing_reports_xlsxs      = sequencing_report.sheets
         File        sequencing_reports_zip        = sequencing_report.all_zip
+        File        sequencing_report_tsv         = sequencing_report.all_tsv
     }
 }

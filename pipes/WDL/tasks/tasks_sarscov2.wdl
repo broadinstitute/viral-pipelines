@@ -168,7 +168,7 @@ task sequencing_report {
         String? voc_list
         String? voi_list
 
-        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.10"
+        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.13"
     }
     command {
         set -e
@@ -182,7 +182,7 @@ task sequencing_report {
             ~{'--min_unambig=' + min_unambig} \
             ~{'--voc_list=' + voc_list} \
             ~{'--voi_list=' + voi_list}
-        zip all_reports.zip *.pdf *.xlsx
+        zip all_reports.zip *.pdf *.xlsx *.tsv
     }
     runtime {
         docker: docker
@@ -195,6 +195,7 @@ task sequencing_report {
         Array[File] reports = glob("*.pdf")
         Array[File] sheets  = glob("*.xlsx")
         File        all_zip = "all_reports.zip"
+        File        all_tsv = glob("report-*-everything-*.tsv")[0]
     }
 }
 
@@ -238,9 +239,9 @@ task sc2_meta_final {
         drop_file_cols = ~{true='True' false='False' drop_file_cols}
 
         # read input files
-        df_assemblies = pd.read_csv(assemblies_tsv, sep='\t')
+        df_assemblies = pd.read_csv(assemblies_tsv, sep='\t').dropna(how='all')
         if collab_tsv and os.path.isfile(collab_tsv) and os.path.getsize(collab_tsv):
-            collab_ids = pd.read_csv(collab_tsv, sep='\t')
+            collab_ids = pd.read_csv(collab_tsv, sep='\t').dropna(how='all')
             if collab_addcols:
                 collab_ids = collab_ids[[collab_idcol] + collab_addcols]
             if collab_idcol != 'sample':
@@ -250,10 +251,13 @@ task sc2_meta_final {
 
         # remove columns with File URIs if requested
         if drop_file_cols:
-            df_assemblies.drop(columns=[
+            cols_unwanted = [
                 'assembly_fasta','coverage_plot','aligned_bam','replicate_discordant_vcf',
-                'variants_from_ref_vcf','nextclade_tsv','pangolin_csv','vadr_tgz','vadr_alerts',
-                ], inplace=True)
+                'variants_from_ref_vcf','nextclade_tsv','nextclade_json',
+                'pangolin_csv','vadr_tgz','vadr_alerts',
+            ]
+            cols_unwanted = list(c for c in cols_unwanted if c in df_assemblies.columns)
+            df_assemblies.drop(columns=cols_unwanted, inplace=True)
 
         # format dates properly and remove all rows with missing or bad dates
         df_assemblies = df_assemblies.loc[
