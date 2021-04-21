@@ -168,7 +168,7 @@ task sequencing_report {
         String? voc_list
         String? voi_list
 
-        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.12"
+        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.13"
     }
     command {
         set -e
@@ -251,11 +251,13 @@ task sc2_meta_final {
 
         # remove columns with File URIs if requested
         if drop_file_cols:
-            df_assemblies.drop(columns=[
+            cols_unwanted = [
                 'assembly_fasta','coverage_plot','aligned_bam','replicate_discordant_vcf',
                 'variants_from_ref_vcf','nextclade_tsv','nextclade_json',
                 'pangolin_csv','vadr_tgz','vadr_alerts',
-                ], inplace=True)
+            ]
+            cols_unwanted = list(c for c in cols_unwanted if c in df_assemblies.columns)
+            df_assemblies.drop(columns=cols_unwanted, inplace=True)
 
         # format dates properly and remove all rows with missing or bad dates
         df_assemblies = df_assemblies.loc[
