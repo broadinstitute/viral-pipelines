@@ -182,7 +182,7 @@ task sequencing_report {
             ~{'--min_unambig=' + min_unambig} \
             ~{'--voc_list=' + voc_list} \
             ~{'--voi_list=' + voi_list}
-        zip all_reports.zip *.pdf *.xlsx
+        zip all_reports.zip *.pdf *.xlsx *.tsv
     }
     runtime {
         docker: docker
@@ -195,6 +195,7 @@ task sequencing_report {
         Array[File] reports = glob("*.pdf")
         Array[File] sheets  = glob("*.xlsx")
         File        all_zip = "all_reports.zip"
+        File        all_tsv = glob("report-*-everything-*.tsv")[0]
     }
 }
 
