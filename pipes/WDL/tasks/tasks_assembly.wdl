@@ -830,14 +830,14 @@ task filter_bad_ntc_batches {
 
         # filter samples from bad batches/lanes
         fail_meta = {}
-        new_seqid_list = []
-        for id in seqid_list:
+        fails = set()
+        for sample in assembly_meta:
+          id = sample['sample']
           if (demux_meta[id].get('batch_lib') in reject_batches) \
             or (demux_meta[id]['run'].split('.')[-1] in reject_lanes):
             fail_meta[id] = 'failed_NTC'
-          else:
-            new_seqid_list.append(id)
-        seqid_list = new_seqid_list
+            fails.add(id)
+        seqid_list = list(id for id in seqid_list if id not in fails)
 
         # write outputs
         with open('seqids.filtered.txt', 'wt') as outf:

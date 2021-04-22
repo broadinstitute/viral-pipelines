@@ -252,7 +252,9 @@ task sc2_meta_final {
         # read input files
         df_assemblies = pd.read_csv(assemblies_tsv, sep='\t').dropna(how='all')
         if collab_tsv and os.path.isfile(collab_tsv) and os.path.getsize(collab_tsv):
-            collab_ids = pd.read_csv(collab_tsv, sep='\t').dropna(how='all')
+            collab_ids = pd.read_csv(collab_tsv, sep='\t').dropna(how='all').dropna(how='all', axis='columns')
+            if 'collection_date' in collab_ids.columns:
+                collab_ids.drop(columns=['collection_date'], inplace=True)
             if collab_addcols:
                 collab_ids = collab_ids[[collab_idcol] + collab_addcols]
             if collab_idcol != 'sample':
@@ -299,9 +301,9 @@ task sc2_meta_final {
 
         # derived column: genome_status
         df_assemblies.loc[:,'genome_status'] = list(
-                'failed_sequencing' if df_assemblies.loc[id, 'assembly_length_unambiguous'] < min_unambig
+                genome_status[df_assemblies.loc[id, 'sample']] if df_assemblies.loc[id, 'sample'] in genome_status
+                else 'failed_sequencing' if df_assemblies.loc[id, 'assembly_length_unambiguous'] < min_unambig
                 else 'failed_annotation' if df_assemblies.loc[id, 'vadr_num_alerts'] > 0
-                else genome_status[id] if id in genome_status
                 else 'submittable'
                 for id in df_assemblies.index)
 
