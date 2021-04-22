@@ -837,6 +837,7 @@ task filter_bad_ntc_batches {
             fail_meta[id] = 'failed_NTC'
           else:
             new_seqid_list.append(id)
+        seqid_list = new_seqid_list
 
         # write outputs
         with open('seqids.filtered.txt', 'wt') as outf:
