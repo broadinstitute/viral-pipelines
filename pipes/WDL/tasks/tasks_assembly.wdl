@@ -795,20 +795,23 @@ task filter_bad_ntc_batches {
           seqid_list = list(x.strip() for x in inf)
         num_provided = len(seqid_list)
         with open('~{demux_meta_by_sample_json}', 'rt') as inf:
-          demux_meta = json.load(inf)
+          demux_meta_orig = json.load(inf)
         with open('~{assembly_meta_tsv}', 'rt') as inf:
           assembly_meta = list(csv.DictReader(inf, delimiter='\t'))
+
+        # re-index demux_meta lookup table by sample_original instead of sample_sanitized
+        demux_meta = dict((v['sample_original'],v) for k,v in demux_meta_orig.items())
 
         # identify bad NTCs
         reject_lanes = set()
         reject_batches = set()
         for sample in assembly_meta:
-          if (demux_meta[sample['sample']].get('control') == 'NTC'):
+          if (demux_meta[sample['sample_original']].get('control') == 'NTC'):
             bad_ntc = sample['assembly_length_unambiguous'] \
               and (int(sample['assembly_length_unambiguous']) >= ntc_min_unambig)
-            id = sample['sample']
-            lane = demux_meta[sample['sample']]['run'].split('.')[-1]
-            batch = demux_meta[sample['sample']].get('batch_lib','')
+            id = sample['sample_original']
+            lane = demux_meta[sample['sample_original']]['run'].split('.')[-1]
+            batch = demux_meta[sample['sample_original']].get('batch_lib','')
             print(f"NTC:\t{id}\t{sample['assembly_length_unambiguous']}\t{bad_ntc}\t{lane}\t{batch}")
             if bad_ntc:
               if batch:
