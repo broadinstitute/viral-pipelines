@@ -215,18 +215,30 @@ workflow sarscov2_illumina_full {
         'Ct'
         ]
 
-    ### summary stats and QC metrics
+    ### summary stats
     call utils.concatenate as assembly_meta_tsv {
       input:
         infiles     = [write_tsv([assembly_tsv_header]), write_tsv(assembly_tsv_row)],
         output_name = "assembly_metadata-~{flowcell_id}.tsv"
     }
+
+    ### filter out batches where NTCs assemble
+    call assembly.filter_bad_ntc_batches {
+      input:
+        seqid_list = write_lines(select_all(submittable_id)),
+        demux_meta_by_sample_json = demux_deplete.meta_by_sample_json,
+        assembly_meta_tsv = assembly_meta_tsv.combined,
+        ntc_min_unambig = 15000
+    }
+
+    ### QC metrics
     call sarscov2.sc2_meta_final {
       input:
         assembly_stats_tsv = assembly_meta_tsv.combined,
         collab_ids_tsv = collab_ids_tsv,
         drop_file_cols = true,
-        min_unambig = min_genome_bases
+        min_unambig = min_genome_bases,
+        filter_to_ids = filter_bad_ntc_batches.seqids_kept
     }
     call read_utils.max as ntc_max {
       input:
@@ -262,7 +274,7 @@ workflow sarscov2_illumina_full {
         biosample_attributes = biosample_merge.out_tsv,
         num_segments         = 1,
         taxid                = taxid,
-        filter_to_ids        = write_lines(select_all(submittable_id))
+        filter_to_ids        = filter_bad_ntc_batches.seqids_kept
     }
     call ncbi.structured_comments {
       input:
@@ -308,7 +320,8 @@ workflow sarscov2_illumina_full {
       input:
         gisaid_meta   = gisaid_meta_prep.meta_tsv,
         assembly_meta = assembly_meta_tsv.combined,
-        out_name      = "nextmeta-~{flowcell_id}.tsv"
+        out_name      = "nextmeta-~{flowcell_id}.tsv",
+        filter_to_ids = filter_bad_ntc_batches.seqids_kept
     }
 
     # create data tables with assembly_meta_tsv if workspace name and project provided
@@ -435,13 +448,13 @@ workflow sarscov2_illumina_full {
         File          passing_fasta                = passing_cat.combined
         
         Array[String] assembled_ids                = select_all(passing_assembly_ids)
-        Array[String] submittable_ids              = select_all(submittable_id)
+        Array[String] submittable_ids              = read_lines(filter_bad_ntc_batches.seqids_kept)
         Array[String] failed_assembly_ids          = select_all(failed_assembly_id)
         Array[String] failed_annotation_ids        = select_all(failed_annotation_id)
         Int           num_read_files               = length(demux_deplete.cleaned_reads_unaligned_bams)
         Int           num_assembled                = length(select_all(passing_assemblies))
         Int           num_failed_assembly          = length(select_all(failed_assembly_id))
-        Int           num_submittable              = length(select_all(submittable_id))
+        Int           num_submittable              = filter_bad_ntc_batches.num_kept
         Int           num_failed_annotation        = length(select_all(failed_annotation_id))
         Int           num_samples                  = length(group_bams_by_sample.sample_names)
         

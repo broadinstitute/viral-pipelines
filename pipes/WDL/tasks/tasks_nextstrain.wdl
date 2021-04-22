@@ -6,6 +6,7 @@ task nextmeta_prep {
     File   gisaid_meta
     File   assembly_meta
     String out_name
+    File?  filter_to_ids
   }
   command <<<
     python3 << CODE
@@ -24,6 +25,12 @@ task nextmeta_prep {
     with open('~{assembly_meta}', 'rt') as inf:
       for row in csv.DictReader(inf, delimiter='\t'):
         sample_to_assembly[row['sample']] = row
+    filter_to_ids = "~{default='' filter_to_ids}"
+    if filter_to_ids:
+        with open(filter_to_ids, 'rt') as inf:
+            keep_list = set(x.strip() for x in inf)
+    else:
+        keep_list = None
 
     # write outputs
     out_headers = ('strain', 'date', 'region', 'country', 'division', 'location', 'length', 'host', 'Nextstrain_clade', 'pango_lineage', 'originating_lab', 'submitting_lab', 'authors', 'purpose_of_sequencing')
@@ -33,23 +40,24 @@ task nextmeta_prep {
       writer.writeheader()
 
       for sample in samples:
-        geoloc = sample_to_gisaid[sample]['covv_location'].split(' / ')
-        writer.writerow({
-          'strain': sample,
-          'host': 'Human',
-          'length': sample_to_assembly[sample]['assembly_length_unambiguous'],
-          'Nextstrain_clade': sample_to_assembly[sample]['nextclade_clade'],
-          'pango_lineage': sample_to_assembly[sample]['pango_lineage'],
-          'region': geoloc[0],
-          'country': geoloc[1] if len(geoloc)>1 else '',
-          'division': geoloc[2] if len(geoloc)>2 else '',
-          'location': geoloc[3] if len(geoloc)>3 else '',
-          'date': sample_to_gisaid[sample]['covv_collection_date'],
-          'originating_lab': sample_to_gisaid[sample]['covv_orig_lab'],
-          'submitting_lab': sample_to_gisaid[sample]['covv_subm_lab'],
-          'authors': sample_to_gisaid[sample]['covv_authors'],
-          'purpose_of_sequencing': sample_to_gisaid[sample]['covv_add_host_info'],
-        })
+        if not filter_to_ids or sample in keep_list:
+            geoloc = sample_to_gisaid[sample]['covv_location'].split(' / ')
+            writer.writerow({
+            'strain': sample,
+            'host': 'Human',
+            'length': sample_to_assembly[sample]['assembly_length_unambiguous'],
+            'Nextstrain_clade': sample_to_assembly[sample]['nextclade_clade'],
+            'pango_lineage': sample_to_assembly[sample]['pango_lineage'],
+            'region': geoloc[0],
+            'country': geoloc[1] if len(geoloc)>1 else '',
+            'division': geoloc[2] if len(geoloc)>2 else '',
+            'location': geoloc[3] if len(geoloc)>3 else '',
+            'date': sample_to_gisaid[sample]['covv_collection_date'],
+            'originating_lab': sample_to_gisaid[sample]['covv_orig_lab'],
+            'submitting_lab': sample_to_gisaid[sample]['covv_subm_lab'],
+            'authors': sample_to_gisaid[sample]['covv_authors'],
+            'purpose_of_sequencing': sample_to_gisaid[sample]['covv_add_host_info'],
+            })
 
     CODE
   >>>

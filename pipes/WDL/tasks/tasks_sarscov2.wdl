@@ -216,6 +216,8 @@ task sc2_meta_final {
         Int?          min_unambig=24000
         Boolean       drop_file_cols=false
 
+        File?         filter_to_ids
+
         String        docker = "quay.io/broadinstitute/py3-bio:0.1.2"
     }
     String out_basename = basename(basename(assembly_stats_tsv, '.txt'), '.tsv')
@@ -237,6 +239,7 @@ task sc2_meta_final {
         min_date = ~{default='None' '"' + min_date + '"'}
         max_date = ~{default='None' '"' + max_date + '"'}
         drop_file_cols = ~{true='True' false='False' drop_file_cols}
+        filter_to_ids = ~{default='None' '"' + filter_to_ids + '"'}
 
         # read input files
         df_assemblies = pd.read_csv(assemblies_tsv, sep='\t').dropna(how='all')
@@ -248,6 +251,9 @@ task sc2_meta_final {
                 collab_ids = collab_ids.rename(columns={collab_idcol: 'sample'})
         else:
             collab_ids = pd.DataFrame(columns = ['sample'] + collab_addcols)
+        if filter_to_ids:
+            with open(filter_to_ids, 'rt') as inf:
+                keep_list = set(x.strip() for x in inf)
 
         # remove columns with File URIs if requested
         if drop_file_cols:
@@ -258,6 +264,10 @@ task sc2_meta_final {
             ]
             cols_unwanted = list(c for c in cols_unwanted if c in df_assemblies.columns)
             df_assemblies.drop(columns=cols_unwanted, inplace=True)
+
+        # filter to IDs if requested
+        if filter_to_ids:
+            df_assemblies = df_assemblies[df_assemblies['sample'].isin(keep_list)]
 
         # format dates properly and remove all rows with missing or bad dates
         df_assemblies = df_assemblies.loc[
