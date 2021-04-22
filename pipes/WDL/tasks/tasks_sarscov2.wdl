@@ -225,6 +225,7 @@ task sc2_meta_final {
     command <<<
         set -e
         python3<<CODE
+        import json
         import os
         import datetime
         import epiweeks
@@ -309,6 +310,15 @@ task sc2_meta_final {
         df_assemblies.loc[:,'geo_state'] = list(g.split(': ')[1].split(', ')[0] if not pd.isna(g) else '' for g in df_assemblies.loc[:,'geo_loc_name'])
         df_assemblies.loc[:,'geo_locality'] = list(g.split(': ')[1].split(', ')[1] if not pd.isna(g) and ', ' in g else '' for g in df_assemblies.loc[:,'geo_loc_name'])
         df_assemblies.loc[:,'geo_state_abbr'] = list(s.split('/')[1].split('-')[0] for s in df_assemblies.loc[:,'sample'])
+
+        # derived columns: collection_epiweek, run_epiweek
+        df_assemblies.loc[:,'collection_epiweek'] = list(epiweeks.Week.fromdate(x) if not pd.isna(x) else x for x in df_assemblies.loc[:,'collection_date'])
+        df_assemblies.loc[:,'run_epiweek'] = list(epiweeks.Week.fromdate(x) if not pd.isna(x) else x for x in df_assemblies.loc[:,'run_date'])
+        df_assemblies.loc[:,'collection_epiweek_end'] = list(x.enddate().strftime('%Y-%m-%d') if not pd.isna(x) else '' for x in df_assemblies.loc[:,'collection_epiweek'])
+        df_assemblies.loc[:,'run_epiweek_end'] = list(x.enddate().strftime('%Y-%m-%d') if not pd.isna(x) else '' for x in df_assemblies.loc[:,'run_epiweek'])
+
+        # derived column: sample_age_at_runtime
+        df_assemblies.loc[:,'sample_age_at_runtime'] = list(x.days for x in df_assemblies.loc[:,'run_date'] - df_assemblies.loc[:,'collection_date'])
 
         # join column: collaborator_id
         df_assemblies = df_assemblies.merge(collab_ids, on='sample', how='left', validate='one_to_one')
