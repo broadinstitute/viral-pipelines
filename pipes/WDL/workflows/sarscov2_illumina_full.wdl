@@ -238,7 +238,7 @@ workflow sarscov2_illumina_full {
         collab_ids_tsv = collab_ids_tsv,
         drop_file_cols = true,
         min_unambig = min_genome_bases,
-        filter_to_ids = filter_bad_ntc_batches.seqids_kept
+        genome_status_json = filter_bad_ntc_batches.fail_meta_json
     }
     call read_utils.max as ntc_max {
       input:
@@ -262,10 +262,16 @@ workflow sarscov2_illumina_full {
         id_col       = 'sample_sanitized',
         out_basename = "picard_metrics_alignment-~{flowcell_id}"
     }
-    call utils.concatenate as passing_cat {
+    call utils.concatenate as passing_cat_prefilter {
       input:
         infiles     = select_all(passing_assemblies),
-        output_name = "assemblies_passing-~{flowcell_id}.fasta"
+        output_name = "assemblies_passing-~{flowcell_id}.prefilter.fasta"
+    }
+    call nextstrain.filter_sequences_to_list as passing_cat {
+      input:
+        sequences = passing_cat_prefilter.combined,
+        keep_list = [filter_bad_ntc_batches.seqids_kept],
+        out_fname = "assemblies_passing-~{flowcell_id}.fasta"
     }
 
     ### prep genbank submission
@@ -370,7 +376,7 @@ workflow sarscov2_illumina_full {
     if(defined(gcs_out_cdc)) {
         call terra.gcs_copy as gcs_cdc_dump {
             input:
-                infiles        = [assembly_meta_tsv.combined, sc2_meta_final.meta_tsv, passing_cat.combined],
+                infiles        = [assembly_meta_tsv.combined, sc2_meta_final.meta_tsv, passing_cat.filtered_fasta],
                 gcs_uri_prefix = "~{gcs_out_cdc}/~{demux_deplete.run_date}/~{flowcell_id}/"
         }
         call terra.gcs_copy as gcs_cdc_dump_reads {
@@ -410,6 +416,8 @@ workflow sarscov2_illumina_full {
         Array[File]   submittable_assemblies_fasta = select_all(submittable_genomes)
         
         Int           max_ntc_bases                = ntc_max.out
+        Array[String] ntc_rejected_batches         = filter_bad_ntc_batches.reject_batches
+        Array[String] ntc_rejected_lanes           = filter_bad_ntc_batches.reject_lanes
         
         Array[File]   demux_metrics                = demux_deplete.demux_metrics
         Array[File]   demux_commonBarcodes         = demux_deplete.demux_commonBarcodes
@@ -445,7 +453,7 @@ workflow sarscov2_illumina_full {
         File          nextclade_all_json           = nextclade_many_samples.nextclade_json
         File          nextclade_auspice_json       = nextclade_many_samples.auspice_json
         
-        File          passing_fasta                = passing_cat.combined
+        File          passing_fasta                = passing_cat.filtered_fasta
         
         Array[String] assembled_ids                = select_all(passing_assembly_ids)
         Array[String] submittable_ids              = read_lines(filter_bad_ntc_batches.seqids_kept)

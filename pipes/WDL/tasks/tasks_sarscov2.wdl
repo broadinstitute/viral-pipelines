@@ -207,6 +207,7 @@ task sc2_meta_final {
     input {
         File          assembly_stats_tsv
         File?         collab_ids_tsv
+        File?         genome_status_json
 
         String        collab_ids_idcol = 'external_id'
         Array[String] collab_ids_addcols = ['collaborator_id']
@@ -240,6 +241,12 @@ task sc2_meta_final {
         max_date = ~{default='None' '"' + max_date + '"'}
         drop_file_cols = ~{true='True' false='False' drop_file_cols}
         filter_to_ids = ~{default='None' '"' + filter_to_ids + '"'}
+        genome_status_json = '~{default="" genome_status_json}'
+        if genome_status_json:
+          with open(genome_status_json, 'rt') as inf:
+            genome_status = json.load(inf)
+        else:
+          genome_status = {}
 
         # read input files
         df_assemblies = pd.read_csv(assemblies_tsv, sep='\t').dropna(how='all')
@@ -293,6 +300,7 @@ task sc2_meta_final {
         df_assemblies.loc[:,'genome_status'] = list(
                 'failed_sequencing' if df_assemblies.loc[id, 'assembly_length_unambiguous'] < min_unambig
                 else 'failed_annotation' if df_assemblies.loc[id, 'vadr_num_alerts'] > 0
+                else genome_status[id] if id in genome_status
                 else 'submittable'
                 for id in df_assemblies.index)
 

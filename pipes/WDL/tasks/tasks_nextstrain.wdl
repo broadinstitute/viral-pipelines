@@ -539,6 +539,7 @@ task filter_sequences_to_list {
         File         sequences
         Array[File]? keep_list
 
+        String       out_fname = sub(sub(basename(sequences), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
         String       docker = "nextstrain/base:build-20210318T204019Z"
     }
     parameter_meta {
@@ -551,7 +552,6 @@ task filter_sequences_to_list {
           patterns: ["*.txt", "*.tsv"]
         }
     }
-    String out_fname = sub(sub(basename(sequences), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
     command <<<
         set -e
         KEEP_LISTS="~{sep=' ' select_first([keep_list, []])}"
