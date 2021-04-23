@@ -51,6 +51,8 @@ workflow demux_deplete {
         }
     }
 
+    String  flowcell_id   = basename(basename(basename(basename(flowcell_tgz, ".gz"), ".zst"), ".tar"), ".tgz")
+
     #### demux each lane (rename samples if requested)
     scatter(lane_sheet in zip(range(length(samplesheets)), samplesheets)) {
         call demux.samplesheet_rename_ids {
@@ -113,7 +115,7 @@ workflow demux_deplete {
                 library_metadata      = samplesheet_rename_ids.new_sheet,
                 platform              = "ILLUMINA",
                 paired                = (illumina_demux.run_info[0]['indexes'] == '2'),
-                out_name              = "sra_metadata-~{basename(flowcell_tgz, '.tar.gz')}.tsv",
+                out_name              = "sra_metadata-~{flowcell_id}.tsv",
                 instrument_model      = select_first([instrument_model]),
                 title                 = select_first([sra_title])
         }
