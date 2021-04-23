@@ -301,8 +301,8 @@ task sc2_meta_final {
 
         # derived column: genome_status
         df_assemblies.loc[:,'genome_status'] = list(
-                genome_status[df_assemblies.loc[id, 'sample']] if df_assemblies.loc[id, 'sample'] in genome_status
-                else 'failed_sequencing' if df_assemblies.loc[id, 'assembly_length_unambiguous'] < min_unambig
+                'failed_sequencing' if df_assemblies.loc[id, 'assembly_length_unambiguous'] < min_unambig
+                else genome_status[df_assemblies.loc[id, 'sample']] if df_assemblies.loc[id, 'sample'] in genome_status
                 else 'failed_annotation' if df_assemblies.loc[id, 'vadr_num_alerts'] > 0
                 else 'submittable'
                 for id in df_assemblies.index)

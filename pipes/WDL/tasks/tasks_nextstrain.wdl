@@ -563,7 +563,6 @@ task filter_sequences_to_list {
                 echo filtering vcf file
                 bcftools view --samples-file keep_list.txt "~{sequences}" -Ou | bcftools filter -i "AC>1" -o "~{out_fname}"
                 echo "-1" > DROP_COUNT
-                bcftools view "~{out_fname}" | grep CHROM | awk -F'\t' '{print NF-9}' > OUT_COUNT
             else
                 # filter fasta file to keep_list.txt
                 echo filtering fasta file
@@ -592,8 +591,16 @@ task filter_sequences_to_list {
         else
             cp "~{sequences}" "~{out_fname}"
             echo "0" > DROP_COUNT
-            echo "-1" > OUT_COUNT
         fi
+
+        if [[ "~{sequences}" = *.vcf || "~{sequences}" = *.vcf.gz ]]; then
+            bcftools query -l "~{out_fname}" > kept_ids.txt
+            bcftools view "~{out_fname}" | grep CHROM | awk -F'\t' '{print NF-9}' > OUT_COUNT
+        else
+            cat "~{out_fname}" | grep \> | cut -c 2- > kept_ids.txt
+            cat kept_ids.txt | wc -l > OUT_COUNT
+        fi
+
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
@@ -610,6 +617,7 @@ task filter_sequences_to_list {
         File   filtered_fasta    = out_fname
         Int    sequences_dropped = read_int("DROP_COUNT")
         Int    sequences_out     = read_int("OUT_COUNT")
+        File   ids_kept          = "kept_ids.txt"
         Int    max_ram_gb        = ceil(read_float("MEM_BYTES")/1000000000)
         Int    runtime_sec       = ceil(read_float("UPTIME_SEC"))
         String cpu_load          = read_string("CPU_LOAD")

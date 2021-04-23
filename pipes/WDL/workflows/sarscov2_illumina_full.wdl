@@ -225,21 +225,13 @@ workflow sarscov2_illumina_full {
     ### filter out batches where NTCs assemble
     call assembly.filter_bad_ntc_batches {
       input:
-        seqid_list = write_lines(select_all(submittable_id)),
+        seqid_list = write_lines(select_all(passing_assembly_ids)),
         demux_meta_by_sample_json = demux_deplete.meta_by_sample_json,
         assembly_meta_tsv = assembly_meta_tsv.combined,
         ntc_min_unambig = 15000
     }
 
     ### QC metrics
-    call sarscov2.sc2_meta_final {
-      input:
-        assembly_stats_tsv = assembly_meta_tsv.combined,
-        collab_ids_tsv = collab_ids_tsv,
-        drop_file_cols = true,
-        min_unambig = min_genome_bases,
-        genome_status_json = filter_bad_ntc_batches.fail_meta_json
-    }
     call read_utils.max as ntc_max {
       input:
         list = select_all(ntc_bases)
@@ -262,6 +254,16 @@ workflow sarscov2_illumina_full {
         id_col       = 'sample_sanitized',
         out_basename = "picard_metrics_alignment-~{flowcell_id}"
     }
+
+    ### filter and concatenate final sets for delivery ("passing" and "submittable")
+    call sarscov2.sc2_meta_final {
+      input:
+        assembly_stats_tsv = assembly_meta_tsv.combined,
+        collab_ids_tsv = collab_ids_tsv,
+        drop_file_cols = true,
+        min_unambig = min_genome_bases,
+        genome_status_json = filter_bad_ntc_batches.fail_meta_json
+    }
     call utils.concatenate as passing_cat_prefilter {
       input:
         infiles     = select_all(passing_assemblies),
@@ -273,6 +275,11 @@ workflow sarscov2_illumina_full {
         keep_list = [filter_bad_ntc_batches.seqids_kept],
         out_fname = "assemblies_passing-~{flowcell_id}.fasta"
     }
+    call nextstrain.filter_sequences_to_list as submittable_filter {
+      input:
+        sequences = passing_cat.filtered_fasta,
+        keep_list = select_all(submittable_id)
+    }
 
     ### prep genbank submission
     call ncbi.biosample_to_genbank {
@@ -280,7 +287,7 @@ workflow sarscov2_illumina_full {
         biosample_attributes = biosample_merge.out_tsv,
         num_segments         = 1,
         taxid                = taxid,
-        filter_to_ids        = filter_bad_ntc_batches.seqids_kept
+        filter_to_ids        = submittable_filter.ids_kept
     }
     call ncbi.structured_comments {
       input:
