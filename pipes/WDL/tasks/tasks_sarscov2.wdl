@@ -280,11 +280,9 @@ task sc2_meta_final {
             df_assemblies = df_assemblies[df_assemblies['sample'].isin(keep_list)]
 
         # format dates properly and remove all rows with missing or bad dates
-        df_assemblies = df_assemblies.loc[
-            ~df_assemblies['run_date'].isna() &
-            ~df_assemblies['collection_date'].isna() &
-            (df_assemblies['run_date'] != 'missing') &
-            (df_assemblies['collection_date'] != 'missing')]
+        df_assemblies = df_assemblies.loc[~df_assemblies['run_date'].isna()]
+        df_assemblies.loc[:,'run_date'].replace('missing', pd.NA, inplace=True)
+        df_assemblies.loc[:,'collection_date'].replace('missing', pd.NA, inplace=True)
         df_assemblies = df_assemblies.astype({'collection_date':'datetime64[D]','run_date':'datetime64[D]'})
 
         # fix vadr_num_alerts
@@ -292,9 +290,9 @@ task sc2_meta_final {
 
         # subset by date range
         if min_date:
-            df_assemblies = df_assemblies.loc[~df_assemblies['run_date'].isna() & (np.datetime64(min_date) <= df_assemblies['run_date'])]
+            df_assemblies = df_assemblies.loc[np.datetime64(min_date) <= df_assemblies['run_date']]
         if max_date:
-            df_assemblies = df_assemblies.loc[~df_assemblies['run_date'].isna() & (df_assemblies['run_date'] <= np.datetime64(max_date))]
+            df_assemblies = df_assemblies.loc[df_assemblies['run_date'] <= np.datetime64(max_date)]
 
         # fix missing data in purpose_of_sequencing
         df_assemblies.loc[:,'purpose_of_sequencing'] = df_assemblies.loc[:,'purpose_of_sequencing'].fillna('Missing').replace('', 'Missing')
@@ -320,7 +318,11 @@ task sc2_meta_final {
         df_assemblies.loc[:,'run_epiweek_end'] = list(x.enddate().strftime('%Y-%m-%d') if not pd.isna(x) else '' for x in df_assemblies.loc[:,'run_epiweek'])
 
         # derived column: sample_age_at_runtime
-        df_assemblies.loc[:,'sample_age_at_runtime'] = list(x.days for x in df_assemblies.loc[:,'run_date'] - df_assemblies.loc[:,'collection_date'])
+        df_assemblies.loc[:,'sample_age_at_runtime'] = list(
+            x.days
+            for x in (df_assemblies.loc[:,'run_date'] - df_assemblies.loc[:,'collection_date'])
+            if not pd.isna(x)
+            else pd.NA)
 
         # join column: collaborator_id
         df_assemblies = df_assemblies.merge(collab_ids, on='sample', how='left', validate='one_to_one')
