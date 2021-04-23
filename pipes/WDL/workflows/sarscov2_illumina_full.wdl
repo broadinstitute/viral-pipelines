@@ -383,7 +383,7 @@ workflow sarscov2_illumina_full {
     if(defined(gcs_out_cdc)) {
         call terra.gcs_copy as gcs_cdc_dump {
             input:
-                infiles        = [assembly_meta_tsv.combined, sc2_meta_final.meta_tsv, passing_cat.filtered_fasta],
+                infiles        = [sc2_meta_final.meta_tsv, passing_cat.filtered_fasta],
                 gcs_uri_prefix = "~{gcs_out_cdc}/~{demux_deplete.run_date}/~{flowcell_id}/"
         }
         call terra.gcs_copy as gcs_cdc_dump_reads {
@@ -406,14 +406,14 @@ workflow sarscov2_illumina_full {
     }
 
     output {
-        Array[File]  raw_reads_unaligned_bams      = demux_deplete.raw_reads_unaligned_bams
-        Array[File]  cleaned_reads_unaligned_bams  = demux_deplete.cleaned_reads_unaligned_bams
-        Array[File]  cleaned_bams_tiny             = demux_deplete.cleaned_bams_tiny
+        Array[File]   raw_reads_unaligned_bams      = demux_deplete.raw_reads_unaligned_bams
+        Array[File]   cleaned_reads_unaligned_bams  = demux_deplete.cleaned_reads_unaligned_bams
+        Array[File]   cleaned_bams_tiny             = demux_deplete.cleaned_bams_tiny
         
-        File         meta_by_filename_json         = demux_deplete.meta_by_filename_json
+        File          meta_by_filename_json         = demux_deplete.meta_by_filename_json
         
-        Array[Int]   read_counts_raw               = demux_deplete.read_counts_raw
-        Array[Int]   read_counts_depleted          = demux_deplete.read_counts_depleted
+        Array[Int]    read_counts_raw               = demux_deplete.read_counts_raw
+        Array[Int]    read_counts_depleted          = demux_deplete.read_counts_depleted
         
         File          sra_metadata                 = select_first([demux_deplete.sra_metadata])
         File          cleaned_bam_uris             = select_first([demux_deplete.cleaned_bam_uris])
