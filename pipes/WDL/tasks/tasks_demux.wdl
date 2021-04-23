@@ -111,7 +111,7 @@ task illumina_demux {
 
   String out_base = "~{basename(basename(basename(basename(flowcell_tgz, '.zst'), '.gz'), '.tar'), '.tgz')}-L~{lane}"
 
-  command {
+  command <<<
     set -ex -o pipefail
 
     # find N% memory
@@ -297,7 +297,7 @@ task illumina_demux {
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
     cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
-  }
+  >>>
 
   output {
     File        metrics                  = "~{out_base}-demux_metrics.txt"

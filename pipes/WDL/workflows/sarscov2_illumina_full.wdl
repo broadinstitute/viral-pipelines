@@ -54,6 +54,7 @@ workflow sarscov2_illumina_full {
         File?         collab_ids_tsv
 
         String?       gcs_out_metrics
+        String?       gcs_out_reporting
         String?       gcs_out_cdc
         String?       gcs_out_sra
     }
@@ -215,19 +216,23 @@ workflow sarscov2_illumina_full {
         'Ct'
         ]
 
-    ### summary stats and QC metrics
+    ### summary stats
     call utils.concatenate as assembly_meta_tsv {
       input:
         infiles     = [write_tsv([assembly_tsv_header]), write_tsv(assembly_tsv_row)],
         output_name = "assembly_metadata-~{flowcell_id}.tsv"
     }
-    call sarscov2.sc2_meta_final {
+
+    ### filter out batches where NTCs assemble
+    call assembly.filter_bad_ntc_batches {
       input:
-        assembly_stats_tsv = assembly_meta_tsv.combined,
-        collab_ids_tsv = collab_ids_tsv,
-        drop_file_cols = true,
-        min_unambig = min_genome_bases
+        seqid_list = write_lines(select_all(passing_assembly_ids)),
+        demux_meta_by_sample_json = demux_deplete.meta_by_sample_json,
+        assembly_meta_tsv = assembly_meta_tsv.combined,
+        ntc_min_unambig = 15000
     }
+
+    ### QC metrics
     call read_utils.max as ntc_max {
       input:
         list = select_all(ntc_bases)
@@ -250,10 +255,31 @@ workflow sarscov2_illumina_full {
         id_col       = 'sample_sanitized',
         out_basename = "picard_metrics_alignment-~{flowcell_id}"
     }
-    call utils.concatenate as passing_cat {
+
+    ### filter and concatenate final sets for delivery ("passing" and "submittable")
+    call sarscov2.sc2_meta_final {
+      input:
+        assembly_stats_tsv = assembly_meta_tsv.combined,
+        collab_ids_tsv = collab_ids_tsv,
+        drop_file_cols = true,
+        min_unambig = min_genome_bases,
+        genome_status_json = filter_bad_ntc_batches.fail_meta_json
+    }
+    call utils.concatenate as passing_cat_prefilter {
       input:
         infiles     = select_all(passing_assemblies),
-        output_name = "assemblies_passing-~{flowcell_id}.fasta"
+        output_name = "assemblies_passing-~{flowcell_id}.prefilter.fasta"
+    }
+    call nextstrain.filter_sequences_to_list as passing_cat {
+      input:
+        sequences = passing_cat_prefilter.combined,
+        keep_list = [filter_bad_ntc_batches.seqids_kept],
+        out_fname = "assemblies_passing-~{flowcell_id}.fasta"
+    }
+    call nextstrain.filter_sequences_to_list as submittable_filter {
+      input:
+        sequences = passing_cat.filtered_fasta,
+        keep_list = [write_lines(select_all(submittable_id))]
     }
 
     ### prep genbank submission
@@ -262,7 +288,7 @@ workflow sarscov2_illumina_full {
         biosample_attributes = biosample_merge.out_tsv,
         num_segments         = 1,
         taxid                = taxid,
-        filter_to_ids        = write_lines(select_all(submittable_id))
+        filter_to_ids        = submittable_filter.ids_kept
     }
     call ncbi.structured_comments {
       input:
@@ -308,7 +334,8 @@ workflow sarscov2_illumina_full {
       input:
         gisaid_meta   = gisaid_meta_prep.meta_tsv,
         assembly_meta = assembly_meta_tsv.combined,
-        out_name      = "nextmeta-~{flowcell_id}.tsv"
+        out_name      = "nextmeta-~{flowcell_id}.tsv",
+        filter_to_ids = filter_bad_ntc_batches.seqids_kept
     }
 
     # create data tables with assembly_meta_tsv if workspace name and project provided
@@ -354,10 +381,17 @@ workflow sarscov2_illumina_full {
               gcs_uri_prefix = "~{gcs_out_metrics}/~{flowcell_id}/"
         }
     }
+    if(defined(gcs_out_reporting)) {
+        call terra.gcs_copy as gcs_reporting_dump {
+            input:
+              infiles        = [sc2_meta_final.meta_tsv, nextclade_many_samples.nextclade_json, nextclade_many_samples.nextclade_tsv],
+              gcs_uri_prefix = "~{gcs_out_reporting}/~{flowcell_id}/"
+        }
+    }
     if(defined(gcs_out_cdc)) {
         call terra.gcs_copy as gcs_cdc_dump {
             input:
-                infiles        = [assembly_meta_tsv.combined, sc2_meta_final.meta_tsv, passing_cat.combined],
+                infiles        = [sc2_meta_final.meta_tsv, passing_cat.filtered_fasta],
                 gcs_uri_prefix = "~{gcs_out_cdc}/~{demux_deplete.run_date}/~{flowcell_id}/"
         }
         call terra.gcs_copy as gcs_cdc_dump_reads {
@@ -380,23 +414,23 @@ workflow sarscov2_illumina_full {
     }
 
     output {
-        Array[File]  raw_reads_unaligned_bams      = demux_deplete.raw_reads_unaligned_bams
-        Array[File]  cleaned_reads_unaligned_bams  = demux_deplete.cleaned_reads_unaligned_bams
-        Array[File]  cleaned_bams_tiny             = demux_deplete.cleaned_bams_tiny
+        Array[File]   raw_reads_unaligned_bams      = demux_deplete.raw_reads_unaligned_bams
+        Array[File]   cleaned_reads_unaligned_bams  = demux_deplete.cleaned_reads_unaligned_bams
+        Array[File]   cleaned_bams_tiny             = demux_deplete.cleaned_bams_tiny
         
-        File         meta_by_filename_json         = demux_deplete.meta_by_filename_json
+        File          meta_by_filename_json         = demux_deplete.meta_by_filename_json
         
-        Array[Int]   read_counts_raw               = demux_deplete.read_counts_raw
-        Array[Int]   read_counts_depleted          = demux_deplete.read_counts_depleted
+        Array[Int]    read_counts_raw               = demux_deplete.read_counts_raw
+        Array[Int]    read_counts_depleted          = demux_deplete.read_counts_depleted
         
         File          sra_metadata                 = select_first([demux_deplete.sra_metadata])
         File          cleaned_bam_uris             = select_first([demux_deplete.cleaned_bam_uris])
         
         Array[File]   assemblies_fasta             = assemble_refbased.assembly_fasta
-        Array[File]   passing_assemblies_fasta     = select_all(passing_assemblies)
-        Array[File]   submittable_assemblies_fasta = select_all(submittable_genomes)
         
         Int           max_ntc_bases                = ntc_max.out
+        Array[String] ntc_rejected_batches         = filter_bad_ntc_batches.reject_batches
+        Array[String] ntc_rejected_lanes           = filter_bad_ntc_batches.reject_lanes
         
         Array[File]   demux_metrics                = demux_deplete.demux_metrics
         Array[File]   demux_commonBarcodes         = demux_deplete.demux_commonBarcodes
@@ -432,16 +466,16 @@ workflow sarscov2_illumina_full {
         File          nextclade_all_json           = nextclade_many_samples.nextclade_json
         File          nextclade_auspice_json       = nextclade_many_samples.auspice_json
         
-        File          passing_fasta                = passing_cat.combined
+        File          passing_fasta                = passing_cat.filtered_fasta
         
         Array[String] assembled_ids                = select_all(passing_assembly_ids)
-        Array[String] submittable_ids              = select_all(submittable_id)
+        Array[String] submittable_ids              = read_lines(filter_bad_ntc_batches.seqids_kept)
         Array[String] failed_assembly_ids          = select_all(failed_assembly_id)
         Array[String] failed_annotation_ids        = select_all(failed_annotation_id)
         Int           num_read_files               = length(demux_deplete.cleaned_reads_unaligned_bams)
         Int           num_assembled                = length(select_all(passing_assemblies))
         Int           num_failed_assembly          = length(select_all(failed_assembly_id))
-        Int           num_submittable              = length(select_all(submittable_id))
+        Int           num_submittable              = filter_bad_ntc_batches.num_kept
         Int           num_failed_annotation        = length(select_all(failed_annotation_id))
         Int           num_samples                  = length(group_bams_by_sample.sample_names)
         

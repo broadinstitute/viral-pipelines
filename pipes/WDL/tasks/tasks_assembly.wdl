@@ -771,3 +771,106 @@ task run_discordance {
         preemptible: 1
     }
 }
+
+
+task filter_bad_ntc_batches {
+    meta {
+        description: "Identify NTCs (negative control libraries) that assemble too much of a genome and fail all other genomes from the same library prep batch."
+    }
+    input {
+        File        seqid_list
+        File        demux_meta_by_sample_json
+        File        assembly_meta_tsv
+        Int         ntc_min_unambig
+        File?       genome_status_json
+    }
+    command <<<
+        set -e
+        python3<<CODE
+        import csv
+        import json
+
+        # load inputs
+        ntc_min_unambig = ~{ntc_min_unambig}
+        with open('~{seqid_list}', 'rt') as inf:
+          seqid_list = list(x.strip() for x in inf)
+        num_provided = len(seqid_list)
+        with open('~{demux_meta_by_sample_json}', 'rt') as inf:
+          demux_meta_orig = json.load(inf)
+        with open('~{assembly_meta_tsv}', 'rt') as inf:
+          assembly_meta = list(csv.DictReader(inf, delimiter='\t'))
+        genome_status_json = '~{default="" genome_status_json}'
+        if genome_status_json:
+          with open(genome_status_json, 'rt') as inf:
+            fail_meta = json.load(inf)
+        else:
+          fail_meta = {}
+
+        # re-index demux_meta lookup table by sample_original instead of sample_sanitized
+        demux_meta = dict((v['sample_original'],v) for k,v in demux_meta_orig.items())
+
+        # identify bad NTCs
+        reject_lanes = set()
+        reject_batches = set()
+        for sample in assembly_meta:
+          if (demux_meta[sample['sample']].get('control') == 'NTC'):
+            bad_ntc = sample['assembly_length_unambiguous'] \
+              and (int(sample['assembly_length_unambiguous']) >= ntc_min_unambig)
+            id = sample['sample']
+            lane = demux_meta[sample['sample']]['run'].split('.')[-1]
+            batch = demux_meta[sample['sample']].get('batch_lib','')
+            print(f"NTC:\t{id}\t{sample['assembly_length_unambiguous']}\t{bad_ntc}\t{lane}\t{batch}")
+            if bad_ntc:
+              if batch:
+                reject_batches.add(batch)
+              else:
+                reject_lanes.add(lane)
+        print(f"BAD BATCHES:\t{','.join(reject_batches)}")
+        print(f"BAD LANES:\t{','.join(reject_lanes)}")
+
+        # filter samples from bad batches/lanes
+        fail_meta = {}
+        fails = set()
+        for sample in assembly_meta:
+          id = sample['sample']
+          if (demux_meta[id].get('batch_lib') in reject_batches) \
+            or (demux_meta[id]['run'].split('.')[-1] in reject_lanes):
+            fail_meta[id] = 'failed_NTC'
+            fails.add(id)
+        seqid_list = list(id for id in seqid_list if id not in fails)
+
+        # write outputs
+        with open('seqids.filtered.txt', 'wt') as outf:
+          for id in seqid_list:
+            outf.write(id+'\n')
+        with open('NUM_PROVIDED', 'wt') as outf:
+          outf.write(str(num_provided)+'\n')
+        with open('NUM_KEPT', 'wt') as outf:
+          outf.write(str(len(seqid_list))+'\n')
+        with open('REJECT_BATCHES', 'wt') as outf:
+          for x in sorted(reject_batches):
+            outf.write(x+'\n')
+        with open('REJECT_LANES', 'wt') as outf:
+          for x in sorted(reject_lanes):
+            outf.write(x+'\n')
+        with open('genome_status.json', 'wt') as outf:
+          json.dump(fail_meta, outf, indent=2)
+
+        CODE
+    >>>
+    runtime {
+        docker: "python:slim"
+        memory: "2 GB"
+        cpu:    1
+        disks: "local-disk 50 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+    output {
+        File           seqids_kept      = "seqids.filtered.txt"
+        Int            num_provided     = read_int("NUM_PROVIDED")
+        Int            num_kept         = read_int("NUM_KEPT")
+        Array[String]  reject_batches   = read_lines("REJECT_BATCHES")
+        Array[String]  reject_lanes     = read_lines("REJECT_LANES")
+        File           fail_meta_json   = "genome_status.json"
+    }
+}
