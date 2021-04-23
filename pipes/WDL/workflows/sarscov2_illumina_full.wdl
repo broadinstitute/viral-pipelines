@@ -278,7 +278,7 @@ workflow sarscov2_illumina_full {
     call nextstrain.filter_sequences_to_list as submittable_filter {
       input:
         sequences = passing_cat.filtered_fasta,
-        keep_list = select_all(submittable_id)
+        keep_list = write_lines(select_all(submittable_id))
     }
 
     ### prep genbank submission
