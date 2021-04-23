@@ -419,8 +419,6 @@ workflow sarscov2_illumina_full {
         File          cleaned_bam_uris             = select_first([demux_deplete.cleaned_bam_uris])
         
         Array[File]   assemblies_fasta             = assemble_refbased.assembly_fasta
-        Array[File]   passing_assemblies_fasta     = select_all(passing_assemblies)
-        Array[File]   submittable_assemblies_fasta = select_all(submittable_genomes)
         
         Int           max_ntc_bases                = ntc_max.out
         Array[String] ntc_rejected_batches         = filter_bad_ntc_batches.reject_batches
