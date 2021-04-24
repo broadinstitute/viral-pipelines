@@ -39,7 +39,7 @@ workflow mafft_and_snp {
     call nextstrain.filter_sequences_by_length {
         input:
             sequences_fasta = gzcat.combined,
-            min_non_N = min_unambig_genome
+            min_non_N       = min_unambig_genome
     }
     call nextstrain.mafft_one_chr as mafft {
         input:

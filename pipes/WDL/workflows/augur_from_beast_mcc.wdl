@@ -10,8 +10,8 @@ workflow augur_from_beast_mcc {
     }
 
     input {
-        File    beast_mcc_tree
-        File    auspice_config
+        File beast_mcc_tree
+        File auspice_config
     }
 
     parameter_meta {
@@ -31,14 +31,14 @@ workflow augur_from_beast_mcc {
     }
     call nextstrain.export_auspice_json {
         input:
-            tree            = augur_import_beast.tree_newick,
-            node_data_jsons = [augur_import_beast.node_data_json],
-            auspice_config  = auspice_config,
+            tree                  = augur_import_beast.tree_newick,
+            node_data_jsons       = [augur_import_beast.node_data_json],
+            auspice_config        = auspice_config,
             include_root_sequence = false
     }
 
     output {
-        File  beast_mcc_tree_newick      = augur_import_beast.tree_newick
-        File  auspice_input_json         = export_auspice_json.virus_json
+        File beast_mcc_tree_newick = augur_import_beast.tree_newick
+        File auspice_input_json    = export_auspice_json.virus_json
     }
 }

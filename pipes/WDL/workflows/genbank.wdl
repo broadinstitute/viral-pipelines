@@ -84,15 +84,15 @@ workflow genbank {
     call ncbi.biosample_to_genbank {
         input:
             biosample_attributes = biosample_attributes,
-            num_segments = length(reference_fastas),
-            taxid = taxid
+            num_segments         = length(reference_fastas),
+            taxid                = taxid
     }
 
     scatter(assembly in assemblies_fasta) {
         call ncbi.align_and_annot_transfer_single as annot {
             input:
-                genome_fasta = assembly,
-                reference_fastas = reference_fastas,
+                genome_fasta             = assembly,
+                reference_fastas         = reference_fastas,
                 reference_feature_tables = reference_feature_tables
         }
     }
@@ -106,31 +106,31 @@ workflow genbank {
 
     call ncbi.prepare_genbank as prep_genbank {
         input:
-            assemblies_fasta = assemblies_fasta,
-            annotations_tbl = flatten(annot.genome_per_chr_tbls),
-            authors_sbt = generate_author_sbt.sbt_file,
-            biosampleMap = biosample_to_genbank.biosample_map,
+            assemblies_fasta   = assemblies_fasta,
+            annotations_tbl    = flatten(annot.genome_per_chr_tbls),
+            authors_sbt        = generate_author_sbt.sbt_file,
+            biosampleMap       = biosample_to_genbank.biosample_map,
             genbankSourceTable = biosample_to_genbank.genbank_source_modifier_table,
-            coverage_table = coverage_table,
-            sequencingTech = sequencingTech,
-            comment = comment,
-            organism = organism,
-            molType = molType
+            coverage_table     = coverage_table,
+            sequencingTech     = sequencingTech,
+            comment            = comment,
+            organism           = organism,
+            molType            = molType
     }
 
     output {
-        File submission_zip = prep_genbank.submission_zip
-        File archive_zip    = prep_genbank.archive_zip
-        File errorSummary   = prep_genbank.errorSummary
-
-        File biosample_map = biosample_to_genbank.biosample_map
-        File genbank_source_table = biosample_to_genbank.genbank_source_modifier_table
-
+        File        submission_zip         = prep_genbank.submission_zip
+        File        archive_zip            = prep_genbank.archive_zip
+        File        errorSummary           = prep_genbank.errorSummary
+        
+        File        biosample_map          = biosample_to_genbank.biosample_map
+        File        genbank_source_table   = biosample_to_genbank.genbank_source_modifier_table
+        
         Array[File] transferred_annot_tbls = flatten(annot.genome_per_chr_tbls)
-        Array[File] genbank_preview_files      = prep_genbank.genbank_preview_files
-        Array[File] validation_files           = prep_genbank.validation_files
-
-        String      viral_phylo_version = prep_genbank.viralngs_version
+        Array[File] genbank_preview_files  = prep_genbank.genbank_preview_files
+        Array[File] validation_files       = prep_genbank.validation_files
+        
+        String      viral_phylo_version    = prep_genbank.viralngs_version
     }
 
 }

@@ -6,7 +6,7 @@ task download_fasta {
     Array[String]+ accessions
     String         emailAddress
 
-    String         docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   command {
@@ -37,7 +37,7 @@ task download_annotations {
     String         emailAddress
     String         combined_out_prefix
 
-    String         docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   command {
@@ -81,7 +81,7 @@ task annot_transfer {
     File         reference_fasta
     Array[File]+ reference_feature_table
 
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String       docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   parameter_meta {
@@ -134,7 +134,7 @@ task align_and_annot_transfer_single {
     Array[File]+ reference_fastas
     Array[File]+ reference_feature_tables
 
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String       docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   parameter_meta {
@@ -182,11 +182,11 @@ task align_and_annot_transfer_single {
 
 task structured_comments {
   input {
-    File    assembly_stats_tsv
+    File   assembly_stats_tsv
 
-    File?   filter_to_ids
+    File?  filter_to_ids
 
-    String  docker="quay.io/broadinstitute/viral-core:2.1.21"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.21"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -231,9 +231,9 @@ task structured_comments {
 
 task prefix_fasta_header {
   input {
-    File    genome_fasta
-    String  prefix
-    String  out_basename = basename(genome_fasta, ".fasta")
+    File   genome_fasta
+    String prefix
+    String out_basename = basename(genome_fasta, ".fasta")
   }
   command <<<
     set -e
@@ -259,12 +259,12 @@ task prefix_fasta_header {
 
 task rename_fasta_header {
   input {
-    File    genome_fasta
-    String  new_name
+    File   genome_fasta
+    String new_name
 
-    String  out_basename = basename(genome_fasta, ".fasta")
+    String out_basename = basename(genome_fasta, ".fasta")
 
-    String  docker="quay.io/broadinstitute/viral-core:2.1.21"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.21"
   }
   command {
     set -e
@@ -284,10 +284,10 @@ task rename_fasta_header {
 
 task gisaid_meta_prep {
   input {
-    File   source_modifier_table
-    File   structured_comments
-    String out_name
-    String continent = "North America"
+    File    source_modifier_table
+    File    structured_comments
+    String  out_name
+    String  continent = "North America"
     Boolean strict = true
     String? username
     String? submitting_lab_name
@@ -367,15 +367,60 @@ task gisaid_meta_prep {
 
 task lookup_table_by_filename {
   input {
-    String  id
-    File    mapping_tsv
-    Int     return_col=2
+    String id
+    File   mapping_tsv
+    Int    return_col = 2
 
-    String  docker="ubuntu"
+    String docker = "ubuntu"
   }
   command {
     set -e -o pipefail
     grep ^"~{id}" ~{mapping_tsv} | cut -f ~{return_col} > OUTVAL
+  }
+  output {
+    String value = read_string("OUTVAL")
+  }
+  runtime {
+    docker: docker
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
+task register_biosamples {
+  meta {
+    description: "This registers a table of metadata with NCBI BioSample. It accepts a TSV similar to the web UI input at submit.ncbi.nlm.nih.gov, but converts to an XML, submits via their FTP/XML API, awaits a response, and retrieves a resulting attributes table and returns that as a TSV. This task registers live data with the production NCBI database."
+  }
+  input {
+    File     sample_metadata_tsv
+    String?  comment
+    String?  embargo_date
+
+    String   org_name
+    String   org_type
+    String   spuid_namespace
+    String   account_name
+
+    File     ftp_config
+    Boolean  test=true
+
+    String   docker = "local/broad-tsv-converter"  # for dev/debug only
+  }
+  String meta_basename = basename(basename(sample_metadata_tsv, '.txt'), '.tsv')
+  command {
+    set -e -o pipefail
+
+    cp "~{sample_metadata_tsv}" files/input.tsv
+    # modify src/config.js
+
+    node src/main.js -i=input.tsv \
+      ~{'-c="' + comment + '"'} \
+      ~{'-d=' + embargo_date} \
+      -u="~{true='Test' false='Production' test}/~{meta_basename}"
+
+    # huh.. need to strip off empty entry at the end of xml....
+
   }
   output {
     String value = read_string("OUTVAL")
@@ -393,16 +438,16 @@ task sra_meta_prep {
     description: "Prepare tables for submission to NCBI's SRA database. This only works on bam files produced by illumina.py illumina_demux --append_run_id in viral-core."
   }
   input {
-    Array[File]    cleaned_bam_filepaths
-    File           biosample_map
-    Array[File]    library_metadata
-    String         platform
-    String         instrument_model
-    String         title
-    Boolean        paired
+    Array[File] cleaned_bam_filepaths
+    File        biosample_map
+    Array[File] library_metadata
+    String      platform
+    String      instrument_model
+    String      title
+    Boolean     paired
 
-    String         out_name = "sra_metadata.tsv"
-    String  docker="quay.io/broadinstitute/viral-core:2.1.21"
+    String      out_name = "sra_metadata.tsv"
+    String      docker="quay.io/broadinstitute/viral-core:2.1.21"
   }
   parameter_meta {
     cleaned_bam_filepaths: {
@@ -504,8 +549,8 @@ task sra_meta_prep {
     CODE
   >>>
   output {
-    File         sra_metadata = "~{out_name}"
-    File         cleaned_bam_uris = write_lines(cleaned_bam_filepaths)
+    File sra_metadata     = "~{out_name}"
+    File cleaned_bam_uris = write_lines(cleaned_bam_filepaths)
   }
   runtime {
     docker: docker
@@ -521,14 +566,14 @@ task biosample_to_genbank {
     description: "Prepares two input metadata files for Genbank submission based on a BioSample registration attributes table (attributes.tsv) since all of the necessary values are there. This produces both a Genbank Source Modifier Table and a BioSample ID map file that can be fed into the prepare_genbank task."
   }
   input {
-    File  biosample_attributes
-    Int   num_segments=1
-    Int   taxid
+    File    biosample_attributes
+    Int     num_segments = 1
+    Int     taxid
 
-    File? filter_to_ids
+    File?   filter_to_ids
 
-    Boolean s_dropout_note=true
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    Boolean s_dropout_note = true
+    String  docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
   String base = basename(biosample_attributes, ".txt")
   command {
@@ -569,9 +614,9 @@ task generate_author_sbt_file {
     String? author_list
     File    j2_template
     File    defaults_yaml
-    String? out_base="authors"
+    String? out_base = "authors"
 
-    String  docker="quay.io/broadinstitute/py3-bio:0.1.2"
+    String  docker = "quay.io/broadinstitute/py3-bio:0.1.2"
   }
 
   parameter_meta {
@@ -662,7 +707,7 @@ task generate_author_sbt_file {
     CODE
   >>>
   output {
-    File   sbt_file = "~{out_base}.sbt"
+    File sbt_file = "~{out_base}.sbt"
   }
   runtime {
     docker: docker
@@ -692,7 +737,7 @@ task prepare_genbank {
     String?      assembly_method_version
 
     Int?         machine_mem_gb
-    String       docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String       docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   parameter_meta {
@@ -823,7 +868,7 @@ task package_genbank_ftp_submission {
     String spuid_namespace
     String account_name
 
-    String  docker="quay.io/broadinstitute/viral-baseimage:0.1.20"
+    String  docker = "quay.io/broadinstitute/viral-baseimage:0.1.20"
   }
   command <<<
     set -e
@@ -868,7 +913,7 @@ task package_genbank_ftp_submission {
   output {
     File submission_zip = "~{submission_uid}.zip"
     File submission_xml = "submission.xml"
-    File submit_ready = "submit.ready"
+    File submit_ready   = "submit.ready"
   }
   runtime {
     docker: docker
@@ -884,53 +929,52 @@ task vadr {
   }
   input {
     File   genome_fasta
-    String vadr_opts="-s -r --nomisc --mkey NC_045512 --fstlowthr 0.0 --alt_fail lowscore,fsthicnf,fstlocnf,insertnn,deletinn"
+    String vadr_opts = "--glsearch -s -r --nomisc --mkey sarscov2 --alt_fail lowscore,fstukcnf,insertnn,deletinn"
 
-    String  docker="staphb/vadr:1.1.3"
+    String docker = "staphb/vadr:1.2"
+    Int    minlen = 50
+    Int    maxlen = 30000
   }
   String out_base = basename(genome_fasta, '.fasta')
   command <<<
     set -e
 
-    # find available RAM
-    RAM_MB=$(free -m | head -2 | tail -1 | awk '{print $2}')
+    # remove terminal ambiguous nucleotides
+    /opt/vadr/vadr/miniscripts/fasta-trim-terminal-ambigs.pl \
+      "~{genome_fasta}" \
+      --minlen ~{minlen} \
+      --maxlen ~{maxlen} \
+      > "~{out_base}.fasta"
 
     # run VADR
     v-annotate.pl \
       ~{vadr_opts} \
-      --mxsize $RAM_MB \
-      "~{genome_fasta}" \
+      --mdir /opt/vadr/vadr-models/ \
+      "~{out_base}.fasta" \
       "~{out_base}"
-
-    # manually ignore certain alert patterns based on conversation with NCBI Genbank team
-    # set +e allows for grep to match or not match the pattern and not fail either way
-    set +e
-    cat "~{out_base}/~{out_base}.vadr.alt.list" \
-      | grep -P -v "DELETION_OF_FEATURE\t\*sequence\*\tinternal deletion of a complete feature \[stem_loop feature number 1: stem_loop.1" \
-      | grep -P -v "INDEFINITE_ANNOTATION_START\tnucleocapsid phosphoprotein\tprotein-based alignment does not extend close enough to nucleotide-based alignment 5' endpoint \[6 > 5" \
-      > "~{out_base}/~{out_base}.vadr.alt.list.filtered"
-    set -e
 
     # package everything for output
     tar -C "~{out_base}" -czvf "~{out_base}.vadr.tar.gz" .
 
     # prep alerts into a tsv file for parsing
-    cat "~{out_base}/~{out_base}.vadr.alt.list.filtered" | cut -f 2 | tail -n +2 \
+    cat "~{out_base}/~{out_base}.vadr.alt.list" | cut -f 2 | tail -n +2 \
       > "~{out_base}.vadr.alerts.tsv"
     cat "~{out_base}.vadr.alerts.tsv" | wc -l > NUM_ALERTS
   >>>
   output {
-    File feature_tbl  = "~{out_base}/~{out_base}.vadr.pass.tbl"
-    Int  num_alerts = read_int("NUM_ALERTS")
-    File alerts_list = "~{out_base}/~{out_base}.vadr.alt.list.filtered"
-    Array[Array[String]] alerts = read_tsv("~{out_base}.vadr.alerts.tsv")
-    File outputs_tgz = "~{out_base}.vadr.tar.gz"
+    File                 feature_tbl = "~{out_base}/~{out_base}.vadr.pass.tbl"
+    Int                  num_alerts  = read_int("NUM_ALERTS")
+    File                 alerts_list = "~{out_base}/~{out_base}.vadr.alt.list"
+    Array[Array[String]] alerts      = read_tsv("~{out_base}.vadr.alerts.tsv")
+    File                 outputs_tgz = "~{out_base}.vadr.tar.gz"
+    Boolean              pass        = num_alerts==0
+    String               vadr_docker = docker
   }
   runtime {
     docker: docker
-    memory: "64 GB"
-    cpu: 8
-    dx_instance_type: "mem3_ssd1_v2_x8"
+    memory: "2 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
 
