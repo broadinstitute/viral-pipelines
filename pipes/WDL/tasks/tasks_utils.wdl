@@ -98,9 +98,9 @@ task md5sum {
 
 task fetch_row_from_tsv {
   input {
-    File   tsv
-    String idx_col
-    String idx_val
+    File          tsv
+    String        idx_col
+    String        idx_val
     Array[String] set_default_keys = []
   }
   command <<<
@@ -188,7 +188,7 @@ task tsv_join {
   >>>
 
   output {
-    File   out_tsv = "${out_basename}.txt"
+    File out_tsv = "${out_basename}.txt"
   }
 
   runtime {
@@ -202,9 +202,9 @@ task tsv_join {
 
 task tsv_stack {
   input {
-    Array[File]+   input_tsvs
-    String         out_basename
-    String         docker="quay.io/broadinstitute/viral-core:2.1.19"
+    Array[File]+ input_tsvs
+    String       out_basename
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.19"
   }
 
   command {
@@ -215,7 +215,7 @@ task tsv_stack {
   }
 
   output {
-    File   out_tsv = "${out_basename}.txt"
+    File out_tsv = "${out_basename}.txt"
   }
 
   runtime {

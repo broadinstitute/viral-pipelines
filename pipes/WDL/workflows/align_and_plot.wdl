@@ -14,7 +14,7 @@ workflow align_and_plot {
     call reports.plot_coverage {
         input:
             aligned_reads_bam = align.aligned_only_reads_bam,
-            sample_name = basename(basename(align.aligned_only_reads_bam, ".bam"), ".mapped")
+            sample_name       = basename(basename(align.aligned_only_reads_bam, ".bam"), ".mapped")
     }
 
     output {
