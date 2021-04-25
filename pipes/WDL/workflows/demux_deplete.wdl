@@ -116,7 +116,7 @@ workflow demux_deplete {
                 platform              = "ILLUMINA",
                 paired                = (illumina_demux.run_info[0]['indexes'] == '2'),
                 out_name              = "sra_metadata-~{flowcell_id}.tsv",
-                instrument_model      = select_first(flatten([[instrument_model_user_specified],illumina_demux.instrument_model]))
+                instrument_model      = select_first(flatten([[instrument_model_user_specified],illumina_demux.instrument_model])),
                 title                 = select_first([sra_title])
         }
     }
