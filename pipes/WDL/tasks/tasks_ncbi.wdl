@@ -417,9 +417,7 @@ task register_biosamples {
     node src/main.js -i=input.tsv \
       ~{'-c="' + comment + '"'} \
       ~{'-d=' + embargo_date} \
-      -u="~{true='Test' false='Production' test}/~{meta_basename}"
-
-    # huh.. need to strip off empty entry at the end of xml....
+      -u="/~{true='Test' false='Production' test}/~{meta_basename}"
 
   }
   output {
