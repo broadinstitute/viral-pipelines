@@ -108,7 +108,7 @@ task pangolin_one_sample {
         File   genome_fasta
         Int?   min_length
         Float? max_ambig
-        String docker = "staphb/pangolin:2.3.8-pangolearn-2021-04-21"
+        String docker = "staphb/pangolin:2.3.8-pangolearn-2021-04-23"
     }
     String basename = basename(genome_fasta, ".fasta")
     command {
@@ -168,7 +168,7 @@ task sequencing_report {
         String? voc_list
         String? voi_list
 
-        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.13"
+        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.14"
     }
     command {
         set -e
