@@ -164,7 +164,7 @@ workflow demux_deplete {
         File        spikein_counts                           = spike_summary.count_summary
         
         String      run_date                                 = illumina_demux.run_info[0]['run_start_date']
-        String      instrument_model                         = select_first(flatten([[instrument_model_user_specified],illumina_demux.instrument_model]))
+        String      instrument_model_inferred                = select_first(flatten([[instrument_model_user_specified],illumina_demux.instrument_model]))
         
         String      demux_viral_core_version                 = illumina_demux.viralngs_version[0]
     }

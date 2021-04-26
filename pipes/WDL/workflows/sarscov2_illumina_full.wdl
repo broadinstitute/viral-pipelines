@@ -129,7 +129,7 @@ workflow sarscov2_illumina_full {
 
             File passing_assemblies     = rename_fasta_header.renamed_fasta
             String passing_assembly_ids = orig_name
-            Array[String] assembly_cmt  = [orig_name, "Broad viral-ngs v. " + demux_deplete.demux_viral_core_version, assemble_refbased.assembly_mean_coverage, demux_deplete.instrument_model]
+            Array[String] assembly_cmt  = [orig_name, "Broad viral-ngs v. " + demux_deplete.demux_viral_core_version, assemble_refbased.assembly_mean_coverage, demux_deplete.instrument_model_inferred]
 
             # lineage assignment
             call sarscov2_lineages.sarscov2_lineages {
