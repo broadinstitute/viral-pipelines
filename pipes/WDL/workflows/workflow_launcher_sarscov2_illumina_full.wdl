@@ -61,8 +61,6 @@ workflow workflow_launcher_sarscov2_illumina_full {
             sra_metadata                 = sarscov2_illumina_full.sra_metadata,
             cleaned_bam_uris             = sarscov2_illumina_full.cleaned_bam_uris,
             assemblies_fasta             = sarscov2_illumina_full.assemblies_fasta,
-            # passing_assemblies_fasta     = sarscov2_illumina_full.passing_assemblies_fasta,
-            # submittable_assemblies_fasta = sarscov2_illumina_full.submittable_assemblies_fasta,
             max_ntc_bases                = sarscov2_illumina_full.max_ntc_bases,
             ntc_rejected_batches         = sarscov2_illumina_full.ntc_rejected_batches,
             ntc_rejected_lanes           = sarscov2_illumina_full.ntc_rejected_lanes,
