@@ -113,20 +113,20 @@ task Fetch_SRA_to_BAM {
     >>>
 
     output {
-        File    reads_ubam = "~{SRA_ID}.bam"
-        Int     num_reads = read_int("OUT_NUM_READS")
-        String  sequencing_center = read_string("OUT_CENTER")
-        String  sequencing_platform = read_string("OUT_PLATFORM")
+        File    reads_ubam                = "~{SRA_ID}.bam"
+        Int     num_reads                 = read_int("OUT_NUM_READS")
+        String  sequencing_center         = read_string("OUT_CENTER")
+        String  sequencing_platform       = read_string("OUT_PLATFORM")
         String  sequencing_platform_model = read_string("OUT_MODEL")
-        String  biosample_accession = read_string("OUT_BIOSAMPLE")
-        String  library_id = read_string("OUT_LIBRARY")
-        String  library_strategy = read_string("OUT_LIBRARY_STRATEGY")
-        String  run_date = read_string("OUT_RUNDATE")
-        String  sample_collection_date = read_string("OUT_COLLECTION_DATE")
-        String  sample_collected_by = read_string("OUT_COLLECTED_BY")
-        String  sample_strain = read_string("OUT_STRAIN")
-        String  sample_geo_loc = read_string("OUT_GEO_LOC")
-        File    sra_metadata = "~{SRA_ID}.json"
+        String  biosample_accession       = read_string("OUT_BIOSAMPLE")
+        String  library_id                = read_string("OUT_LIBRARY")
+        String  library_strategy          = read_string("OUT_LIBRARY_STRATEGY")
+        String  run_date                  = read_string("OUT_RUNDATE")
+        String  sample_collection_date    = read_string("OUT_COLLECTION_DATE")
+        String  sample_collected_by       = read_string("OUT_COLLECTED_BY")
+        String  sample_strain             = read_string("OUT_STRAIN")
+        String  sample_geo_loc            = read_string("OUT_GEO_LOC")
+        File    sra_metadata              = "~{SRA_ID}.json"
         File    biosample_attributes_json = "~{SRA_ID}-biosample_attributes.json"
     }
 
@@ -211,12 +211,12 @@ task group_sra_bams_by_biosample {
     CODE
   >>>
   output {
-    Array[Array[File]+] grouped_bam_filepaths = read_tsv('grouped_bams')
-    Array[String]       biosample_accessions = read_lines('samns')
-    Map[String,Map[String,String]] samn_to_attributes = read_json('attributes.json')
-    File                biosample_attributes_tsv = 'attributes.tsv'
-    Map[String,String]  samn_to_library_strategy = read_json('library_strategies.json')
-    Map[String,String]  samn_to_sequencing_platform = read_json('sequencing_platforms.json')
+    Array[Array[File]+]            grouped_bam_filepaths       = read_tsv('grouped_bams')
+    Array[String]                  biosample_accessions        = read_lines('samns')
+    Map[String,Map[String,String]] samn_to_attributes          = read_json('attributes.json')
+    File                           biosample_attributes_tsv    = 'attributes.tsv'
+    Map[String,String]             samn_to_library_strategy    = read_json('library_strategies.json')
+    Map[String,String]             samn_to_sequencing_platform = read_json('sequencing_platforms.json')
   }
   runtime {
     docker: "python:slim"

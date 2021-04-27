@@ -2,12 +2,12 @@ version 1.0
 
 task alignment_metrics {
   input {
-    File  aligned_bam
-    File  ref_fasta
-    File? primers_bed
+    File   aligned_bam
+    File   ref_fasta
+    File?  primers_bed
 
-    Int?     machine_mem_gb
-    String   docker="quay.io/broadinstitute/viral-core:2.1.19"
+    Int?   machine_mem_gb
+    String docker = "quay.io/broadinstitute/viral-core:2.1.23"
   }
 
   String out_basename = basename(aligned_bam, ".bam")
@@ -54,8 +54,8 @@ task alignment_metrics {
   >>>
 
   output {
-    File   wgs_metrics       = "~{out_basename}.raw_wgs_metrics.txt"
-    File   alignment_metrics = "~{out_basename}.alignment_metrics.txt"
+    File wgs_metrics       = "~{out_basename}.raw_wgs_metrics.txt"
+    File alignment_metrics = "~{out_basename}.alignment_metrics.txt"
   }
 
   runtime {
@@ -69,15 +69,15 @@ task alignment_metrics {
 
 task plot_coverage {
   input {
-    File     aligned_reads_bam
-    String   sample_name
+    File    aligned_reads_bam
+    String  sample_name
 
-    Boolean skip_mark_dupes=false
-    Boolean plot_only_non_duplicates=false
-    Boolean bin_large_plots=false
-    String?  binning_summary_statistic="max" # max or min
+    Boolean skip_mark_dupes = false
+    Boolean plot_only_non_duplicates = false
+    Boolean bin_large_plots = false
+    String? binning_summary_statistic = "max" # max or min
 
-    String   docker="quay.io/broadinstitute/viral-core:2.1.19"
+    String  docker = "quay.io/broadinstitute/viral-core:2.1.23"
   }
   
   command {
@@ -126,14 +126,14 @@ task plot_coverage {
   }
 
   output {
-    File   coverage_plot                 = "${sample_name}.coverage_plot.pdf"
-    File   coverage_tsv                  = "${sample_name}.coverage_plot.txt"
-    Int    assembly_length               = read_int("assembly_length")
-    Int    reads_aligned                 = read_int("reads_aligned")
-    Int    read_pairs_aligned            = read_int("read_pairs_aligned")
-    Float  bases_aligned                 = read_float("bases_aligned")
-    Float  mean_coverage                 = read_float("mean_coverage")
-    String viralngs_version              = read_string("VERSION")
+    File   coverage_plot      = "${sample_name}.coverage_plot.pdf"
+    File   coverage_tsv       = "${sample_name}.coverage_plot.txt"
+    Int    assembly_length    = read_int("assembly_length")
+    Int    reads_aligned      = read_int("reads_aligned")
+    Int    read_pairs_aligned = read_int("read_pairs_aligned")
+    Float  bases_aligned      = read_float("bases_aligned")
+    Float  mean_coverage      = read_float("mean_coverage")
+    String viralngs_version   = read_string("VERSION")
   }
 
   runtime {
@@ -150,9 +150,9 @@ task coverage_report {
   input {
     Array[File]+ mapped_bams
     Array[File]  mapped_bam_idx # optional.. speeds it up if you provide it, otherwise we auto-index
-    String       out_report_name="coverage_report.txt"
+    String       out_report_name = "coverage_report.txt"
 
-    String       docker="quay.io/broadinstitute/viral-core:2.1.19"
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.23"
   }
 
   command {
@@ -183,8 +183,8 @@ task assembly_bases {
     }
 
     input {
-      File     fasta
-      String   docker="ubuntu"
+      File   fasta
+      String docker ="ubuntu"
     }
 
     command {
@@ -194,8 +194,8 @@ task assembly_bases {
     }
 
     output {
-        Int    assembly_length              = read_int("assembly_length")
-        Int    assembly_length_unambiguous  = read_int("assembly_length_unambiguous")
+        Int assembly_length             = read_int("assembly_length")
+        Int assembly_length_unambiguous = read_int("assembly_length_unambiguous")
     }
 
     runtime {
@@ -209,9 +209,9 @@ task assembly_bases {
 
 task fastqc {
   input {
-    File     reads_bam
+    File   reads_bam
 
-    String   docker="quay.io/broadinstitute/viral-core:2.1.19"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.23"
   }
 
   String   reads_basename=basename(reads_bam, ".bam")
@@ -224,7 +224,7 @@ task fastqc {
 
   output {
     File   fastqc_html      = "${reads_basename}_fastqc.html"
-    File   fastqc_zip      = "${reads_basename}_fastqc.zip"
+    File   fastqc_zip       = "${reads_basename}_fastqc.zip"
     String viralngs_version = read_string("VERSION")
   }
 
@@ -239,12 +239,12 @@ task fastqc {
 
 task align_and_count {
   input {
-    File    reads_bam
-    File    ref_db
-    Int     topNHits = 3
+    File   reads_bam
+    File   ref_db
+    Int    topNHits = 3
 
-    Int?    machine_mem_gb
-    String  docker="quay.io/broadinstitute/viral-core:2.1.19"
+    Int?   machine_mem_gb
+    String docker = "quay.io/broadinstitute/viral-core:2.1.23"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
@@ -270,7 +270,7 @@ task align_and_count {
   output {
     File   report           = "${reads_basename}.count.${ref_basename}.txt"
     File   report_top_hits  = "${reads_basename}.count.${ref_basename}.top_${topNHits}_hits.txt"
-    String top_hit_id = read_string("${reads_basename}.count.${ref_basename}.top.txt")
+    String top_hit_id       = read_string("${reads_basename}.count.${ref_basename}.top.txt")
     String viralngs_version = read_string("VERSION")
   }
 
@@ -285,11 +285,11 @@ task align_and_count {
 
 task align_and_count_summary {
   input {
-    Array[File]+  counts_txt
+    Array[File]+ counts_txt
 
-    String       output_prefix="count_summary"
+    String       output_prefix = "count_summary"
 
-    String        docker="quay.io/broadinstitute/viral-core:2.1.19"
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.23"
   }
 
   command {
@@ -320,7 +320,7 @@ task aggregate_metagenomics_reports {
     String       aggregate_taxlevel_focus                 = "species"
     Int          aggregate_top_N_hits                     = 5
 
-    String       docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
 
   parameter_meta {
@@ -347,7 +347,7 @@ task aggregate_metagenomics_reports {
 
   output {
     File   krakenuniq_aggregate_taxlevel_summary = "aggregate_taxa_summary_${aggregate_taxon_heading}_by_${aggregate_taxlevel_focus}_top_${aggregate_top_N_hits}_by_sample.csv"
-    String viralngs_version = read_string("VERSION")
+    String viralngs_version                      = read_string("VERSION")
   }
 
   runtime {
@@ -362,35 +362,35 @@ task aggregate_metagenomics_reports {
 
 task MultiQC {
   input {
-    Array[File]     input_files = []
+    Array[File]    input_files = []
 
-    Boolean         force = false
-    Boolean         full_names = false
-    String?         title
-    String?         comment
-    String?         file_name
-    String          out_dir = "./multiqc-output"
-    String?         template
-    String?         tag
-    String?         ignore_analysis_files
-    String?         ignore_sample_names
-    File?           sample_names
-    Array[String]?  exclude_modules
-    Array[String]?  module_to_use
-    Boolean         data_dir = false
-    Boolean         no_data_dir = false
-    String?         output_data_format
-    Boolean         zip_data_dir = false
-    Boolean         export = false
-    Boolean         flat = false
-    Boolean         interactive = true
-    Boolean         lint = false
-    Boolean         pdf = false
-    Boolean         megaQC_upload = false # Upload generated report to MegaQC if MegaQC options are found
-    File?           config  # directory
-    String?         config_yaml
+    Boolean        force = false
+    Boolean        full_names = false
+    String?        title
+    String?        comment
+    String?        file_name
+    String         out_dir = "./multiqc-output"
+    String?        template
+    String?        tag
+    String?        ignore_analysis_files
+    String?        ignore_sample_names
+    File?          sample_names
+    Array[String]? exclude_modules
+    Array[String]? module_to_use
+    Boolean        data_dir = false
+    Boolean        no_data_dir = false
+    String?        output_data_format
+    Boolean        zip_data_dir = false
+    Boolean        export = false
+    Boolean        flat = false
+    Boolean        interactive = true
+    Boolean        lint = false
+    Boolean        pdf = false
+    Boolean        megaQC_upload = false # Upload generated report to MegaQC if MegaQC options are found
+    File?          config  # directory
+    String?        config_yaml
 
-    String          docker = "quay.io/biocontainers/multiqc:1.8--py_2"
+    String         docker = "quay.io/biocontainers/multiqc:1.8--py_2"
   }
 
   parameter_meta {
@@ -443,26 +443,26 @@ task MultiQC {
   }
 
   output {
-      File multiqc_report            = "${out_dir}/${report_filename}.html"
-      File multiqc_data_dir_tarball  = "${report_filename}_data.tar.gz"
+      File multiqc_report           = "${out_dir}/${report_filename}.html"
+      File multiqc_data_dir_tarball = "${report_filename}_data.tar.gz"
   }
 
   runtime {
-    memory: "3 GB"
+    memory: "8 GB"
     cpu: 2
     docker: "${docker}"
     disks: "local-disk 375 LOCAL"
-    dx_instance_type: "mem1_ssd1_v2_x2"
+    dx_instance_type: "mem2_ssd1_v2_x2"
   }
 }
 
 task compare_two_genomes {
   input {
-    File          genome_one
-    File          genome_two
-    String        out_basename
+    File   genome_one
+    File   genome_two
+    String out_basename
 
-    String        docker="quay.io/broadinstitute/viral-assemble:2.1.16.1"
+    String docker = "quay.io/broadinstitute/viral-assemble:2.1.16.1"
   }
 
   command {
@@ -476,9 +476,9 @@ task compare_two_genomes {
 
   output {
     File   comparison_table = "${out_basename}.txt"
-    Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
-    Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-    String cpu_load = read_string("CPU_LOAD")
+    Int    max_ram_gb       = ceil(read_float("MEM_BYTES")/1000000000)
+    Int    runtime_sec      = ceil(read_float("UPTIME_SEC"))
+    String cpu_load         = read_string("CPU_LOAD")
     String viralngs_version = read_string("VERSION")
   }
 

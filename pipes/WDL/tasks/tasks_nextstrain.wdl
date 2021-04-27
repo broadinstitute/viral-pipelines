@@ -6,6 +6,7 @@ task nextmeta_prep {
     File   gisaid_meta
     File   assembly_meta
     String out_name
+    File?  filter_to_ids
   }
   command <<<
     python3 << CODE
@@ -24,6 +25,12 @@ task nextmeta_prep {
     with open('~{assembly_meta}', 'rt') as inf:
       for row in csv.DictReader(inf, delimiter='\t'):
         sample_to_assembly[row['sample']] = row
+    filter_to_ids = "~{default='' filter_to_ids}"
+    if filter_to_ids:
+        with open(filter_to_ids, 'rt') as inf:
+            keep_list = set(x.strip() for x in inf)
+    else:
+        keep_list = None
 
     # write outputs
     out_headers = ('strain', 'date', 'region', 'country', 'division', 'location', 'length', 'host', 'Nextstrain_clade', 'pango_lineage', 'originating_lab', 'submitting_lab', 'authors', 'purpose_of_sequencing')
@@ -33,23 +40,24 @@ task nextmeta_prep {
       writer.writeheader()
 
       for sample in samples:
-        geoloc = sample_to_gisaid[sample]['covv_location'].split(' / ')
-        writer.writerow({
-          'strain': sample,
-          'host': 'Human',
-          'length': sample_to_assembly[sample]['assembly_length_unambiguous'],
-          'Nextstrain_clade': sample_to_assembly[sample]['nextclade_clade'],
-          'pango_lineage': sample_to_assembly[sample]['pango_lineage'],
-          'region': geoloc[0],
-          'country': geoloc[1] if len(geoloc)>1 else '',
-          'division': geoloc[2] if len(geoloc)>2 else '',
-          'location': geoloc[3] if len(geoloc)>3 else '',
-          'date': sample_to_gisaid[sample]['covv_collection_date'],
-          'originating_lab': sample_to_gisaid[sample]['covv_orig_lab'],
-          'submitting_lab': sample_to_gisaid[sample]['covv_subm_lab'],
-          'authors': sample_to_gisaid[sample]['covv_authors'],
-          'purpose_of_sequencing': sample_to_gisaid[sample]['covv_add_host_info'],
-        })
+        if not filter_to_ids or sample in keep_list:
+            geoloc = sample_to_gisaid[sample]['covv_location'].split(' / ')
+            writer.writerow({
+            'strain': sample,
+            'host': 'Human',
+            'length': sample_to_assembly[sample]['assembly_length_unambiguous'],
+            'Nextstrain_clade': sample_to_assembly[sample]['nextclade_clade'],
+            'pango_lineage': sample_to_assembly[sample]['pango_lineage'],
+            'region': geoloc[0],
+            'country': geoloc[1] if len(geoloc)>1 else '',
+            'division': geoloc[2] if len(geoloc)>2 else '',
+            'location': geoloc[3] if len(geoloc)>3 else '',
+            'date': sample_to_gisaid[sample]['covv_collection_date'],
+            'originating_lab': sample_to_gisaid[sample]['covv_orig_lab'],
+            'submitting_lab': sample_to_gisaid[sample]['covv_subm_lab'],
+            'authors': sample_to_gisaid[sample]['covv_authors'],
+            'purpose_of_sequencing': sample_to_gisaid[sample]['covv_add_host_info'],
+            })
 
     CODE
   >>>
@@ -71,9 +79,9 @@ task derived_cols {
     input {
         File          metadata_tsv
         String?       lab_highlight_loc
-        Array[File]   table_map=[]
+        Array[File]   table_map = []
 
-        String        docker="quay.io/broadinstitute/viral-core:2.1.19"
+        String        docker = "quay.io/broadinstitute/viral-core:2.1.23"
     }
     parameter_meta {
         lab_highlight_loc: {
@@ -184,7 +192,7 @@ task filter_segments {
         Int?  segment = 1
         File? pre_assembled_samples_fasta
 
-        Int? machine_mem_gb
+        Int?  machine_mem_gb
     }
     command <<<
     python3 <<CODE
@@ -228,16 +236,16 @@ task nextstrain_build_subsample {
         description: "Filter and subsample a sequence set using a Nextstrain 'build.yaml' file. See https://docs.nextstrain.org/en/latest/tutorials/SARS-CoV-2/steps/customizing-analysis.html#custom-subsampling-schemes"
     }
     input {
-        File     alignment_msa_fasta
-        File     sample_metadata_tsv
-        String   build_name
-        File?    builds_yaml
-        File?    parameters_yaml
-        File?    keep_list
+        File   alignment_msa_fasta
+        File   sample_metadata_tsv
+        String build_name
+        File?  builds_yaml
+        File?  parameters_yaml
+        File?  keep_list
 
-        Int?     machine_mem_gb
-        String   docker = "nextstrain/base:build-20210318T204019Z"
-        String   nextstrain_ncov_repo_commit = "0f30b1c801384fbf871f644ca241336a1d8fa04a"
+        Int?   machine_mem_gb
+        String docker = "nextstrain/base:build-20210318T204019Z"
+        String nextstrain_ncov_repo_commit = "0f30b1c801384fbf871f644ca241336a1d8fa04a"
     }
     parameter_meta {
         alignment_msa_fasta: {
@@ -327,22 +335,22 @@ task nextstrain_build_subsample {
         dx_instance_type: "mem3_ssd1_v2_x8"
     }
     output {
-        File   subsampled_msa = "ncov/results/~{build_name}/subsampled_sequences.fasta"
-        File   subsample_logs = "augur.filter.logs.txt"
-        File   job_stats_json = "ncov/stats.json"
-        Int    sequences_out  = read_int("OUT_COUNT")
+        File            subsampled_msa  = "ncov/results/~{build_name}/subsampled_sequences.fasta"
+        File            subsample_logs  = "augur.filter.logs.txt"
+        File            job_stats_json  = "ncov/stats.json"
+        Int             sequences_out   = read_int("OUT_COUNT")
         Map[String,Int] counts_by_group = read_map("counts_by_group")
-        String augur_version  = read_string("VERSION")
-        Int    max_ram_gb     = ceil(read_float("MEM_BYTES")/1000000000)
-        Int    runtime_sec    = ceil(read_float("UPTIME_SEC"))
-        String cpu_load       = read_string("CPU_LOAD")
+        String          augur_version   = read_string("VERSION")
+        Int             max_ram_gb      = ceil(read_float("MEM_BYTES")/1000000000)
+        Int             runtime_sec     = ceil(read_float("UPTIME_SEC"))
+        String          cpu_load        = read_string("CPU_LOAD")
     }
 }
 
 task nextstrain_ncov_defaults {
     input {
-        String   nextstrain_ncov_repo_commit = "5dbca8a45a64e39057c22163f154db981f7ed5c1"
-        String   docker = "nextstrain/base:build-20210318T204019Z"
+        String nextstrain_ncov_repo_commit = "5dbca8a45a64e39057c22163f154db981f7ed5c1"
+        String docker                      = "nextstrain/base:build-20210318T204019Z"
     }
     command {
         set -e
@@ -353,7 +361,7 @@ task nextstrain_ncov_defaults {
     runtime {
         docker: docker
         memory: "1 GB"
-        cpu :   1
+        cpu:   1
         disks:  "local-disk 50 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
     }
@@ -373,25 +381,25 @@ task filter_subsample_sequences {
         description: "Filter and subsample a sequence set. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/filter.html"
     }
     input {
-        File     sequences_fasta
-        File     sample_metadata_tsv
+        File           sequences_fasta
+        File           sample_metadata_tsv
 
-        Int?     sequences_per_group
-        String?  group_by
-        File?    include
-        File?    exclude
+        Int?           sequences_per_group
+        String?        group_by
+        File?          include
+        File?          exclude
 
-        Boolean  non_nucleotide=true
+        Boolean        non_nucleotide = true
 
-        Float?   min_date
-        Float?   max_date
-        Int?     min_length
-        File?    priority
-        Int?     subsample_seed
-        Array[String]?  exclude_where
-        Array[String]?  include_where
+        Float?         min_date
+        Float?         max_date
+        Int?           min_length
+        File?          priority
+        Int?           subsample_seed
+        Array[String]? exclude_where
+        Array[String]? include_where
 
-        String   docker = "nextstrain/base:build-20210318T204019Z"
+        String         docker = "nextstrain/base:build-20210318T204019Z"
     }
     parameter_meta {
         sequences_fasta: {
@@ -458,9 +466,9 @@ task filter_subsample_sequences {
         String augur_version     = read_string("VERSION")
         Int    sequences_dropped = read_int("DROP_COUNT")
         Int    sequences_out     = read_int("OUT_COUNT")
-        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
-        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        String cpu_load = read_string("CPU_LOAD")
+        Int    max_ram_gb        = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec       = ceil(read_float("UPTIME_SEC"))
+        String cpu_load          = read_string("CPU_LOAD")
     }
 }
 
@@ -469,10 +477,10 @@ task filter_sequences_by_length {
         description: "Filter sequences in a fasta file to enforce a minimum count of non-N bases."
     }
     input {
-        File    sequences_fasta
-        Int     min_non_N = 1
+        File   sequences_fasta
+        Int    min_non_N = 1
 
-        String  docker="quay.io/broadinstitute/viral-core:2.1.19"
+        String docker = "quay.io/broadinstitute/viral-core:2.1.23"
     }
     parameter_meta {
         sequences_fasta: {
@@ -516,10 +524,10 @@ task filter_sequences_by_length {
         dx_instance_type: "mem1_ssd1_v2_x2"
     }
     output {
-        File   filtered_fasta    = out_fname
-        Int    sequences_in      = read_int("IN_COUNT")
-        Int    sequences_dropped = read_int("DROP_COUNT")
-        Int    sequences_out     = read_int("OUT_COUNT")
+        File filtered_fasta    = out_fname
+        Int  sequences_in      = read_int("IN_COUNT")
+        Int  sequences_dropped = read_int("DROP_COUNT")
+        Int  sequences_out     = read_int("OUT_COUNT")
     }
 }
 
@@ -528,10 +536,11 @@ task filter_sequences_to_list {
         description: "Filter and subsample a sequence set to a specific list of ids in a text file (one id per line)."
     }
     input {
-        File          sequences
-        Array[File]?  keep_list
+        File         sequences
+        Array[File]? keep_list
 
-        String   docker = "nextstrain/base:build-20210318T204019Z"
+        String       out_fname = sub(sub(basename(sequences), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
+        String       docker = "nextstrain/base:build-20210318T204019Z"
     }
     parameter_meta {
         sequences: {
@@ -543,7 +552,6 @@ task filter_sequences_to_list {
           patterns: ["*.txt", "*.tsv"]
         }
     }
-    String out_fname = sub(sub(basename(sequences), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
     command <<<
         set -e
         KEEP_LISTS="~{sep=' ' select_first([keep_list, []])}"
@@ -555,7 +563,6 @@ task filter_sequences_to_list {
                 echo filtering vcf file
                 bcftools view --samples-file keep_list.txt "~{sequences}" -Ou | bcftools filter -i "AC>1" -o "~{out_fname}"
                 echo "-1" > DROP_COUNT
-                bcftools view "~{out_fname}" | grep CHROM | awk -F'\t' '{print NF-9}' > OUT_COUNT
             else
                 # filter fasta file to keep_list.txt
                 echo filtering fasta file
@@ -584,8 +591,16 @@ task filter_sequences_to_list {
         else
             cp "~{sequences}" "~{out_fname}"
             echo "0" > DROP_COUNT
-            echo "-1" > OUT_COUNT
         fi
+
+        if [[ "~{sequences}" = *.vcf || "~{sequences}" = *.vcf.gz ]]; then
+            bcftools query -l "~{out_fname}" > kept_ids.txt
+            bcftools view "~{out_fname}" | grep CHROM | awk -F'\t' '{print NF-9}' > OUT_COUNT
+        else
+            cat "~{out_fname}" | grep \> | cut -c 2- > kept_ids.txt
+            cat kept_ids.txt | wc -l > OUT_COUNT
+        fi
+
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
@@ -602,9 +617,10 @@ task filter_sequences_to_list {
         File   filtered_fasta    = out_fname
         Int    sequences_dropped = read_int("DROP_COUNT")
         Int    sequences_out     = read_int("OUT_COUNT")
-        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
-        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        String cpu_load = read_string("CPU_LOAD")
+        File   ids_kept          = "kept_ids.txt"
+        Int    max_ram_gb        = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec       = ceil(read_float("UPTIME_SEC"))
+        String cpu_load          = read_string("CPU_LOAD")
     }
 }
 
@@ -686,9 +702,9 @@ task mafft_one_chr {
     }
     output {
         File   aligned_sequences = "~{basename}_aligned.fasta"
-        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
-        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        String cpu_load = read_string("CPU_LOAD")
+        Int    max_ram_gb        = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec       = ceil(read_float("UPTIME_SEC"))
+        String cpu_load          = read_string("CPU_LOAD")
     }
 }
 
@@ -697,15 +713,15 @@ task augur_mafft_align {
         description: "Align multiple sequences from FASTA. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/align.html"
     }
     input {
-        File     sequences
-        File     ref_fasta
-        String   basename
+        File    sequences
+        File    ref_fasta
+        String  basename
 
-        File?    existing_alignment
-        Boolean  fill_gaps = true
-        Boolean  remove_reference = true
+        File?   existing_alignment
+        Boolean fill_gaps = true
+        Boolean remove_reference = true
 
-        String   docker = "nextstrain/base:build-20210318T204019Z"
+        String  docker = "nextstrain/base:build-20210318T204019Z"
     }
     command {
         set -e
@@ -732,18 +748,18 @@ task augur_mafft_align {
     }
     output {
         File   aligned_sequences = "~{basename}_aligned.fasta"
-        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
-        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        String cpu_load = read_string("CPU_LOAD")
-        String augur_version = read_string("VERSION")
+        Int    max_ram_gb        = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec       = ceil(read_float("UPTIME_SEC"))
+        String cpu_load          = read_string("CPU_LOAD")
+        String augur_version     = read_string("VERSION")
     }
 }
 
 task snp_sites {
     input {
-        File   msa_fasta
-        Boolean allow_wildcard_bases=true
-        String docker = "quay.io/biocontainers/snp-sites:2.5.1--hed695b0_0"
+        File    msa_fasta
+        Boolean allow_wildcard_bases = true
+        String  docker = "quay.io/biocontainers/snp-sites:2.5.1--hed695b0_0"
     }
     String out_basename = basename(msa_fasta, ".fasta")
     command {
@@ -759,7 +775,7 @@ task snp_sites {
         dx_instance_type: "mem3_ssd1_v2_x4"
     }
     output {
-        File   snps_vcf = "~{out_basename}.vcf"
+        File   snps_vcf          = "~{out_basename}.vcf"
         String snp_sites_version = read_string("VERSION")
     }
 }
@@ -769,10 +785,10 @@ task augur_mask_sites {
         description: "Mask unwanted positions from alignment or SNP table. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/mask.html"
     }
     input {
-        File     sequences
-        File?    mask_bed
+        File   sequences
+        File?  mask_bed
 
-        String   docker = "nextstrain/base:build-20210318T204019Z"
+        String docker = "nextstrain/base:build-20210318T204019Z"
     }
     parameter_meta {
         sequences: {
@@ -806,10 +822,10 @@ task augur_mask_sites {
     }
     output {
         File   masked_sequences = out_fname
-        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
-        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        String cpu_load = read_string("CPU_LOAD")
-        String augur_version  = read_string("VERSION")
+        Int    max_ram_gb       = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec      = ceil(read_float("UPTIME_SEC"))
+        String cpu_load         = read_string("CPU_LOAD")
+        String augur_version    = read_string("VERSION")
     }
 }
 
@@ -818,16 +834,16 @@ task draft_augur_tree {
         description: "Build a tree using iqTree. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/tree.html"
     }
     input {
-        File     msa_or_vcf
+        File    msa_or_vcf
 
-        String   method = "iqtree"
-        String   substitution_model = "GTR"
-        File?    exclude_sites
-        File?    vcf_reference
-        String?  tree_builder_args
+        String  method = "iqtree"
+        String  substitution_model = "GTR"
+        File?   exclude_sites
+        File?   vcf_reference
+        String? tree_builder_args
 
-        Int?     cpus
-        String   docker = "nextstrain/base:build-20210318T204019Z"
+        Int?    cpus
+        String  docker = "nextstrain/base:build-20210318T204019Z"
     }
     parameter_meta {
         msa_or_vcf: {
@@ -860,10 +876,10 @@ task draft_augur_tree {
         preemptible: 0
     }
     output {
-        File   aligned_tree = "~{out_basename}_~{method}.nwk"
-        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
-        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        String cpu_load = read_string("CPU_LOAD")
+        File   aligned_tree  = "~{out_basename}_~{method}.nwk"
+        Int    max_ram_gb    = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec   = ceil(read_float("UPTIME_SEC"))
+        String cpu_load      = read_string("CPU_LOAD")
         String augur_version = read_string("VERSION")
     }
 }
@@ -940,12 +956,12 @@ task refine_augur_tree {
         preemptible: 0
     }
     output {
-        File   tree_refined  = "~{out_basename}_timetree.nwk"
+        File   tree_refined   = "~{out_basename}_timetree.nwk"
         File   branch_lengths = "~{out_basename}_branch_lengths.json"
-        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
-        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        String cpu_load = read_string("CPU_LOAD")
-        String augur_version = read_string("VERSION")
+        Int    max_ram_gb     = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec    = ceil(read_float("UPTIME_SEC"))
+        String cpu_load       = read_string("CPU_LOAD")
+        String augur_version  = read_string("VERSION")
     }
 }
 
@@ -954,15 +970,15 @@ task ancestral_traits {
         description: "Infer ancestral traits based on a tree. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/traits.html"
     }
     input {
-        File           tree
-        File           metadata
-        Array[String]  columns
+        File          tree
+        File          metadata
+        Array[String] columns
 
-        Boolean        confidence = true
-        File?          weights
-        Float?         sampling_bias_correction
+        Boolean       confidence = true
+        File?         weights
+        Float?        sampling_bias_correction
 
-        String   docker = "nextstrain/base:build-20210318T204019Z"
+        String        docker = "nextstrain/base:build-20210318T204019Z"
     }
     String out_basename = basename(tree, '.nwk')
     command {
@@ -990,10 +1006,10 @@ task ancestral_traits {
     }
     output {
         File   node_data_json = "~{out_basename}_ancestral_traits.json"
-        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
-        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        String cpu_load = read_string("CPU_LOAD")
-        String augur_version = read_string("VERSION")
+        Int    max_ram_gb     = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec    = ceil(read_float("UPTIME_SEC"))
+        String cpu_load       = read_string("CPU_LOAD")
+        String augur_version  = read_string("VERSION")
     }
 }
 
@@ -1048,11 +1064,11 @@ task ancestral_tree {
         preemptible: 0
     }
     output {
-        File   nt_muts_json = "~{out_basename}_nt_muts.json"
-        File   sequences    = "~{out_basename}_ancestral_sequences.fasta"
-        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
-        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        String cpu_load = read_string("CPU_LOAD")
+        File   nt_muts_json  = "~{out_basename}_nt_muts.json"
+        File   sequences     = "~{out_basename}_ancestral_sequences.fasta"
+        Int    max_ram_gb    = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec   = ceil(read_float("UPTIME_SEC"))
+        String cpu_load      = read_string("CPU_LOAD")
         String augur_version = read_string("VERSION")
     }
 }
@@ -1162,10 +1178,10 @@ task tip_frequencies {
     }
     output {
         File   node_data_json = "~{out_basename}_tip-frequencies.json"
-        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
-        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        String cpu_load = read_string("CPU_LOAD")
-        String augur_version = read_string("VERSION")
+        Int    max_ram_gb     = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec    = ceil(read_float("UPTIME_SEC"))
+        String cpu_load       = read_string("CPU_LOAD")
+        String augur_version  = read_string("VERSION")
     }
 }
 
@@ -1251,10 +1267,10 @@ task augur_import_beast {
     output {
         File   tree_newick    = "~{tree_basename}.nwk"
         File   node_data_json = "~{tree_basename}.json"
-        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
-        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        String cpu_load = read_string("CPU_LOAD")
-        String augur_version = read_string("VERSION")
+        Int    max_ram_gb     = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec    = ceil(read_float("UPTIME_SEC"))
+        String cpu_load       = read_string("CPU_LOAD")
+        String augur_version  = read_string("VERSION")
     }
 }
 
@@ -1263,10 +1279,10 @@ task export_auspice_json {
         description: "export augur files to json suitable for auspice visualization. The metadata tsv input is generally required unless the node_data_jsons comprehensively capture all of it. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/export.html"
     }
     input {
-        File        auspice_config
-        File?       sample_metadata
-        File        tree
-        Array[File] node_data_jsons
+        File           auspice_config
+        File?          sample_metadata
+        File           tree
+        Array[File]    node_data_jsons
 
         File?          lat_longs_tsv
         File?          colors_tsv
@@ -1347,11 +1363,11 @@ task export_auspice_json {
         preemptible: 0
     }
     output {
-        File   virus_json = "~{out_basename}_auspice.json"
+        File   virus_json         = "~{out_basename}_auspice.json"
         File   root_sequence_json = "~{out_basename}_auspice_root-sequence.json"
-        Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
-        Int    runtime_sec = ceil(read_float("UPTIME_SEC"))
-        String cpu_load = read_string("CPU_LOAD")
-        String augur_version = read_string("VERSION")
+        Int    max_ram_gb         = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec        = ceil(read_float("UPTIME_SEC"))
+        String cpu_load           = read_string("CPU_LOAD")
+        String augur_version      = read_string("VERSION")
     }
 }

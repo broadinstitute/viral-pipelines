@@ -37,7 +37,7 @@ task upload_entities_tsv {
     Array[String] cleaned_reads_unaligned_bams_string
     File          meta_by_filename_json
 
-    String        docker="schaluvadi/pathogen-genomic-surveillance:api-wdl"
+    String        docker = "schaluvadi/pathogen-genomic-surveillance:api-wdl"
   }
   command {
     set -e
@@ -71,7 +71,7 @@ task download_entities_tsv {
     String  outname = "~{terra_project}-~{workspace_name}-~{table_name}.tsv"
     String? nop_input_string # this does absolutely nothing, except that it allows an optional mechanism for you to block execution of this step upon the completion of another task in your workflow
 
-    String  docker="schaluvadi/pathogen-genomic-surveillance:api-wdl"
+    String  docker = "schaluvadi/pathogen-genomic-surveillance:api-wdl"
   }
 
   meta {
@@ -120,7 +120,7 @@ task download_entities_tsv {
     cpu: 1
   }
   output {
-    File  tsv_file = '~{outname}'
+    File tsv_file = '~{outname}'
   }
 }
 

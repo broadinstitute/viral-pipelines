@@ -17,8 +17,8 @@ workflow sarscov2_nextclade_multi {
     }
 
     output {
-        File   nextclade_tsv  = nextclade_many_samples.nextclade_tsv
-        File   nextclade_json = nextclade_many_samples.nextclade_json
-        File   auspice_json   = nextclade_many_samples.auspice_json
+        File nextclade_tsv  = nextclade_many_samples.nextclade_tsv
+        File nextclade_json = nextclade_many_samples.nextclade_json
+        File auspice_json   = nextclade_many_samples.auspice_json
     }
 }

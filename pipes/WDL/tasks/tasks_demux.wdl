@@ -2,11 +2,11 @@ version 1.0
 
 task merge_tarballs {
   input {
-    Array[File]+  tar_chunks
-    String        out_filename
+    Array[File]+ tar_chunks
+    String       out_filename
 
-    Int?          machine_mem_gb
-    String        docker="quay.io/broadinstitute/viral-core:2.1.19"
+    Int?         machine_mem_gb
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.23"
   }
 
   command {
@@ -24,8 +24,8 @@ task merge_tarballs {
   }
 
   output {
-    File    combined_tar      = "~{out_filename}"
-    String  viralngs_version  = read_string("VERSION")
+    File   combined_tar     = "~{out_filename}"
+    String viralngs_version = read_string("VERSION")
   }
 
   runtime {
@@ -100,7 +100,7 @@ task illumina_demux {
     Int?    maxRecordsInRam
 
     Int?    machine_mem_gb
-    String  docker="quay.io/broadinstitute/viral-core:2.1.19"
+    String  docker = "quay.io/broadinstitute/viral-core:2.1.23"
   }
   parameter_meta {
       flowcell_tgz: {
@@ -111,7 +111,7 @@ task illumina_demux {
 
   String out_base = "~{basename(basename(basename(basename(flowcell_tgz, '.zst'), '.gz'), '.tar'), '.tgz')}-L~{lane}"
 
-  command {
+  command <<<
     set -ex -o pipefail
 
     # find N% memory
@@ -297,7 +297,7 @@ task illumina_demux {
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
     cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
-  }
+  >>>
 
   output {
     File        metrics                  = "~{out_base}-demux_metrics.txt"
@@ -307,17 +307,17 @@ task illumina_demux {
     File        unmatched_reads_bam      = "unmatched/Unmatched.bam"
     Array[File] raw_reads_fastqc         = glob("*_fastqc.html")
     Array[File] raw_reads_fastqc_zip     = glob("*_fastqc.zip")
-    Int         max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
-    Int         runtime_sec = ceil(read_float("UPTIME_SEC"))
-    Int         cpu_load_15min = ceil(read_float("LOAD_15M"))
+    Int         max_ram_gb               = ceil(read_float("MEM_BYTES")/1000000000)
+    Int         runtime_sec              = ceil(read_float("UPTIME_SEC"))
+    Int         cpu_load_15min           = ceil(read_float("LOAD_15M"))
     String      viralngs_version         = read_string("VERSION")
 
-    Map[String,Map[String,String]] meta_by_sample   = read_json('meta_by_sample.json')
-    Map[String,Map[String,String]] meta_by_filename = read_json('meta_by_fname.json')
-    Map[String,String]             run_info         = read_json("~{out_base}-runinfo.json")
-    File meta_by_sample_json   = 'meta_by_sample.json'
-    File meta_by_filename_json = 'meta_by_fname.json'
-    File run_info_json         = "~{out_base}-runinfo.json"
+    Map[String,Map[String,String]] meta_by_sample        = read_json('meta_by_sample.json')
+    Map[String,Map[String,String]] meta_by_filename      = read_json('meta_by_fname.json')
+    Map[String,String]             run_info              = read_json("~{out_base}-runinfo.json")
+    File                           meta_by_sample_json   = 'meta_by_sample.json'
+    File                           meta_by_filename_json = 'meta_by_fname.json'
+    File                           run_info_json         = "~{out_base}-runinfo.json"
   }
 
   runtime {
@@ -378,8 +378,8 @@ task merge_maps {
     CODE
   >>>
   output {
-    Map[String,Map[String,String]] merged = read_json('out.json')
-    File merged_json = 'out.json'
+    Map[String,Map[String,String]] merged      = read_json('out.json')
+    File                           merged_json = 'out.json'
   }
   runtime {
     docker: "python:slim"
