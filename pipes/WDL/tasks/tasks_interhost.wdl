@@ -142,7 +142,7 @@ task index_ref {
     File?  novocraft_license
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.1.23"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.23_with_picard_2.24.2_WithTileMetricVersionSetTo3"
   }
 
   command {

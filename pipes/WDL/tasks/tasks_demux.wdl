@@ -6,7 +6,7 @@ task merge_tarballs {
     String       out_filename
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-core:2.1.23"
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.23_with_picard_2.24.2_WithTileMetricVersionSetTo3"
   }
 
   command {
@@ -100,7 +100,7 @@ task illumina_demux {
     Int?    maxRecordsInRam
 
     Int?    machine_mem_gb
-    String  docker = "quay.io/broadinstitute/viral-core:2.1.23"
+    String  docker = "quay.io/broadinstitute/viral-core:2.1.23_with_picard_2.24.2_WithTileMetricVersionSetTo3"
   }
   parameter_meta {
       flowcell_tgz: {
