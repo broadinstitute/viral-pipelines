@@ -139,6 +139,134 @@ task Fetch_SRA_to_BAM {
     }
 }
 
+task fetch_biosamples {
+
+    input {
+        Array[String]  biosample_ids
+
+        String         out_basename = "biosample_attributes"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.1"
+    }
+
+    command <<<
+        set -e
+        /opt/docker/scripts/biosample-fetch_attributes.py \
+            ~{sep=' ' biosample_ids} "~{out_basename}"
+    >>>
+
+    output {
+        File    biosample_attributes_tsv  = "~{out_basename}.tsv"
+        File    biosample_attributes_json = "~{out_basename}.json"
+    }
+
+    runtime {
+        cpu:     2
+        memory:  "3 GB"
+        disks:   "local-disk 50 HDD"
+        dx_instance_type: "mem2_ssd1_v2_x2"
+        docker:  docker
+    }
+}
+
+task ncbi_ftp_upload {
+    input {
+        Array[File]    submit_files
+        File           config_js
+        String         target_path
+
+        String         wait_for="1"  # all, disabled, some number
+
+        String         docker = "quay.io/broadinstitute/ncbi-tools:dp-biosample"
+    }
+
+    command <<<
+        set -e
+        cd /opt/converter
+        cp "~{config_js}" src/
+        rm files/sample.tsv
+        cp ~{sep=' ' submit_files} files/
+        MANIFEST=$(ls -1 files | paste -sd,)
+        node src/main.js --debug \
+            --uploadFiles="$MANIFEST" \
+            --poll="~{wait_for}" \
+            --uploadFolder="~{target_path}"
+        ls -alF files reports staging
+    >>>
+
+    output {
+        File        debug  = stdout()
+        Array[File] reports_xmls = glob("/opt/converter/reports/report.*.xml")
+    }
+
+    runtime {
+        cpu:     2
+        memory:  "2 GB"
+        disks:   "local-disk 100 HDD"
+        dx_instance_type: "mem2_ssd1_v2_x2"
+        docker:  docker
+    }
+}
+
+task biosample_submit_tsv_to_xml {
+    input {
+        File     meta_submit_tsv
+        File     config_js
+
+        String   docker = "quay.io/broadinstitute/ncbi-tools:dp-biosample"
+    }
+    command <<<
+        set -e
+        cd /opt/converter
+        cp "~{config_js}" src/
+        rm files/sample.tsv
+        cp "~{meta_submit_tsv}" files/
+        node src/main.js --debug \
+            -i=$(basename "~{meta_submit_tsv}") \
+            --runTestMode=true
+    >>>
+    output {
+        File   submission_xml = "/opt/converter/files/~{basename(meta_submit_tsv, '.tsv')}-submission.xml"
+    }
+    runtime {
+        cpu:     2
+        memory:  "2 GB"
+        disks:   "local-disk 100 HDD"
+        dx_instance_type: "mem2_ssd1_v2_x2"
+        docker:  docker
+    }
+}
+
+task biosample_submit_tsv_ftp_upload {
+    input {
+        File     meta_submit_tsv
+        File     config_js
+        String   target_path
+
+        String   docker = "quay.io/broadinstitute/ncbi-tools:dp-biosample"
+    }
+    command <<<
+        set -e
+        cd /opt/converter
+        cp "~{config_js}" src/
+        rm files/sample.tsv reports/sample-report.xml
+        cp "~{meta_submit_tsv}" files/
+        node src/main.js --debug \
+            -i=$(basename "~{meta_submit_tsv}") \
+            --uploadFolder="~{target_path}"
+    >>>
+    output {
+        File        attributes_tsv = "/opt/converter/reports/~{basename(meta_submit_tsv, '.tsv')}-attributes.tsv"
+        File        submission_xml = "/opt/converter/files/~{basename(meta_submit_tsv, '.tsv')}-submission.xml"
+        Array[File] reports_xmls   = glob("/opt/converter/reports/report.*.xml")
+    }
+    runtime {
+        cpu:     2
+        memory:  "2 GB"
+        disks:   "local-disk 100 HDD"
+        dx_instance_type: "mem2_ssd1_v2_x2"
+        docker:  docker
+    }
+}
 
 task group_sra_bams_by_biosample {
   input {
