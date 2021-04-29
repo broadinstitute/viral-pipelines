@@ -143,7 +143,7 @@ workflow sarscov2_genbank {
         source_modifier_table = passing_source_modifiers.genbank_source_modifier_table,
         structured_comments   = passing_structured_cmt.structured_comment_table,
         fasta_filename        = "gisaid-passing-sequences.fasta",
-        out_name              = "gisaid-passing-meta.tsv"
+        out_name              = "gisaid-passing-meta.csv"
     }
 
     # package genbank
@@ -179,7 +179,7 @@ workflow sarscov2_genbank {
         source_modifier_table = weird_source_modifiers.genbank_source_modifier_table,
         structured_comments   = weird_structured_cmt.structured_comment_table,
         fasta_filename        = "gisaid-weird-sequences.fasta",
-        out_name              = "gisaid-weird-meta.tsv"
+        out_name              = "gisaid-weird-meta.csv"
     }
 
     output {

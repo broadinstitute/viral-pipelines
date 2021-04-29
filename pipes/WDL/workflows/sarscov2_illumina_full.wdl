@@ -326,7 +326,7 @@ workflow sarscov2_illumina_full {
         source_modifier_table = biosample_to_genbank.genbank_source_modifier_table,
         structured_comments   = structured_comments.structured_comment_table,
         fasta_filename        = "gisaid-sequences-~{flowcell_id}.fasta",
-        out_name              = "gisaid-meta-~{flowcell_id}.tsv"
+        out_name              = "gisaid-meta-~{flowcell_id}.csv"
     }
 
     # prep nextmeta-style metadata for private nextstrain build
