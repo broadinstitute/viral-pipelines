@@ -194,12 +194,12 @@ workflow sarscov2_genbank {
         Array[File] vadr_outputs          = vadr.outputs_tgz
         
         File        gisaid_fasta          = passing_prefix_gisaid.renamed_fasta
-        File        gisaid_meta_tsv       = passing_gisaid_meta.meta_tsv
+        File        gisaid_meta_csv       = passing_gisaid_meta.meta_csv
         
         File        weird_genbank_zip     = weird_package_genbank.submission_zip
         File        weird_genbank_xml     = weird_package_genbank.submission_xml
         File        weird_gisaid_fasta    = weird_prefix_gisaid.renamed_fasta
-        File        weird_gisaid_meta_tsv = weird_gisaid_meta.meta_tsv
+        File        weird_gisaid_meta_csv = weird_gisaid_meta.meta_csv
     }
 
 }

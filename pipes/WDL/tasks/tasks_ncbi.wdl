@@ -355,7 +355,7 @@ task gisaid_meta_prep {
     CODE
   >>>
   output {
-    File meta_tsv = "~{out_name}"
+    File meta_csv = "~{out_name}"
   }
   runtime {
     docker: "python:slim"
