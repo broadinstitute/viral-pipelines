@@ -6,7 +6,7 @@ task Fetch_SRA_to_BAM {
         String  SRA_ID
 
         Int?    machine_mem_gb
-        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.1"
+        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.2"
     }
 
     command <<<
@@ -145,7 +145,7 @@ task fetch_biosamples {
         Array[String]  biosample_ids
 
         String         out_basename = "biosample_attributes"
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.1"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.2"
     }
 
     command <<<
@@ -176,26 +176,28 @@ task ncbi_ftp_upload {
 
         String         wait_for="1"  # all, disabled, some number
 
-        String         docker = "quay.io/broadinstitute/ncbi-tools:dp-biosample"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.2"
     }
 
     command <<<
         set -e
         cd /opt/converter
         cp "~{config_js}" src/
-        rm files/sample.tsv
+        rm -f files/sample.tsv reports/sample-report.xml
         cp ~{sep=' ' submit_files} files/
         MANIFEST=$(ls -1 files | paste -sd,)
+        echo "uploading: $MANIFEST to destination ftp folder ~{target_path}"
         node src/main.js --debug \
             --uploadFiles="$MANIFEST" \
             --poll="~{wait_for}" \
             --uploadFolder="~{target_path}"
-        ls -alF files reports staging
+        cd -
+        cp /opt/converter/reports/*report*.xml .
+        ls -alF files reports
     >>>
 
     output {
-        File        debug  = stdout()
-        Array[File] reports_xmls = glob("/opt/converter/reports/report.*.xml")
+        Array[File] reports_xmls = glob("*report*.xml")
     }
 
     runtime {
@@ -212,7 +214,7 @@ task biosample_submit_tsv_to_xml {
         File     meta_submit_tsv
         File     config_js
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:dp-biosample"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.2"
     }
     command <<<
         set -e
@@ -223,9 +225,11 @@ task biosample_submit_tsv_to_xml {
         node src/main.js --debug \
             -i=$(basename "~{meta_submit_tsv}") \
             --runTestMode=true
+        cd -
+        cp "/opt/converter/files/~{basename(meta_submit_tsv, '.tsv')}-submission.xml" .
     >>>
     output {
-        File   submission_xml = "/opt/converter/files/~{basename(meta_submit_tsv, '.tsv')}-submission.xml"
+        File   submission_xml = "~{basename(meta_submit_tsv, '.tsv')}-submission.xml"
     }
     runtime {
         cpu:     2
@@ -242,22 +246,25 @@ task biosample_submit_tsv_ftp_upload {
         File     config_js
         String   target_path
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:dp-biosample"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.2"
     }
+    String base=basename(meta_submit_tsv, '.tsv')
     command <<<
         set -e
         cd /opt/converter
         cp "~{config_js}" src/
-        rm files/sample.tsv reports/sample-report.xml
+        rm -f files/sample.tsv reports/sample-report.xml
         cp "~{meta_submit_tsv}" files/
         node src/main.js --debug \
             -i=$(basename "~{meta_submit_tsv}") \
             --uploadFolder="~{target_path}"
+        cd -
+        cp /opt/converter/reports/~{base}-attributes.tsv /opt/converter/files/~{base}-submission.xml /opt/converter/reports/~{base}-report.*.xml .
     >>>
     output {
-        File        attributes_tsv = "/opt/converter/reports/~{basename(meta_submit_tsv, '.tsv')}-attributes.tsv"
-        File        submission_xml = "/opt/converter/files/~{basename(meta_submit_tsv, '.tsv')}-submission.xml"
-        Array[File] reports_xmls   = glob("/opt/converter/reports/report.*.xml")
+        File        attributes_tsv = "~{base}-attributes.tsv"
+        File        submission_xml = "~{base}-submission.xml"
+        Array[File] reports_xmls   = glob("~{base}-report.*.xml")
     }
     runtime {
         cpu:     2
