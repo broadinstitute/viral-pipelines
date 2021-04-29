@@ -258,6 +258,7 @@ workflow sarscov2_illumina_full {
 
     ### filter and concatenate final sets for delivery ("passing" and "submittable")
     call sarscov2.sc2_meta_final {
+      # this decorates assembly_meta_tsv with collab/internal IDs, genome_status, and many other columns
       input:
         assembly_stats_tsv = assembly_meta_tsv.combined,
         collab_ids_tsv = collab_ids_tsv,
@@ -266,17 +267,20 @@ workflow sarscov2_illumina_full {
         genome_status_json = filter_bad_ntc_batches.fail_meta_json
     }
     call utils.concatenate as passing_cat_prefilter {
+      # this emits a fasta of only genomes that pass min_unambig
       input:
         infiles     = select_all(passing_assemblies),
         output_name = "assemblies_passing-~{flowcell_id}.prefilter.fasta"
     }
     call nextstrain.filter_sequences_to_list as passing_cat {
+      # this drops all genomes that are failed_NTC
       input:
         sequences = passing_cat_prefilter.combined,
         keep_list = [filter_bad_ntc_batches.seqids_kept],
         out_fname = "assemblies_passing-~{flowcell_id}.fasta"
     }
     call nextstrain.filter_sequences_to_list as submittable_filter {
+      # this drops all failed_annotation (aka VADR fails)
       input:
         sequences = passing_cat.filtered_fasta,
         keep_list = [write_lines(select_all(submittable_id))]
