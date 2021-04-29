@@ -215,7 +215,7 @@ workflow sarscov2_sra_to_genbank {
       input:
         source_modifier_table = biosample_to_genbank.genbank_source_modifier_table,
         structured_comments   = structured_comments.structured_comment_table,
-        out_name              = "gisaid_meta.tsv",
+        out_name              = "gisaid_meta.csv",
         strict                = false
     }
 
@@ -258,7 +258,7 @@ workflow sarscov2_sra_to_genbank {
         File          genbank_source_table         = biosample_to_genbank.genbank_source_modifier_table
         
         File          gisaid_fasta                 = prefix_gisaid.renamed_fasta
-        File          gisaid_meta_tsv              = gisaid_meta_prep.meta_tsv
+        File          gisaid_meta_csv              = gisaid_meta_prep.meta_csv
         
         Array[String] assembled_ids                = select_all(passing_assembly_ids)
         Array[String] submittable_ids              = select_all(submittable_id)
