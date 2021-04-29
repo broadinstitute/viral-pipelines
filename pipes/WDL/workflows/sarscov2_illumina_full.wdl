@@ -326,13 +326,13 @@ workflow sarscov2_illumina_full {
         source_modifier_table = biosample_to_genbank.genbank_source_modifier_table,
         structured_comments   = structured_comments.structured_comment_table,
         fasta_filename        = "gisaid-sequences-~{flowcell_id}.fasta",
-        out_name              = "gisaid-meta-~{flowcell_id}.tsv"
+        out_name              = "gisaid-meta-~{flowcell_id}.csv"
     }
 
     # prep nextmeta-style metadata for private nextstrain build
     call nextstrain.nextmeta_prep {
       input:
-        gisaid_meta   = gisaid_meta_prep.meta_tsv,
+        gisaid_meta   = gisaid_meta_prep.meta_csv,
         assembly_meta = assembly_meta_tsv.combined,
         out_name      = "nextmeta-~{flowcell_id}.tsv",
         filter_to_ids = filter_bad_ntc_batches.seqids_kept
@@ -458,7 +458,7 @@ workflow sarscov2_illumina_full {
         File          genbank_source_table         = biosample_to_genbank.genbank_source_modifier_table
         
         File          gisaid_fasta                 = prefix_gisaid.renamed_fasta
-        File          gisaid_meta_tsv              = gisaid_meta_prep.meta_tsv
+        File          gisaid_meta_csv              = gisaid_meta_prep.meta_csv
         
         File          genbank_fasta                = submit_genomes.filtered_fasta
         File          nextmeta_tsv                 = nextmeta_prep.nextmeta_tsv
