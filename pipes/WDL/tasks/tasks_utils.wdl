@@ -138,7 +138,7 @@ task fetch_col_from_tsv {
     String        col
     Boolean       drop_empty = true
     Boolean       drop_header = true
-    String        out_name = "~{tsv}-~{col}.txt"
+    String        out_name = "~{basename(basename(tsv, '.txt'), '.tsv')}-~{col}.txt"
   }
   command <<<
     python3 << CODE
