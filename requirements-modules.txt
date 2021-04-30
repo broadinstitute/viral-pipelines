@@ -7,5 +7,5 @@ broadinstitute/beast-beagle-cuda=1.10.5pre
 broadinstitute/ncbi-tools=2.10.7.2
 nextstrain/base=build-20210318T204019Z
 andersenlabapps/ivar=1.3.1
-staphb/pangolin=2.3.8-pangolearn-2021-04-23
+staphb/pangolin=2.4-pangolearn-2021-04-28
 nextstrain/nextclade=0.13.0
