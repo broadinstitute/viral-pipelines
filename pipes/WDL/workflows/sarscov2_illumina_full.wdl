@@ -60,7 +60,6 @@ workflow sarscov2_illumina_full {
     }
     Int     taxid         = 2697049
     String  gisaid_prefix = 'hCoV-19/'
-    String  flowcell_id   = basename(basename(basename(basename(flowcell_tgz, ".gz"), ".zst"), ".tar"), ".tgz")
 
     # merge biosample attributes tables
     call utils.tsv_join as biosample_merge {
@@ -78,6 +77,7 @@ workflow sarscov2_illumina_full {
             instrument_model = instrument_model,
             sra_title        = sra_title
     }
+    String  flowcell_id = demux_deplete.run_id
 
     ### gather data by biosample
     call read_utils.group_bams_by_sample {

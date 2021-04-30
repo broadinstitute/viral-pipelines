@@ -186,7 +186,7 @@ task structured_comments {
 
     File?  filter_to_ids
 
-    String docker = "quay.io/broadinstitute/viral-core:2.1.26"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.28"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -264,7 +264,7 @@ task rename_fasta_header {
 
     String out_basename = basename(genome_fasta, ".fasta")
 
-    String docker = "quay.io/broadinstitute/viral-core:2.1.26"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.28"
   }
   command {
     set -e
@@ -417,9 +417,7 @@ task register_biosamples {
     node src/main.js -i=input.tsv \
       ~{'-c="' + comment + '"'} \
       ~{'-d=' + embargo_date} \
-      -u="~{true='Test' false='Production' test}/~{meta_basename}"
-
-    # huh.. need to strip off empty entry at the end of xml....
+      -u="/~{true='Test' false='Production' test}/~{meta_basename}"
 
   }
   output {
@@ -447,7 +445,7 @@ task sra_meta_prep {
     Boolean     paired
 
     String      out_name = "sra_metadata.tsv"
-    String      docker="quay.io/broadinstitute/viral-core:2.1.26"
+    String      docker="quay.io/broadinstitute/viral-core:2.1.28"
   }
   parameter_meta {
     cleaned_bam_filepaths: {
