@@ -369,7 +369,7 @@ task crsp_meta_etl {
         import pandas as pd
 
         # load some inputs
-        salt = '~{salt}'
+        salt = '~{salt}'.strip()
         ontology_map_states = json.loads('~{ontology_map_states}')
         ontology_map_body_part = json.loads('~{ontology_map_body_part}')
 
