@@ -18,7 +18,7 @@ workflow merge_metagenomics {
     call metagenomics.krona_merge {
         input:
             krona_reports = krona_per_sample,
-            out_basename = "merged_krona"
+            out_basename  = "merged_krona"
     }
 
     call reports.aggregate_metagenomics_reports {

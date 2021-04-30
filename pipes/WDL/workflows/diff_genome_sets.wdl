@@ -1,6 +1,7 @@
 version 1.0
 
 import "../tasks/tasks_reports.wdl" as reports
+import "../tasks/tasks_utils.wdl" as utils
 
 workflow diff_genome_sets {
 
@@ -12,15 +13,15 @@ workflow diff_genome_sets {
     scatter(sample in zip(genome_set_one, genome_set_two)) {
         call reports.compare_two_genomes {
             input:
-                genome_one = sample.left,
-                genome_two = sample.right,
+                genome_one   = sample.left,
+                genome_two   = sample.right,
                 out_basename = basename(sample.left, '.fasta')
         }
     }
 
-    call reports.tsv_stack {
+    call utils.tsv_stack {
         input:
-            input_tsvs = compare_two_genomes.comparison_table,
+            input_tsvs   = compare_two_genomes.comparison_table,
             out_basename = "diff_genome_sets"
     }
 
