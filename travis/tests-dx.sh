@@ -98,3 +98,22 @@ echo -e "${demux_name}_launcher\t$demux_launcher_id\t$dx_job_id" >> $TEST_LAUNCH
 
 # the presence of this file in the project denotes all tests launched
 dx upload --brief --no-progress --destination /build/$VERSION/ $TEST_LAUNCH_ALL
+
+#
+# Cleanup folders w/ files that are 30 days old (@yihchii)
+#
+THIRTY_DAYS_FILES="30d_old_files.json"
+dx find data --class file --created-before=-30d --path=/tests/ --json > $THIRTY_DAYS_FILES
+[ "$(cat $THIRTY_DAYS_FILES)" != "[]" ] && dx rm -r -f $(jq -r '(.[].describe.folder + "/")' $THIRTY_DAYS_FILES | sort -u)
+rm -rf $THIRTY_DAYS_FILES
+
+# Cleanup empty folders
+#  - Loop over all versioned sub-folders and clean them up if they are empty
+ALL_VERSION_FOLDERS="all_version_folders.txt"
+CURRENT_FOLDER="/tests/$VERSION/"
+dx ls --folders --full $(dirname $CURRENT_FOLDER) > $ALL_VERSION_FOLDERS
+for folder in $(cat $ALL_VERSION_FOLDERS); do 
+    content=$(dx find data --path $folder --brief)
+    [ -z "$content" ] && dx rm -rf $folder
+done
+rm -rf $ALL_VERSION_FOLDERS
