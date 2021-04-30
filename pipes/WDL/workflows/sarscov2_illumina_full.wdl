@@ -73,7 +73,6 @@ workflow sarscov2_illumina_full {
     }
     Int     taxid         = 2697049
     String  gisaid_prefix = 'hCoV-19/'
-    String  flowcell_id   = basename(basename(basename(basename(flowcell_tgz, ".gz"), ".zst"), ".tar"), ".tgz")
 
     # merge biosample attributes tables
     call utils.tsv_join as biosample_merge {
@@ -91,6 +90,7 @@ workflow sarscov2_illumina_full {
             instrument_model = instrument_model,
             sra_title        = sra_title
     }
+    String  flowcell_id = demux_deplete.run_id
 
     ### gather data by biosample
     call read_utils.group_bams_by_sample {
@@ -268,6 +268,12 @@ workflow sarscov2_illumina_full {
         id_col       = 'sample_sanitized',
         out_basename = "picard_metrics_alignment-~{flowcell_id}"
     }
+    call utils.tsv_join as picard_insertsize_merge {
+      input:
+        input_tsvs   = assemble_refbased.picard_metrics_insert_size,
+        id_col       = 'sample_sanitized',
+        out_basename = "picard_metrics_insertsize-~{flowcell_id}"
+    }
 
     ### filter and concatenate final sets for delivery ("passing" and "submittable")
     call sarscov2.sc2_meta_final {
@@ -346,13 +352,13 @@ workflow sarscov2_illumina_full {
         source_modifier_table = biosample_to_genbank.genbank_source_modifier_table,
         structured_comments   = structured_comments.structured_comment_table,
         fasta_filename        = "gisaid-sequences-~{flowcell_id}.fasta",
-        out_name              = "gisaid-meta-~{flowcell_id}.tsv"
+        out_name              = "gisaid-meta-~{flowcell_id}.csv"
     }
 
     # prep nextmeta-style metadata for private nextstrain build
     call nextstrain.nextmeta_prep {
       input:
-        gisaid_meta   = gisaid_meta_prep.meta_tsv,
+        gisaid_meta   = gisaid_meta_prep.meta_csv,
         assembly_meta = assembly_meta_tsv.combined,
         out_name      = "nextmeta-~{flowcell_id}.tsv",
         filter_to_ids = filter_bad_ntc_batches.seqids_kept
@@ -397,7 +403,7 @@ workflow sarscov2_illumina_full {
     if(defined(gcs_out_metrics)) {
         call terra.gcs_copy as gcs_metrics_dump {
             input:
-              infiles        = flatten([[assembly_meta_tsv.combined, sc2_meta_final.meta_tsv, ivar_trim_stats.trim_stats_tsv, demux_deplete.multiqc_report_raw, demux_deplete.multiqc_report_cleaned, demux_deplete.spikein_counts, picard_wgs_merge.out_tsv, picard_alignment_merge.out_tsv, nextclade_many_samples.nextclade_json, nextclade_many_samples.nextclade_tsv], demux_deplete.demux_metrics]),
+              infiles        = flatten([[assembly_meta_tsv.combined, sc2_meta_final.meta_tsv, ivar_trim_stats.trim_stats_tsv, demux_deplete.multiqc_report_raw, demux_deplete.multiqc_report_cleaned, demux_deplete.spikein_counts, picard_wgs_merge.out_tsv, picard_alignment_merge.out_tsv, picard_insertsize_merge.out_tsv, nextclade_many_samples.nextclade_json, nextclade_many_samples.nextclade_tsv], demux_deplete.demux_metrics]),
               gcs_uri_prefix = "~{gcs_out_metrics}/~{flowcell_id}/"
         }
     }
@@ -478,7 +484,7 @@ workflow sarscov2_illumina_full {
         File          genbank_source_table         = biosample_to_genbank.genbank_source_modifier_table
         
         File          gisaid_fasta                 = prefix_gisaid.renamed_fasta
-        File          gisaid_meta_tsv              = gisaid_meta_prep.meta_tsv
+        File          gisaid_meta_csv              = gisaid_meta_prep.meta_csv
         
         File          genbank_fasta                = submit_genomes.filtered_fasta
         File          nextmeta_tsv                 = nextmeta_prep.nextmeta_tsv

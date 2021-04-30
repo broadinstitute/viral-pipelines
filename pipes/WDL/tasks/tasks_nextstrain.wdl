@@ -18,7 +18,7 @@ task nextmeta_prep {
     sample_to_gisaid = {}
     sample_to_assembly = {}
     with open('~{gisaid_meta}', 'rt') as inf:
-      for row in csv.DictReader(inf, delimiter='\t'):
+      for row in csv.DictReader(inf):
         s = row['covv_virus_name'][len('hCoV-19/'):]
         samples.append(s)
         sample_to_gisaid[s] = row
@@ -81,7 +81,7 @@ task derived_cols {
         String?       lab_highlight_loc
         Array[File]   table_map = []
 
-        String        docker = "quay.io/broadinstitute/viral-core:2.1.23"
+        String        docker = "quay.io/broadinstitute/viral-core:2.1.28"
     }
     parameter_meta {
         lab_highlight_loc: {
@@ -480,7 +480,7 @@ task filter_sequences_by_length {
         File   sequences_fasta
         Int    min_non_N = 1
 
-        String docker = "quay.io/broadinstitute/viral-core:2.1.23"
+        String docker = "quay.io/broadinstitute/viral-core:2.1.28"
     }
     parameter_meta {
         sequences_fasta: {

@@ -1,10 +1,10 @@
-broadinstitute/viral-core=2.1.23
+broadinstitute/viral-core=2.1.28
 broadinstitute/viral-assemble=2.1.16.1
 broadinstitute/viral-classify=2.1.16.0
 broadinstitute/viral-phylo=2.1.19.1
 broadinstitute/py3-bio=0.1.2
 broadinstitute/beast-beagle-cuda=1.10.5pre
-broadinstitute/ncbi-tools=2.10.7.1
+broadinstitute/ncbi-tools=2.10.7.2
 nextstrain/base=build-20210318T204019Z
 andersenlabapps/ivar=1.3.1
 staphb/pangolin=2.3.8-pangolearn-2021-04-23

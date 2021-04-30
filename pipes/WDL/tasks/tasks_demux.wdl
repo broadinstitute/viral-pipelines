@@ -6,7 +6,7 @@ task merge_tarballs {
     String       out_filename
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-core:2.1.23"
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.28"
   }
 
   command {
@@ -79,6 +79,48 @@ task samplesheet_rename_ids {
   }
 }
 
+task revcomp_i5 {
+  input {
+    File    old_sheet
+    Boolean revcomp=true
+    String  docker = "quay.io/broadinstitute/py3-bio:0.1.2"
+  }
+  String new_base = basename(basename(old_sheet, '.txt'), '.tsv')
+  command <<<
+    python3 << CODE
+    import csv
+    import Bio.Seq
+    old_sheet = "~{old_sheet}"
+    revcomp = ~{true="True" false="False" revcomp}
+
+    with open(old_sheet, "rt") as inf:
+      with open(new_base+'.tsv', 'wt') as outf:
+        if revcomp:
+          sheet = csv.DictReader(inf, delimiter='\t')
+          writer = csv.DictWriter(outf, sheet.fieldnames, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
+          writer.writeheader()
+          for row in sheet:
+            if row.get('barcode_2')
+              and all(s in 'ATGC' for s in row['barcode_2']):
+              row['barcode_2'] = str(Bio.Seq.Seq(row['barcode_2']).reverse_complement())
+            writer.writerow(row)
+        else:
+          # nop
+          outf.write(inf.read())
+    CODE
+  >>>
+  output {
+    File new_sheet = '~{new_base}.revcompi5.tsv'
+  }
+  runtime {
+    docker: docker
+    memory: "1 GB"
+    cpu:    1
+    disks: "local-disk 50 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task illumina_demux {
   input {
     File    flowcell_tgz
@@ -100,7 +142,7 @@ task illumina_demux {
     Int?    maxRecordsInRam
 
     Int?    machine_mem_gb
-    String  docker = "quay.io/broadinstitute/viral-core:2.1.23"
+    String  docker = "quay.io/broadinstitute/viral-core:2.1.28"
   }
   parameter_meta {
       flowcell_tgz: {

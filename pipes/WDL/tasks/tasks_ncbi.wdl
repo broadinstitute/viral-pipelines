@@ -186,7 +186,7 @@ task structured_comments {
 
     File?  filter_to_ids
 
-    String docker = "quay.io/broadinstitute/viral-core:2.1.23"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.28"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -264,7 +264,7 @@ task rename_fasta_header {
 
     String out_basename = basename(genome_fasta, ".fasta")
 
-    String docker = "quay.io/broadinstitute/viral-core:2.1.23"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.28"
   }
   command {
     set -e
@@ -312,7 +312,7 @@ task gisaid_meta_prep {
     out_headers = ('submitter', 'fn', 'covv_virus_name', 'covv_type', 'covv_passage', 'covv_collection_date', 'covv_location', 'covv_add_location', 'covv_host', 'covv_add_host_info', 'covv_gender', 'covv_patient_age', 'covv_patient_status', 'covv_specimen', 'covv_outbreak', 'covv_last_vaccinated', 'covv_treatment', 'covv_seq_technology', 'covv_assembly_method', 'covv_coverage', 'covv_orig_lab', 'covv_orig_lab_addr', 'covv_provider_sample_id', 'covv_subm_lab', 'covv_subm_lab_addr', 'covv_subm_sample_id', 'covv_authors', 'covv_comment', 'comment_type')
 
     with open('~{out_name}', 'wt') as outf:
-      writer = csv.DictWriter(outf, out_headers, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
+      writer = csv.DictWriter(outf, out_headers, dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
       writer.writeheader()
 
       with open('~{source_modifier_table}', 'rt') as inf:
@@ -355,7 +355,7 @@ task gisaid_meta_prep {
     CODE
   >>>
   output {
-    File meta_tsv = "~{out_name}"
+    File meta_csv = "~{out_name}"
   }
   runtime {
     docker: "python:slim"
@@ -417,9 +417,7 @@ task register_biosamples {
     node src/main.js -i=input.tsv \
       ~{'-c="' + comment + '"'} \
       ~{'-d=' + embargo_date} \
-      -u="~{true='Test' false='Production' test}/~{meta_basename}"
-
-    # huh.. need to strip off empty entry at the end of xml....
+      -u="/~{true='Test' false='Production' test}/~{meta_basename}"
 
   }
   output {
@@ -447,7 +445,7 @@ task sra_meta_prep {
     Boolean     paired
 
     String      out_name = "sra_metadata.tsv"
-    String      docker="quay.io/broadinstitute/viral-core:2.1.23"
+    String      docker="quay.io/broadinstitute/viral-core:2.1.28"
   }
   parameter_meta {
     cleaned_bam_filepaths: {

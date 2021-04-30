@@ -12,8 +12,8 @@ fetch_jar_from_github () {
 	ln -s $_jar_fname $_tool_name.jar
 }
 
-fetch_jar_from_github broadinstitute cromwell womtool 54
-fetch_jar_from_github broadinstitute cromwell cromwell 54
+fetch_jar_from_github broadinstitute cromwell womtool 61
+fetch_jar_from_github broadinstitute cromwell cromwell 61
 fetch_jar_from_github dnanexus dxWDL dxWDL v1.50
 
 TGZ=dx-toolkit-v0.298.1-ubuntu-20.04-amd64.tar.gz
