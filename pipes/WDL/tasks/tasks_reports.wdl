@@ -18,6 +18,11 @@ task alignment_metrics {
     XMX=$(echo "-Xmx"$MEM_MB"m")
     echo "Requesting $MEM_MB MB of RAM for Java"
 
+    # R fails unless you do this, CollectInsertSizeMetrics needs R
+    if [ ! -f /lib/x86_64-linux-gnu/libreadline.so.6 ]; then
+      ln -s /lib/x86_64-linux-gnu/libreadline.so.7 /lib/x86_64-linux-gnu/libreadline.so.6
+    fi
+
     # requisite Picard fasta indexing
     cp "~{ref_fasta}" reference.fasta
     picard $XMX CreateSequenceDictionary -R reference.fasta
@@ -35,6 +40,13 @@ task alignment_metrics {
       -O picard_raw.alignment_metrics.txt
     grep -v \# picard_raw.alignment_metrics.txt | grep . | head -4 > picard_clean.alignment_metrics.txt 
 
+    picard $XMX CollectInsertSizeMetrics \
+      -I "~{aligned_bam}" \
+      -O picard_raw.insert_size_metrics.txt \
+      -H picard_raw.insert_size_metrics.pdf \
+      --INCLUDE_DUPLICATES true
+    grep -v \# picard_raw.insert_size_metrics.txt | grep . | head -2 > picard_clean.insert_size_metrics.txt
+
     # prepend the sample name in order to facilitate tsv joining later
     SAMPLE=$(samtools view -H "~{aligned_bam}" | grep ^@RG | perl -lape 's/^@RG.*SM:(\S+).*$/$1/' | sort | uniq)
     echo -e "sample_sanitized\tbam" > prepend.txt
@@ -43,6 +55,9 @@ task alignment_metrics {
     echo -e "$SAMPLE\t~{out_basename}" >> prepend.txt
     echo -e "$SAMPLE\t~{out_basename}" >> prepend.txt
     paste prepend.txt picard_clean.alignment_metrics.txt > "~{out_basename}".alignment_metrics.txt
+    echo -e "sample_sanitized\tbam" > prepend.txt
+    echo -e "$SAMPLE\t~{out_basename}" >> prepend.txt
+    paste prepend.txt picard_clean.insert_size_metrics.txt > "~{out_basename}".insert_size_metrics.txt
 
     # actually don't know how to do CollectTargetedPcrMetrics yet
     if [ -n "~{primers_bed}" ]; then
@@ -54,8 +69,9 @@ task alignment_metrics {
   >>>
 
   output {
-    File wgs_metrics       = "~{out_basename}.raw_wgs_metrics.txt"
-    File alignment_metrics = "~{out_basename}.alignment_metrics.txt"
+    File wgs_metrics         = "~{out_basename}.raw_wgs_metrics.txt"
+    File alignment_metrics   = "~{out_basename}.alignment_metrics.txt"
+    File insert_size_metrics = "~{out_basename}.insert_size_metrics.txt"
   }
 
   runtime {
