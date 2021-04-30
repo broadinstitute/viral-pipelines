@@ -132,6 +132,43 @@ task fetch_row_from_tsv {
   }
 }
 
+task fetch_col_from_tsv {
+  input {
+    File          tsv
+    String        col
+    Boolean       drop_empty = true
+    Boolean       drop_header = true
+    String        out_name = "~{basename(basename(tsv, '.txt'), '.tsv')}-~{col}.txt"
+  }
+  command <<<
+    python3 << CODE
+    import csv, gzip
+    col = "~{col}"
+    drop_empty = ~{true="True" false="False" drop_empty}
+    drop_header = ~{true="True" false="False" drop_header}
+    open_or_gzopen = lambda *args, **kwargs: gzip.open(*args, **kwargs) if args[0].endswith('.gz') else open(*args, **kwargs)
+    with open_or_gzopen('~{tsv}', 'rt') as inf:
+      with open('~{out_name}', 'wt') as outf:
+        if not drop_header:
+          outf.write(col+'\n')
+        for row in csv.DictReader(inf, delimiter='\t'):
+          x = row.get(col, '')
+          if x or not drop_empty:
+            outf.write(x+'\n')
+    CODE
+  >>>
+  output {
+    File  out_txt  = "~{out_name}"
+  }
+  runtime {
+    docker: "python:slim"
+    memory: "1 GB"
+    cpu: 1
+    disks: "local-disk 50 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task tsv_join {
   meta {
       description: "Perform a full left outer join on multiple TSV tables. Each input tsv must have a header row, and each must must contain the value of id_col in its header. Inputs may or may not be gzipped. Unix/Mac/Win line endings are tolerated on input, Unix line endings are emitted as output. Unicode text safe."

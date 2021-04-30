@@ -68,6 +68,11 @@ workflow sarscov2_illumina_full {
             id_col       = 'accession',
             out_basename = "biosample_attributes-merged"
     }
+    call utils.fetch_col_from_tsv as accessioned_samples {
+      input:
+        tsv = biosample_merge.out_tsv,
+        col = 'sample_name'
+    }
 
     ### demux, deplete, SRA submission prep, fastqc/multiqc
     call demux_deplete.demux_deplete {
@@ -223,7 +228,7 @@ workflow sarscov2_illumina_full {
         output_name = "assembly_metadata-~{flowcell_id}.tsv"
     }
 
-    ### filter out batches where NTCs assemble
+    ### mark up the bad batches or lanes where NTCs assemble
     call assembly.filter_bad_ntc_batches {
       input:
         seqid_list = write_lines(select_all(passing_assembly_ids)),
@@ -264,6 +269,7 @@ workflow sarscov2_illumina_full {
 
     ### filter and concatenate final sets for delivery ("passing" and "submittable")
     call sarscov2.sc2_meta_final {
+      # this decorates assembly_meta_tsv with collab/internal IDs, genome_status, and many other columns
       input:
         assembly_stats_tsv = assembly_meta_tsv.combined,
         collab_ids_tsv = collab_ids_tsv,
@@ -272,17 +278,26 @@ workflow sarscov2_illumina_full {
         genome_status_json = filter_bad_ntc_batches.fail_meta_json
     }
     call utils.concatenate as passing_cat_prefilter {
+      # this emits a fasta of only genomes that pass min_unambig
       input:
         infiles     = select_all(passing_assemblies),
         output_name = "assemblies_passing-~{flowcell_id}.prefilter.fasta"
     }
-    call nextstrain.filter_sequences_to_list as passing_cat {
+    call nextstrain.filter_sequences_to_list as passing_ntc {
+      # this drops all genomes that are failed_NTC
       input:
         sequences = passing_cat_prefilter.combined,
-        keep_list = [filter_bad_ntc_batches.seqids_kept],
+        keep_list = [filter_bad_ntc_batches.seqids_kept]
+    }
+    call nextstrain.filter_sequences_to_list as passing_cat {
+      # this drops all genomes that don't have BioSample accessions (e.g. control libraries)
+      input:
+        sequences = passing_ntc.filtered_fasta,
+        keep_list = [accessioned_samples.out_txt],
         out_fname = "assemblies_passing-~{flowcell_id}.fasta"
     }
     call nextstrain.filter_sequences_to_list as submittable_filter {
+      # this drops all failed_annotation (aka VADR fails)
       input:
         sequences = passing_cat.filtered_fasta,
         keep_list = [write_lines(select_all(submittable_id))]
@@ -290,6 +305,7 @@ workflow sarscov2_illumina_full {
 
     ### prep genbank submission
     call ncbi.biosample_to_genbank {
+      # this takes a BioSample attributes file and emits a Genbank Source Modifier Table
       input:
         biosample_attributes = biosample_merge.out_tsv,
         num_segments         = 1,
@@ -301,14 +317,9 @@ workflow sarscov2_illumina_full {
         assembly_stats_tsv = write_tsv(flatten([[['SeqID','Assembly Method','Coverage','Sequencing Technology']],select_all(assembly_cmt)])),
         filter_to_ids      = biosample_to_genbank.sample_ids
     }
-    call utils.concatenate as passing_genomes {
-      input:
-        infiles     = select_all(submittable_genomes),
-        output_name = "assemblies.fasta"
-    }
     call nextstrain.filter_sequences_to_list as submit_genomes {
       input:
-        sequences = passing_genomes.combined,
+        sequences = submittable_filter.filtered_fasta,
         keep_list = [biosample_to_genbank.sample_ids]
     }
     call ncbi.package_genbank_ftp_submission {
