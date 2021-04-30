@@ -18,7 +18,7 @@ task nextmeta_prep {
     sample_to_gisaid = {}
     sample_to_assembly = {}
     with open('~{gisaid_meta}', 'rt') as inf:
-      for row in csv.DictReader(inf, delimiter='\t'):
+      for row in csv.DictReader(inf):
         s = row['covv_virus_name'][len('hCoV-19/'):]
         samples.append(s)
         sample_to_gisaid[s] = row
