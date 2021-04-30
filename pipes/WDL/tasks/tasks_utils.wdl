@@ -204,7 +204,7 @@ task tsv_stack {
   input {
     Array[File]+ input_tsvs
     String       out_basename
-    String       docker = "quay.io/broadinstitute/viral-core:2.1.26_with_picard_2.25.3_WithEIBPatch"
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.28_with_picard_2.25.3_WithEIBPatch"
   }
 
   command {

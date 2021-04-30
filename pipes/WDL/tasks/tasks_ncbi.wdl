@@ -186,7 +186,7 @@ task structured_comments {
 
     File?  filter_to_ids
 
-    String docker = "quay.io/broadinstitute/viral-core:2.1.26_with_picard_2.25.3_WithEIBPatch"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.28_with_picard_2.25.3_WithEIBPatch"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -264,7 +264,7 @@ task rename_fasta_header {
 
     String out_basename = basename(genome_fasta, ".fasta")
 
-    String docker = "quay.io/broadinstitute/viral-core:2.1.26_with_picard_2.25.3_WithEIBPatch"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.28_with_picard_2.25.3_WithEIBPatch"
   }
   command {
     set -e
@@ -447,7 +447,7 @@ task sra_meta_prep {
     Boolean     paired
 
     String      out_name = "sra_metadata.tsv"
-    String      docker="quay.io/broadinstitute/viral-core:2.1.26_with_picard_2.25.3_WithEIBPatch"
+    String      docker="quay.io/broadinstitute/viral-core:2.1.28_with_picard_2.25.3_WithEIBPatch"
   }
   parameter_meta {
     cleaned_bam_filepaths: {

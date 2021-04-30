@@ -7,7 +7,7 @@ task alignment_metrics {
     File?  primers_bed
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.1.26_with_picard_2.25.3_WithEIBPatch"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.28_with_picard_2.25.3_WithEIBPatch"
   }
 
   String out_basename = basename(aligned_bam, ".bam")
@@ -77,7 +77,7 @@ task plot_coverage {
     Boolean bin_large_plots = false
     String? binning_summary_statistic = "max" # max or min
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.1.26_with_picard_2.25.3_WithEIBPatch"
+    String  docker = "quay.io/broadinstitute/viral-core:2.1.28_with_picard_2.25.3_WithEIBPatch"
   }
   
   command {
@@ -152,7 +152,7 @@ task coverage_report {
     Array[File]  mapped_bam_idx # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name = "coverage_report.txt"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.1.26_with_picard_2.25.3_WithEIBPatch"
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.28_with_picard_2.25.3_WithEIBPatch"
   }
 
   command {
@@ -211,7 +211,7 @@ task fastqc {
   input {
     File   reads_bam
 
-    String docker = "quay.io/broadinstitute/viral-core:2.1.26_with_picard_2.25.3_WithEIBPatch"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.28_with_picard_2.25.3_WithEIBPatch"
   }
 
   String   reads_basename=basename(reads_bam, ".bam")
@@ -244,7 +244,7 @@ task align_and_count {
     Int    topNHits = 3
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.1.26_with_picard_2.25.3_WithEIBPatch"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.28_with_picard_2.25.3_WithEIBPatch"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
@@ -289,7 +289,7 @@ task align_and_count_summary {
 
     String       output_prefix = "count_summary"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.1.26_with_picard_2.25.3_WithEIBPatch"
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.28_with_picard_2.25.3_WithEIBPatch"
   }
 
   command {
