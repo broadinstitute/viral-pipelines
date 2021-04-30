@@ -117,7 +117,7 @@ workflow demux_metag {
         File        demux_metrics                   = illumina_demux.metrics
         File        demux_commonBarcodes            = illumina_demux.commonBarcodes
         File        demux_outlierBarcodes           = illumina_demux.outlierBarcodes
-        String      instrument_model_inferred       = select_first(flatten([[instrument_model_user_specified],[illumina_demux.instrument_model]]))
+        String      instrument_model_inferred       = select_first(flatten([[instrument_model_user_specified],illumina_demux.run_info['sequencer_model']]))
         
         File        multiqc_report_raw              = multiqc_raw.multiqc_report
         File        multiqc_report_cleaned          = multiqc_cleaned.multiqc_report
