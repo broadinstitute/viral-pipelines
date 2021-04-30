@@ -45,7 +45,7 @@ task alignment_metrics {
       -O picard_raw.insert_size_metrics.txt \
       -H picard_raw.insert_size_metrics.pdf \
       --INCLUDE_DUPLICATES true
-    grep -v \# picard_raw.alignmentinsert_size_metrics_metrics.txt | grep . | head -2 > picard_clean.insert_size_metrics.txt
+    grep -v \# picard_raw.insert_size_metrics.txt | grep . | head -2 > picard_clean.insert_size_metrics.txt
 
     # prepend the sample name in order to facilitate tsv joining later
     SAMPLE=$(samtools view -H "~{aligned_bam}" | grep ^@RG | perl -lape 's/^@RG.*SM:(\S+).*$/$1/' | sort | uniq)
