@@ -225,6 +225,11 @@ workflows:
    primaryDescriptorPath: /pipes/WDL/workflows/multiqc_only.wdl
    testParameterFiles:
     - empty.json
+ - name: sarscov2_biosample_load
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_biosample_load.wdl
+   testParameterFiles:
+    - empty.json
  - name: sarscov2_genbank
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_genbank.wdl
