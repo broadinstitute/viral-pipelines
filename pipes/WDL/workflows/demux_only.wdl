@@ -10,6 +10,10 @@ workflow demux_only {
         email:  "viral-ngs@broadinstitute.org"
     }
 
+    input {
+        String? instrument_model_user_specified
+    }
+
     call tasks_demux.illumina_demux
 
     call reports.MultiQC {
@@ -18,11 +22,12 @@ workflow demux_only {
     }
 
     output {
-        Array[File] raw_reads_unaligned_bams = illumina_demux.raw_reads_unaligned_bams
-        File        demux_metrics            = illumina_demux.metrics
-        File        demux_commonBarcodes     = illumina_demux.commonBarcodes
-        File        demux_outlierBarcodes    = illumina_demux.outlierBarcodes
-        File        multiqc_report_raw       = MultiQC.multiqc_report
-        String      demux_viral_core_version = illumina_demux.viralngs_version
+        Array[File] raw_reads_unaligned_bams  = illumina_demux.raw_reads_unaligned_bams
+        File        demux_metrics             = illumina_demux.metrics
+        File        demux_commonBarcodes      = illumina_demux.commonBarcodes
+        File        demux_outlierBarcodes     = illumina_demux.outlierBarcodes
+        File        multiqc_report_raw        = MultiQC.multiqc_report
+        String      instrument_model_inferred = select_first(flatten([[instrument_model_user_specified],[illumina_demux.run_info['sequencer_model']]]))
+        String      demux_viral_core_version  = illumina_demux.viralngs_version
     }
 }

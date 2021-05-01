@@ -42,7 +42,7 @@ workflow sarscov2_illumina_full {
         String        amplicon_bed_prefix
 
         Array[File]   biosample_attributes
-        String        instrument_model
+        String?       instrument_model
         String        sra_title
 
         Int           min_genome_bases = 24000
@@ -77,10 +77,10 @@ workflow sarscov2_illumina_full {
     ### demux, deplete, SRA submission prep, fastqc/multiqc
     call demux_deplete.demux_deplete {
         input:
-            flowcell_tgz     = flowcell_tgz,
-            biosample_map    = biosample_merge.out_tsv,
-            instrument_model = instrument_model,
-            sra_title        = sra_title
+            flowcell_tgz                    = flowcell_tgz,
+            biosample_map                   = biosample_merge.out_tsv,
+            instrument_model_user_specified = instrument_model,
+            sra_title                       = sra_title
     }
     String  flowcell_id = demux_deplete.run_id
 
@@ -134,7 +134,7 @@ workflow sarscov2_illumina_full {
 
             File passing_assemblies     = rename_fasta_header.renamed_fasta
             String passing_assembly_ids = orig_name
-            Array[String] assembly_cmt  = [orig_name, "Broad viral-ngs v. " + demux_deplete.demux_viral_core_version, assemble_refbased.assembly_mean_coverage, instrument_model]
+            Array[String] assembly_cmt  = [orig_name, "Broad viral-ngs v. " + demux_deplete.demux_viral_core_version, assemble_refbased.assembly_mean_coverage, demux_deplete.instrument_model_inferred]
 
             # lineage assignment
             call sarscov2_lineages.sarscov2_lineages {

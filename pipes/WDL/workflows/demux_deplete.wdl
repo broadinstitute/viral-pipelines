@@ -20,7 +20,7 @@ workflow demux_deplete {
         File?        biosample_map
         Int          min_reads_per_bam = 100
 
-        String?      instrument_model
+        String?      instrument_model_user_specified
         String?      sra_title
 
         File         spikein_db
@@ -113,8 +113,9 @@ workflow demux_deplete {
                 library_metadata      = samplesheet_rename_ids.new_sheet,
                 platform              = "ILLUMINA",
                 paired                = (illumina_demux.run_info[0]['indexes'] == '2'),
+
                 out_name              = "sra_metadata-~{illumina_demux.run_info[0]['run_id']}.tsv",
-                instrument_model      = select_first([instrument_model]),
+                instrument_model      = select_first(flatten([[instrument_model_user_specified],[illumina_demux.run_info[0]['sequencer_model']]])),
                 title                 = select_first([sra_title])
         }
     }
@@ -161,6 +162,8 @@ workflow demux_deplete {
         File        multiqc_report_cleaned                   = multiqc_cleaned.multiqc_report
         File        spikein_counts                           = spike_summary.count_summary
         
+        String      instrument_model_inferred                = select_first(flatten([[instrument_model_user_specified],[illumina_demux.run_info[0]['sequencer_model']]]))
+
         String             run_date                          = illumina_demux.run_info[0]['run_start_date']
         Map[String,String] run_info                          = illumina_demux.run_info[0]
         File               run_info_json                     = illumina_demux.run_info_json[0]

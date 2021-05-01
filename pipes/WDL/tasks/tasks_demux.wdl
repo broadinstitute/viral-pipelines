@@ -292,6 +292,8 @@ task illumina_demux {
 
     illumina.py guess_barcodes --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
 
+    illumina.py flowcell_metadata --inDir $FLOWCELL_DIR flowcellMetadataFile.tsv
+
     mkdir -p unmatched
     mv Unmatched.bam unmatched/
 
@@ -352,6 +354,10 @@ task illumina_demux {
     Int         max_ram_gb               = ceil(read_float("MEM_BYTES")/1000000000)
     Int         runtime_sec              = ceil(read_float("UPTIME_SEC"))
     Int         cpu_load_15min           = ceil(read_float("LOAD_15M"))
+
+    String      instrument_model         = read_json("~{out_base}-runinfo.json")["sequencer_model"]
+    String      flowcell_lane_count      = read_json("~{out_base}-runinfo.json")["lane_count"]
+
     String      viralngs_version         = read_string("VERSION")
 
     Map[String,Map[String,String]] meta_by_sample        = read_json('meta_by_sample.json')
