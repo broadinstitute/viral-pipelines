@@ -294,10 +294,6 @@ task illumina_demux {
 
     illumina.py flowcell_metadata --inDir $FLOWCELL_DIR flowcellMetadataFile.tsv
 
-    # output machine model and lane count
-    grep "machine" flowcellMetadataFile.tsv | cut -f2 | tee MACHINE_MODEL
-    grep "lane_count" flowcellMetadataFile.tsv | cut -f2 | tee LANE_COUNT
-
     mkdir -p unmatched
     mv Unmatched.bam unmatched/
 
@@ -359,8 +355,8 @@ task illumina_demux {
     Int         runtime_sec              = ceil(read_float("UPTIME_SEC"))
     Int         cpu_load_15min           = ceil(read_float("LOAD_15M"))
 
-    String      instrument_model         = read_string("MACHINE_MODEL")
-    String      flowcell_lane_count      = read_string("LANE_COUNT")
+    String      instrument_model         = read_json("~{out_base}-runinfo.json")["sequencer_model"]
+    String      flowcell_lane_count      = read_json("~{out_base}-runinfo.json")["lane_count"]
 
     String      viralngs_version         = read_string("VERSION")
 
