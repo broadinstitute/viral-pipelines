@@ -14,6 +14,7 @@ workflow demux_metag {
         Array[File]? bmtaggerDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
         Array[File]? blastDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
         Array[File]? bwaDbs
+        String?      instrument_model_user_specified
 
         File kraken2_db_tgz
         File krona_taxonomy_db_kraken2_tgz
@@ -111,10 +112,12 @@ workflow demux_metag {
         Array[Int]  read_counts_depleted            = deplete.depletion_read_count_post
         Array[Int]  read_counts_dedup               = rmdup_ubam.dedup_read_count_post
         Array[Int]  read_counts_prespades_subsample = spades.subsample_read_count
+
         
         File        demux_metrics                   = illumina_demux.metrics
         File        demux_commonBarcodes            = illumina_demux.commonBarcodes
         File        demux_outlierBarcodes           = illumina_demux.outlierBarcodes
+        String      instrument_model_inferred       = select_first(flatten([[instrument_model_user_specified],[illumina_demux.run_info['sequencer_model']]]))
         
         File        multiqc_report_raw              = multiqc_raw.multiqc_report
         File        multiqc_report_cleaned          = multiqc_cleaned.multiqc_report
