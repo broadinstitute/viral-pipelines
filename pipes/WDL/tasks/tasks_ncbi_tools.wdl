@@ -182,7 +182,7 @@ task ncbi_ftp_upload {
     command <<<
         set -e
         cd /opt/converter
-        cp "~{config_js}" src/
+        cp "~{config_js}" src/config.js
         rm -f files/sample.tsv reports/sample-report.xml
         cp ~{sep=' ' submit_files} files/
         MANIFEST=$(ls -1 files | paste -sd,)
@@ -219,7 +219,7 @@ task biosample_submit_tsv_to_xml {
     command <<<
         set -e
         cd /opt/converter
-        cp "~{config_js}" src/
+        cp "~{config_js}" src/config.js
         rm files/sample.tsv
         cp "~{meta_submit_tsv}" files/
         node src/main.js --debug \
@@ -252,7 +252,7 @@ task biosample_submit_tsv_ftp_upload {
     command <<<
         set -e
         cd /opt/converter
-        cp "~{config_js}" src/
+        cp "~{config_js}" src/config.js
         rm -f files/sample.tsv reports/sample-report.xml
         cp "~{meta_submit_tsv}" files/
         node src/main.js --debug \
