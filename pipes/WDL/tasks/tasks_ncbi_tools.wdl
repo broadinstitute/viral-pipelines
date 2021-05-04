@@ -275,6 +275,37 @@ task biosample_submit_tsv_ftp_upload {
     }
 }
 
+task biosample_xml_response_to_tsv {
+    input {
+        File     meta_submit_tsv
+        File     ncbi_report_xml
+
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.3"
+    }
+    command <<<
+        set -e
+        cd /opt/converter
+        cp "~{meta_submit_tsv}" files/
+        cp "~{ncbi_report_xml}" reports/
+        node src/main.js --debug \
+            -i=$(basename "~{meta_submit_tsv}") \
+            -p=$(basename "~{ncbi_report_xml}")
+        cd -
+        cp "/opt/converter/files/~{basename(meta_submit_tsv, '.tsv')}-attributes.tsv" .
+    >>>
+    output {
+        File   biosample_attributes_tsv = "~{basename(meta_submit_tsv, '.tsv')}-attributes.tsv"
+    }
+    runtime {
+        cpu:     2
+        memory:  "2 GB"
+        disks:   "local-disk 100 HDD"
+        dx_instance_type: "mem2_ssd1_v2_x2"
+        docker:  docker
+    }
+}
+
+
 task group_sra_bams_by_biosample {
   input {
     Array[File]   bam_filepaths
