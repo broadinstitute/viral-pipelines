@@ -79,7 +79,7 @@ task get_sample_meta {
   input {
     Array[File] samplesheets_extended
 
-    String      docker = "quay.io/broadinstitute/viral-core:2.1.28"
+    String      docker = "quay.io/broadinstitute/viral-core:ct-bump-to-picard-2.25.4"
   }
   command <<<
     python3 << CODE
@@ -137,7 +137,7 @@ task merge_and_reheader_bams {
       File?        reheader_table
       String       out_basename
 
-      String       docker = "quay.io/broadinstitute/viral-core:2.1.28"
+      String       docker = "quay.io/broadinstitute/viral-core:ct-bump-to-picard-2.25.4"
     }
 
     command {
@@ -197,7 +197,7 @@ task rmdup_ubam {
     String  method = "mvicuna"
 
     Int?    machine_mem_gb
-    String? docker = "quay.io/broadinstitute/viral-core:2.1.28"
+    String? docker = "quay.io/broadinstitute/viral-core:ct-bump-to-picard-2.25.4"
   }
 
   parameter_meta {
@@ -251,7 +251,7 @@ task downsample_bams {
     Boolean?     deduplicateAfter = false
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-core:2.1.28"
+    String       docker = "quay.io/broadinstitute/viral-core:ct-bump-to-picard-2.25.4"
   }
 
   command {
@@ -310,7 +310,7 @@ task FastqToUBAM {
     String? platform_name
     String? sequencing_center
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.1.28"
+    String  docker = "quay.io/broadinstitute/viral-core:ct-bump-to-picard-2.25.4"
   }
   parameter_meta {
     fastq_1: { description: "Unaligned read1 file in fastq format", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }
