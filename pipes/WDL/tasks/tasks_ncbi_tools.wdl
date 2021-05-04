@@ -282,19 +282,20 @@ task biosample_xml_response_to_tsv {
 
         String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.3"
     }
+    String out_name = "~{basename(meta_submit_tsv, '.tsv')}-attributes.tsv"
     command <<<
         set -e
         cd /opt/converter
-        cp "~{meta_submit_tsv}" files/
-        cp "~{ncbi_report_xml}" reports/
+        cp "~{meta_submit_tsv}" files/submit.tsv
+        cp "~{ncbi_report_xml}" reports/report.xml
         node src/main.js --debug \
-            -i=$(basename "~{meta_submit_tsv}") \
-            -p=$(basename "~{ncbi_report_xml}")
+            -i=submit.tsv \
+            -p=report.xml
         cd -
-        cp "/opt/converter/files/~{basename(meta_submit_tsv, '.tsv')}-attributes.tsv" .
+        cp /opt/converter/reports/submit-attributes.tsv "~{out_name}"
     >>>
     output {
-        File   biosample_attributes_tsv = "~{basename(meta_submit_tsv, '.tsv')}-attributes.tsv"
+        File   biosample_attributes_tsv = "~{out_name}"
     }
     runtime {
         cpu:     2
