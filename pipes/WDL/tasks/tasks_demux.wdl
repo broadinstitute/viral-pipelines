@@ -140,7 +140,7 @@ task illumina_demux {
     String? runStartDate
 
     Int?    maxRecordsInRam
-    Boolean sortReads=false
+    Boolean sortReads=true
 
     Int?    machine_mem_gb
     String  docker = "quay.io/broadinstitute/viral-core:2.1.28"
