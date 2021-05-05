@@ -140,6 +140,7 @@ task illumina_demux {
     String? runStartDate
     Int?    maxReadsInRamPerTile
     Int?    maxRecordsInRam
+    Boolean sortReads=false
 
     Int?    machine_mem_gb
     String  docker = "quay.io/broadinstitute/viral-core:2.1.28"
@@ -279,6 +280,7 @@ task illumina_demux {
       ~{'--read_structure=' + readStructure} \
       ~{'--minimum_quality=' + minimumQuality} \
       ~{'--run_start_date=' + runStartDate} \
+      ~{true='--sort=TRUE' false='--sort=FALSE' sortReads} \
       $max_reads_in_ram_per_tile \
       $max_records_in_ram \
       --JVMmemory="$mem_in_mb"m \
