@@ -399,9 +399,13 @@ workflow sarscov2_illumina_full {
         }
     }
     if(defined(gcs_out_reporting)) {
+        call utils.tsv_to_csv as meta_final_csv {
+          input:
+            tsv = sc2_meta_final.meta_tsv
+        }
         call terra.gcs_copy as gcs_reporting_dump {
             input:
-              infiles        = [sc2_meta_final.meta_tsv, nextclade_many_samples.nextclade_json, nextclade_many_samples.nextclade_tsv],
+              infiles        = [meta_final_csv.csv],
               gcs_uri_prefix = "~{gcs_out_reporting}/~{flowcell_id}/"
         }
     }

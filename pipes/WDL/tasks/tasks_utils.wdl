@@ -237,6 +237,38 @@ task tsv_join {
   }
 }
 
+task tsv_to_csv {
+  input {
+    File   tsv
+    String out_basename = basename(basename(tsv, '.tsv'), '.txt')
+  }
+
+  command <<<
+    python3<<CODE
+    import csv
+    out_basename = '~{out_basename}'
+    with open('~{tsv}', 'rt') as inf:
+      reader = csv.DictReader(inf, delimiter='\t')
+      with open(out_basename+'.csv', 'w', newline='') as outf:
+          writer = csv.DictWriter(outf, reader.fieldnames, dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
+          writer.writeheader()
+          writer.writerows(reader)
+    CODE
+  >>>
+
+  output {
+    File csv = "${out_basename}.csv"
+  }
+
+  runtime {
+    memory: "2 GB"
+    cpu: 1
+    docker: "python:slim"
+    disks: "local-disk 50 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task tsv_stack {
   input {
     Array[File]+ input_tsvs
