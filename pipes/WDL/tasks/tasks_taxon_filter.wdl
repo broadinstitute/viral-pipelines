@@ -202,7 +202,7 @@ task merge_one_per_sample {
     Boolean?     rmdup = false
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-core:2.1.28"
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.30"
   }
 
   command {
