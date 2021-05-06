@@ -6,7 +6,7 @@ task Fetch_SRA_to_BAM {
         String  SRA_ID
 
         Int?    machine_mem_gb
-        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.2"
+        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.4"
     }
 
     command <<<
@@ -145,7 +145,7 @@ task fetch_biosamples {
         Array[String]  biosample_ids
 
         String         out_basename = "biosample_attributes"
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.2"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.4"
     }
 
     command <<<
@@ -176,13 +176,13 @@ task ncbi_ftp_upload {
 
         String         wait_for="1"  # all, disabled, some number
 
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.2"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.4"
     }
 
     command <<<
         set -e
         cd /opt/converter
-        cp "~{config_js}" src/
+        cp "~{config_js}" src/config.js
         rm -f files/sample.tsv reports/sample-report.xml
         cp ~{sep=' ' submit_files} files/
         MANIFEST=$(ls -1 files | paste -sd,)
@@ -214,12 +214,12 @@ task biosample_submit_tsv_to_xml {
         File     meta_submit_tsv
         File     config_js
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.2"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.4"
     }
     command <<<
         set -e
         cd /opt/converter
-        cp "~{config_js}" src/
+        cp "~{config_js}" src/config.js
         rm files/sample.tsv
         cp "~{meta_submit_tsv}" files/
         node src/main.js --debug \
@@ -246,13 +246,13 @@ task biosample_submit_tsv_ftp_upload {
         File     config_js
         String   target_path
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.2"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.4"
     }
     String base=basename(meta_submit_tsv, '.tsv')
     command <<<
         set -e
         cd /opt/converter
-        cp "~{config_js}" src/
+        cp "~{config_js}" src/config.js
         rm -f files/sample.tsv reports/sample-report.xml
         cp "~{meta_submit_tsv}" files/
         node src/main.js --debug \
@@ -274,6 +274,38 @@ task biosample_submit_tsv_ftp_upload {
         docker:  docker
     }
 }
+
+task biosample_xml_response_to_tsv {
+    input {
+        File     meta_submit_tsv
+        File     ncbi_report_xml
+
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.4"
+    }
+    String out_name = "~{basename(meta_submit_tsv, '.tsv')}-attributes.tsv"
+    command <<<
+        set -e
+        cd /opt/converter
+        cp "~{meta_submit_tsv}" files/submit.tsv
+        cp "~{ncbi_report_xml}" reports/report.xml
+        node src/main.js --debug \
+            -i=submit.tsv \
+            -p=report.xml
+        cd -
+        cp /opt/converter/reports/submit-attributes.tsv "~{out_name}"
+    >>>
+    output {
+        File   biosample_attributes_tsv = "~{out_name}"
+    }
+    runtime {
+        cpu:     2
+        memory:  "2 GB"
+        disks:   "local-disk 100 HDD"
+        dx_instance_type: "mem2_ssd1_v2_x2"
+        docker:  docker
+    }
+}
+
 
 task group_sra_bams_by_biosample {
   input {
