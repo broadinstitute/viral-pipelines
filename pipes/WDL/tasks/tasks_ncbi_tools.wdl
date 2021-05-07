@@ -187,6 +187,7 @@ task ncbi_ftp_upload {
         cp ~{sep=' ' submit_files} files/
         MANIFEST=$(ls -1 files | paste -sd,)
         echo "uploading: $MANIFEST to destination ftp folder ~{target_path}"
+        echo "Asymmetrik script version: $ASYMMETRIK_REPO_COMMIT"
         node src/main.js --debug \
             --uploadFiles="$MANIFEST" \
             --poll="~{wait_for}" \
@@ -222,6 +223,7 @@ task biosample_submit_tsv_to_xml {
         cp "~{config_js}" src/config.js
         rm files/sample.tsv
         cp "~{meta_submit_tsv}" files/
+        echo "Asymmetrik script version: $ASYMMETRIK_REPO_COMMIT"
         node src/main.js --debug \
             -i=$(basename "~{meta_submit_tsv}") \
             --runTestMode=true
@@ -255,6 +257,7 @@ task biosample_submit_tsv_ftp_upload {
         cp "~{config_js}" src/config.js
         rm -f files/sample.tsv reports/sample-report.xml
         cp "~{meta_submit_tsv}" files/
+        echo "Asymmetrik script version: $ASYMMETRIK_REPO_COMMIT"
         node src/main.js --debug \
             -i=$(basename "~{meta_submit_tsv}") \
             --uploadFolder="~{target_path}"
@@ -288,6 +291,7 @@ task biosample_xml_response_to_tsv {
         cd /opt/converter
         cp "~{meta_submit_tsv}" files/submit.tsv
         cp "~{ncbi_report_xml}" reports/report.xml
+        echo "Asymmetrik script version: $ASYMMETRIK_REPO_COMMIT"
         node src/main.js --debug \
             -i=submit.tsv \
             -p=report.xml
