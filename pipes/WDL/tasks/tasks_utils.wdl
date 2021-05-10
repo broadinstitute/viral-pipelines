@@ -295,3 +295,50 @@ task tsv_stack {
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
+
+task make_empty_file {
+  input {
+    String out_filename
+  }
+  command {
+    touch "~{out_filename}"
+  }
+  output {
+    File out = "~{out_filename}"
+  }
+  runtime {
+    memory: "1 GB"
+    cpu: 1
+    docker: "ubuntu"
+    disks: "local-disk 10 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
+task s3_copy {
+  input {
+    Array[File] infiles
+    String      s3_uri_prefix
+    File        aws_credentials
+  }
+  meta {
+    description: "aws s3 cp"
+  }
+  command {
+    set -e
+    mkdir -p ~/.aws
+    cp ~{aws_credentials} ~/.aws/credentials
+    for f in ~{sep=' ' infiles}; do
+      aws s3 cp $f ~{s3_uri_prefix}/
+    done
+  }
+  output {
+    File logs = stdout()
+  }
+  runtime {
+    docker: "quay.io/broadinstitute/viral-baseimage:0.1.20"
+    memory: "2 GB"
+    cpu: 2
+    disks: "local-disk 1000 HDD"
+  }
+}
