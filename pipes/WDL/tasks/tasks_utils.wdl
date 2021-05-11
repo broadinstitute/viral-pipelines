@@ -363,20 +363,24 @@ task s3_copy {
     Array[File] infiles
     String      s3_uri_prefix
     File        aws_credentials
+    String?     nop_block # optional ignored input just to allow blocking
   }
   meta {
     description: "aws s3 cp"
   }
   command {
     set -e
+    S3_PREFIX=$(echo "~{s3_uri_prefix}" | sed 's|/*$||')
     mkdir -p ~/.aws
     cp ~{aws_credentials} ~/.aws/credentials
+    touch OUT_URIS
     for f in ~{sep=' ' infiles}; do
-      aws s3 cp $f ~{s3_uri_prefix}/
+      aws s3 cp $f $S3_PREFIX/
+      echo "$S3_PREFIX/$f" >> OUT_URIS
     done
   }
   output {
-    File logs = stdout()
+    Array[String] out_uris = read_lines("OUT_URIS")
   }
   runtime {
     docker: "quay.io/broadinstitute/viral-baseimage:0.1.20"
