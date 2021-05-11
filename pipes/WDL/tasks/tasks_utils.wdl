@@ -315,6 +315,26 @@ task make_empty_file {
   }
 }
 
+task rename_file {
+  input {
+    File   infile
+    String out_filename
+  }
+  command {
+    ln -s "~{infile}" "~{out_filename}"
+  }
+  output {
+    File out = "~{out_filename}"
+  }
+  runtime {
+    memory: "1 GB"
+    cpu: 1
+    docker: "ubuntu"
+    disks: "local-disk 100 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task today {
   input {
     String? timezone
