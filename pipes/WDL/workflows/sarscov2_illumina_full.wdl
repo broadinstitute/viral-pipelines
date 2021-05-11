@@ -121,7 +121,7 @@ workflow sarscov2_illumina_full {
                 tsv              = biosample_merge.out_tsv,
                 idx_col          = "sample_name",
                 idx_val          = orig_name,
-                set_default_keys = ["collection_date", "bioproject_accession", "accession", "collected_by", "geo_loc_name", "host_subject_id", "host_age", "host_sex", "purpose_of_sequencing"]
+                set_default_keys = ["collection_date", "bioproject_accession", "accession", "collected_by", "geo_loc_name", "host_subject_id", "host_age", "host_sex", "purpose_of_sequencing", "anatomical_material", "anatomical_part", "body_product"]
         }
 
         # for genomes that somewhat assemble
@@ -202,6 +202,9 @@ workflow sarscov2_illumina_full {
             biosample.map["host_age"],
             biosample.map["host_sex"],
             "",
+            biosample.map["anatomical_material"],
+            biosample.map["anatomical_part"],
+            biosample.map["body_product"],
             demux_deplete.meta_by_sample[name_reads.left]["viral_ct"]
         ]
     }
@@ -217,7 +220,7 @@ workflow sarscov2_illumina_full {
         'replicate_concordant_sites', 'replicate_discordant_snps', 'replicate_discordant_indels', 'num_read_groups', 'num_libraries',
         'align_to_ref_merged_reads_aligned', 'align_to_ref_merged_bases_aligned',
         'vadr_alerts', 'purpose_of_sequencing', 'collected_by', 'bioproject_accession',
-        'age', 'sex', 'zip',
+        'age', 'sex', 'zip', "anatomical_material", "anatomical_part", "body_product",
         'Ct'
         ]
 
@@ -438,7 +441,8 @@ workflow sarscov2_illumina_full {
         Array[File]   raw_reads_unaligned_bams      = demux_deplete.raw_reads_unaligned_bams
         Array[File]   cleaned_reads_unaligned_bams  = demux_deplete.cleaned_reads_unaligned_bams
         Array[File]   cleaned_bams_tiny             = demux_deplete.cleaned_bams_tiny
-        
+        Array[File]   aligned_trimmed_bams          = assemble_refbased.align_to_ref_merged_aligned_trimmed_only_bam
+
         File          meta_by_filename_json         = demux_deplete.meta_by_filename_json
         
         Array[Int]    read_counts_raw               = demux_deplete.read_counts_raw

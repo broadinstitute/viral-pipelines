@@ -315,6 +315,29 @@ task make_empty_file {
   }
 }
 
+task today {
+  input {
+    String? timezone
+  }
+  meta {
+    volatile: true
+  }
+  command {
+    ~{default='' 'TZ=' + timezone}
+    date +"%Y-%m-%d" > TODAY
+  }
+  output {
+    String date = read_string("TODAY")
+  }
+  runtime {
+    memory: "1 GB"
+    cpu: 1
+    docker: "ubuntu"
+    disks: "local-disk 10 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task s3_copy {
   input {
     Array[File] infiles

@@ -1,7 +1,7 @@
 version 1.0
 
 import "../tasks/tasks_ncbi_tools.wdl" as ncbi_tools
-
+import "../tasks/tasks_utils.wdl" as utils
 
 workflow sarscov2_data_release {
     meta {
@@ -15,15 +15,24 @@ workflow sarscov2_data_release {
         File         genbank_xml
         File         genbank_zip
         #File         sra_meta_tsv
+
         #File         gisaid_csv
         #File         gisaid_fasta
-        #Array[File]  cdc_stuff_also
-        #File         cdc_s3_credentials
+
+        File         cdc_s3_credentials
+        File         cdc_passing_fasta
+        File         cdc_final_metadata
+        Array[File]  cdc_aligned_trimmed_bams
+
         String       ftp_path_prefix = basename(genbank_zip, ".zip")
         String       prod_test = "Production" # Production or Test
     }
 
     String prefix = "/~{prod_test}/~{ftp_path_prefix}"
+
+    call utils.today {
+        input: timezone = "America/New_York"  # CDC is based in Atlanta
+    }
 
     call ncbi_tools.ncbi_ftp_upload as genbank {
         input:
