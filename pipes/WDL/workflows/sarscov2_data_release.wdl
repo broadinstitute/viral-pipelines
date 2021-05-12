@@ -1,6 +1,7 @@
 version 1.0
 
 import "../tasks/tasks_ncbi_tools.wdl" as ncbi_tools
+import "../tasks/tasks_sarscov2.wdl" as sarscov2
 import "../tasks/tasks_utils.wdl" as utils
 
 workflow sarscov2_data_release {
@@ -18,8 +19,9 @@ workflow sarscov2_data_release {
         File         genbank_zip
         #File         sra_meta_tsv
 
-        #File         gisaid_csv
-        #File         gisaid_fasta
+        File?        gisaid_auth_token
+        File?        gisaid_csv
+        File?        gisaid_fasta
 
         File?        cdc_s3_credentials
         File?        cdc_passing_fasta
@@ -49,7 +51,15 @@ workflow sarscov2_data_release {
 
     # to do: Asymmetrik to impement an SRA tsv->xml conversion
 
-    # to do: viral to implement a GISAID CLI upload task
+    # publish to GISAID
+    if (defined(gisaid_auth_token)) {
+        call sarscov2.gisaid_uploader {
+            input:
+                gisaid_sequences_fasta = select_first([gisaid_fasta]),
+                gisaid_meta_csv        = select_first([gisaid_csv]),
+                cli_auth_token         = select_first([gisaid_auth_token])
+        }
+    }
 
     # deliver to CDC
     if (defined(cdc_s3_credentials)) {

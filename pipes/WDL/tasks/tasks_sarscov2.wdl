@@ -474,3 +474,27 @@ task crsp_meta_etl {
     }
 }
 
+task gisaid_uploader {
+  input {
+    File    gisaid_sequences_fasta
+    File    gisaid_meta_csv
+    File    cli_auth_token
+  }
+  command {
+    set -e
+    cp "~{cli_auth_token}" gisaid_uploader.authtoken
+    gisaid_uploader CoV upload \
+        --fasta "~{gisaid_sequences_fasta}" \
+        --csv "~{gisaid_meta_csv}" \
+        --failedout failed_metadata.csv
+  }
+  output {
+    File  failed_metadata = "failed_metadata.csv"
+  }
+  runtime {
+    docker: "quay.io/broadinstitute/gisaid-cli:1.0"
+    memory: "2 GB"
+    cpu: 2
+    disks: "local-disk 100 HDD"
+  }
+}
