@@ -41,12 +41,13 @@ workflow sarscov2_data_release {
     }
 
     # publish to NCBI Genbank
-    call ncbi_tools.ncbi_ftp_upload as genbank {
+    call ncbi_tools.ncbi_sftp_upload as genbank {
         input:
-            config_js      = ncbi_ftp_config_js,
-            submit_files   = [genbank_xml, genbank_zip],
-            target_path    = "~{prefix}/genbank",
-            wait_for       = "1"
+            config_js        = ncbi_ftp_config_js,
+            submission_xml   = genbank_xml,
+            additional_files = [genbank_zip],
+            target_path      = "~{prefix}/genbank",
+            wait_for         = "1"
     }
 
     # to do: Asymmetrik to impement an SRA tsv->xml conversion
