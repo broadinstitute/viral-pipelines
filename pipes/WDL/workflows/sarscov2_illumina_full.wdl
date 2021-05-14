@@ -409,7 +409,7 @@ workflow sarscov2_illumina_full {
         call terra.gcs_copy as gcs_reporting_dump {
             input:
               infiles        = [meta_final_csv.csv],
-              gcs_uri_prefix = "~{gcs_out_reporting}/~{flowcell_id}/"
+              gcs_uri_prefix = "~{gcs_out_reporting}/"
         }
     }
     if(defined(gcs_out_cdc)) {
