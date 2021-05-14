@@ -343,7 +343,7 @@ task today {
     volatile: true
   }
   command {
-    ~{default='' 'TZ=' + timezone}
+    ~{default='' 'export TZ=' + timezone}
     date +"%Y-%m-%d" > TODAY
   }
   output {
@@ -352,7 +352,7 @@ task today {
   runtime {
     memory: "1 GB"
     cpu: 1
-    docker: "ubuntu"
+    docker: "quay.io/broadinstitute/viral-baseimage:0.1.20"
     disks: "local-disk 10 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
@@ -376,7 +376,7 @@ task s3_copy {
     touch OUT_URIS
     for f in ~{sep=' ' infiles}; do
       aws s3 cp $f $S3_PREFIX/
-      echo "$S3_PREFIX/$f" >> OUT_URIS
+      echo "$S3_PREFIX/$(basename $f)" >> OUT_URIS
     done
   }
   output {

@@ -1,6 +1,7 @@
 version 1.0
 
 import "../tasks/tasks_ncbi_tools.wdl" as ncbi_tools
+import "../tasks/tasks_sarscov2.wdl" as sarscov2
 import "../tasks/tasks_utils.wdl" as utils
 
 workflow sarscov2_data_release {
@@ -16,10 +17,13 @@ workflow sarscov2_data_release {
         File         ncbi_ftp_config_js
         File         genbank_xml
         File         genbank_zip
-        #File         sra_meta_tsv
+        File         sra_meta_tsv
+        String       sra_bioproject
+        String       sra_data_bucket_uri
 
-        #File         gisaid_csv
-        #File         gisaid_fasta
+        File?        gisaid_auth_token
+        File?        gisaid_csv
+        File?        gisaid_fasta
 
         File?        cdc_s3_credentials
         File?        cdc_passing_fasta
@@ -39,17 +43,41 @@ workflow sarscov2_data_release {
     }
 
     # publish to NCBI Genbank
-    call ncbi_tools.ncbi_ftp_upload as genbank {
+    call ncbi_tools.ncbi_sftp_upload as genbank_upload {
         input:
-            config_js      = ncbi_ftp_config_js,
-            submit_files   = [genbank_xml, genbank_zip],
-            target_path    = "~{prefix}/genbank",
-            wait_for       = "1"
+            config_js        = ncbi_ftp_config_js,
+            submission_xml   = genbank_xml,
+            additional_files = [genbank_zip],
+            target_path      = "~{prefix}/genbank",
+            wait_for         = "1"
     }
 
-    # to do: Asymmetrik to impement an SRA tsv->xml conversion
+    # publish to NCBI SRA
+    call ncbi_tools.sra_tsv_to_xml {
+        input:
+            meta_submit_tsv  = sra_meta_tsv,
+            config_js        = ncbi_ftp_config_js,
+            bioproject       = sra_bioproject,
+            data_bucket_uri  = "~{sra_data_bucket_uri}/flowcell_id"
+    }
+    call ncbi_tools.ncbi_sftp_upload as sra_upload {
+        input:
+            config_js        = ncbi_ftp_config_js,
+            submission_xml   = sra_tsv_to_xml.submission_xml,
+            additional_files = [],
+            target_path      = "~{prefix}/sra",
+            wait_for         = "1"
+    }
 
-    # to do: viral to implement a GISAID CLI upload task
+    # publish to GISAID
+    if (defined(gisaid_auth_token)) {
+        call sarscov2.gisaid_uploader {
+            input:
+                gisaid_sequences_fasta = select_first([gisaid_fasta]),
+                gisaid_meta_csv        = select_first([gisaid_csv]),
+                cli_auth_token         = select_first([gisaid_auth_token])
+        }
+    }
 
     # deliver to CDC
     if (defined(cdc_s3_credentials)) {
@@ -90,6 +118,8 @@ workflow sarscov2_data_release {
     }
 
     output {
-        Array[File]    genbank_response   = genbank.reports_xmls
+        Array[File]    genbank_response   = genbank_upload.reports_xmls
+        File           sra_xml            = sra_tsv_to_xml.submission_xml
+        Array[File]    sra_response       = sra_upload.reports_xmls
     }
 }
