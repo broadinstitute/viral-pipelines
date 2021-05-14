@@ -177,7 +177,7 @@ task ncbi_sftp_upload {
 
         String         wait_for="1"  # all, disabled, some number
 
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.7"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.6"
     }
 
     command <<<
