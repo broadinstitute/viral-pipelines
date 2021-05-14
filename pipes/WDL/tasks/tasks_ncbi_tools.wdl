@@ -177,13 +177,14 @@ task ncbi_sftp_upload {
 
         String         wait_for="1"  # all, disabled, some number
 
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.6"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.7"
     }
 
     command <<<
         set -e
         cd /opt/converter
         cp "~{config_js}" src/config.js
+        rm -rf files/tests
         cp "~{submission_xml}" files/submission.xml
         if [[ "~{length(additional_files)}" != "0" ]]; then
             cp ~{sep=' ' additional_files} files/
