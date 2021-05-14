@@ -171,7 +171,7 @@ task fetch_biosamples {
 task ncbi_sftp_upload {
     input {
         File           submission_xml
-        Array[File]    additional_files
+        Array[File]    additional_files = []
         File           config_js
         String         target_path
 
@@ -196,9 +196,9 @@ task ncbi_sftp_upload {
             --uploadFiles="$MANIFEST" \
             --poll="~{wait_for}" \
             --uploadFolder="~{target_path}"
+        ls -alF files reports
         cd -
         cp /opt/converter/reports/*report*.xml .
-        ls -alF files reports
     >>>
 
     output {
