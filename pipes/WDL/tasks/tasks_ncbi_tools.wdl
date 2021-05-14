@@ -6,7 +6,7 @@ task Fetch_SRA_to_BAM {
         String  SRA_ID
 
         Int?    machine_mem_gb
-        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.7"
+        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
 
     command <<<
@@ -145,7 +145,7 @@ task fetch_biosamples {
         Array[String]  biosample_ids
 
         String         out_basename = "biosample_attributes"
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.7"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
 
     command <<<
@@ -177,7 +177,7 @@ task ncbi_sftp_upload {
 
         String         wait_for="1"  # all, disabled, some number
 
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.7"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
 
     command <<<
@@ -221,7 +221,7 @@ task sra_tsv_to_xml {
         String   bioproject
         String   data_bucket_uri
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.7"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
     command <<<
         set -e
@@ -255,7 +255,7 @@ task biosample_submit_tsv_to_xml {
         File     meta_submit_tsv
         File     config_js
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.7"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
     command <<<
         set -e
@@ -287,7 +287,7 @@ task biosample_submit_tsv_ftp_upload {
         File     config_js
         String   target_path
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.7"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
     String base=basename(meta_submit_tsv, '.tsv')
     command <<<
@@ -321,7 +321,7 @@ task biosample_xml_response_to_tsv {
         File     meta_submit_tsv
         File     ncbi_report_xml
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.7"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
     String out_name = "~{basename(meta_submit_tsv, '.tsv')}-attributes.tsv"
     command <<<
