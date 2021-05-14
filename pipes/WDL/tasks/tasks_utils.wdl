@@ -376,7 +376,7 @@ task s3_copy {
     touch OUT_URIS
     for f in ~{sep=' ' infiles}; do
       aws s3 cp $f $S3_PREFIX/
-      echo "$S3_PREFIX/$f" >> OUT_URIS
+      echo "$S3_PREFIX/$(basename $f)" >> OUT_URIS
     done
   }
   output {
