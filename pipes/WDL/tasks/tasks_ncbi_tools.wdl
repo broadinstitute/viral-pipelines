@@ -140,25 +140,24 @@ task Fetch_SRA_to_BAM {
 }
 
 task fetch_biosamples {
-
     input {
         Array[String]  biosample_ids
 
         String         out_basename = "biosample_attributes"
         String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
-
+    meta {
+        volatile: true
+    }
     command <<<
         set -e
         /opt/docker/scripts/biosample-fetch_attributes.py \
             ~{sep=' ' biosample_ids} "~{out_basename}"
     >>>
-
     output {
         File    biosample_attributes_tsv  = "~{out_basename}.tsv"
         File    biosample_attributes_json = "~{out_basename}.json"
     }
-
     runtime {
         cpu:     2
         memory:  "3 GB"
