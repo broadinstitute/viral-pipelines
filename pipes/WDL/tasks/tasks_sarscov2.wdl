@@ -428,7 +428,7 @@ task crsp_meta_etl {
             for id in sample_meta['sample_name']]
 
         # prep biosample submission table
-        biosample = sample_meta[['sample_name', 'isolate', 'collected_by', 'collection_date', 'geo_loc_name', 'host_subject_id']]
+        biosample = sample_meta[['sample_name', 'isolate', 'collected_by', 'collection_date', 'geo_loc_name', 'host_subject_id', 'anatomical_part', 'body_product']]
         biosample = biosample.assign(
             bioproject_accession = '~{bioproject}',
             attribute_package = 'Pathogen.cl',

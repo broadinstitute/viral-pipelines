@@ -58,7 +58,7 @@ workflow sarscov2_data_release {
             meta_submit_tsv  = sra_meta_tsv,
             config_js        = ncbi_ftp_config_js,
             bioproject       = sra_bioproject,
-            data_bucket_uri  = "~{sra_data_bucket_uri}/flowcell_id"
+            data_bucket_uri  = "~{sra_data_bucket_uri}/~{flowcell_id}"
     }
     call ncbi_tools.ncbi_sftp_upload as sra_upload {
         input:
