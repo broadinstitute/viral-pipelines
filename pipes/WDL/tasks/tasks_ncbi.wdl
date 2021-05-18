@@ -317,6 +317,14 @@ task gisaid_meta_prep {
 
       with open('~{source_modifier_table}', 'rt') as inf:
         for row in csv.DictReader(inf, delimiter='\t'):
+
+          #covv_specimen
+          if strict:
+            assert row['isolation_source'] == 'Clinical', f"Metadata error: 'isolation_source' != 'Clinical'\n{row}"
+            assert row['host']             == 'Homo sapiens', f"Metadata error: 'host' != 'Homo sapiens'\n{row}"
+            assert row['organism']         == 'Severe acute respiratory syndrome coronavirus 2', f"'organism' != 'Severe acute respiratory syndrome coronavirus 2'\n{row}"
+            assert row['db_xref']          == 'taxon:2697049', f"Metadata error: 'db_xref' != 'taxon:2697049'\n{row}"
+
           writer.writerow({
             'covv_virus_name': 'hCoV-19/' +row['Sequence_ID'],
             'covv_collection_date': row['collection_date'],
@@ -324,7 +332,7 @@ task gisaid_meta_prep {
 
             'covv_type': 'betacoronavirus',
             'covv_passage': 'Original',
-            'covv_host': 'Human',
+            'covv_host': 'Human' if row['isolation_source'] == 'Clinical' else row['isolation_source'].replace("Environmental","Environment"),
             'covv_gender': 'unknown',
             'covv_patient_age': 'unknown',
             'covv_patient_status': 'unknown',
@@ -344,13 +352,6 @@ task gisaid_meta_prep {
 
             'covv_add_host_info': row.get('note',''),
           })
-
-          #covv_specimen
-          if strict:
-            assert row['isolation_source'] == 'Clinical', f"Metadata error: 'isolation_source' != 'Clinical'\n{row}"
-            assert row['host'] == 'Homo sapiens', f"Metadata error: 'host' != 'Homo sapiens'\n{row}"
-            assert row['organism'] == 'Severe acute respiratory syndrome coronavirus 2', f"'organism' != 'Severe acute respiratory syndrome coronavirus 2'\n{row}"
-            assert row['db_xref'] == 'taxon:2697049', f"Metadata error: 'db_xref' != 'taxon:2697049'\n{row}"
 
     CODE
   >>>
