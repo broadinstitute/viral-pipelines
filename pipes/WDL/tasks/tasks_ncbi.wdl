@@ -320,8 +320,9 @@ task gisaid_meta_prep {
 
           #covv_specimen
           if strict:
-            assert row['isolation_source'] == 'Clinical', f"Metadata error: 'isolation_source' != 'Clinical'\n{row}"
-            assert row['host']             == 'Homo sapiens', f"Metadata error: 'host' != 'Homo sapiens'\n{row}"
+            valid_isolation_sources = ('Clinical', 'Environmental')
+            assert row['isolation_source'] in valid_isolation_sources, f"Metadata error: 'isolation_source' not one of: {valid_isolation_sources}\n{row}"
+            assert row['host'] == 'Homo sapiens' or row['isolation_source'] == 'Environmental', f"Metadata error: 'host' must be 'Homo sapiens' if 'isolation_source' is not 'Environmental'\n{row}"
             assert row['organism']         == 'Severe acute respiratory syndrome coronavirus 2', f"'organism' != 'Severe acute respiratory syndrome coronavirus 2'\n{row}"
             assert row['db_xref']          == 'taxon:2697049', f"Metadata error: 'db_xref' != 'taxon:2697049'\n{row}"
 
