@@ -10,7 +10,7 @@ task Fetch_SRA_to_BAM {
     }
 
     meta {
-        description: "This searches NCBI SRA for accessions using the Entrez interface, collects associated metadata, and returns read sets as unaligned BAM files with metadata loaded in. Useful metadata from BioSample is also output from this task directly. This has been tested with both SRA and ENA accessions. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input.",
+        description: "This searches NCBI SRA for accessions using the Entrez interface, collects associated metadata, and returns read sets as unaligned BAM files with metadata loaded in. Useful metadata from BioSample is also output from this task directly. This has been tested with both SRA and ENA accessions. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input."
         volatile: true
     }
 
@@ -152,7 +152,7 @@ task biosample_tsv_filter_preexisting {
         String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
     meta {
-        description: "This task takes a metadata TSV for submission to NCBI BioSample and filters out entries that have already been submitted to NCBI. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input.",
+        description: "This task takes a metadata TSV for submission to NCBI BioSample and filters out entries that have already been submitted to NCBI. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input."
         volatile: true
     }
     command <<<
@@ -185,7 +185,7 @@ task fetch_biosamples {
         String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
     meta {
-        description: "This searches NCBI BioSample for accessions or keywords using the Entrez interface and returns any hits in the form of a BioSample attributes TSV. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input.",
+        description: "This searches NCBI BioSample for accessions or keywords using the Entrez interface and returns any hits in the form of a BioSample attributes TSV. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input."
         volatile: true
     }
     command <<<
