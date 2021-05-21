@@ -6,7 +6,7 @@ task Fetch_SRA_to_BAM {
         String  SRA_ID
 
         Int?    machine_mem_gb
-        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.4"
+        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
 
     command <<<
@@ -140,25 +140,24 @@ task Fetch_SRA_to_BAM {
 }
 
 task fetch_biosamples {
-
     input {
         Array[String]  biosample_ids
 
         String         out_basename = "biosample_attributes"
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.4"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
-
+    meta {
+        volatile: true
+    }
     command <<<
         set -e
         /opt/docker/scripts/biosample-fetch_attributes.py \
             ~{sep=' ' biosample_ids} "~{out_basename}"
     >>>
-
     output {
         File    biosample_attributes_tsv  = "~{out_basename}.tsv"
         File    biosample_attributes_json = "~{out_basename}.json"
     }
-
     runtime {
         cpu:     2
         memory:  "3 GB"
@@ -168,32 +167,37 @@ task fetch_biosamples {
     }
 }
 
-task ncbi_ftp_upload {
+task ncbi_sftp_upload {
     input {
-        Array[File]    submit_files
+        File           submission_xml
+        Array[File]    additional_files = []
         File           config_js
         String         target_path
 
         String         wait_for="1"  # all, disabled, some number
 
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.4"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
 
     command <<<
         set -e
         cd /opt/converter
         cp "~{config_js}" src/config.js
-        rm -f files/sample.tsv reports/sample-report.xml
-        cp ~{sep=' ' submit_files} files/
+        rm -rf files/tests
+        cp "~{submission_xml}" files/submission.xml
+        if [[ "~{length(additional_files)}" != "0" ]]; then
+            cp ~{sep=' ' additional_files} files/
+        fi
         MANIFEST=$(ls -1 files | paste -sd,)
         echo "uploading: $MANIFEST to destination ftp folder ~{target_path}"
+        echo "Asymmetrik script version: $ASYMMETRIK_REPO_COMMIT"
         node src/main.js --debug \
             --uploadFiles="$MANIFEST" \
             --poll="~{wait_for}" \
             --uploadFolder="~{target_path}"
+        ls -alF files reports
         cd -
         cp /opt/converter/reports/*report*.xml .
-        ls -alF files reports
     >>>
 
     output {
@@ -209,19 +213,55 @@ task ncbi_ftp_upload {
     }
 }
 
-task biosample_submit_tsv_to_xml {
+task sra_tsv_to_xml {
     input {
         File     meta_submit_tsv
         File     config_js
+        String   bioproject
+        String   data_bucket_uri
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.4"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
     command <<<
         set -e
         cd /opt/converter
         cp "~{config_js}" src/config.js
-        rm files/sample.tsv
         cp "~{meta_submit_tsv}" files/
+        echo "Asymmetrik script version: $ASYMMETRIK_REPO_COMMIT"
+        node src/main.js --debug \
+            -i=$(basename "~{meta_submit_tsv}") \
+            --submissionType=sra \
+            --bioproject="~{bioproject}" \
+            --submissionFileLoc="~{data_bucket_uri}" \
+            --runTestMode=true
+        cd -
+        cp "/opt/converter/files/~{basename(meta_submit_tsv, '.tsv')}-submission.xml" .
+    >>>
+    output {
+        File   submission_xml = "~{basename(meta_submit_tsv, '.tsv')}-submission.xml"
+    }
+    runtime {
+        cpu:     1
+        memory:  "2 GB"
+        disks:   "local-disk 50 HDD"
+        dx_instance_type: "mem2_ssd1_v2_x2"
+        docker:  docker
+    }
+}
+
+task biosample_submit_tsv_to_xml {
+    input {
+        File     meta_submit_tsv
+        File     config_js
+
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
+    }
+    command <<<
+        set -e
+        cd /opt/converter
+        cp "~{config_js}" src/config.js
+        cp "~{meta_submit_tsv}" files/
+        echo "Asymmetrik script version: $ASYMMETRIK_REPO_COMMIT"
         node src/main.js --debug \
             -i=$(basename "~{meta_submit_tsv}") \
             --runTestMode=true
@@ -232,9 +272,9 @@ task biosample_submit_tsv_to_xml {
         File   submission_xml = "~{basename(meta_submit_tsv, '.tsv')}-submission.xml"
     }
     runtime {
-        cpu:     2
+        cpu:     1
         memory:  "2 GB"
-        disks:   "local-disk 100 HDD"
+        disks:   "local-disk 50 HDD"
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
     }
@@ -246,15 +286,15 @@ task biosample_submit_tsv_ftp_upload {
         File     config_js
         String   target_path
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.4"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
     String base=basename(meta_submit_tsv, '.tsv')
     command <<<
         set -e
         cd /opt/converter
         cp "~{config_js}" src/config.js
-        rm -f files/sample.tsv reports/sample-report.xml
         cp "~{meta_submit_tsv}" files/
+        echo "Asymmetrik script version: $ASYMMETRIK_REPO_COMMIT"
         node src/main.js --debug \
             -i=$(basename "~{meta_submit_tsv}") \
             --uploadFolder="~{target_path}"
@@ -280,7 +320,7 @@ task biosample_xml_response_to_tsv {
         File     meta_submit_tsv
         File     ncbi_report_xml
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.4"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
     String out_name = "~{basename(meta_submit_tsv, '.tsv')}-attributes.tsv"
     command <<<
@@ -288,6 +328,7 @@ task biosample_xml_response_to_tsv {
         cd /opt/converter
         cp "~{meta_submit_tsv}" files/submit.tsv
         cp "~{ncbi_report_xml}" reports/report.xml
+        echo "Asymmetrik script version: $ASYMMETRIK_REPO_COMMIT"
         node src/main.js --debug \
             -i=submit.tsv \
             -p=report.xml

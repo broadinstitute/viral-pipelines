@@ -186,7 +186,7 @@ task structured_comments {
 
     File?  filter_to_ids
 
-    String docker = "quay.io/broadinstitute/viral-core:2.1.30"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.28"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -264,7 +264,7 @@ task rename_fasta_header {
 
     String out_basename = basename(genome_fasta, ".fasta")
 
-    String docker = "quay.io/broadinstitute/viral-core:2.1.30"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.28"
   }
   command {
     set -e
@@ -347,10 +347,10 @@ task gisaid_meta_prep {
 
           #covv_specimen
           if strict:
-            assert row['isolation_source'] == 'Clinical'
-            assert row['host'] == 'Homo sapiens'
-            assert row['organism'] == 'Severe acute respiratory syndrome coronavirus 2'
-            assert row['db_xref'] == 'taxon:2697049'
+            assert row['isolation_source'] == 'Clinical', f"Metadata error: 'isolation_source' != 'Clinical'\n{row}"
+            assert row['host'] == 'Homo sapiens', f"Metadata error: 'host' != 'Homo sapiens'\n{row}"
+            assert row['organism'] == 'Severe acute respiratory syndrome coronavirus 2', f"'organism' != 'Severe acute respiratory syndrome coronavirus 2'\n{row}"
+            assert row['db_xref'] == 'taxon:2697049', f"Metadata error: 'db_xref' != 'taxon:2697049'\n{row}"
 
     CODE
   >>>
@@ -445,7 +445,7 @@ task sra_meta_prep {
     Boolean     paired
 
     String      out_name = "sra_metadata.tsv"
-    String      docker="quay.io/broadinstitute/viral-core:2.1.30"
+    String      docker="quay.io/broadinstitute/viral-core:2.1.28"
   }
   parameter_meta {
     cleaned_bam_filepaths: {
