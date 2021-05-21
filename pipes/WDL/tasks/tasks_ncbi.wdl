@@ -388,49 +388,6 @@ task lookup_table_by_filename {
   }
 }
 
-task register_biosamples {
-  meta {
-    description: "This registers a table of metadata with NCBI BioSample. It accepts a TSV similar to the web UI input at submit.ncbi.nlm.nih.gov, but converts to an XML, submits via their FTP/XML API, awaits a response, and retrieves a resulting attributes table and returns that as a TSV. This task registers live data with the production NCBI database."
-  }
-  input {
-    File     sample_metadata_tsv
-    String?  comment
-    String?  embargo_date
-
-    String   org_name
-    String   org_type
-    String   spuid_namespace
-    String   account_name
-
-    File     ftp_config
-    Boolean  test=true
-
-    String   docker = "local/broad-tsv-converter"  # for dev/debug only
-  }
-  String meta_basename = basename(basename(sample_metadata_tsv, '.txt'), '.tsv')
-  command {
-    set -e -o pipefail
-
-    cp "~{sample_metadata_tsv}" files/input.tsv
-    # modify src/config.js
-
-    node src/main.js -i=input.tsv \
-      ~{'-c="' + comment + '"'} \
-      ~{'-d=' + embargo_date} \
-      -u="/~{true='Test' false='Production' test}/~{meta_basename}"
-
-  }
-  output {
-    String value = read_string("OUTVAL")
-  }
-  runtime {
-    docker: docker
-    memory: "1 GB"
-    cpu: 1
-    dx_instance_type: "mem1_ssd1_v2_x2"
-  }
-}
-
 task sra_meta_prep {
   meta {
     description: "Prepare tables for submission to NCBI's SRA database. This only works on bam files produced by illumina.py illumina_demux --append_run_id in viral-core."
