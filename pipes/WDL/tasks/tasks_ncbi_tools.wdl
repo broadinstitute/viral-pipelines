@@ -9,6 +9,11 @@ task Fetch_SRA_to_BAM {
         String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
 
+    meta {
+        description: "This searches NCBI SRA for accessions using the Entrez interface, collects associated metadata, and returns read sets as unaligned BAM files with metadata loaded in. Useful metadata from BioSample is also output from this task directly. This has been tested with both SRA and ENA accessions. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input."
+        volatile: true
+    }
+
     command <<<
         set -e
         # fetch SRA metadata on this record
@@ -139,6 +144,39 @@ task Fetch_SRA_to_BAM {
     }
 }
 
+task biosample_tsv_filter_preexisting {
+    input {
+        File           meta_submit_tsv
+
+        String         out_basename = "biosample_attributes"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
+    }
+    meta {
+        description: "This task takes a metadata TSV for submission to NCBI BioSample and filters out entries that have already been submitted to NCBI. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input."
+        volatile: true
+    }
+    command <<<
+        set -e
+
+        echo "TO DO!"
+        exit 1
+
+        /opt/docker/scripts/biosample-fetch_attributes.py \
+            $(cat samplenames) "~{out_basename}"
+    >>>
+    output {
+        File    meta_unsubmitted_tsv = ""
+        File    biosample_attributes_tsv  = "~{out_basename}.tsv"
+    }
+    runtime {
+        cpu:     2
+        memory:  "3 GB"
+        disks:   "local-disk 50 HDD"
+        dx_instance_type: "mem2_ssd1_v2_x2"
+        docker:  docker
+    }
+}
+
 task fetch_biosamples {
     input {
         Array[String]  biosample_ids
@@ -147,6 +185,7 @@ task fetch_biosamples {
         String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
     meta {
+        description: "This searches NCBI BioSample for accessions or keywords using the Entrez interface and returns any hits in the form of a BioSample attributes TSV. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input."
         volatile: true
     }
     command <<<
@@ -256,6 +295,9 @@ task biosample_submit_tsv_to_xml {
 
         String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
+    meta {
+        description: "This converts a web portal submission TSV for NCBI BioSample into an ftp-appropriate XML submission for NCBI BioSample. It does not connect to NCBI, and does not submit or fetch any data."
+    }
     command <<<
         set -e
         cd /opt/converter
@@ -289,6 +331,9 @@ task biosample_submit_tsv_ftp_upload {
         String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
     String base=basename(meta_submit_tsv, '.tsv')
+    meta {
+        description: "This registers a table of metadata with NCBI BioSample. It accepts a TSV similar to the web UI input at submit.ncbi.nlm.nih.gov, but converts to an XML, submits via their FTP/XML API, awaits a response, and retrieves a resulting attributes table and returns that as a TSV. This task registers live data with the production NCBI database."
+    }
     command <<<
         set -e
         cd /opt/converter
@@ -323,6 +368,9 @@ task biosample_xml_response_to_tsv {
         String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
     }
     String out_name = "~{basename(meta_submit_tsv, '.tsv')}-attributes.tsv"
+    meta {
+        description: "This converts an FTP-based XML response from BioSample into a web-portal-style attributes.tsv file with metadata and accessions. This task does not communicate with NCBI, it only parses pre-retrieved responses."
+    }
     command <<<
         set -e
         cd /opt/converter
