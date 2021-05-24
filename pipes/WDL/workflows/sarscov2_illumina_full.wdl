@@ -505,6 +505,7 @@ workflow sarscov2_illumina_full {
         Int           num_samples                  = length(group_bams_by_sample.sample_names)
         
         String        run_date                     = demux_deplete.run_date
+        String        run_id                       = demux_deplete.run_id
         
         File?         sequencing_reports           = sequencing_report.all_zip
         
