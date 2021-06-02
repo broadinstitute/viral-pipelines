@@ -186,7 +186,7 @@ task structured_comments {
 
     File?  filter_to_ids
 
-    String docker = "quay.io/broadinstitute/viral-core:2.1.30"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.28"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -264,7 +264,7 @@ task rename_fasta_header {
 
     String out_basename = basename(genome_fasta, ".fasta")
 
-    String docker = "quay.io/broadinstitute/viral-core:2.1.30"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.28"
   }
   command {
     set -e
@@ -347,10 +347,10 @@ task gisaid_meta_prep {
 
           #covv_specimen
           if strict:
-            assert row['isolation_source'] == 'Clinical'
-            assert row['host'] == 'Homo sapiens'
-            assert row['organism'] == 'Severe acute respiratory syndrome coronavirus 2'
-            assert row['db_xref'] == 'taxon:2697049'
+            assert row['isolation_source'] == 'Clinical', f"Metadata error: 'isolation_source' != 'Clinical'\n{row}"
+            assert row['host'] == 'Homo sapiens', f"Metadata error: 'host' != 'Homo sapiens'\n{row}"
+            assert row['organism'] == 'Severe acute respiratory syndrome coronavirus 2', f"'organism' != 'Severe acute respiratory syndrome coronavirus 2'\n{row}"
+            assert row['db_xref'] == 'taxon:2697049', f"Metadata error: 'db_xref' != 'taxon:2697049'\n{row}"
 
     CODE
   >>>
@@ -388,49 +388,6 @@ task lookup_table_by_filename {
   }
 }
 
-task register_biosamples {
-  meta {
-    description: "This registers a table of metadata with NCBI BioSample. It accepts a TSV similar to the web UI input at submit.ncbi.nlm.nih.gov, but converts to an XML, submits via their FTP/XML API, awaits a response, and retrieves a resulting attributes table and returns that as a TSV. This task registers live data with the production NCBI database."
-  }
-  input {
-    File     sample_metadata_tsv
-    String?  comment
-    String?  embargo_date
-
-    String   org_name
-    String   org_type
-    String   spuid_namespace
-    String   account_name
-
-    File     ftp_config
-    Boolean  test=true
-
-    String   docker = "local/broad-tsv-converter"  # for dev/debug only
-  }
-  String meta_basename = basename(basename(sample_metadata_tsv, '.txt'), '.tsv')
-  command {
-    set -e -o pipefail
-
-    cp "~{sample_metadata_tsv}" files/input.tsv
-    # modify src/config.js
-
-    node src/main.js -i=input.tsv \
-      ~{'-c="' + comment + '"'} \
-      ~{'-d=' + embargo_date} \
-      -u="/~{true='Test' false='Production' test}/~{meta_basename}"
-
-  }
-  output {
-    String value = read_string("OUTVAL")
-  }
-  runtime {
-    docker: docker
-    memory: "1 GB"
-    cpu: 1
-    dx_instance_type: "mem1_ssd1_v2_x2"
-  }
-}
-
 task sra_meta_prep {
   meta {
     description: "Prepare tables for submission to NCBI's SRA database. This only works on bam files produced by illumina.py illumina_demux --append_run_id in viral-core."
@@ -445,7 +402,7 @@ task sra_meta_prep {
     Boolean     paired
 
     String      out_name = "sra_metadata.tsv"
-    String      docker="quay.io/broadinstitute/viral-core:2.1.30"
+    String      docker="quay.io/broadinstitute/viral-core:2.1.28"
   }
   parameter_meta {
     cleaned_bam_filepaths: {

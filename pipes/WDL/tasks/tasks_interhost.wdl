@@ -142,7 +142,7 @@ task index_ref {
     File?  novocraft_license
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.1.30"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.28"
   }
 
   command {
@@ -213,10 +213,15 @@ task merge_vcfs_bcftools {
 
   command {
 
+    # copy files to CWD (required for tabix indexing)
+    INFILES=~{write_lines(in_vcfs_gz)}
+    ln -s $(cat $INFILES) .
+    for FN in $(cat $INFILES); do basename $FN; done > vcf_filenames.txt
+
     # tabix index input vcfs (must be gzipped)
-    parallel -I ,, \
-      "tabix -p vcf ,," \
-      ::: "${sep=' ' in_vcfs_gz}"
+    for FN in $(cat vcf_filenames.txt); do
+      tabix -p vcf $FN
+    done
 
     # see: https://samtools.github.io/bcftools/bcftools.html#merge
     # --merge snps allows snps to be merged to multi-allelic (multi-ALT) records, all other records are listed separately
@@ -227,7 +232,7 @@ task merge_vcfs_bcftools {
     --output ${output_prefix}.vcf.gz \
     --output-type z \
     --threads "$(nproc --all)" \
-    ${sep=' ' in_vcfs_gz}
+    --file-list vcf_filenames.txt
 
     # tabix index the vcf to create .tbi file
     tabix -p vcf ${output_prefix}.vcf.gz

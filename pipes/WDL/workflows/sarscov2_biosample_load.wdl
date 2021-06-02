@@ -29,9 +29,13 @@ workflow sarscov2_biosample_load {
         }
     }
 
+    File meta_submit_tsv = select_first([biosample_submit_tsv, crsp_meta_etl.biosample_submit_tsv])
+
+    #call ncbi_tools.fetch_biosamples
+
     call ncbi_tools.biosample_submit_tsv_ftp_upload {
         input:
-            meta_submit_tsv = select_first([biosample_submit_tsv, crsp_meta_etl.biosample_submit_tsv]),
+            meta_submit_tsv = meta_submit_tsv,
             config_js = ftp_config_js,
             target_path = ftp_target_path
     } 
