@@ -279,7 +279,6 @@ task illumina_demux {
       ~{'--read_structure=' + readStructure} \
       ~{'--minimum_quality=' + minimumQuality} \
       ~{'--run_start_date=' + runStartDate} \
-      $max_reads_in_ram_per_tile \
       $max_records_in_ram \
       --JVMmemory="$mem_in_mb"m \
       $demux_threads \
