@@ -203,10 +203,22 @@ task illumina_demux {
     total_tile_count=$((lane_count*surface_count*swath_count*tile_count))
 
     demux_threads="$(nproc --all)"
-    if [ "$total_tile_count" -le 50 ]; then
+    if [ "$total_tile_count" -le 2 ]; then
+        echo "Detected $total_tile_count tiles, interpreting as MiSeq nano run."
+    elif [ "$total_tile_count" -le 8 ]; then
+        echo "Detected $total_tile_count tiles, interpreting as MiSeq micro run."
+    elif [ "$total_tile_count" -le 16 ]; then
+        echo "Detected $total_tile_count tiles, interpreting as iSeq run."
+    elif [ "$total_tile_count" -le 28 ]; then
         echo "Detected $total_tile_count tiles, interpreting as MiSeq run."
-    elif [ "$total_tile_count" -le 150 ]; then
+    elif [ "$total_tile_count" -le 38 ]; then
+        echo "Detected $total_tile_count tiles, interpreting as MiSeq run."
+    elif [ "$total_tile_count" -le 128 ]; then
         echo "Detected $total_tile_count tiles, interpreting as HiSeq2k run."
+    elif [ "$total_tile_count" -le 132 ]; then
+        echo "Detected $total_tile_count tiles, interpreting as NextSeq 2000 P2 run."
+    elif [ "$total_tile_count" -le 264 ]; then
+        echo "Detected $total_tile_count tiles, interpreting as NextSeq 2000 P3 run."
     elif [ "$total_tile_count" -le 288 ]; then
         # increase the number of reads in ram per-tile for NextSeq, since the tiles are larger
         # without this setting, reads will spill to disk and may read the limit
@@ -220,6 +232,8 @@ task illumina_demux {
         max_reads_in_ram_per_tile=600000 # reduce the number of reads per tile since the NovaSeq has so many
         max_records_in_ram=2000000
         echo "Detected $total_tile_count tiles, interpreting as NovaSeq SP run."
+    elif [ "$total_tile_count" -le 768 ]; then
+        echo "Detected $total_tile_count tiles, interpreting as HiSeq4k run."
     elif [ "$total_tile_count" -le 864 ]; then
         # increase the number of reads in ram per-tile for NextSeq, since the tiles are larger
         # without this setting, reads will spill to disk and may read the limit
@@ -237,7 +251,14 @@ task illumina_demux {
         echo "Detected $total_tile_count tiles, interpreting as NovaSeq run."
         echo "  **Note: Q20 threshold used since NovaSeq with RTA3 writes only four Q-score values: 2, 12, 23, and 37.**"
         echo "    See: https://www.illumina.com/content/dam/illumina-marketing/documents/products/appnotes/novaseq-hiseq-q30-app-note-770-2017-010.pdf"
-    elif [ "$total_tile_count" -gt 1408 ]; then
+    elif [ "$total_tile_count" -le 3744 ]; then
+        demux_threads=32 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
+        mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 80)
+        max_records_in_ram=2000000
+        echo "Detected $total_tile_count tiles, interpreting as NovaSeq run."
+        echo "  **Note: Q20 threshold used since NovaSeq with RTA3 writes only four Q-score values: 2, 12, 23, and 37.**"
+        echo "    See: https://www.illumina.com/content/dam/illumina-marketing/documents/products/appnotes/novaseq-hiseq-q30-app-note-770-2017-010.pdf"
+    elif [ "$total_tile_count" -gt 3744 ]; then
         demux_threads=30 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
         mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 80)
         max_reads_in_ram_per_tile=600000 # reduce the number of reads per tile since the NovaSeq has so many
