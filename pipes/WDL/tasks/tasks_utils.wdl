@@ -178,6 +178,7 @@ task tsv_join {
     Array[File]+   input_tsvs
     String         id_col
     String         out_basename = "merged"
+    String         placeholder_for_missing = ""
   }
 
   command <<<
@@ -210,8 +211,8 @@ task tsv_join {
             row_out = out_row_by_id.get(row_id, {})
             for h in header:
                 # prefer non-empty values from earlier files in in_tsvs, populate from subsequent files only if missing
-                if not row_out.get(h):
-                    row_out[h] = row.get(h, '')
+                if row_out.get(h, '~{placeholder_for_missing}') == '~{placeholder_for_missing}':
+                    row_out[h] = row.get(h, '~{placeholder_for_missing}')
             out_row_by_id[row_id] = row_out
             out_ids.append(row_id)
     out_ids = list(collections.OrderedDict(((i,0) for i in out_ids)).keys())

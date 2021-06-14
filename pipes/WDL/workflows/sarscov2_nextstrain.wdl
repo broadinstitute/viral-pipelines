@@ -78,9 +78,10 @@ workflow sarscov2_nextstrain {
     if(length(sample_metadata_tsvs)>1) {
         call utils.tsv_join {
             input:
-                input_tsvs   = sample_metadata_tsvs,
-                id_col       = 'strain',
-                out_basename = "metadata-merged"
+                input_tsvs              = sample_metadata_tsvs,
+                id_col                  = 'strain',
+                out_basename            = "metadata-merged"
+                placeholder_for_missing = "?"
         }
     }
     call nextstrain.derived_cols {
