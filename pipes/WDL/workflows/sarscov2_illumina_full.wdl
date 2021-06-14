@@ -185,7 +185,7 @@ workflow sarscov2_illumina_full {
             assemble_refbased.align_to_ref_variants_vcf_gz,
             select_first([sarscov2_lineages.nextclade_tsv, ""]),
             select_first([sarscov2_lineages.nextclade_json, ""]),
-            select_first([sarscov2_lineages.pangolin_csv, ""]),
+            select_first([sarscov2_lineages.pango_lineage_report, ""]),
             select_first([vadr.outputs_tgz, ""]),
             demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"],
             assemble_refbased.replicate_concordant_sites,
