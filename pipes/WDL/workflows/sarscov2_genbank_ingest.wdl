@@ -8,11 +8,11 @@ workflow genbank_dump {
     call pull_data {
         input:
             Google_Maps_API_Key_File = Google_Maps_API_Key_File,
-            user_email = user_email
+            user_email               = user_email
     }
     output {
-        File    seqs_fasta = pull_data.genbank_seqs_fasta
-        File    seqs_metadata = pull_data.genbank_seqs_metadata
+        File seqs_fasta    = pull_data.genbank_seqs_fasta
+        File seqs_metadata = pull_data.genbank_seqs_metadata
     }
 }
 

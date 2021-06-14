@@ -86,6 +86,7 @@ jobs:
     - language: java
       jdk: openjdk11
       stage: build
+      if: branch = dnanexus
       env:
         - TRAVIS_JOB=deploy_dnanexus
         # DX_API_TOKEN (for DNAnexus builds) -- token #3, expires 12/31/2024

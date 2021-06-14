@@ -2,6 +2,7 @@ version 1.0
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_reports.wdl" as reports
+import "../tasks/tasks_utils.wdl" as utils
 
 workflow augur_from_msa {
     meta {
@@ -11,15 +12,15 @@ workflow augur_from_msa {
     }
 
     input {
-        File            msa_or_vcf
-        Array[File]+    sample_metadata
-        File            ref_fasta
-        File            genbank_gb
-        File            auspice_config
-        File?           clades_tsv
-        Array[String]?  ancestral_traits_to_infer
-        Array[File]?    keep_list
-        File?           mask_bed
+        File           msa_or_vcf
+        Array[File]+   sample_metadata
+        File           ref_fasta
+        File           genbank_gb
+        File           auspice_config
+        File?          clades_tsv
+        Array[String]? ancestral_traits_to_infer
+        Array[File]?   keep_list
+        File?          mask_bed
     }
 
     parameter_meta {
@@ -75,42 +76,42 @@ workflow augur_from_msa {
             msa_or_vcf = augur_mask_sites.masked_sequences
     }
     if(length(sample_metadata)>1) {
-        call reports.tsv_join {
+        call utils.tsv_join {
             input:
-                input_tsvs = sample_metadata,
-                id_col = 'strain',
+                input_tsvs   = sample_metadata,
+                id_col       = 'strain',
                 out_basename = "metadata-merged"
         }
     }
     call nextstrain.refine_augur_tree {
         input:
-            raw_tree    = draft_augur_tree.aligned_tree,
-            msa_or_vcf  = augur_mask_sites.masked_sequences,
-            metadata    = select_first(flatten([[tsv_join.out_tsv], sample_metadata]))
+            raw_tree   = draft_augur_tree.aligned_tree,
+            msa_or_vcf = augur_mask_sites.masked_sequences,
+            metadata   = select_first(flatten([[tsv_join.out_tsv], sample_metadata]))
     }
     if(defined(ancestral_traits_to_infer) && length(select_first([ancestral_traits_to_infer,[]]))>0) {
         call nextstrain.ancestral_traits {
             input:
-                tree           = refine_augur_tree.tree_refined,
-                metadata       = select_first(flatten([[tsv_join.out_tsv], sample_metadata])),
-                columns        = select_first([ancestral_traits_to_infer,[]])
+                tree     = refine_augur_tree.tree_refined,
+                metadata = select_first(flatten([[tsv_join.out_tsv], sample_metadata])),
+                columns  = select_first([ancestral_traits_to_infer,[]])
         }
     }
     call nextstrain.tip_frequencies {
         input:
-            tree        = refine_augur_tree.tree_refined,
-            metadata    = select_first(flatten([[tsv_join.out_tsv], sample_metadata]))
+            tree     = refine_augur_tree.tree_refined,
+            metadata = select_first(flatten([[tsv_join.out_tsv], sample_metadata]))
     }
     call nextstrain.ancestral_tree {
         input:
-            tree        = refine_augur_tree.tree_refined,
-            msa_or_vcf  = augur_mask_sites.masked_sequences
+            tree       = refine_augur_tree.tree_refined,
+            msa_or_vcf = augur_mask_sites.masked_sequences
     }
     call nextstrain.translate_augur_tree {
         input:
-            tree        = refine_augur_tree.tree_refined,
-            nt_muts     = ancestral_tree.nt_muts_json,
-            genbank_gb  = genbank_gb
+            tree       = refine_augur_tree.tree_refined,
+            nt_muts    = ancestral_tree.nt_muts_json,
+            genbank_gb = genbank_gb
     }
     if(defined(clades_tsv)) {
         call nextstrain.assign_clades_to_nodes {
@@ -136,17 +137,20 @@ workflow augur_from_msa {
     }
 
     output {
-        File  masked_alignment    = augur_mask_sites.masked_sequences
-        File  ml_tree             = draft_augur_tree.aligned_tree
-        File  time_tree           = refine_augur_tree.tree_refined
-        Array[File] node_data_jsons     = select_all([
+        File        masked_alignment      = augur_mask_sites.masked_sequences
+        
+        File        ml_tree               = draft_augur_tree.aligned_tree
+        File        time_tree             = refine_augur_tree.tree_refined
+        
+        Array[File] node_data_jsons       = select_all([
                     refine_augur_tree.branch_lengths,
                     ancestral_traits.node_data_json,
                     ancestral_tree.nt_muts_json,
                     translate_augur_tree.aa_muts_json,
                     assign_clades_to_nodes.node_clade_data_json])
-        File  auspice_input_json  = export_auspice_json.virus_json
-        File  tip_frequencies_json = tip_frequencies.node_data_json
-        File  root_sequence_json   = export_auspice_json.root_sequence_json
+
+        File        auspice_input_json    = export_auspice_json.virus_json
+        File        tip_frequencies_json  = tip_frequencies.node_data_json
+        File        root_sequence_json    = export_auspice_json.root_sequence_json
     }
 }

@@ -20,6 +20,7 @@ workflow demux_plus {
         Array[File]? bmtaggerDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
         Array[File]? blastDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
         Array[File]? bwaDbs
+        String?      instrument_model_user_specified
     }
 
     call demux.illumina_demux as illumina_demux
@@ -28,21 +29,21 @@ workflow demux_plus {
         call reports.align_and_count as spikein {
             input:
                 reads_bam = raw_reads,
-                ref_db = spikein_db
+                ref_db    = spikein_db
         }
         call taxon_filter.deplete_taxa as deplete {
             input:
                 raw_reads_unmapped_bam = raw_reads,
-                bmtaggerDbs = bmtaggerDbs,
-                blastDbs = blastDbs,
-                bwaDbs = bwaDbs
+                bmtaggerDbs            = bmtaggerDbs,
+                blastDbs               = blastDbs,
+                bwaDbs                 = bwaDbs
         }
         call assembly.assemble as spades {
             input:
-                assembler = "spades",
+                assembler          = "spades",
                 reads_unmapped_bam = deplete.cleaned_bam,
-                trim_clip_db = trim_clip_db,
-                always_succeed = true
+                trim_clip_db       = trim_clip_db,
+                always_succeed     = true
         }
     }
 
@@ -74,27 +75,28 @@ workflow demux_plus {
     }
 
     output {
-        Array[File] raw_reads_unaligned_bams     = illumina_demux.raw_reads_unaligned_bams
-        Array[File] cleaned_reads_unaligned_bams = deplete.cleaned_bam
-        Array[File] contigs_fastas               = spades.contigs_fasta
-
-        Array[Int]  read_counts_raw = deplete.depletion_read_count_pre
-        Array[Int]  read_counts_depleted = deplete.depletion_read_count_post
-        Array[Int]  read_counts_prespades_subsample = spades.subsample_read_count
-
-        File        demux_metrics            = illumina_demux.metrics
-        File        demux_commonBarcodes     = illumina_demux.commonBarcodes
-        File        demux_outlierBarcodes    = illumina_demux.outlierBarcodes
-
-        File        multiqc_report_raw     = multiqc_raw.multiqc_report
-        File        multiqc_report_cleaned = multiqc_cleaned.multiqc_report
-        File        spikein_counts         = spike_summary.count_summary
-        File        metagenomics_krona     = krakenuniq.krona_report_merged_html
-        File        metagenomics_summary   = metag_summary_report.krakenuniq_aggregate_taxlevel_summary
-        Array[File] krakenuniq_classified_reads = krakenuniq.krakenuniq_classified_reads
-        Array[File] krakenuniq_summary_reports  = krakenuniq.krakenuniq_summary_reports
-        Array[File] krakenuniq_krona_by_sample  = krakenuniq.krona_report_html
-
+        Array[File] raw_reads_unaligned_bams          = illumina_demux.raw_reads_unaligned_bams
+        Array[File] cleaned_reads_unaligned_bams      = deplete.cleaned_bam
+        Array[File] contigs_fastas                    = spades.contigs_fasta
+        
+        Array[Int]  read_counts_raw                   = deplete.depletion_read_count_pre
+        Array[Int]  read_counts_depleted              = deplete.depletion_read_count_post
+        Array[Int]  read_counts_prespades_subsample   = spades.subsample_read_count
+        
+        File        demux_metrics                     = illumina_demux.metrics
+        File        demux_commonBarcodes              = illumina_demux.commonBarcodes
+        File        demux_outlierBarcodes             = illumina_demux.outlierBarcodes
+        String      instrument_model_inferred         = select_first(flatten([[instrument_model_user_specified],[illumina_demux.run_info['sequencer_model']]]))
+        
+        File        multiqc_report_raw                = multiqc_raw.multiqc_report
+        File        multiqc_report_cleaned            = multiqc_cleaned.multiqc_report
+        File        spikein_counts                    = spike_summary.count_summary
+        File        metagenomics_krona                = krakenuniq.krona_report_merged_html
+        File        metagenomics_summary              = metag_summary_report.krakenuniq_aggregate_taxlevel_summary
+        Array[File] krakenuniq_classified_reads       = krakenuniq.krakenuniq_classified_reads
+        Array[File] krakenuniq_summary_reports        = krakenuniq.krakenuniq_summary_reports
+        Array[File] krakenuniq_krona_by_sample        = krakenuniq.krona_report_html
+        
         String      demux_viral_core_version          = illumina_demux.viralngs_version
         String      krakenuniq_viral_classify_version = krakenuniq.viralngs_version
         String      deplete_viral_classify_version    = deplete.viralngs_version[0]

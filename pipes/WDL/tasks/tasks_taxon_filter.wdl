@@ -14,7 +14,7 @@ task deplete_taxa {
 
     Int?         cpu=8
     Int?         machine_mem_gb
-    String       docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
 
   parameter_meta {
@@ -110,7 +110,7 @@ task filter_to_taxon {
     String?  neg_control_prefixes_space_separated = "neg water NTC"
 
     Int?     machine_mem_gb
-    String   docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
+    String   docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
 
   # do this in two steps in case the input doesn't actually have "cleaned" in the name
@@ -163,13 +163,13 @@ task filter_to_taxon {
 
 task build_lastal_db {
   input {
-    File    sequences_fasta
+    File   sequences_fasta
 
-    Int?    machine_mem_gb
-    String  docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
+    Int?   machine_mem_gb
+    String docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
 
-  String  db_name = basename(sequences_fasta, ".fasta")
+  String db_name = basename(sequences_fasta, ".fasta")
 
   command {
     set -ex -o pipefail
@@ -199,10 +199,10 @@ task merge_one_per_sample {
   input {
     String       out_bam_basename
     Array[File]+ inputBams
-    Boolean?     rmdup=false
+    Boolean?     rmdup = false
 
     Int?         machine_mem_gb
-    String       docker="quay.io/broadinstitute/viral-core:2.1.19"
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.31"
   }
 
   command {

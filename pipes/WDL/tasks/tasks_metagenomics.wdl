@@ -11,7 +11,7 @@ task krakenuniq {
     File        krona_taxonomy_db_tgz  # taxonomy.tab
 
     Int?        machine_mem_gb
-    String      docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
+    String      docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
 
   parameter_meta {
@@ -106,11 +106,11 @@ task krakenuniq {
   }
 
   output {
-    Array[File] krakenuniq_classified_reads   = glob("*.krakenuniq-reads.txt.gz")
-    Array[File] krakenuniq_summary_reports    = glob("*.krakenuniq-summary_report.txt")
-    Array[File] krona_report_html             = glob("*.krakenuniq-krona.html")
-    File        krona_report_merged_html      = "krakenuniq.krona.combined.html"
-    String      viralngs_version              = read_string("VERSION")
+    Array[File] krakenuniq_classified_reads = glob("*.krakenuniq-reads.txt.gz")
+    Array[File] krakenuniq_summary_reports  = glob("*.krakenuniq-summary_report.txt")
+    Array[File] krona_report_html           = glob("*.krakenuniq-krona.html")
+    File        krona_report_merged_html    = "krakenuniq.krona.combined.html"
+    String      viralngs_version            = read_string("VERSION")
   }
 
   runtime {
@@ -125,18 +125,18 @@ task krakenuniq {
 
 task build_krakenuniq_db {
   input {
-    File        genome_fastas_tarball
-    File        taxonomy_db_tarball
-    String      db_basename
+    File     genome_fastas_tarball
+    File     taxonomy_db_tarball
+    String   db_basename
 
-    Boolean?    subsetTaxonomy
-    Int?        minimizerLen
-    Int?        kmerLen
-    Int?        maxDbSize
-    Int?        zstd_compression_level
+    Boolean? subsetTaxonomy
+    Int?     minimizerLen
+    Int?     kmerLen
+    Int?     maxDbSize
+    Int?     zstd_compression_level
 
-    Int?        machine_mem_gb
-    String      docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
+    Int?     machine_mem_gb
+    String   docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
 
   command {
@@ -175,8 +175,8 @@ task build_krakenuniq_db {
   }
 
   output {
-    File        krakenuniq_db    = "${db_basename}.tar.zst"
-    String      viralngs_version = read_string("VERSION")
+    File   krakenuniq_db    = "${db_basename}.tar.zst"
+    String viralngs_version = read_string("VERSION")
   }
 
   runtime {
@@ -195,14 +195,14 @@ task kraken2 {
   }
 
   input {
-    File     reads_bam
-    File     kraken2_db_tgz         # {database.kdb,taxonomy}
-    File     krona_taxonomy_db_tgz  # taxonomy.tab
-    Float?   confidence_threshold
-    Int?     min_base_qual
+    File   reads_bam
+    File   kraken2_db_tgz         # {database.kdb,taxonomy}
+    File   krona_taxonomy_db_tgz  # taxonomy.tab
+    Float? confidence_threshold
+    Int?   min_base_qual
 
-    Int?     machine_mem_gb
-    String   docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
+    Int?   machine_mem_gb
+    String docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
 
   parameter_meta {
@@ -226,7 +226,7 @@ task kraken2 {
     }
   }
 
-  String out_basename=basename(basename(reads_bam, '.bam'), '.fasta')
+  String out_basename = basename(basename(reads_bam, '.bam'), '.fasta')
 
   command {
     set -ex -o pipefail
@@ -296,10 +296,10 @@ task kraken2 {
   }
 
   output {
-    File    kraken2_reads_report   = "${out_basename}.kraken2.reads.txt.gz"
-    File    kraken2_summary_report = "${out_basename}.kraken2.report.txt"
-    File    krona_report_html      = "${out_basename}.kraken2.krona.html"
-    String  viralngs_version       = read_string("VERSION")
+    File   kraken2_reads_report   = "${out_basename}.kraken2.reads.txt.gz"
+    File   kraken2_summary_report = "${out_basename}.kraken2.report.txt"
+    File   krona_report_html      = "${out_basename}.kraken2.krona.html"
+    String viralngs_version       = read_string("VERSION")
   }
 
   runtime {
@@ -325,16 +325,16 @@ task build_kraken2_db {
                       "viral", "human", "fungi", "protozoa",
                       "UniVec_Core"]
     Array[File]   custom_libraries = []
-    Boolean       protein=false
+    Boolean       protein = false
 
-    Int?        kmerLen
-    Int?        minimizerLen
-    Int?        minimizerSpaces
-    Int?        maxDbSize
-    Int?        zstd_compression_level
+    Int?          kmerLen
+    Int?          minimizerLen
+    Int?          minimizerSpaces
+    Int?          maxDbSize
+    Int?          zstd_compression_level
 
-    Int?        machine_mem_gb
-    String      docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
+    Int?          machine_mem_gb
+    String        docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
 
   parameter_meta {
@@ -445,10 +445,10 @@ task build_kraken2_db {
   }
 
   output {
-    File        kraken2_db       = "kraken2-${db_basename}.tar.zst"
-    File        taxdump_tgz      = "taxdump-${db_basename}.tar.gz"
-    File        krona_db         = "krona-${db_basename}-taxonomy.tab.zst"
-    String      viralngs_version = read_string("VERSION")
+    File   kraken2_db       = "kraken2-${db_basename}.tar.zst"
+    File   taxdump_tgz      = "taxdump-${db_basename}.tar.gz"
+    File   krona_db         = "krona-${db_basename}-taxonomy.tab.zst"
+    String viralngs_version = read_string("VERSION")
   }
 
   runtime {
@@ -467,12 +467,12 @@ task blastx {
   }
 
   input {
-    File     contigs_fasta
-    File     blast_db_tgz
-    File     krona_taxonomy_db_tgz
+    File   contigs_fasta
+    File   blast_db_tgz
+    File   krona_taxonomy_db_tgz
 
-    Int?     machine_mem_gb
-    String   docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
+    Int?   machine_mem_gb
+    String docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
 
   parameter_meta {
@@ -548,18 +548,18 @@ task blastx {
 
 task krona {
   input {
-    Array[File]+  reports_txt_gz
-    File          krona_taxonomy_db_tgz
-    String        out_basename = basename(basename(reports_txt_gz[0], '.gz'), '.txt')
+    Array[File]+ reports_txt_gz
+    File         krona_taxonomy_db_tgz
+    String       out_basename = basename(basename(reports_txt_gz[0], '.gz'), '.txt')
 
-    String?  input_type
-    Int?     query_column
-    Int?     taxid_column
-    Int?     score_column
-    Int?     magnitude_column
+    String?      input_type
+    Int?         query_column
+    Int?         taxid_column
+    Int?         score_column
+    Int?         magnitude_column
 
-    Int?     machine_mem_gb
-    String   docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
+    Int?         machine_mem_gb
+    String       docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
 
   command {
@@ -603,8 +603,8 @@ task krona {
   }
 
   output {
-    File    krona_report_html  = "${out_basename}.html"
-    String  viralngs_version   = read_string("VERSION")
+    File   krona_report_html = "${out_basename}.html"
+    String viralngs_version  = read_string("VERSION")
   }
 
   runtime {
@@ -618,11 +618,11 @@ task krona {
 
 task krona_merge {
   input {
-    Array[File]  krona_reports
-    String       out_basename
+    Array[File] krona_reports
+    String      out_basename
 
-    Int?         machine_mem_gb
-    String       docker="biocontainers/krona:v2.7.1_cv1"
+    Int?        machine_mem_gb
+    String      docker = "biocontainers/krona:v2.7.1_cv1"
   }
 
   command {
@@ -632,8 +632,8 @@ task krona_merge {
   }
 
   output {
-    File    krona_report_html = "${out_basename}.html"
-    String  krona_version     = read_string("VERSION")
+    File   krona_report_html = "${out_basename}.html"
+    String krona_version     = read_string("VERSION")
   }
 
   runtime {
@@ -653,12 +653,12 @@ task filter_bam_to_taxa {
     Array[String]? taxonomic_names
     Array[Int]?    taxonomic_ids
     Int?           minimum_hit_groups
-    Boolean        withoutChildren=false
-    Boolean        exclude_taxa=false
+    Boolean        withoutChildren = false
+    Boolean        exclude_taxa = false
     String         out_filename_suffix = "filtered"
 
     Int?           machine_mem_gb
-    String         docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
+    String         docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
 
   String out_basename = basename(classified_bam, ".bam") + "." + out_filename_suffix
@@ -737,13 +737,13 @@ task filter_bam_to_taxa {
 
 task kaiju {
   input {
-    File     reads_unmapped_bam
-    File     kaiju_db_lz4  # <something>.fmi
-    File     ncbi_taxonomy_db_tgz # taxonomy/{nodes.dmp, names.dmp}
-    File     krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
+    File   reads_unmapped_bam
+    File   kaiju_db_lz4  # <something>.fmi
+    File   ncbi_taxonomy_db_tgz # taxonomy/{nodes.dmp, names.dmp}
+    File   krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
 
-    Int?     machine_mem_gb
-    String   docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
+    Int?   machine_mem_gb
+    String docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
 
   String   input_basename = basename(reads_unmapped_bam, ".bam")
@@ -793,10 +793,10 @@ task kaiju {
   }
 
   output {
-    File    kaiju_report       = "${input_basename}.kaiju-summary_report.txt"
-    File    kaiju_reads        = "${input_basename}.kaiju-reads.txt.gz"
-    File    krona_report_html  = "${input_basename}.kaiju-krona.html"
-    String  viralngs_version   = read_string("VERSION")
+    File   kaiju_report      = "${input_basename}.kaiju-summary_report.txt"
+    File   kaiju_reads       = "${input_basename}.kaiju-reads.txt.gz"
+    File   krona_report_html = "${input_basename}.kaiju-krona.html"
+    String viralngs_version  = read_string("VERSION")
   }
 
   runtime {

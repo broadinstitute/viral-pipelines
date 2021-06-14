@@ -10,6 +10,6 @@ workflow multiqc_only {
     }
     call reports.MultiQC
     output {
-        File        multiqc = MultiQC.multiqc_report
+        File multiqc = MultiQC.multiqc_report
     }
 }

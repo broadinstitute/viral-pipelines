@@ -8,10 +8,10 @@ task isnvs_per_sample {
     Int?    threads
     Int?    minReadsPerStrand
     Int?    maxBias
-    Boolean removeDoublyMappedReads=true
+    Boolean removeDoublyMappedReads = true
 
     Int?    machine_mem_gb
-    String  docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String  docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
 
     String  sample_name = basename(basename(basename(mapped_bam, ".bam"), ".all"), ".mapped")
   }
@@ -49,10 +49,10 @@ task isnvs_vcf {
     Array[String]? snpEffRef
     Array[String]? sampleNames
     String?        emailAddress
-    Boolean        naiveFilter=false
+    Boolean        naiveFilter = false
 
     Int?           machine_mem_gb
-    String         docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   parameter_meta {
@@ -102,12 +102,12 @@ task isnvs_vcf {
   }
 
   output {
-    File        isnvs_vcf           = "isnvs.vcf.gz"
-    File        isnvs_vcf_idx       = "isnvs.vcf.gz.tbi"
-    File        isnvs_annot_vcf     = "isnvs.annot.vcf.gz"
-    File        isnvs_annot_vcf_idx = "isnvs.annot.vcf.gz.tbi"
-    File        isnvs_annot_txt     = "isnvs.annot.txt.gz"
-    String      viralngs_version    = read_string("VERSION")
+    File   isnvs_vcf           = "isnvs.vcf.gz"
+    File   isnvs_vcf_idx       = "isnvs.vcf.gz.tbi"
+    File   isnvs_annot_vcf     = "isnvs.annot.vcf.gz"
+    File   isnvs_annot_vcf_idx = "isnvs.annot.vcf.gz.tbi"
+    File   isnvs_annot_txt     = "isnvs.annot.txt.gz"
+    String viralngs_version    = read_string("VERSION")
   }
   runtime {
     docker: "${docker}"
@@ -125,7 +125,7 @@ task annotate_vcf_snpeff {
     String?        emailAddress
 
     Int?           machine_mem_gb
-    String         docker="quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
 
     String         output_basename = basename(basename(in_vcf, ".gz"), ".vcf")
   }
@@ -195,9 +195,9 @@ task annotate_vcf_snpeff {
   }
 
   output {
-    File        annot_vcf_gz      = "~{output_basename}.annot.vcf.gz"
-    File        annot_vcf_gz_tbi  = "~{output_basename}.annot.vcf.gz.tbi"
-    String      viralngs_version  = read_string("VERSION")
+    File   annot_vcf_gz     = "~{output_basename}.annot.vcf.gz"
+    File   annot_vcf_gz_tbi = "~{output_basename}.annot.vcf.gz.tbi"
+    String viralngs_version = read_string("VERSION")
   }
   runtime {
     docker: docker

@@ -1,6 +1,7 @@
 version 1.0
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
+import "../tasks/tasks_utils.wdl" as utils
 
 workflow mafft_and_snp {
     meta {
@@ -30,7 +31,7 @@ workflow mafft_and_snp {
         }
     }
 
-    call nextstrain.gzcat {
+    call utils.gzcat {
         input:
             infiles     = assembly_fastas,
             output_name = "all_samples_combined_assembly.fasta.gz"
@@ -38,7 +39,7 @@ workflow mafft_and_snp {
     call nextstrain.filter_sequences_by_length {
         input:
             sequences_fasta = gzcat.combined,
-            min_non_N = min_unambig_genome
+            min_non_N       = min_unambig_genome
     }
     call nextstrain.mafft_one_chr as mafft {
         input:

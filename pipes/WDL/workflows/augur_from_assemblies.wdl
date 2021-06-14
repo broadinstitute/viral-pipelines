@@ -2,6 +2,7 @@ version 1.0
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_reports.wdl" as reports
+import "../tasks/tasks_utils.wdl" as utils
 
 workflow augur_from_assemblies {
     meta {
@@ -11,23 +12,23 @@ workflow augur_from_assemblies {
     }
 
     input {
-        Array[File]+    assembly_fastas
-        Array[File]+    sample_metadata_tsvs
-        File            ref_fasta
+        Array[File]+   assembly_fastas
+        Array[File]+   sample_metadata_tsvs
+        File           ref_fasta
 
-        Int             min_unambig_genome
+        Int            min_unambig_genome
 
-        String          focal_variable = "region"
-        String          focal_value = "North America"
+        String         focal_variable = "region"
+        String         focal_value = "North America"
 
-        String          focal_bin_variable = "division"
-        Int             focal_bin_max = 50
+        String         focal_bin_variable = "division"
+        Int            focal_bin_max = 50
 
-        String          global_bin_variable = "country"
-        Int             global_bin_max = 50
+        String         global_bin_variable = "country"
+        Int            global_bin_max = 50
 
-        File?           clades_tsv
-        Array[String]?  ancestral_traits_to_infer
+        File?          clades_tsv
+        Array[String]? ancestral_traits_to_infer
     }
 
     parameter_meta {
@@ -80,7 +81,7 @@ workflow augur_from_assemblies {
 
     #### mafft_and_snp
 
-    call nextstrain.gzcat {
+    call utils.gzcat {
         input:
             infiles     = assembly_fastas,
             output_name = "all_samples_combined_assembly.fasta"
@@ -88,7 +89,7 @@ workflow augur_from_assemblies {
     call nextstrain.filter_sequences_by_length {
         input:
             sequences_fasta = gzcat.combined,
-            min_non_N = min_unambig_genome
+            min_non_N       = min_unambig_genome
     }
     call nextstrain.mafft_one_chr as mafft {
         input:
@@ -105,10 +106,10 @@ workflow augur_from_assemblies {
     #### subsample_by_metadata_with_focal
 
     if(length(sample_metadata_tsvs)>1) {
-        call reports.tsv_join {
+        call utils.tsv_join {
             input:
-                input_tsvs = sample_metadata_tsvs,
-                id_col = 'strain',
+                input_tsvs   = sample_metadata_tsvs,
+                id_col       = 'strain',
                 out_basename = "metadata-merged"
         }
     }
@@ -120,29 +121,29 @@ workflow augur_from_assemblies {
 
     call nextstrain.filter_subsample_sequences as prefilter {
         input:
-            sequences_fasta = mafft.aligned_sequences,
+            sequences_fasta     = mafft.aligned_sequences,
             sample_metadata_tsv = derived_cols.derived_metadata
     }
 
     call nextstrain.filter_subsample_sequences as subsample_focal {
         input:
-            sequences_fasta = prefilter.filtered_fasta,
+            sequences_fasta     = prefilter.filtered_fasta,
             sample_metadata_tsv = derived_cols.derived_metadata,
-            exclude_where = ["${focal_variable}!=${focal_value}"],
+            exclude_where       = ["${focal_variable}!=${focal_value}"],
             sequences_per_group = focal_bin_max,
-            group_by = focal_bin_variable
+            group_by            = focal_bin_variable
     }
 
     call nextstrain.filter_subsample_sequences as subsample_global {
         input:
-            sequences_fasta = prefilter.filtered_fasta,
+            sequences_fasta     = prefilter.filtered_fasta,
             sample_metadata_tsv = derived_cols.derived_metadata,
-            exclude_where = ["${focal_variable}=${focal_value}"],
+            exclude_where       = ["${focal_variable}=${focal_value}"],
             sequences_per_group = global_bin_max,
-            group_by = global_bin_variable
+            group_by            = global_bin_variable
     }
 
-    call nextstrain.concatenate as cat_fasta {
+    call utils.concatenate as cat_fasta {
         input:
             infiles = [
                 subsample_focal.filtered_fasta, subsample_global.filtered_fasta
@@ -150,7 +151,7 @@ workflow augur_from_assemblies {
             output_name = "subsampled.fasta"
     }
 
-    call nextstrain.fasta_to_ids {
+    call utils.fasta_to_ids {
         input:
             sequences_fasta = cat_fasta.combined
     }
@@ -169,32 +170,32 @@ workflow augur_from_assemblies {
 
     call nextstrain.refine_augur_tree {
         input:
-            raw_tree    = draft_augur_tree.aligned_tree,
-            msa_or_vcf  = augur_mask_sites.masked_sequences,
-            metadata    = derived_cols.derived_metadata
+            raw_tree   = draft_augur_tree.aligned_tree,
+            msa_or_vcf = augur_mask_sites.masked_sequences,
+            metadata   = derived_cols.derived_metadata
     }
     if(defined(ancestral_traits_to_infer) && length(select_first([ancestral_traits_to_infer,[]]))>0) {
         call nextstrain.ancestral_traits {
             input:
-                tree           = refine_augur_tree.tree_refined,
-                metadata       = derived_cols.derived_metadata,
-                columns        = select_first([ancestral_traits_to_infer,[]])
+                tree     = refine_augur_tree.tree_refined,
+                metadata = derived_cols.derived_metadata,
+                columns  = select_first([ancestral_traits_to_infer,[]])
         }
     }
     call nextstrain.ancestral_tree {
         input:
-            tree        = refine_augur_tree.tree_refined,
-            msa_or_vcf  = augur_mask_sites.masked_sequences
+            tree       = refine_augur_tree.tree_refined,
+            msa_or_vcf = augur_mask_sites.masked_sequences
     }
     call nextstrain.translate_augur_tree {
         input:
-            tree        = refine_augur_tree.tree_refined,
-            nt_muts     = ancestral_tree.nt_muts_json
+            tree    = refine_augur_tree.tree_refined,
+            nt_muts = ancestral_tree.nt_muts_json
     }
     call nextstrain.tip_frequencies {
         input:
-            tree        = refine_augur_tree.tree_refined,
-            metadata    = derived_cols.derived_metadata
+            tree     = refine_augur_tree.tree_refined,
+            metadata = derived_cols.derived_metadata
     }
     if(defined(clades_tsv)) {
         call nextstrain.assign_clades_to_nodes {
@@ -219,28 +220,31 @@ workflow augur_from_assemblies {
     }
 
     output {
-      File  combined_assemblies   = filter_sequences_by_length.filtered_fasta
-      File  multiple_alignment    = mafft.aligned_sequences
-      File  unmasked_snps         = snp_sites.snps_vcf
-
-      File  metadata_merged       = derived_cols.derived_metadata
-      File  keep_list             = fasta_to_ids.ids_txt
-      File  subsampled_sequences  = cat_fasta.combined
-      Int   focal_kept            = subsample_focal.sequences_out
-      Int   global_kept           = subsample_global.sequences_out
-      Int   sequences_kept        = subsample_focal.sequences_out + subsample_global.sequences_out
-
-      File  masked_alignment      = augur_mask_sites.masked_sequences
-      File  ml_tree               = draft_augur_tree.aligned_tree
-      File  time_tree             = refine_augur_tree.tree_refined
-      Array[File] node_data_jsons = select_all([
+      File        combined_assemblies  = filter_sequences_by_length.filtered_fasta
+      File        multiple_alignment   = mafft.aligned_sequences
+      File        unmasked_snps        = snp_sites.snps_vcf
+      
+      File        metadata_merged      = derived_cols.derived_metadata
+      File        keep_list            = fasta_to_ids.ids_txt
+      File        subsampled_sequences = cat_fasta.combined
+      Int         focal_kept           = subsample_focal.sequences_out
+      Int         global_kept          = subsample_global.sequences_out
+      Int         sequences_kept       = subsample_focal.sequences_out + subsample_global.sequences_out
+      
+      File        masked_alignment     = augur_mask_sites.masked_sequences
+      
+      File        ml_tree              = draft_augur_tree.aligned_tree
+      File        time_tree            = refine_augur_tree.tree_refined
+      
+      Array[File] node_data_jsons      = select_all([
                     refine_augur_tree.branch_lengths,
                     ancestral_traits.node_data_json,
                     ancestral_tree.nt_muts_json,
                     translate_augur_tree.aa_muts_json,
                     assign_clades_to_nodes.node_clade_data_json])
-      File  tip_frequencies_json  =                     tip_frequencies.node_data_json
-      File  root_sequence_json    = export_auspice_json.root_sequence_json
-      File  auspice_input_json    = export_auspice_json.virus_json
+
+      File        auspice_input_json   = export_auspice_json.virus_json
+      File        tip_frequencies_json = tip_frequencies.node_data_json
+      File        root_sequence_json   = export_auspice_json.root_sequence_json
     }
 }

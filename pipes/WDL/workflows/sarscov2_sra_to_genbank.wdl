@@ -2,8 +2,8 @@ version 1.0
 
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_ncbi_tools.wdl" as ncbi_tools
-import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_reports.wdl" as reports
+import "../tasks/tasks_utils.wdl" as utils
 
 import "assemble_refbased.wdl"
 import "sarscov2_lineages.wdl"
@@ -50,12 +50,12 @@ workflow sarscov2_sra_to_genbank {
                 SRA_ID = sra_id
         }
         if (Fetch_SRA_to_BAM.num_reads >= min_reads_per_bam) {
-            File reads_ubam = Fetch_SRA_to_BAM.reads_ubam
+            File reads_ubam                = Fetch_SRA_to_BAM.reads_ubam
             File biosample_attributes_json = Fetch_SRA_to_BAM.biosample_attributes_json
-            String library_strategy = Fetch_SRA_to_BAM.library_strategy
-            String biosample_accession = Fetch_SRA_to_BAM.biosample_accession
-            Int num_reads = Fetch_SRA_to_BAM.num_reads
-            String seq_platform = Fetch_SRA_to_BAM.sequencing_platform
+            String library_strategy        = Fetch_SRA_to_BAM.library_strategy
+            String biosample_accession     = Fetch_SRA_to_BAM.biosample_accession
+            Int num_reads                  = Fetch_SRA_to_BAM.num_reads
+            String seq_platform            = Fetch_SRA_to_BAM.sequencing_platform
             call reports.fastqc {
                 input:
                     reads_bam = Fetch_SRA_to_BAM.reads_ubam
@@ -63,7 +63,7 @@ workflow sarscov2_sra_to_genbank {
             call reports.align_and_count as spikein {
                 input:
                     reads_bam = Fetch_SRA_to_BAM.reads_ubam,
-                    ref_db = spikein_db
+                    ref_db    = spikein_db
             }
         }
     }
@@ -80,7 +80,7 @@ workflow sarscov2_sra_to_genbank {
 
     ### assembly and analyses per biosample
     scatter(samn_bam in zip(group_sra_bams_by_biosample.biosample_accessions, group_sra_bams_by_biosample.grouped_bam_filepaths)) {
-        Boolean ampseq = (group_sra_bams_by_biosample.samn_to_library_strategy[samn_bam.left] == "AMPLICON")
+        Boolean ampseq   = (group_sra_bams_by_biosample.samn_to_library_strategy[samn_bam.left] == "AMPLICON")
         String orig_name = group_sra_bams_by_biosample.samn_to_attributes[samn_bam.left]["sample_name"]
 
         # assemble genome
@@ -90,12 +90,12 @@ workflow sarscov2_sra_to_genbank {
         call assemble_refbased.assemble_refbased {
             input:
                 reads_unmapped_bams = samn_bam.right,
-                reference_fasta = reference_fasta,
-                sample_name = samn_bam.left,
-                aligner = "minimap2",
-                skip_mark_dupes = ampseq,
-                trim_coords_bed = trim_coords_bed,
-                min_coverage = if ampseq then 20 else 3
+                reference_fasta     = reference_fasta,
+                sample_name         = samn_bam.left,
+                aligner             = "minimap2",
+                skip_mark_dupes     = ampseq,
+                trim_coords_bed     = trim_coords_bed,
+                min_coverage        = if ampseq then 20 else 3
         }
 
         # for genomes that somewhat assemble
@@ -103,12 +103,12 @@ workflow sarscov2_sra_to_genbank {
             call ncbi.rename_fasta_header {
               input:
                 genome_fasta = assemble_refbased.assembly_fasta,
-                new_name = orig_name
+                new_name     = orig_name
             }
 
-            File passing_assemblies = rename_fasta_header.renamed_fasta
+            File passing_assemblies     = rename_fasta_header.renamed_fasta
             String passing_assembly_ids = orig_name
-            Array[String] assembly_cmt = [orig_name, "Broad viral-ngs v. " + assemble_refbased.align_to_ref_viral_core_version, assemble_refbased.assembly_mean_coverage, group_sra_bams_by_biosample.samn_to_sequencing_platform[samn_bam.left]]
+            Array[String] assembly_cmt  = [orig_name, "Broad viral-ngs v. " + assemble_refbased.align_to_ref_viral_core_version, assemble_refbased.assembly_mean_coverage, group_sra_bams_by_biosample.samn_to_sequencing_platform[samn_bam.left]]
 
             # lineage assignment
             call sarscov2_lineages.sarscov2_lineages {
@@ -123,7 +123,7 @@ workflow sarscov2_sra_to_genbank {
             }
             if (vadr.num_alerts<=max_vadr_alerts) {
               File submittable_genomes = passing_assemblies
-              String submittable_id = orig_name
+              String submittable_id    = orig_name
             }
             if (vadr.num_alerts>max_vadr_alerts) {
               String failed_annotation_id = orig_name
@@ -151,6 +151,7 @@ workflow sarscov2_sra_to_genbank {
             assemble_refbased.align_to_ref_merged_aligned_trimmed_only_bam,
             assemble_refbased.replicate_discordant_vcf,
             select_first([sarscov2_lineages.nextclade_tsv, ""]),
+            select_first([sarscov2_lineages.nextclade_json, ""]),
             select_first([sarscov2_lineages.pangolin_csv, ""]),
             select_first([vadr.outputs_tgz, ""]),
             assemble_refbased.replicate_concordant_sites,
@@ -168,39 +169,39 @@ workflow sarscov2_sra_to_genbank {
         'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels', 'pango_lineage',
         'dist_to_ref_snps', 'dist_to_ref_indels', 'vadr_num_alerts',
         'assembly_fasta', 'coverage_plot', 'aligned_bam', 'replicate_discordant_vcf',
-        'nextclade_tsv', 'pangolin_csv', 'vadr_tgz',
+        'nextclade_tsv', 'nextclade_json', 'pangolin_csv', 'vadr_tgz',
         'replicate_concordant_sites', 'replicate_discordant_snps', 'replicate_discordant_indels', 'num_read_groups', 'num_libraries',
         'align_to_ref_merged_reads_aligned', 'align_to_ref_merged_bases_aligned',
         ]
 
-    call nextstrain.concatenate as assembly_meta_tsv {
+    call utils.concatenate as assembly_meta_tsv {
       input:
         infiles = [write_tsv([assembly_tsv_header]), write_tsv(assembly_tsv_row)],
         output_name = "assembly_metadata.tsv"
     }
 
     ### prep genbank submission
-    call nextstrain.concatenate as submit_genomes {
+    call utils.concatenate as submit_genomes {
       input:
-        infiles = select_all(submittable_genomes),
+        infiles     = select_all(submittable_genomes),
         output_name = "assemblies.fasta"
     }
     call ncbi.biosample_to_genbank {
       input:
         biosample_attributes = group_sra_bams_by_biosample.biosample_attributes_tsv,
-        num_segments = 1,
-        taxid = taxid,
-        filter_to_ids = write_lines(select_all(submittable_id))
+        num_segments         = 1,
+        taxid                = taxid,
+        filter_to_ids        = write_lines(select_all(submittable_id))
     }
     call ncbi.structured_comments {
       input:
         assembly_stats_tsv = write_tsv(flatten([[['SeqID','Assembly Method','Coverage','Sequencing Technology']],select_all(assembly_cmt)])),
-        filter_to_ids = write_lines(select_all(submittable_id))
+        filter_to_ids      = write_lines(select_all(submittable_id))
     }
     call ncbi.package_genbank_ftp_submission {
       input:
-        sequences_fasta = submit_genomes.combined,
-        source_modifier_table = biosample_to_genbank.genbank_source_modifier_table,
+        sequences_fasta          = submit_genomes.combined,
+        source_modifier_table    = biosample_to_genbank.genbank_source_modifier_table,
         structured_comment_table = structured_comments.structured_comment_table
     }
 
@@ -208,14 +209,14 @@ workflow sarscov2_sra_to_genbank {
     call ncbi.prefix_fasta_header as prefix_gisaid {
       input:
         genome_fasta = submit_genomes.combined,
-        prefix = gisaid_prefix
+        prefix       = gisaid_prefix
     }
     call ncbi.gisaid_meta_prep {
       input:
         source_modifier_table = biosample_to_genbank.genbank_source_modifier_table,
-        structured_comments = structured_comments.structured_comment_table,
-        out_name = "gisaid_meta.tsv",
-        strict = false
+        structured_comments   = structured_comments.structured_comment_table,
+        out_name              = "gisaid_meta.csv",
+        strict                = false
     }
 
     #### summary stats
@@ -230,44 +231,44 @@ workflow sarscov2_sra_to_genbank {
     }
 
     output {
-        Array[File] raw_reads_unaligned_bams     = select_all(reads_ubam)
-        Array[File] cleaned_reads_unaligned_bams = select_all(reads_ubam)
-
-        File        biosample_attributes = group_sra_bams_by_biosample.biosample_attributes_tsv
-
-        Array[Int]  read_counts_raw       = select_all(num_reads)
-        Array[Int]  read_counts_depleted  = select_all(num_reads)
-
-        Array[Int]   primer_trimmed_read_count   = flatten(assemble_refbased.primer_trimmed_read_count)
-        Array[Float] primer_trimmed_read_percent = flatten(assemble_refbased.primer_trimmed_read_percent)
-
-        Array[File] assemblies_fasta = assemble_refbased.assembly_fasta
-        Array[File] passing_assemblies_fasta = select_all(passing_assemblies)
-        Array[File] submittable_assemblies_fasta = select_all(submittable_genomes)
-
-        File        multiqc_report_raw     = multiqc_raw.multiqc_report
-        File        spikein_counts         = spike_summary.count_summary
-
-        File assembly_stats_tsv = assembly_meta_tsv.combined
-
-        File submission_zip = package_genbank_ftp_submission.submission_zip
-        File submission_xml = package_genbank_ftp_submission.submission_xml
-        File submit_ready   = package_genbank_ftp_submission.submit_ready
-        Array[File] vadr_outputs = select_all(vadr.outputs_tgz)
-        File genbank_source_table = biosample_to_genbank.genbank_source_modifier_table
-
-        File gisaid_fasta = prefix_gisaid.renamed_fasta
-        File gisaid_meta_tsv = gisaid_meta_prep.meta_tsv
-
-        Array[String] assembled_ids = select_all(passing_assembly_ids)
-        Array[String] submittable_ids = select_all(submittable_id)
-        Array[String] failed_assembly_ids = select_all(failed_assembly_id)
-        Array[String] failed_annotation_ids = select_all(failed_annotation_id)
-        Int           num_read_files = length(Fetch_SRA_to_BAM.reads_ubam)
-        Int           num_assembled = length(select_all(passing_assemblies))
-        Int           num_failed_assembly = length(select_all(failed_assembly_id))
-        Int           num_submittable = length(select_all(submittable_id))
-        Int           num_failed_annotation = length(select_all(failed_annotation_id))
-        Int           num_samples = length(group_sra_bams_by_biosample.biosample_accessions)
+        Array[File]   raw_reads_unaligned_bams     = select_all(reads_ubam)
+        Array[File]   cleaned_reads_unaligned_bams = select_all(reads_ubam)
+        
+        File          biosample_attributes         = group_sra_bams_by_biosample.biosample_attributes_tsv
+        
+        Array[Int]    read_counts_raw              = select_all(num_reads)
+        Array[Int]    read_counts_depleted         = select_all(num_reads)
+        
+        Array[Int]    primer_trimmed_read_count    = flatten(assemble_refbased.primer_trimmed_read_count)
+        Array[Float]  primer_trimmed_read_percent  = flatten(assemble_refbased.primer_trimmed_read_percent)
+        
+        Array[File]   assemblies_fasta             = assemble_refbased.assembly_fasta
+        Array[File]   passing_assemblies_fasta     = select_all(passing_assemblies)
+        Array[File]   submittable_assemblies_fasta = select_all(submittable_genomes)
+        
+        File          multiqc_report_raw           = multiqc_raw.multiqc_report
+        File          spikein_counts               = spike_summary.count_summary
+        
+        File          assembly_stats_tsv           = assembly_meta_tsv.combined
+        
+        File          submission_zip               = package_genbank_ftp_submission.submission_zip
+        File          submission_xml               = package_genbank_ftp_submission.submission_xml
+        File          submit_ready                 = package_genbank_ftp_submission.submit_ready
+        Array[File]   vadr_outputs                 = select_all(vadr.outputs_tgz)
+        File          genbank_source_table         = biosample_to_genbank.genbank_source_modifier_table
+        
+        File          gisaid_fasta                 = prefix_gisaid.renamed_fasta
+        File          gisaid_meta_csv              = gisaid_meta_prep.meta_csv
+        
+        Array[String] assembled_ids                = select_all(passing_assembly_ids)
+        Array[String] submittable_ids              = select_all(submittable_id)
+        Array[String] failed_assembly_ids          = select_all(failed_assembly_id)
+        Array[String] failed_annotation_ids        = select_all(failed_annotation_id)
+        Int           num_read_files               = length(Fetch_SRA_to_BAM.reads_ubam)
+        Int           num_assembled                = length(select_all(passing_assemblies))
+        Int           num_failed_assembly          = length(select_all(failed_assembly_id))
+        Int           num_submittable              = length(select_all(submittable_id))
+        Int           num_failed_annotation        = length(select_all(failed_annotation_id))
+        Int           num_samples                  = length(group_sra_bams_by_biosample.biosample_accessions)
     }
 }

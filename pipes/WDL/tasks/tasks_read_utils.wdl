@@ -3,7 +3,7 @@ version 1.0
 task max {
   input {
     Array[Int] list
-    Int        default_empty=0
+    Int        default_empty = 0
   }
   command <<<
     python3 << CODE
@@ -25,7 +25,7 @@ task max {
 
 task group_bams_by_sample {
   input {
-    Array[File]  bam_filepaths
+    Array[File] bam_filepaths
   }
   parameter_meta {
     bam_filepaths: {
@@ -64,7 +64,7 @@ task group_bams_by_sample {
   >>>
   output {
     Array[Array[File]+] grouped_bam_filepaths = read_tsv('grouped_bams')
-    Array[String]       sample_names = read_lines('sample_names')
+    Array[String]       sample_names          = read_lines('sample_names')
   }
   runtime {
     docker: "python:slim"
@@ -77,9 +77,9 @@ task group_bams_by_sample {
 
 task get_sample_meta {
   input {
-    Array[File]    samplesheets_extended
+    Array[File] samplesheets_extended
 
-    String  docker="quay.io/broadinstitute/viral-core:2.1.19"
+    String      docker = "quay.io/broadinstitute/viral-core:2.1.31"
   }
   command <<<
     python3 << CODE
@@ -113,8 +113,8 @@ task get_sample_meta {
   >>>
   output {
     Map[String,String] original_names = read_json('sample')
-    Map[String,String] amplicon_set = read_json('amplicon_set')
-    Map[String,String] control = read_json('control')
+    Map[String,String] amplicon_set   = read_json('amplicon_set')
+    Map[String,String] control        = read_json('control')
   }
   runtime {
     docker: docker
@@ -132,12 +132,12 @@ task merge_and_reheader_bams {
     }
 
     input {
-      Array[File]+    in_bams
-      String?         sample_name
-      File?           reheader_table
-      String          out_basename
+      Array[File]+ in_bams
+      String?      sample_name
+      File?        reheader_table
+      String       out_basename
 
-      String          docker="quay.io/broadinstitute/viral-core:2.1.19"
+      String       docker = "quay.io/broadinstitute/viral-core:2.1.31"
     }
 
     command {
@@ -193,11 +193,11 @@ task rmdup_ubam {
   }
 
   input {
-    File     reads_unmapped_bam
-    String   method="mvicuna"
+    File    reads_unmapped_bam
+    String  method = "mvicuna"
 
-    Int?     machine_mem_gb
-    String?  docker="quay.io/broadinstitute/viral-core:2.1.19"
+    Int?    machine_mem_gb
+    String? docker = "quay.io/broadinstitute/viral-core:2.1.31"
   }
 
   parameter_meta {
@@ -245,13 +245,13 @@ task downsample_bams {
   }
 
   input {
-    Array[File]+  reads_bam
+    Array[File]+ reads_bam
     Int?         readCount
-    Boolean?     deduplicateBefore=false
-    Boolean?     deduplicateAfter=false
+    Boolean?     deduplicateBefore = false
+    Boolean?     deduplicateAfter = false
 
     Int?         machine_mem_gb
-    String       docker="quay.io/broadinstitute/viral-core:2.1.19"
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.31"
   }
 
   command {
@@ -310,7 +310,7 @@ task FastqToUBAM {
     String? platform_name
     String? sequencing_center
 
-    String  docker="quay.io/broadinstitute/viral-core:2.1.19"
+    String  docker = "quay.io/broadinstitute/viral-core:2.1.31"
   }
   parameter_meta {
     fastq_1: { description: "Unaligned read1 file in fastq format", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }

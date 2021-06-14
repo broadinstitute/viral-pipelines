@@ -2,6 +2,7 @@ version 1.0
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_reports.wdl" as reports
+import "../tasks/tasks_utils.wdl" as utils
 
 workflow subsample_by_metadata_with_focal {
     meta {
@@ -45,21 +46,21 @@ workflow subsample_by_metadata_with_focal {
         File    sequences_fasta
         File?   priorities
 
-        String  focal_variable = "region"
-        String  focal_value = "North America"
-
-        String  focal_bin_variable = "division"
-        Int     focal_bin_max = 50
-
+        String  focal_variable      = "region"
+        String  focal_value         = "North America"
+        
+        String  focal_bin_variable  = "division"
+        Int     focal_bin_max       = 50
+        
         String  global_bin_variable = "country"
-        Int     global_bin_max = 50
+        Int     global_bin_max      = 50
     }
 
     if(length(sample_metadata_tsvs)>1) {
-        call reports.tsv_join {
+        call utils.tsv_join {
             input:
-                input_tsvs = sample_metadata_tsvs,
-                id_col = 'strain',
+                input_tsvs   = sample_metadata_tsvs,
+                id_col       = 'strain',
                 out_basename = "metadata-merged"
         }
     }
@@ -71,31 +72,31 @@ workflow subsample_by_metadata_with_focal {
 
     call nextstrain.filter_subsample_sequences as prefilter {
         input:
-            sequences_fasta = sequences_fasta,
+            sequences_fasta     = sequences_fasta,
             sample_metadata_tsv = derived_cols.derived_metadata
     }
 
     call nextstrain.filter_subsample_sequences as subsample_focal {
         input:
-            sequences_fasta = prefilter.filtered_fasta,
+            sequences_fasta     = prefilter.filtered_fasta,
             sample_metadata_tsv = derived_cols.derived_metadata,
-            exclude_where = ["${focal_variable}!=${focal_value}"],
+            exclude_where       = ["${focal_variable}!=${focal_value}"],
             sequences_per_group = focal_bin_max,
-            group_by = focal_bin_variable,
-            priority = priorities
+            group_by            = focal_bin_variable,
+            priority            = priorities
     }
 
     call nextstrain.filter_subsample_sequences as subsample_global {
         input:
-            sequences_fasta = prefilter.filtered_fasta,
+            sequences_fasta     = prefilter.filtered_fasta,
             sample_metadata_tsv = derived_cols.derived_metadata,
-            exclude_where = ["${focal_variable}=${focal_value}"],
+            exclude_where       = ["${focal_variable}=${focal_value}"],
             sequences_per_group = global_bin_max,
-            group_by = global_bin_variable,
-            priority = priorities
+            group_by            = global_bin_variable,
+            priority            = priorities
     }
 
-    call nextstrain.concatenate as cat_fasta {
+    call utils.concatenate as cat_fasta {
         input:
             infiles = [
                 subsample_focal.filtered_fasta, subsample_global.filtered_fasta
@@ -103,7 +104,7 @@ workflow subsample_by_metadata_with_focal {
             output_name = "subsampled.fasta"
     }
 
-    call nextstrain.fasta_to_ids {
+    call utils.fasta_to_ids {
         input:
             sequences_fasta = cat_fasta.combined
     }

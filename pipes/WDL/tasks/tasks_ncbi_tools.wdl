@@ -6,7 +6,12 @@ task Fetch_SRA_to_BAM {
         String  SRA_ID
 
         Int?    machine_mem_gb
-        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.1"
+        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
+    }
+
+    meta {
+        description: "This searches NCBI SRA for accessions using the Entrez interface, collects associated metadata, and returns read sets as unaligned BAM files with metadata loaded in. Useful metadata from BioSample is also output from this task directly. This has been tested with both SRA and ENA accessions. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input."
+        volatile: true
     }
 
     command <<<
@@ -113,20 +118,20 @@ task Fetch_SRA_to_BAM {
     >>>
 
     output {
-        File    reads_ubam = "~{SRA_ID}.bam"
-        Int     num_reads = read_int("OUT_NUM_READS")
-        String  sequencing_center = read_string("OUT_CENTER")
-        String  sequencing_platform = read_string("OUT_PLATFORM")
+        File    reads_ubam                = "~{SRA_ID}.bam"
+        Int     num_reads                 = read_int("OUT_NUM_READS")
+        String  sequencing_center         = read_string("OUT_CENTER")
+        String  sequencing_platform       = read_string("OUT_PLATFORM")
         String  sequencing_platform_model = read_string("OUT_MODEL")
-        String  biosample_accession = read_string("OUT_BIOSAMPLE")
-        String  library_id = read_string("OUT_LIBRARY")
-        String  library_strategy = read_string("OUT_LIBRARY_STRATEGY")
-        String  run_date = read_string("OUT_RUNDATE")
-        String  sample_collection_date = read_string("OUT_COLLECTION_DATE")
-        String  sample_collected_by = read_string("OUT_COLLECTED_BY")
-        String  sample_strain = read_string("OUT_STRAIN")
-        String  sample_geo_loc = read_string("OUT_GEO_LOC")
-        File    sra_metadata = "~{SRA_ID}.json"
+        String  biosample_accession       = read_string("OUT_BIOSAMPLE")
+        String  library_id                = read_string("OUT_LIBRARY")
+        String  library_strategy          = read_string("OUT_LIBRARY_STRATEGY")
+        String  run_date                  = read_string("OUT_RUNDATE")
+        String  sample_collection_date    = read_string("OUT_COLLECTION_DATE")
+        String  sample_collected_by       = read_string("OUT_COLLECTED_BY")
+        String  sample_strain             = read_string("OUT_STRAIN")
+        String  sample_geo_loc            = read_string("OUT_GEO_LOC")
+        File    sra_metadata              = "~{SRA_ID}.json"
         File    biosample_attributes_json = "~{SRA_ID}-biosample_attributes.json"
     }
 
@@ -134,6 +139,257 @@ task Fetch_SRA_to_BAM {
         cpu:     2
         memory:  select_first([machine_mem_gb, 6]) + " GB"
         disks:   "local-disk 750 LOCAL"
+        dx_instance_type: "mem2_ssd1_v2_x2"
+        docker:  docker
+    }
+}
+
+task biosample_tsv_filter_preexisting {
+    input {
+        File           meta_submit_tsv
+
+        String         out_basename = "biosample_attributes"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
+    }
+    meta {
+        description: "This task takes a metadata TSV for submission to NCBI BioSample and filters out entries that have already been submitted to NCBI. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input."
+        volatile: true
+    }
+    command <<<
+        set -e
+
+        echo "TO DO!"
+        exit 1
+
+        /opt/docker/scripts/biosample-fetch_attributes.py \
+            $(cat samplenames) "~{out_basename}"
+    >>>
+    output {
+        File    meta_unsubmitted_tsv = ""
+        File    biosample_attributes_tsv  = "~{out_basename}.tsv"
+    }
+    runtime {
+        cpu:     2
+        memory:  "3 GB"
+        disks:   "local-disk 50 HDD"
+        dx_instance_type: "mem2_ssd1_v2_x2"
+        docker:  docker
+    }
+}
+
+task fetch_biosamples {
+    input {
+        Array[String]  biosample_ids
+
+        String         out_basename = "biosample_attributes"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
+    }
+    meta {
+        description: "This searches NCBI BioSample for accessions or keywords using the Entrez interface and returns any hits in the form of a BioSample attributes TSV. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input."
+        volatile: true
+    }
+    command <<<
+        set -e
+        /opt/docker/scripts/biosample-fetch_attributes.py \
+            ~{sep=' ' biosample_ids} "~{out_basename}"
+    >>>
+    output {
+        File    biosample_attributes_tsv  = "~{out_basename}.tsv"
+        File    biosample_attributes_json = "~{out_basename}.json"
+    }
+    runtime {
+        cpu:     2
+        memory:  "3 GB"
+        disks:   "local-disk 50 HDD"
+        dx_instance_type: "mem2_ssd1_v2_x2"
+        docker:  docker
+    }
+}
+
+task ncbi_sftp_upload {
+    input {
+        File           submission_xml
+        Array[File]    additional_files = []
+        File           config_js
+        String         target_path
+
+        String         wait_for="1"  # all, disabled, some number
+
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
+    }
+
+    command <<<
+        set -e
+        cd /opt/converter
+        cp "~{config_js}" src/config.js
+        rm -rf files/tests
+        cp "~{submission_xml}" files/submission.xml
+        if [[ "~{length(additional_files)}" != "0" ]]; then
+            cp ~{sep=' ' additional_files} files/
+        fi
+        MANIFEST=$(ls -1 files | paste -sd,)
+        echo "uploading: $MANIFEST to destination ftp folder ~{target_path}"
+        echo "Asymmetrik script version: $ASYMMETRIK_REPO_COMMIT"
+        node src/main.js --debug \
+            --uploadFiles="$MANIFEST" \
+            --poll="~{wait_for}" \
+            --uploadFolder="~{target_path}"
+        ls -alF files reports
+        cd -
+        cp /opt/converter/reports/*report*.xml .
+    >>>
+
+    output {
+        Array[File] reports_xmls = glob("*report*.xml")
+    }
+
+    runtime {
+        cpu:     2
+        memory:  "2 GB"
+        disks:   "local-disk 100 HDD"
+        dx_instance_type: "mem2_ssd1_v2_x2"
+        docker:  docker
+    }
+}
+
+task sra_tsv_to_xml {
+    input {
+        File     meta_submit_tsv
+        File     config_js
+        String   bioproject
+        String   data_bucket_uri
+
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
+    }
+    command <<<
+        set -e
+        cd /opt/converter
+        cp "~{config_js}" src/config.js
+        cp "~{meta_submit_tsv}" files/
+        echo "Asymmetrik script version: $ASYMMETRIK_REPO_COMMIT"
+        node src/main.js --debug \
+            -i=$(basename "~{meta_submit_tsv}") \
+            --submissionType=sra \
+            --bioproject="~{bioproject}" \
+            --submissionFileLoc="~{data_bucket_uri}" \
+            --runTestMode=true
+        cd -
+        cp "/opt/converter/files/~{basename(meta_submit_tsv, '.tsv')}-submission.xml" .
+    >>>
+    output {
+        File   submission_xml = "~{basename(meta_submit_tsv, '.tsv')}-submission.xml"
+    }
+    runtime {
+        cpu:     1
+        memory:  "2 GB"
+        disks:   "local-disk 50 HDD"
+        dx_instance_type: "mem2_ssd1_v2_x2"
+        docker:  docker
+    }
+}
+
+task biosample_submit_tsv_to_xml {
+    input {
+        File     meta_submit_tsv
+        File     config_js
+
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
+    }
+    meta {
+        description: "This converts a web portal submission TSV for NCBI BioSample into an ftp-appropriate XML submission for NCBI BioSample. It does not connect to NCBI, and does not submit or fetch any data."
+    }
+    command <<<
+        set -e
+        cd /opt/converter
+        cp "~{config_js}" src/config.js
+        cp "~{meta_submit_tsv}" files/
+        echo "Asymmetrik script version: $ASYMMETRIK_REPO_COMMIT"
+        node src/main.js --debug \
+            -i=$(basename "~{meta_submit_tsv}") \
+            --runTestMode=true
+        cd -
+        cp "/opt/converter/files/~{basename(meta_submit_tsv, '.tsv')}-submission.xml" .
+    >>>
+    output {
+        File   submission_xml = "~{basename(meta_submit_tsv, '.tsv')}-submission.xml"
+    }
+    runtime {
+        cpu:     1
+        memory:  "2 GB"
+        disks:   "local-disk 50 HDD"
+        dx_instance_type: "mem2_ssd1_v2_x2"
+        docker:  docker
+    }
+}
+
+task biosample_submit_tsv_ftp_upload {
+    input {
+        File     meta_submit_tsv
+        File     config_js
+        String   target_path
+
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
+    }
+    String base=basename(meta_submit_tsv, '.tsv')
+    meta {
+        description: "This registers a table of metadata with NCBI BioSample. It accepts a TSV similar to the web UI input at submit.ncbi.nlm.nih.gov, but converts to an XML, submits via their FTP/XML API, awaits a response, and retrieves a resulting attributes table and returns that as a TSV. This task registers live data with the production NCBI database."
+    }
+    command <<<
+        set -e
+        cd /opt/converter
+        cp "~{config_js}" src/config.js
+        cp "~{meta_submit_tsv}" files/
+        echo "Asymmetrik script version: $ASYMMETRIK_REPO_COMMIT"
+        node src/main.js --debug \
+            -i=$(basename "~{meta_submit_tsv}") \
+            --uploadFolder="~{target_path}"
+        cd -
+        cp /opt/converter/reports/~{base}-attributes.tsv /opt/converter/files/~{base}-submission.xml /opt/converter/reports/~{base}-report.*.xml .
+    >>>
+    output {
+        File        attributes_tsv = "~{base}-attributes.tsv"
+        File        submission_xml = "~{base}-submission.xml"
+        Array[File] reports_xmls   = glob("~{base}-report.*.xml")
+    }
+    runtime {
+        cpu:     2
+        memory:  "2 GB"
+        disks:   "local-disk 100 HDD"
+        dx_instance_type: "mem2_ssd1_v2_x2"
+        docker:  docker
+    }
+}
+
+task biosample_xml_response_to_tsv {
+    input {
+        File     meta_submit_tsv
+        File     ncbi_report_xml
+
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.8"
+    }
+    String out_name = "~{basename(meta_submit_tsv, '.tsv')}-attributes.tsv"
+    meta {
+        description: "This converts an FTP-based XML response from BioSample into a web-portal-style attributes.tsv file with metadata and accessions. This task does not communicate with NCBI, it only parses pre-retrieved responses."
+    }
+    command <<<
+        set -e
+        cd /opt/converter
+        cp "~{meta_submit_tsv}" files/submit.tsv
+        cp "~{ncbi_report_xml}" reports/report.xml
+        echo "Asymmetrik script version: $ASYMMETRIK_REPO_COMMIT"
+        node src/main.js --debug \
+            -i=submit.tsv \
+            -p=report.xml
+        cd -
+        cp /opt/converter/reports/submit-attributes.tsv "~{out_name}"
+    >>>
+    output {
+        File   biosample_attributes_tsv = "~{out_name}"
+    }
+    runtime {
+        cpu:     2
+        memory:  "2 GB"
+        disks:   "local-disk 100 HDD"
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
     }
@@ -211,12 +467,12 @@ task group_sra_bams_by_biosample {
     CODE
   >>>
   output {
-    Array[Array[File]+] grouped_bam_filepaths = read_tsv('grouped_bams')
-    Array[String]       biosample_accessions = read_lines('samns')
-    Map[String,Map[String,String]] samn_to_attributes = read_json('attributes.json')
-    File                biosample_attributes_tsv = 'attributes.tsv'
-    Map[String,String]  samn_to_library_strategy = read_json('library_strategies.json')
-    Map[String,String]  samn_to_sequencing_platform = read_json('sequencing_platforms.json')
+    Array[Array[File]+]            grouped_bam_filepaths       = read_tsv('grouped_bams')
+    Array[String]                  biosample_accessions        = read_lines('samns')
+    Map[String,Map[String,String]] samn_to_attributes          = read_json('attributes.json')
+    File                           biosample_attributes_tsv    = 'attributes.tsv'
+    Map[String,String]             samn_to_library_strategy    = read_json('library_strategies.json')
+    Map[String,String]             samn_to_sequencing_platform = read_json('sequencing_platforms.json')
   }
   runtime {
     docker: "python:slim"

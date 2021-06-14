@@ -1,5 +1,34 @@
 version 1.0
 
+task gcs_copy {
+  input {
+    Array[File] infiles
+    String      gcs_uri_prefix
+  }
+  meta {
+    description: "gsutil cp. only works on a GCP-based backend (e.g. Terra)"
+  }
+  parameter_meta {
+    infiles: {
+      description: "Input files",
+      localization_optional: true,
+      stream: true
+    }
+  }
+  command {
+    set -e
+    gsutil -m cp ~{sep=' ' infiles} ~{gcs_uri_prefix}
+  }
+  output {
+    File logs = stdout()
+  }
+  runtime {
+    docker: "quay.io/broadinstitute/viral-baseimage:0.1.20"
+    memory: "1 GB"
+    cpu: 1
+  }
+}
+
 task upload_entities_tsv {
   input {
     String        workspace_name
@@ -8,7 +37,7 @@ task upload_entities_tsv {
     Array[String] cleaned_reads_unaligned_bams_string
     File          meta_by_filename_json
 
-    String        docker="schaluvadi/pathogen-genomic-surveillance:api-wdl"
+    String        docker = "schaluvadi/pathogen-genomic-surveillance:api-wdl"
   }
   command {
     set -e
@@ -42,7 +71,7 @@ task download_entities_tsv {
     String  outname = "~{terra_project}-~{workspace_name}-~{table_name}.tsv"
     String? nop_input_string # this does absolutely nothing, except that it allows an optional mechanism for you to block execution of this step upon the completion of another task in your workflow
 
-    String  docker="schaluvadi/pathogen-genomic-surveillance:api-wdl"
+    String  docker = "schaluvadi/pathogen-genomic-surveillance:api-wdl"
   }
 
   meta {
@@ -91,6 +120,6 @@ task download_entities_tsv {
     cpu: 1
   }
   output {
-    File  tsv_file = '~{outname}'
+    File tsv_file = '~{outname}'
   }
 }

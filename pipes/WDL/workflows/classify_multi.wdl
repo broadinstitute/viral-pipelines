@@ -16,13 +16,13 @@ workflow classify_multi {
     input {
         Array[File]+ reads_bams
 
-        File  ncbi_taxdump_tgz
+        File ncbi_taxdump_tgz
 
-        File  spikein_db
-        File  trim_clip_db
+        File spikein_db
+        File trim_clip_db
 
-        File  kraken2_db_tgz
-        File  krona_taxonomy_db_kraken2_tgz
+        File kraken2_db_tgz
+        File krona_taxonomy_db_kraken2_tgz
     }
 
     parameter_meta {
@@ -67,30 +67,30 @@ workflow classify_multi {
         # separate scatter blocks speeds up the gathers in DNAnexus and provides independent failure blocks
         call metagenomics.kraken2 as kraken2 {
             input:
-                reads_bam = raw_reads,
-                kraken2_db_tgz = kraken2_db_tgz,
+                reads_bam             = raw_reads,
+                kraken2_db_tgz        = kraken2_db_tgz,
                 krona_taxonomy_db_tgz = krona_taxonomy_db_kraken2_tgz
         }
         call metagenomics.filter_bam_to_taxa as deplete {
             input:
-                classified_bam = raw_reads,
+                classified_bam          = raw_reads,
                 classified_reads_txt_gz = kraken2.kraken2_reads_report,
-                ncbi_taxonomy_db_tgz = ncbi_taxdump_tgz,
-                exclude_taxa = true,
-                taxonomic_names = ["Vertebrata"],
-                out_filename_suffix = "hs_depleted"
+                ncbi_taxonomy_db_tgz    = ncbi_taxdump_tgz,
+                exclude_taxa            = true,
+                taxonomic_names         = ["Vertebrata"],
+                out_filename_suffix     = "hs_depleted"
         }
         call reports.fastqc as fastqc_cleaned {
             input: reads_bam = deplete.bam_filtered_to_taxa
         }
         call metagenomics.filter_bam_to_taxa as filter_acellular {
             input:
-                classified_bam = raw_reads,
+                classified_bam          = raw_reads,
                 classified_reads_txt_gz = kraken2.kraken2_reads_report,
-                ncbi_taxonomy_db_tgz = ncbi_taxdump_tgz,
-                exclude_taxa = true,
-                taxonomic_names = ["Vertebrata", "other sequences", "Bacteria"],
-                out_filename_suffix = "acellular"
+                ncbi_taxonomy_db_tgz    = ncbi_taxdump_tgz,
+                exclude_taxa            = true,
+                taxonomic_names         = ["Vertebrata", "other sequences", "Bacteria"],
+                out_filename_suffix     = "acellular"
         }
     }
 
@@ -101,10 +101,10 @@ workflow classify_multi {
         }
         call assembly.assemble as spades {
             input:
-                assembler = "spades",
+                assembler          = "spades",
                 reads_unmapped_bam = rmdup_ubam.dedup_bam,
-                trim_clip_db = trim_clip_db,
-                always_succeed = true
+                trim_clip_db       = trim_clip_db,
+                always_succeed     = true
         }
     }
 
@@ -138,34 +138,34 @@ workflow classify_multi {
 
     call metagenomics.krona as krona_merge_kraken2 {
         input:
-            reports_txt_gz = kraken2.kraken2_summary_report,
+            reports_txt_gz        = kraken2.kraken2_summary_report,
             krona_taxonomy_db_tgz = krona_taxonomy_db_kraken2_tgz,
-            input_type = "kraken2",
-            out_basename = "merged-kraken2.krona"
+            input_type            = "kraken2",
+            out_basename          = "merged-kraken2.krona"
     }
 
     output {
-        Array[File] cleaned_reads_unaligned_bams = deplete.bam_filtered_to_taxa
-        Array[File] deduplicated_reads_unaligned = rmdup_ubam.dedup_bam
-        Array[File] contigs_fastas               = spades.contigs_fasta
-
+        Array[File] cleaned_reads_unaligned_bams    = deplete.bam_filtered_to_taxa
+        Array[File] deduplicated_reads_unaligned    = rmdup_ubam.dedup_bam
+        Array[File] contigs_fastas                  = spades.contigs_fasta
+        
         Array[Int]  read_counts_raw                 = deplete.classified_taxonomic_filter_read_count_pre
         Array[Int]  read_counts_depleted            = deplete.classified_taxonomic_filter_read_count_post
         Array[Int]  read_counts_dedup               = rmdup_ubam.dedup_read_count_post
         Array[Int]  read_counts_prespades_subsample = spades.subsample_read_count
-
-        File        multiqc_report_raw     = multiqc_raw.multiqc_report
-        File        multiqc_report_cleaned = multiqc_cleaned.multiqc_report
-        File        multiqc_report_dedup   = multiqc_dedup.multiqc_report
-        File        spikein_counts         = spike_summary.count_summary
-        File        kraken2_merged_krona   = krona_merge_kraken2.krona_report_html
-        File        kraken2_summary        = metag_summary_report.krakenuniq_aggregate_taxlevel_summary
-
-        Array[File] kraken2_summary_reports = kraken2.kraken2_summary_report
-        Array[File] kraken2_krona_by_sample = kraken2.krona_report_html
-
-        String      kraken2_viral_classify_version = kraken2.viralngs_version[0]
-        String      deplete_viral_classify_version    = deplete.viralngs_version[0]
-        String      spades_viral_assemble_version     = spades.viralngs_version[0]
+        
+        File        multiqc_report_raw              = multiqc_raw.multiqc_report
+        File        multiqc_report_cleaned          = multiqc_cleaned.multiqc_report
+        File        multiqc_report_dedup            = multiqc_dedup.multiqc_report
+        File        spikein_counts                  = spike_summary.count_summary
+        File        kraken2_merged_krona            = krona_merge_kraken2.krona_report_html
+        File        kraken2_summary                 = metag_summary_report.krakenuniq_aggregate_taxlevel_summary
+        
+        Array[File] kraken2_summary_reports         = kraken2.kraken2_summary_report
+        Array[File] kraken2_krona_by_sample         = kraken2.krona_report_html
+        
+        String      kraken2_viral_classify_version  = kraken2.viralngs_version[0]
+        String      deplete_viral_classify_version  = deplete.viralngs_version[0]
+        String      spades_viral_assemble_version   = spades.viralngs_version[0]
     }
 }

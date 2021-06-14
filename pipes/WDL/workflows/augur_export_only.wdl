@@ -11,7 +11,7 @@ workflow augur_export_only {
 
     call nextstrain.export_auspice_json
     output {
-        File auspice_json = export_auspice_json.virus_json
+        File auspice_json       = export_auspice_json.virus_json
         File root_sequence_json = export_auspice_json.root_sequence_json
     }
 }

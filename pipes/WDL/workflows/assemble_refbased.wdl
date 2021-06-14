@@ -52,15 +52,15 @@ workflow assemble_refbased {
     }
 
     input {
-        Array[File]+    reads_unmapped_bams
-        File            reference_fasta
-        String          sample_name = basename(reads_unmapped_bams[0], '.bam')
+        Array[File]+ reads_unmapped_bams
+        File         reference_fasta
+        String       sample_name = basename(reads_unmapped_bams[0], '.bam')
 
-        String          aligner="minimap2"
-        File?           novocraft_license
-        Int             min_coverage=3
-        Boolean         skip_mark_dupes=false
-        File?           trim_coords_bed
+        String       aligner="minimap2"
+        File?        novocraft_license
+        Int          min_coverage=3
+        Boolean      skip_mark_dupes=false
+        File?        trim_coords_bed
     }
 
     Map[String,String] align_to_ref_options = {
@@ -86,7 +86,7 @@ workflow assemble_refbased {
         }
         call assembly.ivar_trim {
             input:
-                aligned_bam = align_to_ref.aligned_only_reads_bam,
+                aligned_bam     = align_to_ref.aligned_only_reads_bam,
                 trim_coords_bed = trim_coords_bed
         }
         Map[String,String] ivar_stats = {
@@ -94,13 +94,14 @@ workflow assemble_refbased {
             'trim_percent': ivar_trim.primer_trimmed_read_percent,
             'trim_count':   ivar_trim.primer_trimmed_read_count
         }
+        Array[String] ivar_stats_row = [ivar_stats['file'], ivar_stats['trim_percent'], ivar_stats['trim_count']]
     }
 
     call read_utils.merge_and_reheader_bams as merge_align_to_ref {
         input:
-            in_bams             = ivar_trim.aligned_trimmed_bam,
-            sample_name         = sample_name,
-            out_basename        = "~{sample_name}.align_to_ref.trimmed"
+            in_bams      = ivar_trim.aligned_trimmed_bam,
+            sample_name  = sample_name,
+            out_basename = "~{sample_name}.align_to_ref.trimmed"
     }
 
     call reports.alignment_metrics {
@@ -119,8 +120,8 @@ workflow assemble_refbased {
 
     call reports.plot_coverage as plot_ref_coverage {
         input:
-            aligned_reads_bam   = merge_align_to_ref.out_bam,
-            sample_name         = sample_name
+            aligned_reads_bam = merge_align_to_ref.out_bam,
+            sample_name       = sample_name
     }
 
     call assembly.refine_assembly_with_aligned_reads as call_consensus {
@@ -145,65 +146,67 @@ workflow assemble_refbased {
 
     call read_utils.merge_and_reheader_bams as merge_align_to_self {
         input:
-            in_bams             = align_to_self.aligned_only_reads_bam,
-            sample_name         = sample_name,
-            out_basename        = "~{sample_name}.merge_align_to_self"
+            in_bams      = align_to_self.aligned_only_reads_bam,
+            sample_name  = sample_name,
+            out_basename = "~{sample_name}.merge_align_to_self"
     }
 
     call reports.plot_coverage as plot_self_coverage {
         input:
-            aligned_reads_bam   = merge_align_to_self.out_bam,
-            sample_name         = sample_name
+            aligned_reads_bam = merge_align_to_self.out_bam,
+            sample_name       = sample_name
     }
 
     output {
-        File   assembly_fasta               = call_consensus.refined_assembly_fasta
-        File   align_to_ref_variants_vcf_gz = call_consensus.sites_vcf_gz
-        Int    assembly_length              = call_consensus.assembly_length
-        Int    assembly_length_unambiguous  = call_consensus.assembly_length_unambiguous
-        Int    reference_genome_length      = plot_ref_coverage.assembly_length
-        Float  assembly_mean_coverage       = plot_ref_coverage.mean_coverage
-
-        Int    dist_to_ref_snps   = call_consensus.dist_to_ref_snps
-        Int    dist_to_ref_indels = call_consensus.dist_to_ref_indels
-
-        Array[Int]   primer_trimmed_read_count   = ivar_trim.primer_trimmed_read_count
-        Array[Float] primer_trimmed_read_percent = ivar_trim.primer_trimmed_read_percent
-        Array[Map[String,String]] ivar_trim_stats = ivar_stats
-
-        Int    replicate_concordant_sites  = run_discordance.concordant_sites
-        Int    replicate_discordant_snps   = run_discordance.discordant_snps
-        Int    replicate_discordant_indels = run_discordance.discordant_indels
-        Int    num_read_groups             = run_discordance.num_read_groups
-        Int    num_libraries               = run_discordance.num_libraries
-        File   replicate_discordant_vcf    = run_discordance.discordant_sites_vcf
-
-        Array[File]   align_to_ref_per_input_aligned_flagstat = align_to_ref.aligned_bam_flagstat
-        Array[Int]    align_to_ref_per_input_reads_provided   = align_to_ref.reads_provided
-        Array[Int]    align_to_ref_per_input_reads_aligned    = align_to_ref.reads_aligned
-        Array[File]   align_to_ref_per_input_fastqc = align_to_ref.aligned_only_reads_fastqc
-
-        File   align_to_ref_merged_aligned_trimmed_only_bam = merge_align_to_ref.out_bam
-        File   align_to_ref_merged_coverage_plot            = plot_ref_coverage.coverage_plot
-        File   align_to_ref_merged_coverage_tsv             = plot_ref_coverage.coverage_tsv
-        Int    align_to_ref_merged_reads_aligned            = plot_ref_coverage.reads_aligned
-        Int    align_to_ref_merged_read_pairs_aligned       = plot_ref_coverage.read_pairs_aligned
-        Float  align_to_ref_merged_bases_aligned            = plot_ref_coverage.bases_aligned
-
-        File   picard_metrics_wgs       = alignment_metrics.wgs_metrics
-        File   picard_metrics_alignment = alignment_metrics.alignment_metrics
-
-        File   align_to_self_merged_aligned_only_bam   = merge_align_to_self.out_bam
-        File   align_to_self_merged_coverage_plot      = plot_self_coverage.coverage_plot
-        File   align_to_self_merged_coverage_tsv       = plot_self_coverage.coverage_tsv
-        Int    align_to_self_merged_reads_aligned      = plot_self_coverage.reads_aligned
-        Int    align_to_self_merged_read_pairs_aligned = plot_self_coverage.read_pairs_aligned
-        Float  align_to_self_merged_bases_aligned      = plot_self_coverage.bases_aligned
-        Float  align_to_self_merged_mean_coverage            = plot_self_coverage.mean_coverage
-
-        String align_to_ref_viral_core_version = align_to_ref.viralngs_version[0]
-        String ivar_version                    = ivar_trim.ivar_version[0]
-        String viral_assemble_version          = call_consensus.viralngs_version
+        File        assembly_fasta                               = call_consensus.refined_assembly_fasta
+        File        align_to_ref_variants_vcf_gz                 = call_consensus.sites_vcf_gz
+        Int         assembly_length                              = call_consensus.assembly_length
+        Int         assembly_length_unambiguous                  = call_consensus.assembly_length_unambiguous
+        Int         reference_genome_length                      = plot_ref_coverage.assembly_length
+        Float       assembly_mean_coverage                       = plot_ref_coverage.mean_coverage
+        
+        Int         dist_to_ref_snps                             = call_consensus.dist_to_ref_snps
+        Int         dist_to_ref_indels                           = call_consensus.dist_to_ref_indels
+        
+        Array[Int]                primer_trimmed_read_count      = ivar_trim.primer_trimmed_read_count
+        Array[Float]              primer_trimmed_read_percent    = ivar_trim.primer_trimmed_read_percent
+        Array[Map[String,String]] ivar_trim_stats                = ivar_stats
+        Array[Array[String]]      ivar_trim_stats_tsv            = ivar_stats_row
+        
+        Int         replicate_concordant_sites                   = run_discordance.concordant_sites
+        Int         replicate_discordant_snps                    = run_discordance.discordant_snps
+        Int         replicate_discordant_indels                  = run_discordance.discordant_indels
+        Int         num_read_groups                              = run_discordance.num_read_groups
+        Int         num_libraries                                = run_discordance.num_libraries
+        File        replicate_discordant_vcf                     = run_discordance.discordant_sites_vcf
+        
+        Array[File] align_to_ref_per_input_aligned_flagstat      = align_to_ref.aligned_bam_flagstat
+        Array[Int]  align_to_ref_per_input_reads_provided        = align_to_ref.reads_provided
+        Array[Int]  align_to_ref_per_input_reads_aligned         = align_to_ref.reads_aligned
+        Array[File] align_to_ref_per_input_fastqc                = align_to_ref.aligned_only_reads_fastqc
+        
+        File        align_to_ref_merged_aligned_trimmed_only_bam = merge_align_to_ref.out_bam
+        File        align_to_ref_merged_coverage_plot            = plot_ref_coverage.coverage_plot
+        File        align_to_ref_merged_coverage_tsv             = plot_ref_coverage.coverage_tsv
+        Int         align_to_ref_merged_reads_aligned            = plot_ref_coverage.reads_aligned
+        Int         align_to_ref_merged_read_pairs_aligned       = plot_ref_coverage.read_pairs_aligned
+        Float       align_to_ref_merged_bases_aligned            = plot_ref_coverage.bases_aligned
+        
+        File        picard_metrics_wgs                           = alignment_metrics.wgs_metrics
+        File        picard_metrics_alignment                     = alignment_metrics.alignment_metrics
+        File        picard_metrics_insert_size                   = alignment_metrics.insert_size_metrics
+        
+        File        align_to_self_merged_aligned_only_bam        = merge_align_to_self.out_bam
+        File        align_to_self_merged_coverage_plot           = plot_self_coverage.coverage_plot
+        File        align_to_self_merged_coverage_tsv            = plot_self_coverage.coverage_tsv
+        Int         align_to_self_merged_reads_aligned           = plot_self_coverage.reads_aligned
+        Int         align_to_self_merged_read_pairs_aligned      = plot_self_coverage.read_pairs_aligned
+        Float       align_to_self_merged_bases_aligned           = plot_self_coverage.bases_aligned
+        Float       align_to_self_merged_mean_coverage           = plot_self_coverage.mean_coverage
+        
+        String      align_to_ref_viral_core_version              = align_to_ref.viralngs_version[0]
+        String      ivar_version                                 = ivar_trim.ivar_version[0]
+        String      viral_assemble_version                       = call_consensus.viralngs_version
     }
 
 }

@@ -1,7 +1,6 @@
 version 1.0
 
 import "../tasks/tasks_demux.wdl" as demux
-import "../tasks/tasks_read_utils.wdl" as read_utils
 import "../tasks/tasks_taxon_filter.wdl" as taxon_filter
 import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_ncbi.wdl" as ncbi
@@ -21,7 +20,7 @@ workflow demux_deplete {
         File?        biosample_map
         Int          min_reads_per_bam = 100
 
-        String?      instrument_model
+        String?      instrument_model_user_specified
         String?      sra_title
 
         File         spikein_db
@@ -29,8 +28,8 @@ workflow demux_deplete {
         Array[File]? blastDbs  # .tar.gz, .tgz, .tar.bz2, .tar.lz4, .fasta, or .fasta.gz
         Array[File]? bwaDbs
 
-        Array[String] default_sample_keys = ["amplicon_set", "control"]
-        Array[String] default_filename_keys = ["spike_in"]
+        Array[String] default_sample_keys = ["amplicon_set", "control", "batch_lib", "viral_ct"]
+        Array[String] default_filename_keys = ["spike_in", "batch_lib"]
     }
 
     parameter_meta {
@@ -56,24 +55,24 @@ workflow demux_deplete {
     scatter(lane_sheet in zip(range(length(samplesheets)), samplesheets)) {
         call demux.samplesheet_rename_ids {
             input:
-                old_sheet = lane_sheet.right,
+                old_sheet  = lane_sheet.right,
                 rename_map = sample_rename_map
         }
         call demux.illumina_demux {
             input:
                 flowcell_tgz = flowcell_tgz,
-                lane = lane_sheet.left + 1,
-                samplesheet = samplesheet_rename_ids.new_sheet
+                lane         = lane_sheet.left + 1,
+                samplesheet  = samplesheet_rename_ids.new_sheet
         }
         call demux.map_map_setdefault as meta_default_sample {
             input:
                 map_map_json = illumina_demux.meta_by_sample_json,
-                sub_keys = default_sample_keys
+                sub_keys     = default_sample_keys
         }
         call demux.map_map_setdefault as meta_default_filename {
             input:
                 map_map_json = illumina_demux.meta_by_filename_json,
-                sub_keys = default_filename_keys
+                sub_keys     = default_filename_keys
         }
     }
     call demux.merge_maps as meta_sample {
@@ -110,13 +109,14 @@ workflow demux_deplete {
         call ncbi.sra_meta_prep {
             input:
                 cleaned_bam_filepaths = select_all(cleaned_bam_passing),
-                biosample_map = select_first([biosample_map]),
-                library_metadata = samplesheet_rename_ids.new_sheet,
-                platform = "ILLUMINA",
-                paired = (illumina_demux.run_info[0]['indexes'] == '2'),
-                out_name = "sra_metadata-~{basename(flowcell_tgz, '.tar.gz')}.tsv",
-                instrument_model = select_first([instrument_model]),
-                title = select_first([sra_title])
+                biosample_map         = select_first([biosample_map]),
+                library_metadata      = samplesheet_rename_ids.new_sheet,
+                platform              = "ILLUMINA",
+                paired                = (illumina_demux.run_info[0]['indexes'] == '2'),
+
+                out_name              = "sra_metadata-~{illumina_demux.run_info[0]['run_id']}.tsv",
+                instrument_model      = select_first(flatten([[instrument_model_user_specified],[illumina_demux.run_info[0]['sequencer_model']]])),
+                title                 = select_first([sra_title])
         }
     }
 
@@ -139,31 +139,36 @@ workflow demux_deplete {
     # TO DO: flag all libraries where highest spike-in is not what was expected in extended samplesheet
 
     output {
-        Array[File] raw_reads_unaligned_bams     = flatten(illumina_demux.raw_reads_unaligned_bams)
-        Array[Int]  read_counts_raw = deplete.depletion_read_count_pre
+        Array[File] raw_reads_unaligned_bams                 = flatten(illumina_demux.raw_reads_unaligned_bams)
+        Array[Int]  read_counts_raw                          = deplete.depletion_read_count_pre
+        
+        Map[String,Map[String,String]] meta_by_filename      = meta_filename.merged
+        Map[String,Map[String,String]] meta_by_sample        = meta_sample.merged
+        File                           meta_by_filename_json = meta_filename.merged_json
+        File                           meta_by_sample_json   = meta_sample.merged_json
+        
+        Array[File] cleaned_reads_unaligned_bams             = select_all(cleaned_bam_passing)
+        Array[File] cleaned_bams_tiny                        = select_all(empty_bam)
+        Array[Int]  read_counts_depleted                     = deplete.depletion_read_count_post
+        
+        File?       sra_metadata                             = sra_meta_prep.sra_metadata
+        File?       cleaned_bam_uris                         = sra_meta_prep.cleaned_bam_uris
+        
+        Array[File] demux_metrics                            = illumina_demux.metrics
+        Array[File] demux_commonBarcodes                     = illumina_demux.commonBarcodes
+        Array[File] demux_outlierBarcodes                    = illumina_demux.outlierBarcodes
+        
+        File        multiqc_report_raw                       = multiqc_raw.multiqc_report
+        File        multiqc_report_cleaned                   = multiqc_cleaned.multiqc_report
+        File        spikein_counts                           = spike_summary.count_summary
+        
+        String      instrument_model_inferred                = select_first(flatten([[instrument_model_user_specified],[illumina_demux.run_info[0]['sequencer_model']]]))
 
-        Map[String,Map[String,String]] meta_by_filename = meta_filename.merged
-        Map[String,Map[String,String]] meta_by_sample = meta_sample.merged
-        File meta_by_filename_json = meta_filename.merged_json
-        File meta_by_sample_json = meta_sample.merged_json
-
-        Array[File] cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing)
-        Array[File] cleaned_bams_tiny = select_all(empty_bam)
-        Array[Int]  read_counts_depleted = deplete.depletion_read_count_post
-
-        File?       sra_metadata          = sra_meta_prep.sra_metadata
-        File?       cleaned_bam_uris      = sra_meta_prep.cleaned_bam_uris
-
-        Array[File] demux_metrics         = illumina_demux.metrics
-        Array[File] demux_commonBarcodes  = illumina_demux.commonBarcodes
-        Array[File] demux_outlierBarcodes = illumina_demux.outlierBarcodes
-
-        File        multiqc_report_raw     = multiqc_raw.multiqc_report
-        File        multiqc_report_cleaned = multiqc_cleaned.multiqc_report
-        File        spikein_counts         = spike_summary.count_summary
-
-        String      run_date = illumina_demux.run_info[0]['run_start_date']
-
-        String      demux_viral_core_version = illumina_demux.viralngs_version[0]
+        String             run_date                          = illumina_demux.run_info[0]['run_start_date']
+        Map[String,String] run_info                          = illumina_demux.run_info[0]
+        File               run_info_json                     = illumina_demux.run_info_json[0]
+        String             run_id                            = illumina_demux.run_info[0]['run_id']
+        
+        String      demux_viral_core_version                 = illumina_demux.viralngs_version[0]
     }
 }
