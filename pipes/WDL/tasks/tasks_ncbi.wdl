@@ -326,6 +326,15 @@ task gisaid_meta_prep {
             assert row['organism']         == 'Severe acute respiratory syndrome coronavirus 2', f"'organism' != 'Severe acute respiratory syndrome coronavirus 2'\n{row}"
             assert row['db_xref']          == 'taxon:2697049', f"Metadata error: 'db_xref' != 'taxon:2697049'\n{row}"
 
+          # PHA4GE/INSDC controlled vocabulary for source information
+          # from "Vocabulary" tab of this sheet:
+          #   https://github.com/pha4ge/SARS-CoV-2-Contextual-Data-Specification/blob/master/PHA4GE%20SARS-CoV-2%20Contextual%20Data%20Template.xlsx
+          gisaid_specimen_source = "unknown"
+          if row['isolation_source'] == 'Clinical':
+            gisaid_specimen_source = row.get("body_product",row.get("anatomical_material",row.get("anatomical_part","missing")))
+          if row['isolation_source'] == 'Environmental':
+            gisaid_specimen_source = row.get("environmental_material",row.get("environmental_site","missing")
+
           writer.writerow({
             'covv_virus_name': 'hCoV-19/' +row['Sequence_ID'],
             'covv_collection_date': row['collection_date'],
@@ -337,6 +346,7 @@ task gisaid_meta_prep {
             'covv_gender': 'unknown',
             'covv_patient_age': 'unknown',
             'covv_patient_status': 'unknown',
+            'covv_specimen': gisaid_specimen_source,
 
             'covv_assembly_method': sample_to_cmt[row['Sequence_ID']]['Assembly Method'],
             'covv_coverage': sample_to_cmt[row['Sequence_ID']]['Coverage'],
