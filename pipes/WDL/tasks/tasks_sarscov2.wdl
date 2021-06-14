@@ -87,7 +87,7 @@ task nextclade_many_samples {
             --output-tree "~{basename}".nextclade.auspice.json
     }
     runtime {
-        docker: "nextstrain/nextclade:0.13.0"
+        docker: "nextstrain/nextclade:0.14.4"
         memory: "14 GB"
         cpu:    16
         disks: "local-disk 100 HDD"
