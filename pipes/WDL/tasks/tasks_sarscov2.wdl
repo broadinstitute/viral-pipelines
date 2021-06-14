@@ -109,7 +109,7 @@ task pangolin_one_sample {
         File    genome_fasta
         Int?    min_length
         Float?  max_ambig
-        Boolean inference_usher=true
+        Boolean inference_usher=false
         String  docker = "staphb/pangolin:3.0.5-pangolearn-2021-06-05"
     }
     String basename = basename(genome_fasta, ".fasta")
@@ -121,10 +121,10 @@ task pangolin_one_sample {
         pangolin -pv | tee VERSION_PANGOLEARN
 
         pangolin "~{genome_fasta}" \
+            ~{true='--usher' false='' inference_usher} \
             --outfile "~{basename}.pangolin_report.csv" \
             ~{"--min-length " + min_length} \
             ~{"--max-ambig " + max_ambig} \
-            ~{true='--usher' false='' inference_usher} \
             --alignment \
             --verbose
 
@@ -146,7 +146,6 @@ task pangolin_one_sample {
                     outf.write(line["note"])
                 break
         CODE
-        grep ^lineage transposed.tsv | cut -f 2 | grep -v lineage > PANGOLIN_CLADE
     >>>
     runtime {
         docker: docker
