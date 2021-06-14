@@ -336,32 +336,32 @@ task gisaid_meta_prep {
             gisaid_specimen_source = row.get("environmental_material",row.get("environmental_site","missing")
 
           writer.writerow({
-            'covv_virus_name': 'hCoV-19/' +row['Sequence_ID'],
+            'covv_virus_name'     : 'hCoV-19/' +row['Sequence_ID'],
             'covv_collection_date': row['collection_date'],
-            'covv_location': '~{continent} / ' + row['country'].replace(':',' /'),
+            'covv_location'       : '~{continent} / ' + row['country'].replace(':',' /'),
 
-            'covv_type': 'betacoronavirus',
-            'covv_passage': 'Original',
-            'covv_host': 'Human' if row['isolation_source'] == 'Clinical' else row['isolation_source'].replace("Environmental","Environment"),
-            'covv_gender': 'unknown',
-            'covv_patient_age': 'unknown',
-            'covv_patient_status': 'unknown',
-            'covv_specimen': gisaid_specimen_source,
+            'covv_type'           : 'betacoronavirus',
+            'covv_passage'        : 'Original',
+            'covv_host'           : 'Human' if row['isolation_source'] == 'Clinical' else row['isolation_source'].replace("Environmental","Environment"),
+            'covv_gender'         : 'unknown',
+            'covv_patient_age'    : 'unknown',
+            'covv_patient_status' : 'unknown',
+            'covv_specimen'       : gisaid_specimen_source,
 
             'covv_assembly_method': sample_to_cmt[row['Sequence_ID']]['Assembly Method'],
-            'covv_coverage': sample_to_cmt[row['Sequence_ID']]['Coverage'],
-            'covv_seq_technology': sample_to_cmt[row['Sequence_ID']]['Sequencing Technology'],
+            'covv_coverage'       : sample_to_cmt[row['Sequence_ID']]['Coverage'],
+            'covv_seq_technology' : sample_to_cmt[row['Sequence_ID']]['Sequencing Technology'],
 
-            'covv_orig_lab': row['collected_by'],
-            'covv_subm_lab': "~{default='REQUIRED' submitting_lab_name}",
-            'covv_authors': "~{default='REQUIRED' authors}",
-            'covv_orig_lab_addr': "~{default='REQUIRED' originating_lab_addr}",
-            'covv_subm_lab_addr': "~{default='REQUIRED' submitting_lab_addr}",
+            'covv_orig_lab'       : row['collected_by'],
+            'covv_subm_lab'       : "~{default='REQUIRED' submitting_lab_name}",
+            'covv_authors'        : "~{default='REQUIRED' authors}",
+            'covv_orig_lab_addr'  : "~{default='REQUIRED' originating_lab_addr}",
+            'covv_subm_lab_addr'  : "~{default='REQUIRED' submitting_lab_addr}",
 
-            'submitter': "~{default='REQUIRED' username}",
-            'fn': "~{default='REQUIRED' fasta_filename}",
+            'submitter'           : "~{default='REQUIRED' username}",
+            'fn'                  : "~{default='REQUIRED' fasta_filename}",
 
-            'covv_add_host_info': row.get('note',''),
+            'covv_add_host_info'  : row.get('note',''),
           })
 
     CODE
