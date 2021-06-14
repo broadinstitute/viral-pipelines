@@ -81,7 +81,7 @@ task derived_cols {
         String?       lab_highlight_loc
         Array[File]   table_map = []
 
-        String        docker = "quay.io/broadinstitute/viral-core:2.1.28"
+        String        docker = "quay.io/broadinstitute/viral-core:2.1.31"
     }
     parameter_meta {
         lab_highlight_loc: {
@@ -480,7 +480,7 @@ task filter_sequences_by_length {
         File   sequences_fasta
         Int    min_non_N = 1
 
-        String docker = "quay.io/broadinstitute/viral-core:2.1.28"
+        String docker = "quay.io/broadinstitute/viral-core:2.1.31"
     }
     parameter_meta {
         sequences_fasta: {
