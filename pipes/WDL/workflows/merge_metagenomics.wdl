@@ -4,6 +4,11 @@ import "../tasks/tasks_metagenomics.wdl" as metagenomics
 import "../tasks/tasks_reports.wdl" as reports
 
 workflow merge_metagenomics {
+    meta {
+        description: "Combine metagenomic reports from single samples into an aggregate report."
+        author: "Broad Viral Genomics"
+        email:  "viral-ngs@broadinstitute.org"
+    }
 
     input {
         Array[File] krakenuniq_summary_reports
@@ -13,7 +18,7 @@ workflow merge_metagenomics {
     call metagenomics.krona_merge {
         input:
             krona_reports = krona_per_sample,
-            out_basename = "merged_krona"
+            out_basename  = "merged_krona"
     }
 
     call reports.aggregate_metagenomics_reports {

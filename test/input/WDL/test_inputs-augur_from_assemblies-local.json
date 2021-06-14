@@ -1,0 +1,12 @@
+{
+  "augur_from_assemblies.translate_augur_tree.genbank_gb": "test/input/zika-tutorial/config/zika_outgroup.gb",
+  "augur_from_assemblies.min_unambig_genome": 9000,
+  "augur_from_assemblies.ref_fasta": "test/input/zika-tutorial/data/KX369547.1.fna",
+  "augur_from_assemblies.export_auspice_json.colors_tsv": "test/input/zika-tutorial/config/colors.tsv",
+  "augur_from_assemblies.export_auspice_json.auspice_config": "test/input/zika-tutorial/config/auspice_config.json",
+  "augur_from_assemblies.ancestral_traits_to_infer": ["region", "country"],
+  "augur_from_assemblies.export_auspice_json.lat_longs_tsv": "test/input/zika-tutorial/config/lat_longs.tsv",
+  "augur_from_assemblies.assembly_fastas": ["test/input/zika-tutorial/data/sequences.fasta"],
+  "augur_from_assemblies.sample_metadata_tsvs": ["test/input/zika-tutorial/data/metadata.tsv"]
+}
+

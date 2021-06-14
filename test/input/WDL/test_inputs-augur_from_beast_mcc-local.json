@@ -1,0 +1,5 @@
+{
+  "augur_from_beast_mcc.beast_mcc_tree": "test/input/beast-mers-mcc.tree",
+  "augur_from_beast_mcc.auspice_config": "test/input/beast-mers-auspice_config.json"
+}
+

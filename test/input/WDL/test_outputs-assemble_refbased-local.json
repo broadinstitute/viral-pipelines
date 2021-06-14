@@ -1,11 +1,17 @@
 {
-  "assemble_refbased.align_to_self_merged_bases_aligned": 1765480,
-  "assemble_refbased.align_to_self_merged_read_pairs_aligned": 16798,
-  "assemble_refbased.align_to_self_merged_reads_aligned": 17480,
-  "assemble_refbased.align_to_ref_merged_bases_aligned": 1800325,
-  "assemble_refbased.align_to_ref_merged_read_pairs_aligned": 17266,
-  "assemble_refbased.align_to_ref_merged_reads_aligned": 17825,
+  "assemble_refbased.align_to_ref_merged_bases_aligned": 1688922,
+  "assemble_refbased.align_to_ref_merged_read_pairs_aligned": 16722,
+  "assemble_refbased.align_to_ref_merged_reads_aligned": 16722,
+  "assemble_refbased.align_to_self_merged_bases_aligned": 1695386,
+  "assemble_refbased.align_to_self_merged_read_pairs_aligned": 16786,
+  "assemble_refbased.align_to_self_merged_reads_aligned": 16786,
   "assemble_refbased.reference_genome_length": 18959,
-  "assemble_refbased.assembly_length_unambiguous": 18865,
-  "assemble_refbased.assembly_length": 18865
+  "assemble_refbased.assembly_length_unambiguous": 18843,
+  "assemble_refbased.assembly_length": 18843,
+  "assemble_refbased.replicate_discordant_indels": 0,
+  "assemble_refbased.replicate_discordant_snps": 0,
+  "assemble_refbased.dist_to_ref_snps": 13,
+  "assemble_refbased.dist_to_ref_indels": 2,
+  "assemble_refbased.num_read_groups": 8,
+  "assemble_refbased.num_libraries": 2
 }

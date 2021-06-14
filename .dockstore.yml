@@ -1,0 +1,307 @@
+version: 1.2
+workflows:
+ - name: align_and_count_multiple_report
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/align_and_count_multiple_report.wdl
+   testParameterFiles:
+    - empty.json
+ - name: align_and_count
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/align_and_count.wdl
+   testParameterFiles:
+    - empty.json
+ - name: align_and_plot
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/align_and_plot.wdl
+   testParameterFiles:
+    - /test/input/WDL/test_inputs-align_and_plot-local.json
+ - name: assemble_denovo
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/assemble_denovo.wdl
+   testParameterFiles:
+    - /test/input/WDL/test_inputs-assemble_denovo-local.json
+ - name: assemble_refbased
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/assemble_refbased.wdl
+   testParameterFiles:
+    - /test/input/WDL/test_inputs-assemble_refbased-local.json
+ - name: augur_export_only
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/augur_export_only.wdl
+   testParameterFiles:
+    - empty.json
+ - name: augur_from_assemblies
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/augur_from_assemblies.wdl
+   testParameterFiles:
+    - /test/input/WDL/test_inputs-augur_from_assemblies-local.json
+ - name: augur_from_beast_mcc
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/augur_from_beast_mcc.wdl
+   testParameterFiles:
+    - /test/input/WDL/test_inputs-augur_from_beast_mcc-local.json
+ - name: augur_from_mltree
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/augur_from_mltree.wdl
+   testParameterFiles:
+    - empty.json
+ - name: augur_from_msa
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/augur_from_msa.wdl
+   testParameterFiles:
+    - empty.json
+ - name: bams_multiqc
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/bams_multiqc.wdl
+   testParameterFiles:
+    - empty.json
+ - name: beast_gpu
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/beast_gpu.wdl
+   testParameterFiles:
+    - empty.json
+ - name: classify_kaiju
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/classify_kaiju.wdl
+   testParameterFiles:
+    - empty.json
+ - name: classify_kraken2
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/classify_kraken2.wdl
+   testParameterFiles:
+    - /test/input/WDL/test_inputs-classify_kraken2-local.json
+ - name: classify_krakenuniq
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/classify_krakenuniq.wdl
+   testParameterFiles:
+    - empty.json
+ - name: classify_multi
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/classify_multi.wdl
+   testParameterFiles:
+    - empty.json
+ - name: classify_single
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/classify_single.wdl
+   testParameterFiles:
+    - empty.json
+ - name: contigs
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/contigs.wdl
+   testParameterFiles:
+    - empty.json
+ - name: coverage_table
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/coverage_table.wdl
+   testParameterFiles:
+    - empty.json
+ - name: demux_metag
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/demux_metag.wdl
+   testParameterFiles:
+    - empty.json
+ - name: demux_only
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/demux_only.wdl
+   testParameterFiles:
+    - empty.json
+ - name: demux_deplete
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/demux_deplete.wdl
+   testParameterFiles:
+    - empty.json
+ - name: demux_plus
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/demux_plus.wdl
+   testParameterFiles:
+    - empty.json
+ - name: deplete_only
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/deplete_only.wdl
+   testParameterFiles:
+    - empty.json
+ - name: diff_genome_sets
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/diff_genome_sets.wdl
+   testParameterFiles:
+    - empty.json
+ - name: downsample
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/downsample.wdl
+   testParameterFiles:
+    - empty.json
+ - name: fastq_to_ubam
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/fastq_to_ubam.wdl
+   testParameterFiles:
+    - /test/input/WDL/test_inputs-fastq_to_ubam-local.json
+ - name: fetch_annotations
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/fetch_annotations.wdl
+   testParameterFiles:
+    - empty.json
+ - name: fetch_sra_to_bam
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/fetch_sra_to_bam.wdl
+   testParameterFiles:
+    - empty.json
+ - name: filter_classified_bam_to_taxa
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/filter_classified_bam_to_taxa.wdl
+   testParameterFiles:
+    - empty.json
+ - name: filter_sequences
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/filter_sequences.wdl
+   testParameterFiles:
+    - empty.json
+ - name: genbank
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/genbank.wdl
+   testParameterFiles:
+    - /test/input/WDL/test_inputs-genbank-local.json
+ - name: isnvs_merge_to_vcf
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/isnvs_merge_to_vcf.wdl
+   testParameterFiles:
+    - empty.json
+ - name: isnvs_one_sample
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/isnvs_one_sample.wdl
+   testParameterFiles:
+    - empty.json
+ - name: kraken2_build
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/kraken2_build.wdl
+   testParameterFiles:
+    - empty.json
+ - name: mafft_and_snp
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/mafft_and_snp.wdl
+   testParameterFiles:
+    - empty.json
+ - name: mafft_and_snp_annotated
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/mafft_and_snp_annotated.wdl
+   testParameterFiles:
+    - empty.json
+ - name: mafft_and_trim
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/mafft_and_trim.wdl
+   testParameterFiles:
+    - empty.json
+ - name: mafft
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/mafft.wdl
+   testParameterFiles:
+    - empty.json
+ - name: merge_bams
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/merge_bams.wdl
+   testParameterFiles:
+    - empty.json
+ - name: merge_metagenomics
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/merge_metagenomics.wdl
+   testParameterFiles:
+    - empty.json
+ - name: merge_tar_chunks
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/merge_tar_chunks.wdl
+   testParameterFiles:
+    - empty.json
+ - name: merge_vcfs_and_annotate
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/merge_vcfs_and_annotate.wdl
+   testParameterFiles:
+    - empty.json
+ - name: merge_vcfs
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/merge_vcfs.wdl
+   testParameterFiles:
+    - empty.json
+ - name: multiqc_only
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/multiqc_only.wdl
+   testParameterFiles:
+    - empty.json
+ - name: sarscov2_biosample_load
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_biosample_load.wdl
+   testParameterFiles:
+    - empty.json
+ - name: sarscov2_data_release
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_data_release.wdl
+   testParameterFiles:
+    - empty.json
+ - name: sarscov2_genbank
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_genbank.wdl
+   testParameterFiles:
+    - empty.json
+ - name: sarscov2_genbank_ingest
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_genbank_ingest.wdl
+   testParameterFiles:
+    - empty.json    
+ - name: sarscov2_illumina_full
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_illumina_full.wdl
+   testParameterFiles:
+    - empty.json
+ - name: sarscov2_lineages
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_lineages.wdl
+   testParameterFiles:
+    - /test/input/WDL/test_inputs-sarscov2_lineages-local.json
+ - name: sarscov2_nextclade_multi
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_nextclade_multi.wdl
+   testParameterFiles:
+    - empty.json
+ - name: sarscov2_nextstrain
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_nextstrain.wdl
+   testParameterFiles:
+    - empty.json
+ - name: sarscov2_sequencing_reports
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_sequencing_reports.wdl
+   testParameterFiles:
+    - empty.json
+ - name: sarscov2_sra_to_genbank
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_sra_to_genbank.wdl
+   testParameterFiles:
+    - empty.json
+ - name: scaffold_and_refine
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/scaffold_and_refine.wdl
+   testParameterFiles:
+    - empty.json
+ - name: subsample_by_metadata
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/subsample_by_metadata.wdl
+   testParameterFiles:
+    - empty.json
+ - name: subsample_by_metadata_with_focal
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/subsample_by_metadata_with_focal.wdl
+   testParameterFiles:
+    - empty.json
+ - name: terra_table_to_tsv
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/terra_table_to_tsv.wdl
+   testParameterFiles:
+    - empty.json
+ - name: terra_update_assemblies
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/terra_update_assemblies.wdl
+   testParameterFiles:
+    - empty.json
+ - name: trimal
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/trimal.wdl
+   testParameterFiles:
+    - empty.json

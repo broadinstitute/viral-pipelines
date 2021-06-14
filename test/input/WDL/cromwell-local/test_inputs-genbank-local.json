@@ -11,7 +11,9 @@
   "genbank.prep_genbank.assembly_method": "placeholder assembly software",
   "genbank.prep_genbank.assembly_method_version": "5.4.3.2.1",
   "genbank.comment": "this is only a test -- DO NOT SUBMIT to NCBI",
-  "genbank.authors_sbt": "test/input/genbank/authors-nga_lasv.sbt",
+  "genbank.author_list": "Odia,Ikponmwosa, Ehaine,Philomena, Oguzie,Judith,U. Siddle,Katherine,J. Mehta,Samar, Barnes,Kayla,M. Winnicki,Sarah,M. Brehio,Patrick, Shah,Rickey,R. Chak,Bridget, Yozwiak,Nathan, Amao,Adebayo, Nosamiefan,Iguosadolo, Birren,Bruce,W. Park,Daniel,J. Folarin,Onikepe, Okokhere,Peter, Sabeti,Pardis,C. Happi,Christian,T.",
+  "genbank.author_sbt_defaults_yaml": "test/input/genbank/default_sbt_values.yaml",
+  "genbank.author_sbt_j2_template": "test/input/genbank/author_template.sbt.j2",
   "genbank.assemblies_fasta": [
     "test/input/MA_MGH_00003.fasta",
     "test/input/MA_MGH_00004.fasta",

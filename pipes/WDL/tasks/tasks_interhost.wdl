@@ -2,17 +2,17 @@ version 1.0
 
 task multi_align_mafft_ref {
   input {
-    File           reference_fasta
-    Array[File]+   assemblies_fasta # fasta files, one per sample, multiple chrs per file okay
-    Int?           mafft_maxIters
-    Float?         mafft_ep
-    Float?         mafft_gapOpeningPenalty
+    File         reference_fasta
+    Array[File]+ assemblies_fasta # fasta files, one per sample, multiple chrs per file okay
+    Int?         mafft_maxIters
+    Float?       mafft_ep
+    Float?       mafft_gapOpeningPenalty
 
-    Int?           machine_mem_gb
-    String         docker="quay.io/broadinstitute/viral-phylo"
+    Int?         machine_mem_gb
+    String       docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
-  String           fasta_basename = basename(reference_fasta, '.fasta')
+  String         fasta_basename = basename(reference_fasta, '.fasta')
 
   command {
     interhost.py --version | tee VERSION
@@ -30,30 +30,30 @@ task multi_align_mafft_ref {
   }
 
   output {
-    #File         sampleNamesFile    = "align_mafft-${fasta_basename}-sample_names.txt"
-    Array[File]+  alignments_by_chr  = glob("align_mafft-${fasta_basename}*.fasta")
-    String        viralngs_version   = read_string("VERSION")
+    #File         sampleNamesFile = "align_mafft-${fasta_basename}-sample_names.txt"
+    Array[File]+ alignments_by_chr = glob("align_mafft-${fasta_basename}*.fasta")
+    String       viralngs_version  = read_string("VERSION")
   }
 
   runtime {
     docker: "${docker}"
-    memory: select_first([machine_mem_gb, 28]) + " GB"
+    memory: select_first([machine_mem_gb, 60]) + " GB"
     cpu: 8
     disks: "local-disk 200 HDD"
-    dx_instance_type: "mem2_ssd1_v2_x8"
+    dx_instance_type: "mem3_ssd1_v2_x8"
   }
 }
 
 task multi_align_mafft {
   input {
-    Array[File]+   assemblies_fasta # fasta files, one per sample, multiple chrs per file okay
-    String         out_prefix = "aligned"
-    Int?           mafft_maxIters
-    Float?         mafft_ep
-    Float?         mafft_gapOpeningPenalty
+    Array[File]+ assemblies_fasta # fasta files, one per sample, multiple chrs per file okay
+    String       out_prefix = "aligned"
+    Int?         mafft_maxIters
+    Float?       mafft_ep
+    Float?       mafft_gapOpeningPenalty
 
-    Int?           machine_mem_gb
-    String         docker="quay.io/broadinstitute/viral-phylo"
+    Int?         machine_mem_gb
+    String       docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   command {
@@ -79,18 +79,23 @@ task multi_align_mafft {
 
   runtime {
     docker: "${docker}"
-    memory: select_first([machine_mem_gb, 7]) + " GB"
+    memory: select_first([machine_mem_gb, 30]) + " GB"
     cpu: 8
     disks: "local-disk 200 HDD"
-    dx_instance_type: "mem1_ssd1_v2_x8"
+    dx_instance_type: "mem2_ssd1_v2_x8"
   }
 }
 
 task beast {
   input {
-    File     beauti_xml
+    File    beauti_xml
+    
+    String? accelerator_type
+    Int?    accelerator_count
+    String? gpu_type
+    Int?    gpu_count
 
-    String   docker="quay.io/broadinstitute/beast-beagle-cuda"
+    String  docker = "quay.io/broadinstitute/beast-beagle-cuda:1.10.5pre"
   }
 
   # TO DO: parameterize gpuType and gpuCount
@@ -120,22 +125,24 @@ task beast {
     cpu:    4
     disks: "local-disk 300 HDD"
     bootDiskSizeGb: 50
-    gpu:              true                # dxWDL
-    acceleratorType:  "nvidia-tesla-k80"  # GCP PAPIv2
-    acceleratorCount: 4                   # GCP PAPIv2
-    gpuType:          "nvidia-tesla-k80"  # Terra
-    gpuCount:         4                   # Terra
-    nvidiaDriverVersion: "396.37"
+    gpu:                 true                # dxWDL
+    dx_timeout:          "40H"               # dxWDL
+    dx_instance_type:    "mem1_ssd1_gpu2_x8" # dxWDL
+    acceleratorType:     select_first([accelerator_type, "nvidia-tesla-k80"])  # GCP PAPIv2
+    acceleratorCount:    select_first([accelerator_count, 4])  # GCP PAPIv2
+    gpuType:             select_first([gpu_type, "nvidia-tesla-k80"])  # Terra
+    gpuCount:            select_first([gpu_count, 4])  # Terra
+    nvidiaDriverVersion: "410.79"
   }
 }
 
 task index_ref {
   input {
-    File     referenceGenome
-    File?    novocraft_license
+    File   referenceGenome
+    File?  novocraft_license
 
-    Int?     machine_mem_gb
-    String   docker="quay.io/broadinstitute/viral-core"
+    Int?   machine_mem_gb
+    String docker = "quay.io/broadinstitute/viral-core:2.1.31"
   }
 
   command {
@@ -164,12 +171,12 @@ task index_ref {
 
 task trimal_clean_msa {
   input {
-    File     in_aligned_fasta
+    File   in_aligned_fasta
 
-    Int?     machine_mem_gb
-    String   docker="quay.io/biocontainers/trimal:1.4.1--h6bb024c_3"
+    Int?   machine_mem_gb
+    String docker = "quay.io/biocontainers/trimal:1.4.1--h6bb024c_3"
 
-    String   input_basename = basename(basename(in_aligned_fasta, ".fasta"), ".fa")
+    String input_basename = basename(basename(in_aligned_fasta, ".fasta"), ".fa")
   }
 
   command {
@@ -177,7 +184,7 @@ task trimal_clean_msa {
   }
 
   output {
-    File   trimal_cleaned_fasta = "${input_basename}_trimal_cleaned.fasta"
+    File trimal_cleaned_fasta = "${input_basename}_trimal_cleaned.fasta"
   }
   runtime {
     docker: "${docker}"
@@ -192,10 +199,10 @@ task merge_vcfs_bcftools {
   input {
     Array[File] in_vcfs_gz
 
-    Int?     machine_mem_gb
-    String   docker="quay.io/biocontainers/bcftools:1.10.2--hd2cd319_0"
+    Int?   machine_mem_gb
+    String docker = "quay.io/biocontainers/bcftools:1.10.2--hd2cd319_0"
 
-    String   output_prefix = "merged"
+    String output_prefix = "merged"
   }
 
   parameter_meta {
@@ -206,10 +213,15 @@ task merge_vcfs_bcftools {
 
   command {
 
+    # copy files to CWD (required for tabix indexing)
+    INFILES=~{write_lines(in_vcfs_gz)}
+    ln -s $(cat $INFILES) .
+    for FN in $(cat $INFILES); do basename $FN; done > vcf_filenames.txt
+
     # tabix index input vcfs (must be gzipped)
-    parallel -I ,, \
-      "tabix -p vcf ,," \
-      ::: "${sep=' ' in_vcfs_gz}"
+    for FN in $(cat vcf_filenames.txt); do
+      tabix -p vcf $FN
+    done
 
     # see: https://samtools.github.io/bcftools/bcftools.html#merge
     # --merge snps allows snps to be merged to multi-allelic (multi-ALT) records, all other records are listed separately
@@ -220,7 +232,7 @@ task merge_vcfs_bcftools {
     --output ${output_prefix}.vcf.gz \
     --output-type z \
     --threads "$(nproc --all)" \
-    ${sep=' ' in_vcfs_gz}
+    --file-list vcf_filenames.txt
 
     # tabix index the vcf to create .tbi file
     tabix -p vcf ${output_prefix}.vcf.gz
@@ -244,10 +256,10 @@ task merge_vcfs_gatk {
     Array[File] in_vcfs_gz
     File        ref_fasta
 
-    Int?     machine_mem_gb
-    String   docker="quay.io/broadinstitute/viral-phylo"
+    Int?        machine_mem_gb
+    String      docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
 
-    String   output_prefix = "merged"
+    String      output_prefix = "merged"
   }
 
   parameter_meta {

@@ -1,26 +1,19 @@
-dist: bionic
+dist: focal
 os: linux
 
 git:
   depth: 150
 
+services:
+  - docker
+
 env:
   global:
-  - CACHE_DIR="$HOME/misc_cache"
-  - MINICONDA_DIR="$HOME/miniconda"
-  - CONDA_DEFAULT_ENV="$HOME/misc_cache/default_env"
-  - PYTHONIOENCODING=UTF8
-  - BOTO_CONFIG=/dev/null # bogus value to override config on travis
-  - DOCKER_REGISTRY="quay.io"
-  - DOCKER_REPO_PROD="quay.io/broadinstitute/viral-pipelines"
-  - DOCKER_REPO_DEV="quay.io/broadinstitute/viral-pipelines-dev"
-  - MODULE_VERSIONS="requirements-modules.txt"
-
-cache:
-  directories:
-    - $HOME/misc_cache
-    - $HOME/miniconda
-  timeout: 1000
+    - PYTHONIOENCODING=UTF8
+    - DOCKER_REGISTRY="quay.io"
+    - DOCKER_REPO_PROD="quay.io/broadinstitute/viral-pipelines"
+    - DOCKER_REPO_DEV="quay.io/broadinstitute/viral-pipelines-dev"
+    - MODULE_VERSIONS="requirements-modules.txt"
 
 stages:
   - validate
@@ -40,7 +33,8 @@ jobs:
       install:
         - pip3 -q install miniwdl
       script:
-        - travis/version-wdl-runtimes.sh
+        - set -e
+        - travis/check-wdl-runtimes.sh
         - miniwdl check pipes/WDL/workflows/*.wdl
 
     - language: java
@@ -51,7 +45,8 @@ jobs:
       install:
         - travis/install-wdl.sh
       script:
-        - travis/version-wdl-runtimes.sh
+        - set -e
+        - travis/check-wdl-runtimes.sh
         - travis/validate-wdl-womtool.sh
 
     - language: python
@@ -71,7 +66,7 @@ jobs:
       install:
         - travis/install-wdl.sh
       script:
-        - travis/version-wdl-runtimes.sh
+        - set -e
         - travis/relative-wdl-paths.sh
         - travis/tests-cromwell.sh
 
@@ -86,78 +81,25 @@ jobs:
       install:
         - pip3 -q install miniwdl
       script:
-        - travis/version-wdl-runtimes.sh
         - travis/tests-miniwdl.sh
 
     - language: java
       jdk: openjdk11
       stage: build
+      if: branch = dnanexus
       env:
         - TRAVIS_JOB=deploy_dnanexus
         # DX_API_TOKEN (for DNAnexus builds) -- token #3, expires 12/31/2024
         - secure: "zAAxwXWwSDcwnLYHawc0+gbshV3UURAZWSyk8g99kXgFCRcgytacvUpRxd44mC+rlgL2RtS8+RPT11hO2zJ+4y0J0FBaC8d9R7aTzEAGKLHk11cfhMg63QMVBt/8Gz9HToeE0BJ8/JbNZr+IZ01dD8GNDRA4FcFj+8maTpp4nrQ5/leDdmUwzkV1XfMiE+0/wR3KttKvqzHy6+6gRTAKbTeSxPICvWpHKlIYkIxFcEoH+3SNxgwWU9jZqG29MRt3/ikzZMBW/T2O9g+tY/5vKRqxm9aqWChFgjrpWRZDwvZqvwdxizokoVfReLZES3Ls//YSKzfFJG2GZ6a2vhAbfjcUkbRnyPOcZPwK+sE91Pq7FgFwL4N8BV63j6GQ5VrHZxe0b6spw8gvlkEjjhBgN1178lcxnp75QANNJ8AprZBqi3MzTQOTlgRZRAsDWTLgpXODrcDib76pg3af+JK5PQb0ncRVps9Z09u2EJ8fk9MGCDB6iw7XFedPPCxlx6MyIp2ywF4v9mkQXUBafYo67KRyPaojUUDGFkJsylYxzGHvvp0PrU93cp8zvDg4NqUkrbgEdGVvPF+qmXxT9MpfLc/yZ4vfhtKfZuQUGmNw+5WfTa3RYbJDEowN6noWCdXBZ67SrusKrok3TxIJV25vxXrFVhD/u/3ermysu7xA9ss="
         - DX_PROJECT=project-F8PQ6380xf5bK0Qk0YPjB17P
+      before_install:
+        - sudo apt-get -y install python2-minimal
       install:
         - travis/install-wdl.sh
       script:
         - set -e
-        - travis/version-wdl-runtimes.sh
         - travis/relative-wdl-paths.sh
         - travis/build-dx.sh
         - travis/tests-dx.sh
-
-    - language: python
-      stage: build
-      python: "3.8"
-      env:
-        - TRAVIS_JOB=deploy_github_staging
-      install:
-        - pip3 -q install miniwdl
-      script:
-        - travis/github-viral-ngs-staging.sh
-      after_failure:
-        - sleep 10
-
-    - language: python
-      stage: build
-      python: "3.8"
-      env:
-        - TRAVIS_JOB=deploy_gcs
-      script: skip
-      before_deploy:
-        - set -e -o pipefail
-        - openssl aes-256-cbc -K $encrypted_6def3e87f286_key -iv $encrypted_6def3e87f286_iv -in travis/viral-ngs-wdl.json.enc -out travis/viral-ngs-wdl.json -d
-        - export DEST_DIR=`travis/list-docker-tags.sh | tail -1 | sed 's/:/\//'`
-        - pip3 -q install miniwdl
-        - travis/version-wdl-runtimes.sh
-        - travis/flatten-wdls.sh
-      deploy:
-          provider:   gcs
-          edge:       true
-          key_file:   travis/viral-ngs-wdl.json
-          bucket:     viral-ngs-wdl
-          local_dir:  pipes/WDL/flattened
-          upload_dir: "$DEST_DIR"
-          acl:        public-read
-          on:
-              all_branches: true
-
-    #- language: python
-    #  stage: build
-    #  python: "3.8"
-    #  env:
-    #    - TRAVIS_JOB=deploy_github
-    #  before_deploy:
-    #    - set -e
-    #    - pip3 -q install miniwdl
-    #    - travis/version-wdl-runtimes.sh
-    #    - travis/flatten-wdls.sh
-    #  deploy:
-    #      provider:  releases
-    #      edge:      true
-    #      token:     "$GITHUB_OAUTH_TOKEN"
-    #      file: pipes/WDL/flattened/*.wdl
-    #      on:
-    #        tags: true
 
 

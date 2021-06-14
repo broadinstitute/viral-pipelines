@@ -4,18 +4,17 @@ import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_assembly.wdl" as assembly
 
 workflow align_and_plot {
-    input {
-        String? aligner_options = "-r Random -l 30 -g 40 -x 20 -t 502"
+    meta {
+        description: "Align reads to reference and produce coverage plots and statistics."
+        author: "Broad Viral Genomics"
+        email:  "viral-ngs@broadinstitute.org"
     }
 
-    call assembly.align_reads as align {
-        input:
-            aligner_options = aligner_options
-    }
+    call assembly.align_reads as align
     call reports.plot_coverage {
         input:
             aligned_reads_bam = align.aligned_only_reads_bam,
-            sample_name = basename(basename(basename(align.aligned_only_reads_bam, ".bam"), ".mapped"), ".clean")
+            sample_name       = basename(basename(align.aligned_only_reads_bam, ".bam"), ".mapped")
     }
 
     output {
@@ -29,7 +28,7 @@ workflow align_and_plot {
         Int    reads_provided                = align.reads_provided
         Int    reads_aligned                 = align.reads_aligned
         Int    read_pairs_aligned            = align.read_pairs_aligned
-        Int    bases_aligned                 = align.bases_aligned
+        Float  bases_aligned                 = align.bases_aligned
         Float  mean_coverage                 = align.mean_coverage
         String align_viral_core_version      = align.viralngs_version
         File   coverage_plot                 = plot_coverage.coverage_plot

@@ -11,14 +11,14 @@ workflow isnvs_merge_to_vcf {
 
     call interhost.multi_align_mafft_ref as mafft {
         input:
-            reference_fasta = reference_fasta,
+            reference_fasta  = reference_fasta,
             assemblies_fasta = assemblies_fasta
     }
 
     call tasks_intrahost.isnvs_vcf {
         input:
             perSegmentMultiAlignments = mafft.alignments_by_chr,
-            reference_fasta = reference_fasta
+            reference_fasta           = reference_fasta
     }
 
     output {

@@ -8,9 +8,10 @@ task isnvs_per_sample {
     Int?    threads
     Int?    minReadsPerStrand
     Int?    maxBias
+    Boolean removeDoublyMappedReads = true
 
     Int?    machine_mem_gb
-    String  docker="quay.io/broadinstitute/viral-phylo"
+    String  docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
 
     String  sample_name = basename(basename(basename(mapped_bam, ".bam"), ".all"), ".mapped")
   }
@@ -21,10 +22,10 @@ task isnvs_per_sample {
         ${mapped_bam} \
         ${assembly_fasta} \
         vphaser2.${sample_name}.txt.gz \
-        ${'--vphaserNumThreads' + threads} \
-        --removeDoublyMappedReads \
-        ${'--minReadsEach' + minReadsPerStrand} \
-        ${'--maxBias' + maxBias}
+        ${'--vphaserNumThreads=' + threads} \
+        ${true="--removeDoublyMappedReads" false="" removeDoublyMappedReads} \
+        ${'--minReadsEach=' + minReadsPerStrand} \
+        ${'--maxBias=' + maxBias}
   }
 
   output {
@@ -48,10 +49,10 @@ task isnvs_vcf {
     Array[String]? snpEffRef
     Array[String]? sampleNames
     String?        emailAddress
-    Boolean        naiveFilter=false
+    Boolean        naiveFilter = false
 
     Int?           machine_mem_gb
-    String         docker="quay.io/broadinstitute/viral-phylo"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
 
   parameter_meta {
@@ -101,12 +102,12 @@ task isnvs_vcf {
   }
 
   output {
-    File        isnvs_vcf           = "isnvs.vcf.gz"
-    File        isnvs_vcf_idx       = "isnvs.vcf.gz.tbi"
-    File        isnvs_annot_vcf     = "isnvs.annot.vcf.gz"
-    File        isnvs_annot_vcf_idx = "isnvs.annot.vcf.gz.tbi"
-    File        isnvs_annot_txt     = "isnvs.annot.txt.gz"
-    String      viralngs_version    = read_string("VERSION")
+    File   isnvs_vcf           = "isnvs.vcf.gz"
+    File   isnvs_vcf_idx       = "isnvs.vcf.gz.tbi"
+    File   isnvs_annot_vcf     = "isnvs.annot.vcf.gz"
+    File   isnvs_annot_vcf_idx = "isnvs.annot.vcf.gz.tbi"
+    File   isnvs_annot_txt     = "isnvs.annot.txt.gz"
+    String viralngs_version    = read_string("VERSION")
   }
   runtime {
     docker: "${docker}"
@@ -124,7 +125,7 @@ task annotate_vcf_snpeff {
     String?        emailAddress
 
     Int?           machine_mem_gb
-    String         docker="quay.io/broadinstitute/viral-phylo"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
 
     String         output_basename = basename(basename(in_vcf, ".gz"), ".vcf")
   }
@@ -149,37 +150,59 @@ task annotate_vcf_snpeff {
     fi
     echo "snpRefAccessions: $snpRefAccessions"
 
+    vcf_to_use=""
     if (file "${in_vcf}" | grep -q "gzip" ) ; then
       echo "${in_vcf} is already compressed"
+      vcf_to_use="${in_vcf}"
     else
       echo "${in_vcf} is not compressed; gzipping..."
       bgzip "${in_vcf}"
+      vcf_to_use="${in_vcf}.gz"
     fi
+
+    # renames the seq id using the first sequence in the alignment
+    ref_name=$(head -n1 "~{ref_fasta}" | sed -E 's/^>([^[:space:]]+).*$/\1/g')
+    ref_name_no_version=$(head -n1 "~{ref_fasta}" | sed -E 's/^>([^[:space:]\.]+).*$/\1/g')
+    # copy the input or just created gzipped vcf file
+    cp "$vcf_to_use" "temp.vcf.gz"
+    # ensure uncompressed
+    bgzip -d "temp.vcf.gz"
+    # rename chr field (first col) in vcf
+    cat "temp.vcf" | sed "s/^1/$ref_name_no_version/" > "temp2.vcf"
+    
+    # output the vcf, removing the reference sequence if present as a sample name
+    bgzip "temp2.vcf"
+    tabix -p vcf "temp2.vcf.gz"
+    bcftools index "temp2.vcf.gz"
+    bcftools view -s "^$ref_name" "temp2.vcf.gz" > "temp3.vcf"
+    rm "temp2.vcf.gz"
+    vcf_to_use="temp3.vcf"
+
+    # compress vcf
+    bgzip -c "$vcf_to_use" > "$vcf_to_use.gz"
+    vcf_to_use="$vcf_to_use.gz"
+
+    # index vcf
     echo "Creating vcf index"
-    tabix -p vcf "${in_vcf}"
-        
+    bcftools index "$vcf_to_use"
+    tabix -p vcf "$vcf_to_use"
+    
     interhost.py snpEff \
-        "${in_vcf}" \
+        "$vcf_to_use" \
         $snpRefAccessions \
         "${output_basename}.annot.vcf.gz" \
         ${'--emailAddress=' + emailAddress}
-
-    intrahost.py iSNV_table \
-        "${output_basename}.annot.vcf.gz" \
-        "${output_basename}.annot.txt.gz"
-
-    tabix -p vcf "${output_basename}.annot.vcf.gz"
   }
 
   output {
-    File        annot_vcf_gz      = "${output_basename}.annot.vcf.gz"
-    File        annot_vcf_gz_tbi  = "${output_basename}.annot.vcf.gz.tbi"
-    File        annot_txt_gz      = "${output_basename}.annot.txt.gz"
-    String      viralngs_version  = read_string("VERSION")
+    File   annot_vcf_gz     = "~{output_basename}.annot.vcf.gz"
+    File   annot_vcf_gz_tbi = "~{output_basename}.annot.vcf.gz.tbi"
+    String viralngs_version = read_string("VERSION")
   }
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: select_first([machine_mem_gb, 4]) + " GB"
+    disks:  "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x4"
   }
 }

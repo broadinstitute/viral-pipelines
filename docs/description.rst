@@ -37,8 +37,7 @@ Viral genome assembly
 ~~~~~~~~~~~~~~~~~~~~~
 
 The filtered and trimmed reads are subsampled to at most 100,000 pairs.
-*de novo* assemby is performed using Trinity_. SPAdes_ is also offered as
-an alternative *de novo* assembler.
+*de novo* assemby is performed using SPAdes_.
 Reference-assisted assembly improvements follow (contig scaffolding, orienting, etc.)
 with MUMMER_ and MUSCLE_ or MAFFT_. Gap2Seq_ is used to seal gaps between scaffolded *de novo* contigs with sequencing reads.
 
@@ -51,7 +50,6 @@ reads were changed to N.
 
 This align-call-refine cycle is iterated twice, to minimize reference bias in the assembly.
  
-.. _Trinity: http://trinityrnaseq.github.io/
 .. _SPAdes: http://bioinf.spbau.ru/en/spades
 .. _MUMMER: https://mummer4.github.io/
 .. _MUSCLE: https://www.drive5.com/muscle/

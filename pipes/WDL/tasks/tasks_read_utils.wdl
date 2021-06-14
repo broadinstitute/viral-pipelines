@@ -1,17 +1,143 @@
 version 1.0
 
+task max {
+  input {
+    Array[Int] list
+    Int        default_empty = 0
+  }
+  command <<<
+    python3 << CODE
+    inlist = '~{sep="*" list}'.split('*')
+    print(str(max(map(int, [x for x in inlist if x]), default = ~{default_empty})))
+    CODE
+  >>>
+  output {
+    Int out = read_int(stdout())
+  }
+  runtime {
+    docker: "python:slim"
+    memory: "1 GB"
+    cpu: 1
+    disks: "local-disk 10 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
+task group_bams_by_sample {
+  input {
+    Array[File] bam_filepaths
+  }
+  parameter_meta {
+    bam_filepaths: {
+      description: "all bam files",
+      localization_optional: true,
+      stream: true,
+      patterns: ["*.bam"]
+    }
+  }
+  command <<<
+    python3 << CODE
+    import os.path
+
+    # WDL arrays to python arrays
+    bam_uris = '~{sep="*" bam_filepaths}'.split('*')
+
+    # lookup table files to dicts
+    sample_to_bams = {}
+    for bam in bam_uris:
+      # filename must be <samplename>.l<xxx>.bam
+      assert bam.endswith('.bam'), "filename does not end in .bam: {}".format(bam)
+      bam_base = os.path.basename(bam)
+      i = bam_base.index('.l')
+      assert i>0, "filename does not contain a .l -- {}".format(bam)
+      sample = bam_base[:i]
+      sample_to_bams.setdefault(sample, [])
+      sample_to_bams[sample].append(bam)
+
+    # write outputs
+    with open('grouped_bams', 'wt') as out_groups:
+      with open('sample_names', 'wt') as out_samples:
+        for sample in sorted(sample_to_bams.keys()):
+          out_samples.write(sample+'\n')
+          out_groups.write('\t'.join(sample_to_bams[sample])+'\n')
+    CODE
+  >>>
+  output {
+    Array[Array[File]+] grouped_bam_filepaths = read_tsv('grouped_bams')
+    Array[String]       sample_names          = read_lines('sample_names')
+  }
+  runtime {
+    docker: "python:slim"
+    memory: "1 GB"
+    cpu: 1
+    disks: "local-disk 100 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
+task get_sample_meta {
+  input {
+    Array[File] samplesheets_extended
+
+    String      docker = "quay.io/broadinstitute/viral-core:2.1.31"
+  }
+  command <<<
+    python3 << CODE
+    import os.path
+    import csv
+    import json
+    import util.file
+
+    # WDL arrays to python arrays
+    library_metadata = '~{sep="*" samplesheets_extended}'.split('*')
+
+    # lookup table files to dicts
+    meta = {}
+    meta_cols = ('sample','amplicon_set','control')
+    for col in meta_cols:
+      meta[col] = {}
+    for libfile in library_metadata:
+      with open(libfile, 'rt') as inf:
+        for row in csv.DictReader(inf, delimiter='\t'):
+          sanitized = util.file.string_to_file_name(row['sample'])
+          for col in meta_cols:
+            meta[col].setdefault(sanitized, '')
+            if row.get(col):
+              meta[col][sanitized] = row[col]
+
+    # write outputs
+    for col in meta_cols:
+      with open(col, 'wt') as outf:
+        json.dump(meta[col], outf, indent=2)
+    CODE
+  >>>
+  output {
+    Map[String,String] original_names = read_json('sample')
+    Map[String,String] amplicon_set   = read_json('amplicon_set')
+    Map[String,String] control        = read_json('control')
+  }
+  runtime {
+    docker: docker
+    memory: "1 GB"
+    cpu: 1
+    disks: "local-disk 50 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
+
 task merge_and_reheader_bams {
     meta {
       description: "Merge and/or reheader bam files using a mapping table. This task can modify read group tags in a BAM header field for single BAM files or as part of a BAM merge operation. The output is a single BAM file (given one or more input BAMs) and a three-column tab delimited text table that defines: the field, the old value, and the new value (e.g. LB, old_lib_name, new_lib_name or SM, old_sample_name, new_sample_name)"
     }
 
     input {
-      Array[File]+    in_bams
-      String?         sample_name
-      File?           reheader_table
-      String          out_basename
+      Array[File]+ in_bams
+      String?      sample_name
+      File?        reheader_table
+      String       out_basename
 
-      String          docker="quay.io/broadinstitute/viral-core"
+      String       docker = "quay.io/broadinstitute/viral-core:2.1.31"
     }
 
     command {
@@ -67,11 +193,11 @@ task rmdup_ubam {
   }
 
   input {
-    File     reads_unmapped_bam
-    String   method="mvicuna"
+    File    reads_unmapped_bam
+    String  method = "mvicuna"
 
-    Int?     machine_mem_gb
-    String?  docker="quay.io/broadinstitute/viral-core"
+    Int?    machine_mem_gb
+    String? docker = "quay.io/broadinstitute/viral-core:2.1.31"
   }
 
   parameter_meta {
@@ -119,13 +245,13 @@ task downsample_bams {
   }
 
   input {
-    Array[File]  reads_bam
+    Array[File]+ reads_bam
     Int?         readCount
-    Boolean?     deduplicateBefore=false
-    Boolean?     deduplicateAfter=false
+    Boolean?     deduplicateBefore = false
+    Boolean?     deduplicateAfter = false
 
     Int?         machine_mem_gb
-    String       docker="quay.io/broadinstitute/viral-core"
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.31"
   }
 
   command {
@@ -184,7 +310,7 @@ task FastqToUBAM {
     String? platform_name
     String? sequencing_center
 
-    String  docker="quay.io/broadinstitute/viral-core"
+    String  docker = "quay.io/broadinstitute/viral-core:2.1.31"
   }
   parameter_meta {
     fastq_1: { description: "Unaligned read1 file in fastq format", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }

@@ -15,9 +15,7 @@ Workflows are written in [WDL](https://github.com/openwdl/wdl) format. This is a
 
 ## Obtaining the latest WDL workflows
 
-Workflows from this repository are continuously deployed to [Dockstore](https://dev.dockstore.net/organizations/BroadInstitute/collections/pgs), a GA4GH Tool Repository Service. They can then be easily imported to any bioinformatic compute platform that utilizes the TRS API and understands WDL (this includes Terra, DNAnexus, DNAstack, etc).
-
-Flattened workflows are also continuously deployed to a staging github repo [viral-ngs-staging](https://github.com/broadinstitute/viral-ngs-staging/) and a GCS bucket: [gs://viral-ngs-wdl](https://console.cloud.google.com/storage/browser/viral-ngs-wdl?forceOnBucketsSortingFiltering=false&organizationId=548622027621&project=gcid-viral-seq) and can be downloaded for local use.
+Workflows from this repository are continuously deployed to [Dockstore](https://dockstore.org/organizations/BroadInstitute/collections/pgs), a GA4GH Tool Registry Service. They can then be easily imported to any bioinformatic compute platform that utilizes the TRS API and understands WDL (this includes Terra, DNAnexus, DNAstack, etc).
 
 Workflows are also available in the [Terra featured workspace](https://app.terra.bio/#workspaces/pathogen-genomic-surveillance/COVID-19).
 
@@ -26,12 +24,14 @@ Workflows are continuously deployed to a [DNAnexus CI project](https://platform.
 
 ## Basic execution
 
-The easiest way to get started is on a single, Docker-capable machine (your laptop, shared workstation, or virtual machine) using [miniWDL](https://github.com/chanzuckerberg/miniwdl). MiniWDL can be installed either via `pip` or `conda` (via conda-forge). After confirming that it works (`miniwdl run_self_test`, you can use [miniwdl run](https://github.com/chanzuckerberg/miniwdl#miniwdl-run) to invoke WDL workflows from this repository.
+<img src="https://raw.githubusercontent.com/openwdl/learn-wdl/master/images/miniwdl-dev.png" width=600>
+
+The easiest way to get started is on a single, Python & Docker-capable machine (your laptop, shared workstation, or virtual machine) using [miniWDL](https://github.com/chanzuckerberg/miniwdl) as shown above. MiniWDL can be installed either via `pip` or `conda` (via conda-forge). After confirming that it works (`miniwdl run_self_test`, you can use [miniwdl run](https://miniwdl.readthedocs.io/en/latest/getting_started.html) to invoke WDL workflows from this repository.
 
 For example, to list the inputs for the assemble_refbased workflow:
 
 ```
-miniwdl run https://raw.githubusercontent.com/broadinstitute/viral-ngs-staging/master/pipes/WDL/workflows/assemble_refbased.wdl
+miniwdl run https://raw.githubusercontent.com/broadinstitute/viral-pipelines/v2.1.8.0/pipes/WDL/workflows/assemble_refbased.wdl
 ```
 
 This will emit:
@@ -57,7 +57,7 @@ miniwdl run \
   reads_unmapped_bams=PatientA_library2.bam \
   reference_fasta=/refs/NC_045512.2.fasta \
   trim_coords_bed=/refs/NC_045512.2-artic_primers-3.bed \
-  sample_name=PatientA \
+  sample_name=PatientA
 ```
 
 In the above example, reads from two sequencing runs are aligned and merged together before consensus calling. The optional bed file provided turns on primer trimming at the given coordinates.
@@ -65,4 +65,4 @@ In the above example, reads from two sequencing runs are aligned and merged toge
 
 ## Available workflows
 
-The workflows provided here are more fully documented at our [ReadTheDocs](https://viral-pipelines.readthedocs.io/) page.
+The workflows provided here are more fully documented at our [ReadTheDocs](https://viral-pipelines.readthedocs.io/en/latest/workflows.html) page.

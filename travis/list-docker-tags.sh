@@ -6,7 +6,7 @@
 #
 # Important note: the last tag is considered the definitive, uniquely
 # identifiable tag that should be used for all build steps that depend on
-# the docker image (e.g. version-wdl-runtimes.sh). All others are aliases.
+# the docker image (e.g. check-wdl-runtimes.sh). All others are aliases.
 
 set -e -o pipefail
 
