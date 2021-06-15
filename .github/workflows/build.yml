@@ -31,9 +31,6 @@ jobs:
   validate_wdl_miniwdl:
     runs-on: ubuntu-20.04
     steps:
-      - name: write build context (for debugging)
-        run: |
-          echo "${{ toJson(github) }}"
       - name: Programmatic environment setup
         run: |
           # $GITHUB_ENV is available for subsequent steps
