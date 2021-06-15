@@ -11,6 +11,7 @@ task nextclade_one_sample {
         File? qc_config_json
         File? gene_annotations_json
         File? pcr_primers_csv
+        String docker = "neherlab/nextclade:0.14.4"
     }
     String basename = basename(genome_fasta, ".fasta")
     command {
@@ -40,7 +41,7 @@ task nextclade_one_sample {
         grep ^aaDeletions transposed.tsv | cut -f 2 | grep -v aaDeletions > NEXTCLADE_AADELS
     }
     runtime {
-        docker: "nextstrain/nextclade:0.13.0"
+        docker: docker
         memory: "3 GB"
         cpu:    2
         disks: "local-disk 50 HDD"
@@ -86,7 +87,7 @@ task nextclade_many_samples {
             --output-tree "~{basename}".nextclade.auspice.json
     }
     runtime {
-        docker: "nextstrain/nextclade:0.13.0"
+        docker: "nextstrain/nextclade:0.14.4"
         memory: "14 GB"
         cpu:    16
         disks: "local-disk 100 HDD"
@@ -105,18 +106,22 @@ task pangolin_one_sample {
         description: "Pangolin classification of one SARS-CoV-2 sample."
     }
     input {
-        File   genome_fasta
-        Int?   min_length
-        Float? max_ambig
-        String docker = "staphb/pangolin:2.4-pangolearn-2021-04-28"
+        File    genome_fasta
+        Int?    min_length
+        Float?  max_ambig
+        Boolean inference_usher=false
+        String  docker = "staphb/pangolin:3.0.5-pangolearn-2021-06-05"
     }
     String basename = basename(genome_fasta, ".fasta")
-    command {
-        set -e
-        pangolin -v > VERSION_PANGOLIN
-        pangolin -pv > VERSION_PANGOLEARN
+    command <<<
+        date | tee DATE
+        conda list -n pangolin | grep "usher" | awk -F ' +' '{print$1, $2}' | tee VERSION_PANGO_USHER
+        set -ex
+        pangolin -v | tee VERSION_PANGOLIN
+        pangolin -pv | tee VERSION_PANGOLEARN
 
         pangolin "~{genome_fasta}" \
+            ~{true='--usher' false='' inference_usher} \
             --outfile "~{basename}.pangolin_report.csv" \
             ~{"--min-length " + min_length} \
             ~{"--max-ambig " + max_ambig} \
@@ -124,16 +129,24 @@ task pangolin_one_sample {
             --verbose
 
         cp sequences.aln.fasta "~{basename}.pangolin_msa.fasta"
-        cp "~{basename}.pangolin_report.csv" input.csv
         python3 <<CODE
-        # transpose table and convert csv to tsv
-        with open('input.csv', 'rt') as inf:
-            with open('transposed.tsv', 'wt') as outf:
-                for c in zip(*(l.rstrip().split(',') for l in inf)):
-                    outf.write('\t'.join(c)+'\n')
+        import csv
+        #grab output values by column header
+        with open("~{basename}.pangolin_report.csv", 'rt') as csv_file:
+            for line in csv.DictReader(csv_file):
+                with open("VERSION", 'wt') as outf:
+                    pangolin_version=line["pangolin_version"]
+                    version=line["version"]
+                    outf.write(f"pangolin {pangolin_version}; {version}")
+                with open("PANGO_LINEAGE", 'wt') as outf:
+                    outf.write(line["lineage"])
+                with open("PANGOLIN_CONFLICTS", 'wt') as outf:
+                    outf.write(line["conflict"])
+                with open("PANGOLIN_NOTES", 'wt') as outf:
+                    outf.write(line["note"])
+                break
         CODE
-        grep ^lineage transposed.tsv | cut -f 2 | grep -v lineage > PANGOLIN_CLADE
-    }
+    >>>
     runtime {
         docker: docker
         memory: "3 GB"
@@ -142,12 +155,17 @@ task pangolin_one_sample {
         dx_instance_type: "mem1_ssd1_v2_x2"
     }
     output {
-        String pangolin_version   = read_string("VERSION_PANGOLIN")
-        String pangolearn_version = read_string("VERSION_PANGOLEARN")
-        File   pangolin_csv       = "~{basename}.pangolin_report.csv"
-        String pango_lineage      = read_string("PANGOLIN_CLADE")
-        File   msa_fasta          = "~{basename}.pangolin_msa.fasta"
-        String pangolin_docker    = docker
+        String     date                   = read_string("DATE")
+        String     version                = read_string("VERSION")
+        String     pango_lineage          = read_string("PANGO_LINEAGE")
+        String     pangolin_conflicts     = read_string("PANGOLIN_CONFLICTS")
+        String     pangolin_notes         = read_string("PANGOLIN_NOTES")
+        String     pangolin_usher_version = read_string("VERSION_PANGO_USHER")
+        String     pangolin_version       = read_string("VERSION_PANGOLIN")
+        String     pangolearn_version     = read_string("VERSION_PANGOLEARN")
+        String     pangolin_docker        = docker
+        File       pango_lineage_report   = "${basename}.pangolin_report.csv"
+        File       msa_fasta              = "~{basename}.pangolin_msa.fasta"
     }
 }
 
@@ -168,7 +186,7 @@ task sequencing_report {
         String? voc_list
         String? voi_list
 
-        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.17"
+        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.18"
     }
     command {
         set -e
