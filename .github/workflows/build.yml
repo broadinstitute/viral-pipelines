@@ -80,30 +80,30 @@ jobs:
           github_actions_ci/check-wdl-runtimes.sh
           github_actions_ci/validate-wdl-womtool.sh
 
-  # ## note: this test_docs job does not actually produce the output on readthedocs
-  # ## readthedocs does its own build trigger. this travis job exists simply to alert us
-  # ## of build failures of the docs because otherwise we would never know.
-  # test_docs:
-  #   runs-on: ubuntu-20.04
-  #   steps:
-  #     - name: Programmatic environment setup
-  #       run: |
-  #         # $GITHUB_ENV is available for subsequent steps
-  #         TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
-  #     - name: install python
-  #       uses: actions/setup-python@v2
-  #       with: 
-  #         python-version: '3.8'
-  #     - name: checkout repository
-  #       uses: actions/checkout@v2
-  #     - name: install docs dependencies
-  #       shell: bash
-  #       run: |
-  #         github_actions_ci/install-pip-docs.sh
-  #     - name: test docs build
-  #       shell: bash
-  #       run: |
-  #         github_actions_ci/build-docs.sh
+  ## note: this test_docs job does not actually produce the output on readthedocs
+  ## readthedocs does its own build trigger. this travis job exists simply to alert us
+  ## of build failures of the docs because otherwise we would never know.
+  test_docs:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Programmatic environment setup
+        run: |
+          # $GITHUB_ENV is available for subsequent steps
+          TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+      - name: install python
+        uses: actions/setup-python@v2
+        with: 
+          python-version: '3.8'
+      - name: checkout repository
+        uses: actions/checkout@v2
+      - name: install docs dependencies
+        shell: bash
+        run: |
+          github_actions_ci/install-pip-docs.sh
+      - name: test docs build
+        shell: bash
+        run: |
+          github_actions_ci/build-docs.sh
 
   # test_cromwell:
   #   needs: validate_wdl_womtool
