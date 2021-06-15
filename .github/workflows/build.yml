@@ -13,19 +13,20 @@ on:
   schedule:
     - cron: '0 0 * * 0' # weekly
 
+env:
+  PYTHONIOENCODING: UTF8
+  DOCKER_REGISTRY: "quay.io"
+  DOCKER_REPO_PROD: "quay.io/broadinstitute/viral-pipelines"
+  DOCKER_REPO_DEV: "quay.io/broadinstitute/viral-pipelines-dev"
+  MODULE_VERSIONS: "requirements-modules.txt"
+
+  TRAVIS_COMMIT: ${{ github.event.sha }}
+  TRAVIS_BRANCH: ${{ github.event.ref }}
+  TRAVIS_PULL_REQUEST_BRANCH: ${{ github.head_ref }}
+  TRAVIS_PULL_REQUEST_SHA : ${{ github.event.pull_request.head.sha }}
+
 jobs:
   # environment to use for all jobs below
-  env:
-    PYTHONIOENCODING: UTF8
-    DOCKER_REGISTRY: "quay.io"
-    DOCKER_REPO_PROD: "quay.io/broadinstitute/viral-pipelines"
-    DOCKER_REPO_DEV: "quay.io/broadinstitute/viral-pipelines-dev"
-    MODULE_VERSIONS: "requirements-modules.txt"
-
-    TRAVIS_COMMIT: ${{ github.event.sha }}
-    TRAVIS_BRANCH: ${{ github.event.ref }}
-    TRAVIS_PULL_REQUEST_BRANCH: ${{ github.head_ref }}
-    TRAVIS_PULL_REQUEST_SHA : ${{ github.event.pull_request.head.sha }}
 
   validate_wdl_miniwdl:
     runs-on: ubuntu-20.04
