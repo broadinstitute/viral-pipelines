@@ -131,31 +131,31 @@ jobs:
           github_actions_ci/relative-wdl-paths.sh
           github_actions_ci/tests-cromwell.sh
 
-  # test_miniwdl:
-  #   needs: validate_wdl_miniwdl
-  #   runs-on: ubuntu-20.04
-  #   steps:
-  #     - name: Programmatic environment setup
-  #       run: |
-  #         # $GITHUB_ENV is available for subsequent steps
-  #         TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
-  #     - name: install python
-  #       uses: actions/setup-python@v2
-  #       with:
-  #         python-version: '3.8'
-  #     - name: install system dependencies
-  #       run: |
-  #         sudo apt-get update
-  #         sudo apt-get -y install jq
-  #     - name: install miniwdl
-  #       run: |
-  #         pip3 -q install miniwdl
-  #     - name: checkout repository
-  #       uses: actions/checkout@v2
-  #     - name: test with miniwdl
-  #       shell: bash
-  #       run: |
-  #         github_actions_ci/tests-miniwdl.sh
+  test_miniwdl:
+    needs: validate_wdl_miniwdl
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Programmatic environment setup
+        run: |
+          # $GITHUB_ENV is available for subsequent steps
+          TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+      - name: install python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install jq
+      - name: install miniwdl
+        run: |
+          pip3 -q install miniwdl
+      - name: checkout repository
+        uses: actions/checkout@v2
+      - name: test with miniwdl
+        shell: bash
+        run: |
+          github_actions_ci/tests-miniwdl.sh
 
   # # ToDo: add docker build test; see miniwdl repo for example: https://github.com/chanzuckerberg/miniwdl/blob/main/.github/workflows/CI.yml
 
