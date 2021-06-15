@@ -55,30 +55,30 @@ jobs:
           github_actions_ci/check-wdl-runtimes.sh
           miniwdl check pipes/WDL/workflows/*.wdl
 
-  # validate_wdl_womtool:
-  #   runs-on: ubuntu-20.04
-  #   steps:
-  #     - name: Programmatic environment setup
-  #       run: |
-  #         # $GITHUB_ENV is available for subsequent steps
-  #         TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
-  #     - name: install java
-  #       uses: actions/setup-java@v2
-  #       with:
-  #         distribution: 'adopt'
-  #         java-version: '11'
-  #     - name: checkout repository
-  #       uses: actions/checkout@v2
-  #     - name: install cromwell+womtool+dxWDL
-  #       shell: bash
-  #       run: |
-  #         github_actions_ci/install-wdl.sh
-  #     - name: run womtool checks
-  #       shell: bash
-  #       run: |
-  #         set -e
-  #         github_actions_ci/check-wdl-runtimes.sh
-  #         github_actions_ci/validate-wdl-womtool.sh
+  validate_wdl_womtool:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Programmatic environment setup
+        run: |
+          # $GITHUB_ENV is available for subsequent steps
+          TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+      - name: install java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '11'
+      - name: checkout repository
+        uses: actions/checkout@v2
+      - name: install cromwell+womtool+dxWDL
+        shell: bash
+        run: |
+          github_actions_ci/install-wdl.sh
+      - name: run womtool checks
+        shell: bash
+        run: |
+          set -e
+          github_actions_ci/check-wdl-runtimes.sh
+          github_actions_ci/validate-wdl-womtool.sh
 
   # ## note: this test_docs job does not actually produce the output on readthedocs
   # ## readthedocs does its own build trigger. this travis job exists simply to alert us
