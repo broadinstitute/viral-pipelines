@@ -1,0 +1,192 @@
+name: "viral-pipelines CI"
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  release:
+    types:
+      - created
+  schedule:
+    - cron: '0 0 * * 0' # weekly
+
+jobs:
+  # environment to use for all jobs below
+  env:
+    PYTHONIOENCODING: UTF8
+    DOCKER_REGISTRY: "quay.io"
+    DOCKER_REPO_PROD: "quay.io/broadinstitute/viral-pipelines"
+    DOCKER_REPO_DEV: "quay.io/broadinstitute/viral-pipelines-dev"
+    MODULE_VERSIONS: "requirements-modules.txt"
+
+    TRAVIS_COMMIT: ${{ github.event.sha }}
+    TRAVIS_BRANCH: ${{ github.event.ref }}
+    TRAVIS_PULL_REQUEST_BRANCH: ${{ github.head_ref }}
+    TRAVIS_PULL_REQUEST_SHA : ${{ github.event.pull_request.head.sha }}
+
+  validate_wdl_miniwdl:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: write build context (for debugging)
+        run: |
+          echo "${{ toJson(github) }}"
+      - name: Programmatic environment setup
+        run: |
+          # $GITHUB_ENV is available for subsequent steps
+          TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+      - name: install python
+        uses: actions/setup-python@v2
+          with: python-version: '3.8'
+      - name: install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install shellcheck
+      - name: install miniwdl
+        run: |
+          pip3 -q install miniwdl
+      - name: run miniwdl checks
+        uses: actions/checkout@v2
+        shell: bash
+        run: |
+          set -e
+          github_actions_ci/check-wdl-runtimes.sh
+          miniwdl check pipes/WDL/workflows/*.wdl
+
+  # validate_wdl_womtool:
+  #   runs-on: ubuntu-20.04
+  #   steps:
+  #     - name: Programmatic environment setup
+  #       run: |
+  #         # $GITHUB_ENV is available for subsequent steps
+  #         TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+  #     - name: install java
+  #       uses: actions/setup-java@v2
+  #         with:
+  #           distribution: 'adopt'
+  #           java-version: '11'
+  #     - name: install cromwell+womtool+dxWDL
+  #       uses: actions/checkout@v2
+  #       shell: bash
+  #       run: |
+  #         github_actions_ci/install-wdl.sh
+  #     - name: run womtool checks
+  #       shell: bash
+  #       run: |
+  #         set -e
+  #         github_actions_ci/check-wdl-runtimes.sh
+  #         github_actions_ci/validate-wdl-womtool.sh
+
+  # ## note: this test_docs job does not actually produce the output on readthedocs
+  # ## readthedocs does its own build trigger. this travis job exists simply to alert us
+  # ## of build failures of the docs because otherwise we would never know.
+  # test_docs:
+  #   runs-on: ubuntu-20.04
+  #   steps:
+  #     - name: Programmatic environment setup
+  #       run: |
+  #         # $GITHUB_ENV is available for subsequent steps
+  #         TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+  #     - name: install python
+  #       uses: actions/setup-python@v2
+  #         with: python-version: '3.8'
+  #     - name: install docs dependencies
+  #       uses: actions/checkout@v2
+  #       shell: bash
+  #       run: |
+  #         github_actions_ci/install-pip-docs.sh
+  #     - name: test docs build
+  #       shell: bash
+  #       run: |
+  #         github_actions_ci/build-docs.sh
+
+  # test_cromwell:
+  #   needs: validate_wdl_womtool
+  #   runs-on: ubuntu-20.04
+  #   steps:
+  #     - name: Programmatic environment setup
+  #       run: |
+  #         # $GITHUB_ENV is available for subsequent steps
+  #         TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+  #     - name: install java
+  #       uses: actions/setup-java@v2
+  #         with:
+  #           distribution: 'adopt'
+  #           java-version: '11'
+  #     - name: install cromwell+womtool+dxWDL
+  #       uses: actions/checkout@v2
+  #       shell: bash
+  #       run: |
+  #         github_actions_ci/install-wdl.sh
+  #     - name: test with cromwell
+  #       shell: bash
+  #       run: |
+  #         set -e
+  #         github_actions_ci/relative-wdl-paths.sh
+  #         github_actions_ci/tests-cromwell.sh
+
+  # test_miniwdl:
+  #   needs: validate_wdl_miniwdl
+  #   runs-on: ubuntu-20.04
+  #   steps:
+  #     - name: Programmatic environment setup
+  #       run: |
+  #         # $GITHUB_ENV is available for subsequent steps
+  #         TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+  #     - name: install python
+  #       uses: actions/setup-python@v2
+  #         with: python-version: '3.8'
+  #     - name: install system dependencies
+  #       run: |
+  #         sudo apt-get update
+  #         sudo apt-get -y install jq
+  #     - name: install miniwdl
+  #       run: |
+  #         pip3 -q install miniwdl
+  #     - name: test with miniwdl
+  #       uses: actions/checkout@v2
+  #       shell: bash
+  #       run: |
+  #         github_actions_ci/tests-miniwdl.sh
+
+  # # ToDo: add docker build test; see miniwdl repo for example: https://github.com/chanzuckerberg/miniwdl/blob/main/.github/workflows/CI.yml
+
+  # deploy_dnanexus:
+  #   if: ${{ github.event.ref == 'dnanexus' }}
+  #   needs:
+  #     - validate_wdl_womtool
+  #     - validate_wdl_miniwdl
+  #   runs-on: ubuntu-20.04
+  #   env:
+  #     # DX_API_TOKEN (for DNAnexus builds) -- token #3, expires 12/31/2024
+  #     DX_API_TOKEN: ${{ secrets.DX_API_TOKEN }}
+  #     DX_PROJECT: project-F8PQ6380xf5bK0Qk0YPjB17P
+  #   steps:
+  #     - name: Programmatic environment setup
+  #       run: |
+  #         # $GITHUB_ENV is available for subsequent steps
+  #         TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+  #     - name: install python
+  #       uses: actions/setup-python@v2
+  #         with: python-version: '2.7'
+  #     - name: install java
+  #       uses: actions/setup-java@v2
+  #         with:
+  #           distribution: 'adopt'
+  #           java-version: '11'
+  #     #- name: install system dependencies
+  #     #  run: |
+  #     #    sudo apt-get -y install python2-minimal # ToDo: switch to py3
+  #     - name: install dx toolkit
+  #       uses: actions/checkout@v2
+  #       shell: bash
+  #       run: |
+  #         github_actions_ci/install-wdl.sh
+  #     - name: 
+  #       shell: bash
+  #       run: |
+  #         github_actions_ci/relative-wdl-paths.sh
+  #         github_actions_ci/build-dx.sh
+  #         github_actions_ci/tests-dx.sh
