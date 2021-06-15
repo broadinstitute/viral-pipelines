@@ -39,8 +39,8 @@ jobs:
           TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
       - name: install python
         uses: actions/setup-python@v2
-          with:
-            python-version: '3.8'
+        with:
+          python-version: '3.8'
       - name: install system dependencies
         run: |
           sudo apt-get update
@@ -65,9 +65,9 @@ jobs:
   #         TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
   #     - name: install java
   #       uses: actions/setup-java@v2
-  #         with:
-  #           distribution: 'adopt'
-  #           java-version: '11'
+  #       with:
+  #         distribution: 'adopt'
+  #         java-version: '11'
   #     - name: install cromwell+womtool+dxWDL
   #       uses: actions/checkout@v2
   #       shell: bash
@@ -92,8 +92,8 @@ jobs:
   #         TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
   #     - name: install python
   #       uses: actions/setup-python@v2
-  #         with: 
-  #           python-version: '3.8'
+  #       with: 
+  #         python-version: '3.8'
   #     - name: install docs dependencies
   #       uses: actions/checkout@v2
   #       shell: bash
@@ -114,9 +114,9 @@ jobs:
   #         TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
   #     - name: install java
   #       uses: actions/setup-java@v2
-  #         with:
-  #           distribution: 'adopt'
-  #           java-version: '11'
+  #       with:
+  #         distribution: 'adopt'
+  #         java-version: '11'
   #     - name: install cromwell+womtool+dxWDL
   #       uses: actions/checkout@v2
   #       shell: bash
@@ -139,8 +139,8 @@ jobs:
   #         TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
   #     - name: install python
   #       uses: actions/setup-python@v2
-  #         with:
-  #           python-version: '3.8'
+  #       with:
+  #         python-version: '3.8'
   #     - name: install system dependencies
   #       run: |
   #         sudo apt-get update
@@ -173,13 +173,13 @@ jobs:
   #         TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
   #     - name: install python
   #       uses: actions/setup-python@v2
-  #         with: 
-  #            python-version: '2.7'
+  #       with: 
+  #         python-version: '2.7'
   #     - name: install java
   #       uses: actions/setup-java@v2
-  #         with:
-  #           distribution: 'adopt'
-  #           java-version: '11'
+  #       with:
+  #         distribution: 'adopt'
+  #         java-version: '11'
   #     #- name: install system dependencies
   #     #  run: |
   #     #    sudo apt-get -y install python2-minimal # ToDo: switch to py3
