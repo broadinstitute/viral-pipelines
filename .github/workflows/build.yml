@@ -152,6 +152,8 @@ jobs:
           pip3 -q install miniwdl
       - name: checkout repository
         uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
       - name: test with miniwdl
         shell: bash
         run: |
