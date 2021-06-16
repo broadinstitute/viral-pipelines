@@ -45,9 +45,6 @@ jobs:
           GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
       - name: checkout repository
         uses: actions/checkout@v2
-      - name: fetch git tags
-        run: |
-          git fetch --tags # implies --force
       - name: List environment
         run: |
           env
