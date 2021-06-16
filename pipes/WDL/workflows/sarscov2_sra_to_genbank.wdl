@@ -152,7 +152,7 @@ workflow sarscov2_sra_to_genbank {
             assemble_refbased.replicate_discordant_vcf,
             select_first([sarscov2_lineages.nextclade_tsv, ""]),
             select_first([sarscov2_lineages.nextclade_json, ""]),
-            select_first([sarscov2_lineages.pangolin_csv, ""]),
+            select_first([sarscov2_lineages.pango_lineage_report, ""]),
             select_first([vadr.outputs_tgz, ""]),
             assemble_refbased.replicate_concordant_sites,
             assemble_refbased.replicate_discordant_snps,
