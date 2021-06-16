@@ -45,8 +45,9 @@ jobs:
           GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
       - name: List environment
         run: |
+          set -e
           env
-          github_actions_ci/list-docker-tags.sh
+          ./github_actions_ci/list-docker-tags.sh
       - name: install python
         uses: actions/setup-python@v2
         with:
