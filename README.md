@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/broadinstitute/viral-pipelines.svg?branch=master)](https://travis-ci.com/broadinstitute/viral-pipelines)
+[![Build Status](https://github.com/broadinstitute/viral-pipelines/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/broadinstitute/viral-pipelines/actions/workflows/build.yml)
 [![Documentation Status](https://readthedocs.org/projects/viral-pipelines/badge/?version=latest)](http://viral-pipelines.readthedocs.io/en/latest/?badge=latest)
 
 # viral-pipelines
