@@ -20,9 +20,15 @@ env:
   DOCKER_REPO_DEV: "quay.io/broadinstitute/viral-pipelines-dev"
   MODULE_VERSIONS: "requirements-modules.txt"
 
+
+  # TravisCI variables described here:
+  #   https://docs.travis-ci.com/user/environment-variables/
+  # GitHub Actions environment variables and context described here:
+  #   https://docs.github.com/en/actions/reference/environment-variables
+  #   https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#env-context
   TRAVIS_COMMIT: ${{ github.sha }}
   TRAVIS_BUILD_DIR: ${{ github.workspace }}
-  TRAVIS_BRANCH: ${{ github.head_ref }}
+  TRAVIS_BRANCH: ${{ github.base_ref }}
   TRAVIS_PULL_REQUEST: ${{ github.event.number }}
   TRAVIS_PULL_REQUEST_BRANCH: ${{ github.head_ref }}
   TRAVIS_PULL_REQUEST_SHA : ${{ github.event.pull_request.head.sha }}
@@ -162,8 +168,6 @@ jobs:
         shell: bash
         run: |
           github_actions_ci/tests-miniwdl.sh
-
-  # # ToDo: add docker build test; see miniwdl repo for example: https://github.com/chanzuckerberg/miniwdl/blob/main/.github/workflows/CI.yml
 
   # deploy_dnanexus:
   #   if: ${{ github.event.ref == 'dnanexus' }}
