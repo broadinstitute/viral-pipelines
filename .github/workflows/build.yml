@@ -49,6 +49,7 @@ jobs:
         run: |
           env
           github_actions_ci/list-docker-tags.sh
+          git describe --tags --always
       - name: install python
         uses: actions/setup-python@v2
         with:
