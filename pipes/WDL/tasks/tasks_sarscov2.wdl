@@ -70,6 +70,7 @@ task nextclade_many_samples {
         File?        gene_annotations_json
         File?        pcr_primers_csv
         String       basename
+        String       docker = "neherlab/nextclade:0.14.4"
     }
     command {
         set -e
@@ -87,7 +88,7 @@ task nextclade_many_samples {
             --output-tree "~{basename}".nextclade.auspice.json
     }
     runtime {
-        docker: "nextstrain/nextclade:0.14.4"
+        docker: docker
         memory: "14 GB"
         cpu:    16
         disks: "local-disk 100 HDD"
@@ -186,7 +187,7 @@ task sequencing_report {
         String? voc_list
         String? voi_list
 
-        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.19"
+        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.20"
     }
     command {
         set -e
