@@ -37,9 +37,9 @@ workflow sarscov2_batch_relineage {
                 nextclade_one_sample.aa_subs_csv,
                 nextclade_one_sample.aa_dels_csv,
                 pangolin_one_sample.version,
-                nextclade_one_sample.nextclade_tsv,#
-                nextclade_one_sample.nextclade_json,#
-                pangolin_one_sample.pango_lineage_report,#
+                nextclade_one_sample.nextclade_tsv,
+                nextclade_one_sample.nextclade_json,
+                pangolin_one_sample.pango_lineage_report,
             ]
         }
     }
@@ -56,7 +56,7 @@ workflow sarscov2_batch_relineage {
             input_tsvs = [write_tsv(flatten([[meta_header], select_all(metadata)])),
                 metadata_raw_tsv],
             id_col = "sample_sanitized",
-            out_basename = basename(metadata_raw_tsv, '.tsv') + "relineage_~{today.date}.tsv"
+            out_basename = basename(metadata_raw_tsv, '.tsv') + ".relineage_~{today.date}.tsv"
     }
 
     call utils.tsv_join as merge_annotated {
@@ -64,7 +64,7 @@ workflow sarscov2_batch_relineage {
             input_tsvs = [write_tsv(flatten([[meta_header], select_all(metadata)])),
                 metadata_annotated_tsv],
             id_col = "sample_sanitized",
-            out_basename = basename(metadata_annotated_tsv, '.tsv') + "relineage_~{today.date}.tsv"
+            out_basename = basename(metadata_annotated_tsv, '.tsv') + ".relineage_~{today.date}.tsv"
     }
 
     output {
