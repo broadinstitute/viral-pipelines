@@ -170,7 +170,8 @@ jobs:
           github_actions_ci/tests-miniwdl.sh
 
   deploy_dnanexus:
-    if: ${{ github.event.ref == 'dnanexus' }}
+    #if: ${{ github.event.ref == 'dnanexus' }}
+    if: ${{ github.base_ref == 'master' }}
     needs:
       - validate_wdl_womtool
       - validate_wdl_miniwdl
