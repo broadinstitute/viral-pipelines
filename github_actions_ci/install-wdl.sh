@@ -16,7 +16,7 @@ fetch_jar_from_github broadinstitute cromwell womtool 61
 fetch_jar_from_github broadinstitute cromwell cromwell 61
 fetch_jar_from_github dnanexus dxWDL dxWDL v1.50
 
-TGZ=dx-toolkit-v0.298.1-ubuntu-20.04-amd64.tar.gz
+TGZ=dx-toolkit-v0.311.0-ubuntu-20.04-amd64.tar.gz
 echo "Fetching $TGZ"
 wget --quiet https://dnanexus-sdk.s3.amazonaws.com/$TGZ
 tar -xzpf $TGZ
