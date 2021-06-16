@@ -34,8 +34,6 @@ env:
   GITHUB_ACTIONS_PULL_REQUEST_SHA : ${{ github.event.pull_request.head.sha }}
 
 jobs:
-  # environment to use for all jobs below
-
   validate_wdl_miniwdl:
     runs-on: ubuntu-20.04
     steps:
@@ -185,6 +183,7 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       # DX_API_TOKEN (for DNAnexus builds) -- token #3, expires 12/31/2024
+      # stored here: https://github.com/broadinstitute/viral-pipelines/settings/secrets/actions
       DX_API_TOKEN: ${{ secrets.DX_API_TOKEN }}
       DX_PROJECT: project-F8PQ6380xf5bK0Qk0YPjB17P
     steps:
