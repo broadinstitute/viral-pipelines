@@ -2,6 +2,7 @@ version 1.0
 
 import "../tasks/tasks_ncbi_tools.wdl" as ncbi_tools
 import "../tasks/tasks_sarscov2.wdl" as sarscov2
+import "../tasks/tasks_utils.wdl" as utils
 
 
 workflow sarscov2_biosample_load {
@@ -17,7 +18,7 @@ workflow sarscov2_biosample_load {
         File?  biosample_submit_tsv
         String bioproject
         File   ftp_config_js
-        String ftp_target_path
+        String prod_test = "Production" # Production or Test
     }
 
     if(!defined(biosample_submit_tsv)) {
@@ -30,6 +31,14 @@ workflow sarscov2_biosample_load {
     }
 
     File meta_submit_tsv = select_first([biosample_submit_tsv, crsp_meta_etl.biosample_submit_tsv])
+
+    call utils.today
+    call utils.md5sum {
+        input:
+            in_file = meta_submit_tsv
+    }
+
+    String ftp_target_path = "/~{prod_test}/~{today.date}_~{md5sum.md5}/biosample"
 
     #call ncbi_tools.fetch_biosamples
 
