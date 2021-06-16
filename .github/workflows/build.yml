@@ -200,6 +200,9 @@ jobs:
       #- name: install system dependencies
       #  run: |
       #    sudo apt-get -y install python2-minimal # ToDo: switch to py3
+      - name: install miniwdl
+        run: |
+          pip3 install pyyaml
       - name: checkout repository
         uses: actions/checkout@v2
       - name: install dx toolkit
