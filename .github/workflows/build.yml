@@ -20,8 +20,10 @@ env:
   DOCKER_REPO_DEV: "quay.io/broadinstitute/viral-pipelines-dev"
   MODULE_VERSIONS: "requirements-modules.txt"
 
-  TRAVIS_COMMIT: ${{ github.event.sha }}
-  TRAVIS_BRANCH: ${{ github.event.ref }}
+  TRAVIS_COMMIT: ${{ github.sha }}
+  TRAVIS_BUILD_DIR: ${{ github.workspace }}
+  TRAVIS_BRANCH: ${{ github.head_ref }}
+  TRAVIS_PULL_REQUEST: ${{ github.event.number }}
   TRAVIS_PULL_REQUEST_BRANCH: ${{ github.head_ref }}
   TRAVIS_PULL_REQUEST_SHA : ${{ github.event.pull_request.head.sha }}
 
@@ -35,6 +37,8 @@ jobs:
         run: |
           # $GITHUB_ENV is available for subsequent steps
           TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+      - name: List environment
+        run: env
       - name: install python
         uses: actions/setup-python@v2
         with:
@@ -149,7 +153,7 @@ jobs:
           sudo apt-get -y install jq
       - name: install miniwdl
         run: |
-          pip3 -q install miniwdl
+          pip3 install miniwdl docker[tls] six
       - name: checkout repository
         uses: actions/checkout@v2
       - name: Set up Docker Buildx
