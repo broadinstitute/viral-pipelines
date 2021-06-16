@@ -13,7 +13,7 @@ for workflow in ../pipes/WDL/workflows/*.wdl; do
 		date
 		echo "Executing $workflow_name using Cromwell on local instance"
 		# the "cat" is to allow a pipe failure (otherwise it halts because of set -e)
-		java -Dconfig.file=../pipes/cromwell/cromwell.local-travis.conf \
+		java -Dconfig.file=../pipes/cromwell/cromwell.local-github_actions.conf \
 			-jar cromwell.jar run \
 			$workflow_name.wdl \
 			-i $input_json | tee cromwell.out

@@ -7,7 +7,7 @@ if [ -z "$DX_API_TOKEN" ]; then
 fi
 
 # obtain version tag
-VERSION=`travis/list-docker-tags.sh | tail -1 | sed 's/:/\//'`
+VERSION=`github_actions_ci/list-docker-tags.sh | tail -1 | sed 's/:/\//'`
 
 # log in to DNAnexus
 source dx-toolkit/environment

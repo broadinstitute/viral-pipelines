@@ -26,12 +26,12 @@ env:
   # GitHub Actions environment variables and context described here:
   #   https://docs.github.com/en/actions/reference/environment-variables
   #   https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#env-context
-  TRAVIS_COMMIT: ${{ github.sha }}
-  TRAVIS_BUILD_DIR: ${{ github.workspace }}
-  TRAVIS_BRANCH: ${{ github.base_ref }}
-  TRAVIS_PULL_REQUEST: ${{ github.event.number }}
-  TRAVIS_PULL_REQUEST_BRANCH: ${{ github.head_ref }}
-  TRAVIS_PULL_REQUEST_SHA : ${{ github.event.pull_request.head.sha }}
+  GITHUB_ACTIONS_COMMIT: ${{ github.sha }}
+  GITHUB_ACTIONS_BUILD_DIR: ${{ github.workspace }}
+  GITHUB_ACTIONS_BRANCH: ${{ github.base_ref }}
+  GITHUB_ACTIONS_PULL_REQUEST: ${{ github.event.number }}
+  GITHUB_ACTIONS_PULL_REQUEST_BRANCH: ${{ github.head_ref }}
+  GITHUB_ACTIONS_PULL_REQUEST_SHA : ${{ github.event.pull_request.head.sha }}
 
 jobs:
   # environment to use for all jobs below
@@ -42,7 +42,7 @@ jobs:
       - name: Programmatic environment setup
         run: |
           # $GITHUB_ENV is available for subsequent steps
-          TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+          GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
       - name: List environment
         run: env
       - name: install python
@@ -71,7 +71,7 @@ jobs:
       - name: Programmatic environment setup
         run: |
           # $GITHUB_ENV is available for subsequent steps
-          TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+          GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
       - name: install java
         uses: actions/setup-java@v2
         with:
@@ -99,7 +99,7 @@ jobs:
       - name: Programmatic environment setup
         run: |
           # $GITHUB_ENV is available for subsequent steps
-          TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+          GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
       - name: install python
         uses: actions/setup-python@v2
         with: 
@@ -122,7 +122,7 @@ jobs:
       - name: Programmatic environment setup
         run: |
           # $GITHUB_ENV is available for subsequent steps
-          TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+          GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
       - name: install java
         uses: actions/setup-java@v2
         with:
@@ -148,7 +148,7 @@ jobs:
       - name: Programmatic environment setup
         run: |
           # $GITHUB_ENV is available for subsequent steps
-          TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+          GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
       - name: install python
         uses: actions/setup-python@v2
         with:
@@ -184,7 +184,7 @@ jobs:
       - name: Programmatic environment setup
         run: |
           # $GITHUB_ENV is available for subsequent steps
-          TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+          GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
       - name: install python
         uses: actions/setup-python@v2
         with: 

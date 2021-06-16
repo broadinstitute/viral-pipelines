@@ -1,6 +1,6 @@
 #!/bin/bash
 # requires $MODULE_VERSIONS to be set to point to a text file with equal-sign-separated values
-# export MODULE_VERSIONS="./requirements-modules.txt" && ./travis/check-wdl-runtimes.sh
+# export MODULE_VERSIONS="./requirements-modules.txt" && ./github_actions_ci/check-wdl-runtimes.sh
 
 echo "Checking wdl container versions against ${MODULE_VERSIONS}"
 

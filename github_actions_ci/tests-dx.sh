@@ -2,7 +2,7 @@
 set -e -o pipefail
 
 # obtain version tag
-VERSION=`travis/list-docker-tags.sh | tail -1 | sed 's/:/\//'`
+VERSION=`github_actions_ci/list-docker-tags.sh | tail -1 | sed 's/:/\//'`
 
 # log in to DNAnexus
 source dx-toolkit/environment
@@ -71,7 +71,7 @@ for workflow in pipes/WDL/workflows/*.wdl; do
 done
 
 # only run demux_plus if this is on master or tagged branch
-if [ "$TRAVIS_BRANCH" = "master" -o -n "$TRAVIS_TAG" ]; then
+if [ "$GITHUB_ACTIONS_BRANCH" = "master" -o -n "$GITHUB_ACTIONS_TAG" ]; then
   demux_name="demux_plus"
 else
   # otherwise just run the (faster) demux_only
