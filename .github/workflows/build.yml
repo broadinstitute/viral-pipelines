@@ -169,42 +169,42 @@ jobs:
         run: |
           github_actions_ci/tests-miniwdl.sh
 
-  # deploy_dnanexus:
-  #   if: ${{ github.event.ref == 'dnanexus' }}
-  #   needs:
-  #     - validate_wdl_womtool
-  #     - validate_wdl_miniwdl
-  #   runs-on: ubuntu-20.04
-  #   env:
-  #     # DX_API_TOKEN (for DNAnexus builds) -- token #3, expires 12/31/2024
-  #     DX_API_TOKEN: ${{ secrets.DX_API_TOKEN }}
-  #     DX_PROJECT: project-F8PQ6380xf5bK0Qk0YPjB17P
-  #   steps:
-  #     - name: Programmatic environment setup
-  #       run: |
-  #         # $GITHUB_ENV is available for subsequent steps
-  #         TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
-  #     - name: install python
-  #       uses: actions/setup-python@v2
-  #       with: 
-  #         python-version: '2.7'
-  #     - name: install java
-  #       uses: actions/setup-java@v2
-  #       with:
-  #         distribution: 'adopt'
-  #         java-version: '11'
-  #     #- name: install system dependencies
-  #     #  run: |
-  #     #    sudo apt-get -y install python2-minimal # ToDo: switch to py3
-  #     - name: checkout repository
-  #       uses: actions/checkout@v2
-  #     - name: install dx toolkit
-  #       shell: bash
-  #       run: |
-  #         github_actions_ci/install-wdl.sh
-  #     - name: 
-  #       shell: bash
-  #       run: |
-  #         github_actions_ci/relative-wdl-paths.sh
-  #         github_actions_ci/build-dx.sh
-  #         github_actions_ci/tests-dx.sh
+  deploy_dnanexus:
+    if: ${{ github.event.ref == 'dnanexus' }}
+    needs:
+      - validate_wdl_womtool
+      - validate_wdl_miniwdl
+    runs-on: ubuntu-20.04
+    env:
+      # DX_API_TOKEN (for DNAnexus builds) -- token #3, expires 12/31/2024
+      DX_API_TOKEN: ${{ secrets.DX_API_TOKEN }}
+      DX_PROJECT: project-F8PQ6380xf5bK0Qk0YPjB17P
+    steps:
+      - name: Programmatic environment setup
+        run: |
+          # $GITHUB_ENV is available for subsequent steps
+          TRAVIS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+      - name: install python
+        uses: actions/setup-python@v2
+        with: 
+          python-version: '2.7'
+      - name: install java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '11'
+      #- name: install system dependencies
+      #  run: |
+      #    sudo apt-get -y install python2-minimal # ToDo: switch to py3
+      - name: checkout repository
+        uses: actions/checkout@v2
+      - name: install dx toolkit
+        shell: bash
+        run: |
+          github_actions_ci/install-wdl.sh
+      - name: 
+        shell: bash
+        run: |
+          github_actions_ci/relative-wdl-paths.sh
+          github_actions_ci/build-dx.sh
+          github_actions_ci/tests-dx.sh
