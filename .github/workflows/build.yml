@@ -45,6 +45,8 @@ jobs:
           GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
       - name: checkout repository
         uses: actions/checkout@v2
+      # fetch git tags (tagged releases) because 
+      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags
       - name: List environment
