@@ -50,8 +50,6 @@ jobs:
       - name: List environment
         run: |
           env
-          github_actions_ci/list-docker-tags.sh
-          git describe --tags --always
       - name: install python
         uses: actions/setup-python@v2
         with:
@@ -84,6 +82,10 @@ jobs:
           java-version: '11'
       - name: checkout repository
         uses: actions/checkout@v2
+      # fetch git tags (tagged releases) because 
+      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      - name: fetch tags
+        run: git fetch --prune --unshallow --tags
       - name: install cromwell+womtool+dxWDL
         shell: bash
         run: |
@@ -111,6 +113,10 @@ jobs:
           python-version: '3.8'
       - name: checkout repository
         uses: actions/checkout@v2
+      # fetch git tags (tagged releases) because 
+      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      - name: fetch tags
+        run: git fetch --prune --unshallow --tags
       - name: install docs dependencies
         shell: bash
         run: |
@@ -135,6 +141,10 @@ jobs:
           java-version: '11'
       - name: checkout repository
         uses: actions/checkout@v2
+      # fetch git tags (tagged releases) because 
+      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      - name: fetch tags
+        run: git fetch --prune --unshallow --tags
       - name: install cromwell+womtool+dxWDL
         shell: bash
         run: |
@@ -167,6 +177,10 @@ jobs:
           pip3 install miniwdl docker[tls] six
       - name: checkout repository
         uses: actions/checkout@v2
+      # fetch git tags (tagged releases) because 
+      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      - name: fetch tags
+        run: git fetch --prune --unshallow --tags
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: test with miniwdl
@@ -205,9 +219,13 @@ jobs:
       #    sudo apt-get -y install python2-minimal # ToDo: switch to py3
       - name: install miniwdl
         run: |
-          pip3 install pyyaml
+          pip3 install pyyaml dxpy
       - name: checkout repository
         uses: actions/checkout@v2
+      # fetch git tags (tagged releases) because 
+      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      - name: fetch tags
+        run: git fetch --prune --unshallow --tags
       - name: install dx toolkit
         shell: bash
         run: |
