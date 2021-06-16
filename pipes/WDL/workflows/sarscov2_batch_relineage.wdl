@@ -49,20 +49,20 @@ workflow sarscov2_batch_relineage {
         'nextclade_tsv', 'nextclade_json', 'pangolin_csv'
     ]
 
-    File new_calls = write_tsv(flatten([[meta_header], select_all(metadata)]))
-
     call utils.today
 
     call utils.tsv_join as merge_raw {
         input:
-            input_tsvs = [new_calls, metadata_raw_tsv],
+            input_tsvs = [write_tsv(flatten([[meta_header], select_all(metadata)])),
+                metadata_raw_tsv],
             id_col = "sample_sanitized",
             out_basename = basename(metadata_raw_tsv, '.tsv') + "relineage_~{today.date}.tsv"
     }
 
     call utils.tsv_join as merge_annotated {
         input:
-            input_tsvs = [new_calls, metadata_annotated_tsv],
+            input_tsvs = [write_tsv(flatten([[meta_header], select_all(metadata)])),
+                metadata_annotated_tsv],
             id_col = "sample_sanitized",
             out_basename = basename(metadata_annotated_tsv, '.tsv') + "relineage_~{today.date}.tsv"
     }
