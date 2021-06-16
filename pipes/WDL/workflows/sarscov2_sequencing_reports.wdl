@@ -10,8 +10,10 @@ workflow sarscov2_sequencing_reports {
 
     input {
         Array[File] assembly_stats_tsvs
-        String      max_date
+        String?     max_date
     }
+
+    call utils.today
 
     call utils.tsv_join {
         input:
@@ -23,7 +25,7 @@ workflow sarscov2_sequencing_reports {
     call sarscov2.sequencing_report {
         input:
             assembly_stats_tsv = tsv_join.out_tsv,
-            max_date           = max_date
+            max_date           = select_first([max_date, today.date])
     }
 
     output {
