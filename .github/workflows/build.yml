@@ -1,0 +1,232 @@
+name: "viral-pipelines CI"
+
+on:
+  push:
+  pull_request:
+    branches:
+      - master
+  release:
+    types:
+      - created
+  schedule:
+    - cron: '0 18 * * 1' # weekly at 18:00 on Mondays
+
+env:
+  PYTHONIOENCODING: UTF8
+  DOCKER_REGISTRY: "quay.io"
+  DOCKER_REPO_PROD: "quay.io/broadinstitute/viral-pipelines"
+  DOCKER_REPO_DEV: "quay.io/broadinstitute/viral-pipelines-dev"
+  MODULE_VERSIONS: "requirements-modules.txt"
+
+  # TravisCI variables described here:
+  #   https://docs.travis-ci.com/user/environment-variables/
+  # GitHub Actions environment variables and context described here:
+  #   https://docs.github.com/en/actions/reference/environment-variables
+  #   https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#env-context
+  GITHUB_ACTIONS_COMMIT: ${{ github.sha }}
+  GITHUB_ACTIONS_BUILD_DIR: ${{ github.workspace }}
+  GITHUB_ACTIONS_BRANCH: ${{ github.base_ref }}
+  GITHUB_ACTIONS_PULL_REQUEST: ${{ github.event.number }}
+  GITHUB_ACTIONS_PULL_REQUEST_BRANCH: ${{ github.head_ref }}
+  GITHUB_ACTIONS_PULL_REQUEST_SHA : ${{ github.event.pull_request.head.sha }}
+
+jobs:
+  validate_wdl_miniwdl:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Programmatic environment setup
+        run: |
+          # $GITHUB_ENV is available for subsequent steps
+          GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+      - name: checkout repository
+        uses: actions/checkout@v2
+      # fetch git tags (tagged releases) because 
+      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      - name: fetch tags
+        run: git fetch --prune --unshallow --tags
+      - name: List environment
+        run: |
+          env
+      - name: install python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install shellcheck
+      - name: install miniwdl
+        run: |
+          pip3 -q install miniwdl
+      - name: run miniwdl checks
+        shell: bash
+        run: |
+          set -e
+          github_actions_ci/check-wdl-runtimes.sh
+          miniwdl check pipes/WDL/workflows/*.wdl
+
+  validate_wdl_womtool:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Programmatic environment setup
+        run: |
+          # $GITHUB_ENV is available for subsequent steps
+          GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+      - name: install java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '11'
+      - name: checkout repository
+        uses: actions/checkout@v2
+      # fetch git tags (tagged releases) because 
+      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      - name: fetch tags
+        run: git fetch --prune --unshallow --tags
+      - name: install cromwell+womtool+dxWDL
+        shell: bash
+        run: |
+          github_actions_ci/install-wdl.sh
+      - name: run womtool checks
+        shell: bash
+        run: |
+          set -e
+          github_actions_ci/check-wdl-runtimes.sh
+          github_actions_ci/validate-wdl-womtool.sh
+
+  ## note: this test_docs job does not actually produce the output on readthedocs
+  ## readthedocs does its own build trigger. this travis job exists simply to alert us
+  ## of build failures of the docs because otherwise we would never know.
+  test_docs:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Programmatic environment setup
+        run: |
+          # $GITHUB_ENV is available for subsequent steps
+          GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+      - name: install python
+        uses: actions/setup-python@v2
+        with: 
+          python-version: '3.8'
+      - name: checkout repository
+        uses: actions/checkout@v2
+      # fetch git tags (tagged releases) because 
+      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      - name: fetch tags
+        run: git fetch --prune --unshallow --tags
+      - name: install docs dependencies
+        shell: bash
+        run: |
+          github_actions_ci/install-pip-docs.sh
+      - name: test docs build
+        shell: bash
+        run: |
+          github_actions_ci/build-docs.sh
+
+  test_cromwell:
+    needs: validate_wdl_womtool
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Programmatic environment setup
+        run: |
+          # $GITHUB_ENV is available for subsequent steps
+          GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+      - name: install java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '11'
+      - name: checkout repository
+        uses: actions/checkout@v2
+      # fetch git tags (tagged releases) because 
+      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      - name: fetch tags
+        run: git fetch --prune --unshallow --tags
+      - name: install cromwell+womtool+dxWDL
+        shell: bash
+        run: |
+          github_actions_ci/install-wdl.sh
+      - name: test with cromwell
+        shell: bash
+        run: |
+          set -e
+          github_actions_ci/relative-wdl-paths.sh
+          github_actions_ci/tests-cromwell.sh
+
+  test_miniwdl:
+    needs: validate_wdl_miniwdl
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Programmatic environment setup
+        run: |
+          # $GITHUB_ENV is available for subsequent steps
+          GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+      - name: install python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install jq
+      - name: install miniwdl
+        run: |
+          pip3 install miniwdl docker[tls] six
+      - name: checkout repository
+        uses: actions/checkout@v2
+      # fetch git tags (tagged releases) because 
+      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      - name: fetch tags
+        run: git fetch --prune --unshallow --tags
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: test with miniwdl
+        shell: bash
+        run: |
+          github_actions_ci/tests-miniwdl.sh
+
+  deploy_dnanexus:
+    #if: ${{ github.event.ref == 'dnanexus' }}
+    if: github.base_ref == 'master' && github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+    needs:
+      - validate_wdl_womtool
+      - validate_wdl_miniwdl
+    runs-on: ubuntu-20.04
+    env:
+      # DX_API_TOKEN (for DNAnexus builds) -- token #3, expires 12/31/2024
+      # stored here: https://github.com/broadinstitute/viral-pipelines/settings/secrets/actions
+      DX_API_TOKEN: ${{ secrets.DX_API_TOKEN }}
+      DX_PROJECT: project-F8PQ6380xf5bK0Qk0YPjB17P
+    steps:
+      - name: Programmatic environment setup
+        run: |
+          # $GITHUB_ENV is available for subsequent steps
+          GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+      - name: install python
+        uses: actions/setup-python@v2
+        with: 
+          python-version: '3.8'
+      - name: install java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '11'
+      - name: install miniwdl
+        run: |
+          pip3 install pyyaml dxpy
+      - name: checkout repository
+        uses: actions/checkout@v2
+      # fetch git tags (tagged releases) because 
+      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      - name: fetch tags
+        run: git fetch --prune --unshallow --tags
+      - name: install dx toolkit
+        shell: bash
+        run: |
+          github_actions_ci/install-wdl.sh
+      - name: 
+        shell: bash
+        run: |
+          github_actions_ci/relative-wdl-paths.sh
+          github_actions_ci/build-dx.sh
+          github_actions_ci/tests-dx.sh
