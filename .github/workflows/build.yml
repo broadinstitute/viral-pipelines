@@ -11,7 +11,7 @@ on:
     types:
       - created
   schedule:
-    - cron: '0 0 * * 0' # weekly
+    - cron: '0 18 * * 1' # weekly at 18:00 on Mondays
 
 env:
   PYTHONIOENCODING: UTF8
@@ -19,7 +19,6 @@ env:
   DOCKER_REPO_PROD: "quay.io/broadinstitute/viral-pipelines"
   DOCKER_REPO_DEV: "quay.io/broadinstitute/viral-pipelines-dev"
   MODULE_VERSIONS: "requirements-modules.txt"
-
 
   # TravisCI variables described here:
   #   https://docs.travis-ci.com/user/environment-variables/
@@ -214,9 +213,6 @@ jobs:
         with:
           distribution: 'adopt'
           java-version: '11'
-      #- name: install system dependencies
-      #  run: |
-      #    sudo apt-get -y install python2-minimal # ToDo: switch to py3
       - name: install miniwdl
         run: |
           pip3 install pyyaml dxpy
