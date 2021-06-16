@@ -43,11 +43,12 @@ jobs:
         run: |
           # $GITHUB_ENV is available for subsequent steps
           GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+      - name: checkout repository
+        uses: actions/checkout@v2
       - name: List environment
         run: |
-          set -e
           env
-          ./github_actions_ci/list-docker-tags.sh
+          github_actions_ci/list-docker-tags.sh
       - name: install python
         uses: actions/setup-python@v2
         with:
@@ -59,8 +60,6 @@ jobs:
       - name: install miniwdl
         run: |
           pip3 -q install miniwdl
-      - name: checkout repository
-        uses: actions/checkout@v2
       - name: run miniwdl checks
         shell: bash
         run: |
