@@ -15,17 +15,19 @@ workflow sarscov2_sequencing_reports {
 
     call utils.today
 
+    String report_date = select_first([max_date, today.date])
+
     call utils.tsv_join {
         input:
             input_tsvs   = assembly_stats_tsvs,
             id_col       = 'sample',
-            out_basename = 'assembly_stats-cumulative-~{max_date}'
+            out_basename = 'assembly_stats-cumulative-~{report_date}'
     }
 
     call sarscov2.sequencing_report {
         input:
             assembly_stats_tsv = tsv_join.out_tsv,
-            max_date           = select_first([max_date, today.date])
+            max_date           = report_date
     }
 
     output {
@@ -34,5 +36,6 @@ workflow sarscov2_sequencing_reports {
         Array[File] sequencing_reports_xlsxs      = sequencing_report.sheets
         File        sequencing_reports_zip        = sequencing_report.all_zip
         File        sequencing_report_tsv         = sequencing_report.all_tsv
+        String      sequence_report_date          = report_date
     }
 }

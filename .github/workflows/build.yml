@@ -37,7 +37,7 @@ jobs:
       - name: Programmatic environment setup
         run: |
           # $GITHUB_ENV is available for subsequent steps
-          GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+          echo "GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
       - name: checkout repository
         uses: actions/checkout@v2
       # fetch git tags (tagged releases) because 
@@ -71,7 +71,7 @@ jobs:
       - name: Programmatic environment setup
         run: |
           # $GITHUB_ENV is available for subsequent steps
-          GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+          echo "GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
       - name: install java
         uses: actions/setup-java@v2
         with:
@@ -103,7 +103,7 @@ jobs:
       - name: Programmatic environment setup
         run: |
           # $GITHUB_ENV is available for subsequent steps
-          GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+          echo "GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
       - name: install python
         uses: actions/setup-python@v2
         with: 
@@ -130,7 +130,7 @@ jobs:
       - name: Programmatic environment setup
         run: |
           # $GITHUB_ENV is available for subsequent steps
-          GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+          echo "GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
       - name: install java
         uses: actions/setup-java@v2
         with:
@@ -160,7 +160,7 @@ jobs:
       - name: Programmatic environment setup
         run: |
           # $GITHUB_ENV is available for subsequent steps
-          GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+          echo "GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
       - name: install python
         uses: actions/setup-python@v2
         with:
@@ -201,7 +201,7 @@ jobs:
       - name: Programmatic environment setup
         run: |
           # $GITHUB_ENV is available for subsequent steps
-          GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/} >> $GITHUB_ENV
+          echo "GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
       - name: install python
         uses: actions/setup-python@v2
         with: 

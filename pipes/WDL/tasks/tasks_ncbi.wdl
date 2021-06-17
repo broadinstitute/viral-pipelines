@@ -317,40 +317,52 @@ task gisaid_meta_prep {
 
       with open('~{source_modifier_table}', 'rt') as inf:
         for row in csv.DictReader(inf, delimiter='\t'):
-          writer.writerow({
-            'covv_virus_name': 'hCoV-19/' +row['Sequence_ID'],
-            'covv_collection_date': row['collection_date'],
-            'covv_location': '~{continent} / ' + row['country'].replace(':',' /'),
-
-            'covv_type': 'betacoronavirus',
-            'covv_passage': 'Original',
-            'covv_host': 'Human',
-            'covv_gender': 'unknown',
-            'covv_patient_age': 'unknown',
-            'covv_patient_status': 'unknown',
-
-            'covv_assembly_method': sample_to_cmt[row['Sequence_ID']]['Assembly Method'],
-            'covv_coverage': sample_to_cmt[row['Sequence_ID']]['Coverage'],
-            'covv_seq_technology': sample_to_cmt[row['Sequence_ID']]['Sequencing Technology'],
-
-            'covv_orig_lab': row['collected_by'],
-            'covv_subm_lab': "~{default='REQUIRED' submitting_lab_name}",
-            'covv_authors': "~{default='REQUIRED' authors}",
-            'covv_orig_lab_addr': "~{default='REQUIRED' originating_lab_addr}",
-            'covv_subm_lab_addr': "~{default='REQUIRED' submitting_lab_addr}",
-
-            'submitter': "~{default='REQUIRED' username}",
-            'fn': "~{default='REQUIRED' fasta_filename}",
-
-            'covv_add_host_info': row.get('note',''),
-          })
 
           #covv_specimen
           if strict:
-            assert row['isolation_source'] == 'Clinical', f"Metadata error: 'isolation_source' != 'Clinical'\n{row}"
-            assert row['host'] == 'Homo sapiens', f"Metadata error: 'host' != 'Homo sapiens'\n{row}"
-            assert row['organism'] == 'Severe acute respiratory syndrome coronavirus 2', f"'organism' != 'Severe acute respiratory syndrome coronavirus 2'\n{row}"
-            assert row['db_xref'] == 'taxon:2697049', f"Metadata error: 'db_xref' != 'taxon:2697049'\n{row}"
+            valid_isolation_sources = ('Clinical', 'Environmental')
+            assert row['isolation_source'] in valid_isolation_sources, f"Metadata error: 'isolation_source' not one of: {valid_isolation_sources}\n{row}"
+            assert row['host'] == 'Homo sapiens' or row['isolation_source'] == 'Environmental', f"Metadata error: 'host' must be 'Homo sapiens' if 'isolation_source' is not 'Environmental'\n{row}"
+            assert row['organism']         == 'Severe acute respiratory syndrome coronavirus 2', f"'organism' != 'Severe acute respiratory syndrome coronavirus 2'\n{row}"
+            assert row['db_xref']          == 'taxon:2697049', f"Metadata error: 'db_xref' != 'taxon:2697049'\n{row}"
+
+          # PHA4GE/INSDC controlled vocabulary for source information
+          # from "Vocabulary" tab of this sheet:
+          #   https://github.com/pha4ge/SARS-CoV-2-Contextual-Data-Specification/blob/master/PHA4GE%20SARS-CoV-2%20Contextual%20Data%20Template.xlsx
+          gisaid_specimen_source = "unknown"
+          if row['isolation_source'] == 'Clinical':
+            gisaid_specimen_source = row.get("body_product",row.get("anatomical_material",row.get("anatomical_part","missing")))
+          if row['isolation_source'] == 'Environmental':
+            gisaid_specimen_source = row.get("environmental_material",row.get("environmental_site","missing")
+
+          writer.writerow({
+            'covv_virus_name'     : 'hCoV-19/' +row['Sequence_ID'],
+            'covv_collection_date': row['collection_date'],
+            'covv_location'       : '~{continent} / ' + row['country'].replace(':',' /'),
+
+            'covv_type'           : 'betacoronavirus',
+            'covv_passage'        : 'Original',
+            'covv_host'           : 'Human' if row['isolation_source'] == 'Clinical' else row['isolation_source'].replace("Environmental","Environment"),
+            'covv_gender'         : 'unknown',
+            'covv_patient_age'    : 'unknown',
+            'covv_patient_status' : 'unknown',
+            'covv_specimen'       : gisaid_specimen_source,
+
+            'covv_assembly_method': sample_to_cmt[row['Sequence_ID']]['Assembly Method'],
+            'covv_coverage'       : sample_to_cmt[row['Sequence_ID']]['Coverage'],
+            'covv_seq_technology' : sample_to_cmt[row['Sequence_ID']]['Sequencing Technology'],
+
+            'covv_orig_lab'       : row['collected_by'],
+            'covv_subm_lab'       : "~{default='REQUIRED' submitting_lab_name}",
+            'covv_authors'        : "~{default='REQUIRED' authors}",
+            'covv_orig_lab_addr'  : "~{default='REQUIRED' originating_lab_addr}",
+            'covv_subm_lab_addr'  : "~{default='REQUIRED' submitting_lab_addr}",
+
+            'submitter'           : "~{default='REQUIRED' username}",
+            'fn'                  : "~{default='REQUIRED' fasta_filename}",
+
+            'covv_add_host_info'  : row.get('note',''),
+          })
 
     CODE
   >>>
