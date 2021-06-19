@@ -34,16 +34,16 @@ jobs:
   validate_wdl_miniwdl:
     runs-on: ubuntu-20.04
     steps:
-      - name: Programmatic environment setup
-        run: |
-          # $GITHUB_ENV is available for subsequent steps
-          echo "GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
       - name: checkout repository
         uses: actions/checkout@v2
       # fetch git tags (tagged releases) because 
       # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
-        run: git fetch --prune --unshallow --tags
+        run: git fetch --prune --unshallow --tags      
+      - name: Programmatic environment setup
+        run: |
+          # $GITHUB_ENV is available for subsequent steps
+          echo "GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')" >> $GITHUB_ENV
       - name: List environment
         run: |
           env
@@ -68,21 +68,21 @@ jobs:
   validate_wdl_womtool:
     runs-on: ubuntu-20.04
     steps:
-      - name: Programmatic environment setup
-        run: |
-          # $GITHUB_ENV is available for subsequent steps
-          echo "GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-      - name: install java
-        uses: actions/setup-java@v2
-        with:
-          distribution: 'adopt'
-          java-version: '11'
       - name: checkout repository
         uses: actions/checkout@v2
       # fetch git tags (tagged releases) because 
       # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags
+      - name: Programmatic environment setup
+        run: |
+          # $GITHUB_ENV is available for subsequent steps
+          echo "GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')" >> $GITHUB_ENV
+      - name: install java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '11'
       - name: install cromwell+womtool+dxWDL
         shell: bash
         run: |
@@ -100,20 +100,20 @@ jobs:
   test_docs:
     runs-on: ubuntu-20.04
     steps:
-      - name: Programmatic environment setup
-        run: |
-          # $GITHUB_ENV is available for subsequent steps
-          echo "GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-      - name: install python
-        uses: actions/setup-python@v2
-        with: 
-          python-version: '3.8'
       - name: checkout repository
         uses: actions/checkout@v2
       # fetch git tags (tagged releases) because 
       # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags
+      - name: Programmatic environment setup
+        run: |
+          # $GITHUB_ENV is available for subsequent steps
+          echo "GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')" >> $GITHUB_ENV
+      - name: install python
+        uses: actions/setup-python@v2
+        with: 
+          python-version: '3.8'
       - name: install docs dependencies
         shell: bash
         run: |
@@ -127,21 +127,21 @@ jobs:
     needs: validate_wdl_womtool
     runs-on: ubuntu-20.04
     steps:
-      - name: Programmatic environment setup
-        run: |
-          # $GITHUB_ENV is available for subsequent steps
-          echo "GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-      - name: install java
-        uses: actions/setup-java@v2
-        with:
-          distribution: 'adopt'
-          java-version: '11'
       - name: checkout repository
         uses: actions/checkout@v2
       # fetch git tags (tagged releases) because 
       # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags
+      - name: Programmatic environment setup
+        run: |
+          # $GITHUB_ENV is available for subsequent steps
+          echo "GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')" >> $GITHUB_ENV
+      - name: install java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '11'
       - name: install cromwell+womtool+dxWDL
         shell: bash
         run: |
@@ -157,10 +157,16 @@ jobs:
     needs: validate_wdl_miniwdl
     runs-on: ubuntu-20.04
     steps:
+      - name: checkout repository
+        uses: actions/checkout@v2
+      # fetch git tags (tagged releases) because 
+      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      - name: fetch tags
+        run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
         run: |
           # $GITHUB_ENV is available for subsequent steps
-          echo "GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          echo "GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')" >> $GITHUB_ENV
       - name: install python
         uses: actions/setup-python@v2
         with:
@@ -172,12 +178,6 @@ jobs:
       - name: install miniwdl
         run: |
           pip3 install miniwdl docker[tls] six
-      - name: checkout repository
-        uses: actions/checkout@v2
-      # fetch git tags (tagged releases) because 
-      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
-      - name: fetch tags
-        run: git fetch --prune --unshallow --tags
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: test with miniwdl
@@ -198,10 +198,16 @@ jobs:
       DX_API_TOKEN: ${{ secrets.DX_API_TOKEN }}
       DX_PROJECT: project-F8PQ6380xf5bK0Qk0YPjB17P
     steps:
+      - name: checkout repository
+        uses: actions/checkout@v2
+      # fetch git tags (tagged releases) because 
+      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      - name: fetch tags
+        run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
         run: |
           # $GITHUB_ENV is available for subsequent steps
-          echo "GITHUB_ACTIONS_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          echo "GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')" >> $GITHUB_ENV
       - name: install python
         uses: actions/setup-python@v2
         with: 
@@ -214,12 +220,6 @@ jobs:
       - name: install miniwdl
         run: |
           pip3 install pyyaml dxpy
-      - name: checkout repository
-        uses: actions/checkout@v2
-      # fetch git tags (tagged releases) because 
-      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
-      - name: fetch tags
-        run: git fetch --prune --unshallow --tags
       - name: install dx toolkit
         shell: bash
         run: |
