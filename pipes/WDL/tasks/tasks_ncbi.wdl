@@ -333,7 +333,7 @@ task gisaid_meta_prep {
           if row['isolation_source'] == 'Clinical':
             gisaid_specimen_source = row.get("body_product",row.get("anatomical_material",row.get("anatomical_part","missing")))
           if row['isolation_source'] == 'Environmental':
-            gisaid_specimen_source = row.get("environmental_material",row.get("environmental_site","missing")
+            gisaid_specimen_source = row.get("environmental_material",row.get("environmental_site","missing"))
 
           writer.writerow({
             'covv_virus_name'     : 'hCoV-19/' +row['Sequence_ID'],
