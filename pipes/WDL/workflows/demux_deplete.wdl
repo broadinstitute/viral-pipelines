@@ -15,6 +15,7 @@ workflow demux_deplete {
     input {
         File         flowcell_tgz
         Array[File]+ samplesheets  ## must be in lane order!
+        String?      read_structure
 
         File?        sample_rename_map
         File?        biosample_map
@@ -60,9 +61,10 @@ workflow demux_deplete {
         }
         call demux.illumina_demux {
             input:
-                flowcell_tgz = flowcell_tgz,
-                lane         = lane_sheet.left + 1,
-                samplesheet  = samplesheet_rename_ids.new_sheet
+                flowcell_tgz  = flowcell_tgz,
+                lane          = lane_sheet.left + 1,
+                samplesheet   = samplesheet_rename_ids.new_sheet,
+                readStructure = read_structure
         }
         call demux.map_map_setdefault as meta_default_sample {
             input:

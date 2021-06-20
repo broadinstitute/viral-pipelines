@@ -40,6 +40,7 @@ workflow sarscov2_illumina_full {
         File          flowcell_tgz
         File          reference_fasta
         String        amplicon_bed_prefix
+        String?       read_structure
 
         Array[File]   biosample_attributes
         String?       instrument_model
@@ -80,7 +81,8 @@ workflow sarscov2_illumina_full {
             flowcell_tgz                    = flowcell_tgz,
             biosample_map                   = biosample_merge.out_tsv,
             instrument_model_user_specified = instrument_model,
-            sra_title                       = sra_title
+            sra_title                       = sra_title,
+            read_structure                  = read_structure
     }
     String  flowcell_id = demux_deplete.run_id
 
