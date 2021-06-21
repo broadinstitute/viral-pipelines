@@ -1,5 +1,93 @@
 version 1.0
 
+task detect_cross_contamination {
+  input {
+    Array[File]    lofreq_vcf
+    Array[File]    genomes_fasta
+    File           reference_fasta
+
+    Int            min_readcount = 10
+    Float          min_maf = 0.03
+
+    File?          plate_map
+    Int?           plate_size
+    Int?           plate_columns
+    Int?           plate_rows
+
+    String         out_basename = "potential_cross_contamination"
+
+    String         docker = "quay.io/broadinstitute/polyphonia:latest"
+  }
+
+  parameter_meta {
+    lofreq_vcf:         { description: "VCF file(s) output by LoFreq or GATK; must use reference provided by reference_fasta" }
+    genomes_fasta:      { description: "Unaligned consensus genome or genomes" }
+    reference_fasta:    { description: "Reference fasta file" }
+  }
+
+  command <<<
+    set -e -o pipefail
+
+    mkdir -p figs
+
+    polyphonia cross_contamination \
+      --ref ~{reference_fasta} \
+      --vcf ~{sep=' ' lofreq_vcf} \
+      --consensus ~{sep=' ' genomes_fasta} \
+      ~{'--min_readcount ' + min_readcount} \
+      ~{'--min_maf ' + min_maf} \
+      ~{'--plate_map ' + plate_map} \
+      ~{'--plate_size ' + plate_size} \
+      ~{'--plate_columns' + plate_columns} \
+      ~{'--plate_rows' + plate_rows} \
+      --output ~{out_basename}.txt \
+      --out-figures figs \
+      --cores `nproc` \
+      --verbose TRUE \
+      --overwrite TRUE
+  >>>
+
+  output {
+    File        report = "~{out_basename}.txt"
+    Array[File] figures = glob("figs/*")
+  }
+  runtime {
+    docker: docker
+    cpu:    4
+    memory: "13 GB"
+    disks:  "local-disk 100 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x4"
+  }
+}
+
+task lofreq {
+  input {
+    File      aligned_bam
+    File      reference_fasta
+
+    String    out_basename = basename(aligned_bam, '.bam')
+    String    docker = "quay.io/broadinstitute/polyphonia:latest"
+  }
+  command <<<
+    set -e -o pipefail
+    lofreq call \
+      -f "~{reference_fasta}" \
+      -o "~{out_basename}.vcf" \
+      "~{aligned_bam}" \
+  >>>
+
+  output {
+    File        report = "~{out_basename}.vcf"
+  }
+  runtime {
+    docker: docker
+    cpu:    2
+    memory: "3 GB"
+    disks:  "local-disk 200 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task isnvs_per_sample {
   input {
     File    mapped_bam
