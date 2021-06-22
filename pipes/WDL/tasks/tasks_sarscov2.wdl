@@ -229,7 +229,7 @@ task sc2_meta_final {
         File?         genome_status_json
 
         String        collab_ids_idcol = 'external_id'
-        Array[String] collab_ids_addcols = ['collaborator_id']
+        Array[String] collab_ids_addcols = ['collaborator_id','hl7_message_id','matrix_id']
 
         String?       max_date
         String?       min_date
@@ -274,6 +274,7 @@ task sc2_meta_final {
             collab_ids = pd.read_csv(collab_tsv, sep='\t').dropna(how='all').dropna(how='all', axis='columns')
             if 'collection_date' in collab_ids.columns:
                 collab_ids.drop(columns=['collection_date'], inplace=True)
+            collab_addcols = list(x for x in collab_addcols if x in collab_ids.columns)
             if collab_addcols:
                 collab_ids = collab_ids[[collab_idcol] + collab_addcols]
             if collab_idcol != 'sample':
@@ -386,6 +387,7 @@ task crsp_meta_etl {
         import hashlib
         import json
         import pandas as pd
+        import numpy as np
 
         # load some inputs
         salt = '~{salt}'.strip()
@@ -407,6 +409,10 @@ task crsp_meta_etl {
         assert sample_meta.anatomical_part.isna().sum() == 0, "error: some samples missing anatomical_part"
         assert sample_meta.hl7_message_id.isna().sum() == 0, "error: some samples missing hl7_message_id"
         assert sample_meta.internal_id.isna().sum() == 0, "error: some samples missing internal_id"
+
+        # stub matrix_id if it doesn't exist
+        if 'matrix_id' not in sample_meta.columns:
+            sample_meta['matrix_id'] = np.nan
 
         # clean geoloc
         sample_meta.loc[:,'geo_loc_state_abbr'] = sample_meta.loc[:,'geo_loc_name']
@@ -469,8 +475,8 @@ task crsp_meta_etl {
         ])
 
         # create ID map
-        collab_ids = sample_meta[['sample_name','hl7_message_id','internal_id']]
-        collab_ids = collab_ids.rename(columns={'sample_name': 'external_id'})
+        collab_ids = sample_meta[['sample_name','hl7_message_id','internal_id','matrix_id']]
+        collab_ids = collab_ids.rename(columns={'sample_name': 'external_id', 'internal_id': 'collaborator_id'})
 
         # write final output
         biosample.to_csv("biosample_meta_submit-~{out_basename}.tsv", sep='\t', index=False)
@@ -489,7 +495,7 @@ task crsp_meta_etl {
         File          collab_ids_tsv       = "collab_ids-~{out_basename}.tsv"
 
         String        collab_ids_idcols    = 'external_id'
-        Array[String] collab_ids_addcols   = ['hl7_message_id','internal_id']
+        Array[String] collab_ids_addcols   = ['hl7_message_id','collaborator_id','matrix_id']
     }
 }
 
