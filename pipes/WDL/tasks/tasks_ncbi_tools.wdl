@@ -158,14 +158,34 @@ task biosample_tsv_filter_preexisting {
     command <<<
         set -e
 
-        echo "TO DO!"
-        exit 1
+        # extract all the sample_name values from input tsv
+        python3<<CODE
+        import csv
+        with open('~{meta_submit_tsv}', 'rt') as inf:
+            with open('SAMPLES.txt', 'w', newline='') as outf:
+                for row in csv.DictReader(inf, delimiter='\t'):
+                    outf.write(row['sample_name'] + '\n')
+        CODE
 
+        # fetch attributes file for anything already registered
         /opt/docker/scripts/biosample-fetch_attributes.py \
-            $(cat samplenames) "~{out_basename}"
+            $(cat SAMPLES.txt) "~{out_basename}"
+
+        # extract all the sample_name values from NCBI
+        python3<<CODE
+        import csv
+        with open('~{out_basename}.tsv', 'rt') as inf:
+            with open('FOUND.txt', 'w', newline='') as outf:
+                for row in csv.DictReader(inf, delimiter='\t'):
+                    outf.write(row['sample_name'] + '\n')
+        CODE
+
+        # filter out from input
+        set +e
+        grep -v -f FOUND.txt "~{meta_submit_tsv}" > "~{out_basename}.unsubmitted.tsv"
     >>>
     output {
-        File    meta_unsubmitted_tsv = ""
+        File    meta_unsubmitted_tsv = "~{out_basename}.unsubmitted.tsv"
         File    biosample_attributes_tsv  = "~{out_basename}.tsv"
     }
     runtime {
