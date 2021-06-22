@@ -2,6 +2,7 @@ version 1.0
 
 import "../tasks/tasks_ncbi_tools.wdl" as ncbi_tools
 import "../tasks/tasks_sarscov2.wdl" as sarscov2
+import "../tasks/tasks_terra.wdl" as terra
 import "../tasks/tasks_utils.wdl" as utils
 
 workflow sarscov2_data_release {
@@ -31,6 +32,8 @@ workflow sarscov2_data_release {
         File?        cdc_cumulative_metadata
         Array[File]  cdc_aligned_trimmed_bams
         String?      cdc_s3_uri
+
+        String?      dashboard_bucket_uri
 
         String       ftp_path_prefix = basename(genbank_zip, ".zip")
         String       prod_test = "Production" # Production or Test
@@ -76,6 +79,21 @@ workflow sarscov2_data_release {
                 gisaid_sequences_fasta = select_first([gisaid_fasta]),
                 gisaid_meta_csv        = select_first([gisaid_csv]),
                 cli_auth_token         = select_first([gisaid_auth_token])
+        }
+    }
+
+    # deliver to dashboard bucket ingest
+    if (defined(cdc_cumulative_metadata) && defined(dashboard_bucket_uri)) {
+        call utils.tsv_drop_cols as meta_sanitize {
+            input:
+                in_tsv = select_first([cdc_cumulative_metadata]),
+                drop_cols = ['internal_id','collaborator_id','matrix_id','hl7_message_id'],
+                out_basename = "metadata-cumulative"
+        }
+        call terra.gcs_copy as dashbord_delivery {
+            input:
+                infiles = [meta_sanitize.out_tsv],
+                gcs_uri_prefix = select_first([dashboard_bucket_uri])
         }
     }
 
