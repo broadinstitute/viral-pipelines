@@ -65,11 +65,11 @@ task detect_cross_contamination {
       ~{'--plate-size ' + plate_size} \
       ~{'--plate-columns ' + plate_columns} \
       ~{'--plate-rows ' + plate_rows} \
-      ~{'--compare-direct ' + compare_direct_neighbors} \
-      ~{'--compare-diagonal ' + compare_diagonal_neighbors} \
-      ~{'--compare-row ' + compare_full_row} \
-      ~{'--compare-column ' + compare_full_column} \
-      ~{'--compare-plate ' + compare_full_plate} \
+      --compare-direct ~{true="TRUE" false="FALSE" compare_direct_neighbors} \
+      --compare-diagonal ~{true="TRUE" false="FALSE" compare_diagonal_neighbors} \
+      --compare-row ~{true="TRUE" false="FALSE" compare_full_row} \
+      --compare-column ~{true="TRUE" false="FALSE" compare_full_column} \
+      --compare-plate ~{true="TRUE" false="FALSE" compare_full_plate} \
       --output ~{out_basename}.txt \
       --out-figures figs \
       --cores `nproc` \
