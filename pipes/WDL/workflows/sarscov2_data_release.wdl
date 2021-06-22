@@ -90,7 +90,7 @@ workflow sarscov2_data_release {
                 drop_cols = ['internal_id','collaborator_id','matrix_id','hl7_message_id'],
                 out_basename = "metadata-cumulative"
         }
-        call terra.gcs_copy as dashbord_delivery {
+        call terra.gcs_copy as dashboard_delivery {
             input:
                 infiles = [meta_sanitize.out_tsv],
                 gcs_uri_prefix = select_first([dashboard_bucket_uri])
