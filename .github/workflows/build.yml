@@ -25,7 +25,7 @@ env:
   #   https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#env-context
   GITHUB_ACTIONS_COMMIT: ${{ github.sha }}
   GITHUB_ACTIONS_BUILD_DIR: ${{ github.workspace }}
-  GITHUB_ACTIONS_BRANCH: ${{ github.base_ref }}
+  GITHUB_ACTIONS_BRANCH: ${{ github.ref }}
   GITHUB_ACTIONS_PULL_REQUEST: ${{ github.event.number }}
   GITHUB_ACTIONS_PULL_REQUEST_BRANCH: ${{ github.head_ref }}
   GITHUB_ACTIONS_PULL_REQUEST_SHA : ${{ github.event.pull_request.head.sha }}
@@ -42,8 +42,23 @@ jobs:
         run: git fetch --prune --unshallow --tags      
       - name: Programmatic environment setup
         run: |
+          set -e -x
           # $GITHUB_ENV is available for subsequent steps
-          echo "GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')" >> $GITHUB_ENV
+          GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')
+          echo "GITHUB_ACTIONS_TAG=$GITHUB_ACTIONS_TAG" >> $GITHUB_ENV
+          # 
+          # Set GITHUB_ACTIONS_BRANCH
+          # TRAVIS_BRANCH: (via https://docs.travis-ci.com/user/environment-variables/ )
+          #   for push builds, or builds not triggered by a pull request, this is the name of the branch.
+          #   for builds triggered by a pull request this is the name of the branch targeted by the pull request.
+          #   for builds triggered by a tag, this is the same as the name of the tag (TRAVIS_TAG).
+          GITHUB_ACTIONS_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [ -n "$GITHUB_ACTIONS_PULL_REQUEST_BRANCH" ]; then
+            GITHUB_ACTIONS_BRANCH=${GITHUB_ACTIONS_BASE_REF##*/}
+          elif [[ "${{ github.event_name }}" == "release" ]]; then
+            GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_TAG
+          fi
+          echo "GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_BRANCH" >> $GITHUB_ENV
       - name: List environment
         run: |
           env
@@ -76,8 +91,23 @@ jobs:
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
         run: |
+          set -e -x
           # $GITHUB_ENV is available for subsequent steps
-          echo "GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')" >> $GITHUB_ENV
+          GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')
+          echo "GITHUB_ACTIONS_TAG=$GITHUB_ACTIONS_TAG" >> $GITHUB_ENV
+          # 
+          # Set GITHUB_ACTIONS_BRANCH
+          # TRAVIS_BRANCH: (via https://docs.travis-ci.com/user/environment-variables/ )
+          #   for push builds, or builds not triggered by a pull request, this is the name of the branch.
+          #   for builds triggered by a pull request this is the name of the branch targeted by the pull request.
+          #   for builds triggered by a tag, this is the same as the name of the tag (TRAVIS_TAG).
+          GITHUB_ACTIONS_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [ -n "$GITHUB_ACTIONS_PULL_REQUEST_BRANCH" ]; then
+            GITHUB_ACTIONS_BRANCH=${GITHUB_ACTIONS_BASE_REF##*/}
+          elif [[ "${{ github.event_name }}" == "release" ]]; then
+            GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_TAG
+          fi
+          echo "GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_BRANCH" >> $GITHUB_ENV
       - name: install java
         uses: actions/setup-java@v2
         with:
@@ -108,8 +138,23 @@ jobs:
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
         run: |
+          set -e -x
           # $GITHUB_ENV is available for subsequent steps
-          echo "GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')" >> $GITHUB_ENV
+          GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')
+          echo "GITHUB_ACTIONS_TAG=$GITHUB_ACTIONS_TAG" >> $GITHUB_ENV
+          # 
+          # Set GITHUB_ACTIONS_BRANCH
+          # TRAVIS_BRANCH: (via https://docs.travis-ci.com/user/environment-variables/ )
+          #   for push builds, or builds not triggered by a pull request, this is the name of the branch.
+          #   for builds triggered by a pull request this is the name of the branch targeted by the pull request.
+          #   for builds triggered by a tag, this is the same as the name of the tag (TRAVIS_TAG).
+          GITHUB_ACTIONS_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [ -n "$GITHUB_ACTIONS_PULL_REQUEST_BRANCH" ]; then
+            GITHUB_ACTIONS_BRANCH=${GITHUB_ACTIONS_BASE_REF##*/}
+          elif [[ "${{ github.event_name }}" == "release" ]]; then
+            GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_TAG
+          fi
+          echo "GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_BRANCH" >> $GITHUB_ENV
       - name: install python
         uses: actions/setup-python@v2
         with: 
@@ -135,8 +180,23 @@ jobs:
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
         run: |
+          set -e -x
           # $GITHUB_ENV is available for subsequent steps
-          echo "GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')" >> $GITHUB_ENV
+          GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')
+          echo "GITHUB_ACTIONS_TAG=$GITHUB_ACTIONS_TAG" >> $GITHUB_ENV
+          # 
+          # Set GITHUB_ACTIONS_BRANCH
+          # TRAVIS_BRANCH: (via https://docs.travis-ci.com/user/environment-variables/ )
+          #   for push builds, or builds not triggered by a pull request, this is the name of the branch.
+          #   for builds triggered by a pull request this is the name of the branch targeted by the pull request.
+          #   for builds triggered by a tag, this is the same as the name of the tag (TRAVIS_TAG).
+          GITHUB_ACTIONS_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [ -n "$GITHUB_ACTIONS_PULL_REQUEST_BRANCH" ]; then
+            GITHUB_ACTIONS_BRANCH=${GITHUB_ACTIONS_BASE_REF##*/}
+          elif [[ "${{ github.event_name }}" == "release" ]]; then
+            GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_TAG
+          fi
+          echo "GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_BRANCH" >> $GITHUB_ENV
       - name: install java
         uses: actions/setup-java@v2
         with:
@@ -165,8 +225,23 @@ jobs:
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
         run: |
+          set -e -x
           # $GITHUB_ENV is available for subsequent steps
-          echo "GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')" >> $GITHUB_ENV
+          GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')
+          echo "GITHUB_ACTIONS_TAG=$GITHUB_ACTIONS_TAG" >> $GITHUB_ENV
+          # 
+          # Set GITHUB_ACTIONS_BRANCH
+          # TRAVIS_BRANCH: (via https://docs.travis-ci.com/user/environment-variables/ )
+          #   for push builds, or builds not triggered by a pull request, this is the name of the branch.
+          #   for builds triggered by a pull request this is the name of the branch targeted by the pull request.
+          #   for builds triggered by a tag, this is the same as the name of the tag (TRAVIS_TAG).
+          GITHUB_ACTIONS_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [ -n "$GITHUB_ACTIONS_PULL_REQUEST_BRANCH" ]; then
+            GITHUB_ACTIONS_BRANCH=${GITHUB_ACTIONS_BASE_REF##*/}
+          elif [[ "${{ github.event_name }}" == "release" ]]; then
+            GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_TAG
+          fi
+          echo "GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_BRANCH" >> $GITHUB_ENV
       - name: install python
         uses: actions/setup-python@v2
         with:
@@ -206,8 +281,23 @@ jobs:
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
         run: |
+          set -e -x
           # $GITHUB_ENV is available for subsequent steps
-          echo "GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')" >> $GITHUB_ENV
+          GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')
+          echo "GITHUB_ACTIONS_TAG=$GITHUB_ACTIONS_TAG" >> $GITHUB_ENV
+          # 
+          # Set GITHUB_ACTIONS_BRANCH
+          # TRAVIS_BRANCH: (via https://docs.travis-ci.com/user/environment-variables/ )
+          #   for push builds, or builds not triggered by a pull request, this is the name of the branch.
+          #   for builds triggered by a pull request this is the name of the branch targeted by the pull request.
+          #   for builds triggered by a tag, this is the same as the name of the tag (TRAVIS_TAG).
+          GITHUB_ACTIONS_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [ -n "$GITHUB_ACTIONS_PULL_REQUEST_BRANCH" ]; then
+            GITHUB_ACTIONS_BRANCH=${GITHUB_ACTIONS_BASE_REF##*/}
+          elif [[ "${{ github.event_name }}" == "release" ]]; then
+            GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_TAG
+          fi
+          echo "GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_BRANCH" >> $GITHUB_ENV
       - name: install python
         uses: actions/setup-python@v2
         with: 
