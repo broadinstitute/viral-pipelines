@@ -8,11 +8,18 @@ task detect_cross_contamination {
 
     Int            min_readcount = 10
     Float          min_maf = 0.03
+    Float          min_genome_coverage = 0.98
+    Int            max_mismatches = 1
 
     File?          plate_map
-    Int?           plate_size
+    Int?           plate_size = 96
     Int?           plate_columns
     Int?           plate_rows
+    Boolean?       compare_direct_neighbors = true
+    Boolean?       compare_diagonal_neighbors = false
+    Boolean?       compare_full_row = false
+    Boolean?       compare_full_column = false
+    Boolean?       compare_full_plate = false
 
     String         out_basename = "potential_cross_contamination"
 
@@ -20,9 +27,25 @@ task detect_cross_contamination {
   }
 
   parameter_meta {
-    lofreq_vcf:         { description: "VCF file(s) output by LoFreq or GATK; must use reference provided by reference_fasta" }
-    genomes_fasta:      { description: "Unaligned consensus genome or genomes" }
-    reference_fasta:    { description: "Reference fasta file" }
+    lofreq_vcf:          { description: "VCF file(s) output by LoFreq or GATK; must use reference provided by reference_fasta" }
+    genomes_fasta:       { description: "Unaligned consensus genome or genomes" }
+    reference_fasta:     { description: "Reference fasta file" }
+    
+    min_readcount:       { description: "Minimum minor allele readcount for position to be considered heterozygous" }
+    min_maf:             { description: "Minimum minor allele frequency for position to be considered heterozygous" }
+    min_genome_coverage: { description: "Minimum proportion genome covered for a sample to be included" }
+    max_mismatches:      { description: "Maximum allowed bases in contaminating sample consensus not matching contaminated sample alleles" }
+    
+    plate_map:           { description: "Optional plate map (tab-separated, no header: sample name, plate position (e.g., A8)); provides substantial speed-up" }
+    plate_size:          { description: "Standard plate size (6-well, 12-well, 24, 48, 96, 384, 1536, 3456)" }
+    plate_columns:       { description: "Number columns in plate (e.g., 1, 2, 3, 4)" }
+    plate_rows:          { description: "Number rows in plate (e.g., A, B, C, D)" }
+    compare_direct_neighbors:  { description: "Compare direct plate neighbors (left, right, top, bottom)" }
+    compare_diagonal_neighbors:{ description: "Compare diagonal plate neighbors (top-right, bottom-right, top-left, bottom-left)" }
+    compare_full_row:    { description: "Compare samples in the same row (e.g., row A)" }
+    compare_full_column: { description: "Compare samples in the same column (e.g., column 8)" }
+    compare_full_plate:  { description: "Compare all samples in the same plate map" }
+    
   }
 
   command <<<
@@ -34,12 +57,19 @@ task detect_cross_contamination {
       --ref ~{reference_fasta} \
       --vcf ~{sep=' ' lofreq_vcf} \
       --consensus ~{sep=' ' genomes_fasta} \
-      ~{'--min_readcount ' + min_readcount} \
-      ~{'--min_maf ' + min_maf} \
-      ~{'--plate_map ' + plate_map} \
-      ~{'--plate_size ' + plate_size} \
-      ~{'--plate_columns' + plate_columns} \
-      ~{'--plate_rows' + plate_rows} \
+      ~{'--min-covered ' + min_genome_coverage} \
+      ~{'--min-readcount ' + min_readcount} \
+      ~{'--max-mismatches ' + max_mismatches} \
+      ~{'--min-maf ' + min_maf} \
+      ~{'--plate-map ' + plate_map} \
+      ~{'--plate-size ' + plate_size} \
+      ~{'--plate-columns ' + plate_columns} \
+      ~{'--plate-rows ' + plate_rows} \
+      ~{'--compare-direct ' + compare_direct_neighbors} \
+      ~{'--compare-diagonal ' + compare_diagonal_neighbors} \
+      ~{'--compare-row ' + compare_full_row} \
+      ~{'--compare-column ' + compare_full_column} \
+      ~{'--compare-plate ' + compare_full_plate} \
       --output ~{out_basename}.txt \
       --out-figures figs \
       --cores `nproc` \
