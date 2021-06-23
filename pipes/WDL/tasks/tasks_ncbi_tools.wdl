@@ -6,7 +6,7 @@ task Fetch_SRA_to_BAM {
         String  SRA_ID
 
         Int?    machine_mem_gb
-        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.9"
+        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     }
 
     meta {
@@ -149,7 +149,7 @@ task biosample_tsv_filter_preexisting {
         File           meta_submit_tsv
 
         String         out_basename = "biosample_attributes"
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.9"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     }
     meta {
         description: "This task takes a metadata TSV for submission to NCBI BioSample and filters out entries that have already been submitted to NCBI. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input."
@@ -208,7 +208,7 @@ task fetch_biosamples {
         Array[String]  biosample_ids
 
         String         out_basename = "biosample_attributes"
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.9"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     }
     meta {
         description: "This searches NCBI BioSample for accessions or keywords using the Entrez interface and returns any hits in the form of a BioSample attributes TSV. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input."
@@ -241,7 +241,7 @@ task ncbi_sftp_upload {
 
         String         wait_for="1"  # all, disabled, some number
 
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.9"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     }
 
     command <<<
@@ -285,7 +285,7 @@ task sra_tsv_to_xml {
         String   bioproject
         String   data_bucket_uri
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.9"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     }
     command <<<
         set -e
@@ -319,7 +319,7 @@ task biosample_submit_tsv_to_xml {
         File     meta_submit_tsv
         File     config_js
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.9"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     }
     meta {
         description: "This converts a web portal submission TSV for NCBI BioSample into an ftp-appropriate XML submission for NCBI BioSample. It does not connect to NCBI, and does not submit or fetch any data."
@@ -354,7 +354,7 @@ task biosample_submit_tsv_ftp_upload {
         File     config_js
         String   target_path
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.9"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     }
     String base=basename(meta_submit_tsv, '.tsv')
     meta {
@@ -391,7 +391,7 @@ task biosample_xml_response_to_tsv {
         File     meta_submit_tsv
         File     ncbi_report_xml
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.9"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     }
     String out_name = "~{basename(meta_submit_tsv, '.tsv')}-attributes.tsv"
     meta {
