@@ -2,24 +2,24 @@ version 1.0
 
 task detect_cross_contamination {
   input {
-    Array[File]    lofreq_vcf
-    Array[File]    genome_fastas
-    File           reference_fasta
+    Array[File] lofreq_vcf
+    Array[File] genome_fastas
+    File        reference_fasta
 
-    Int            min_readcount = 10
-    Float          min_maf = 0.03
-    Float          min_genome_coverage = 0.98
-    Int            max_mismatches = 1
+    Int         min_readcount       = 10
+    Float       min_maf             = 0.03
+    Float       min_genome_coverage = 0.98
+    Int         max_mismatches      = 1
 
-    File?          plate_map
-    Int?           plate_size = 96
-    Int?           plate_columns
-    Int?           plate_rows
-    Boolean?       compare_direct_neighbors = true
-    Boolean?       compare_diagonal_neighbors = false
-    Boolean?       compare_full_row = false
-    Boolean?       compare_full_column = false
-    Boolean?       compare_full_plate = false
+    File?       plate_map
+    Int?        plate_size                 = 96
+    Int?        plate_columns
+    Int?        plate_rows
+    Boolean?    compare_direct_neighbors   = true
+    Boolean?    compare_diagonal_neighbors = false
+    Boolean?    compare_full_row           = false
+    Boolean?    compare_full_column        = false
+    Boolean?    compare_full_plate         = false
 
     String         out_basename = "potential_cross_contamination"
 
@@ -51,6 +51,9 @@ task detect_cross_contamination {
   command <<<
     set -e -o pipefail
 
+    # commented out until polyphonia can report its own version
+    #polyphonia --version | tee POLYPHONIA_VERSION
+
     mkdir -p figs
 
     polyphonia cross_contamination \
@@ -78,8 +81,10 @@ task detect_cross_contamination {
   >>>
 
   output {
-    File        report = "~{out_basename}.txt"
-    Array[File] figures = glob("figs/*")
+    File        report             = "~{out_basename}.txt"
+    Array[File] figures            = glob("figs/*")
+    # commented out until polyphonia can report its own version
+    #String      polyphonia_version = read_string("POLYPHONIA_VERSION")
   }
   runtime {
     docker: docker
@@ -100,6 +105,9 @@ task lofreq {
   }
   command <<<
     set -e -o pipefail
+
+    lofreq version | grep version | sed 's/.* \(.*\)/\1/g' | tee LOFREQ_VERSION
+
     lofreq call \
       -f "~{reference_fasta}" \
       -o "~{out_basename}.vcf" \
@@ -107,7 +115,8 @@ task lofreq {
   >>>
 
   output {
-    File       report_vcf = "~{out_basename}.vcf"
+    File   report_vcf     = "~{out_basename}.vcf"
+    String lofreq_version = read_string("LOFREQ_VERSION")
   }
   runtime {
     docker: docker
