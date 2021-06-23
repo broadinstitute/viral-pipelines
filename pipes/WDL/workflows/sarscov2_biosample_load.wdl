@@ -63,7 +63,8 @@ workflow sarscov2_biosample_load {
                 biosample_submit_tsv_ftp_upload.attributes_tsv,
                 meta_submit_tsv
             ]),
-            id_col = "isolate"
+            id_col = "isolate",
+            out_basename = basename(meta_submit_tsv, '.tsv') + "-attributes"
     }
 
     output {
