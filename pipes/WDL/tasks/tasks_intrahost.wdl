@@ -3,7 +3,7 @@ version 1.0
 task detect_cross_contamination {
   input {
     Array[File]    lofreq_vcf
-    Array[File]    genomes_fasta
+    Array[File]    genome_fastas
     File           reference_fasta
 
     Int            min_readcount = 10
@@ -28,7 +28,7 @@ task detect_cross_contamination {
 
   parameter_meta {
     lofreq_vcf:          { description: "VCF file(s) output by LoFreq or GATK; must use reference provided by reference_fasta" }
-    genomes_fasta:       { description: "Unaligned consensus genome or genomes" }
+    genome_fastas:       { description: "Unaligned consensus genome or genomes" }
     reference_fasta:     { description: "Reference fasta file" }
     
     min_readcount:       { description: "Minimum minor allele readcount for position to be considered heterozygous" }
@@ -56,7 +56,7 @@ task detect_cross_contamination {
     polyphonia cross_contamination \
       --ref ~{reference_fasta} \
       --vcf ~{sep=' ' lofreq_vcf} \
-      --consensus ~{sep=' ' genomes_fasta} \
+      --consensus ~{sep=' ' genome_fastas} \
       ~{'--min-covered ' + min_genome_coverage} \
       ~{'--min-readcount ' + min_readcount} \
       ~{'--max-mismatches ' + max_mismatches} \
