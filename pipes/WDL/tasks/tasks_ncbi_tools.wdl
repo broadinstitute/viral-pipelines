@@ -164,7 +164,7 @@ task biosample_tsv_filter_preexisting {
         with open('~{meta_submit_tsv}', 'rt') as inf:
             with open('SAMPLES.txt', 'w', newline='') as outf:
                 for row in csv.DictReader(inf, delimiter='\t'):
-                    outf.write(row['sample_name'] + '\n')
+                    outf.write(row['isolate'] + '\n')
         CODE
         cat SAMPLES.txt | wc -l | tee COUNT_IN
 
