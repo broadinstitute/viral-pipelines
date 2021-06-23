@@ -51,7 +51,7 @@ workflow detect_cross_contamination {
     }
 
     Array[Array[File]] vcfs_and_genomes = transpose(vcf_genome_pairs)
-    call intrahost.detect_cross_contamination as detect_cross_contamination {
+    call intrahost.detect_cross_contamination as detect_cross_contam {
         # take scatter-gathered array of [(vcf1,fasta1),(vcf2,fasta2),(vcf3,fasta3)]
         # and transpose to [[vcf1,vcf2,vcf3],[fasta1,fasta2,fasta3]]
         input:
@@ -61,11 +61,11 @@ workflow detect_cross_contamination {
     }
 
     output {
-        File        contamination_report  = detect_cross_contamination.report
+        File        contamination_report  = detect_cross_contam.report
         Array[File] lofreq_vcfs           = lofreq.report_vcf
-        Array[File] contamination_figures = detect_cross_contamination.figures
+        Array[File] contamination_figures = detect_cross_contam.figures
         String      lofreq_version        = lofreq.lofreq_version[0]
         # commented out until polyphonia can report its own version
-        #String      polyphonia_version    = detect_cross_contamination.polyphonia_version
+        #String      polyphonia_version    = detect_cross_contam.polyphonia_version
     }
 }
