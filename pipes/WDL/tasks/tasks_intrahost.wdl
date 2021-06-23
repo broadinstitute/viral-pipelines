@@ -96,7 +96,7 @@ task lofreq {
     File      reference_fasta
 
     String    out_basename = basename(aligned_bam, '.bam')
-    String    docker = "quay.io/broadinstitute/polyphonia:latest"
+    String    docker = "quay.io/biocontainers/lofreq:latest"
   }
   command <<<
     set -e -o pipefail
