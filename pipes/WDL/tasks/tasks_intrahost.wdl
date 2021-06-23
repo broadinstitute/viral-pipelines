@@ -108,10 +108,13 @@ task lofreq {
 
     lofreq version | grep version | sed 's/.* \(.*\)/\1/g' | tee LOFREQ_VERSION
 
+    samtools faidx "~{reference_fasta}"
+    samtools index "~{aligned_bam}"
+
     lofreq call \
       -f "~{reference_fasta}" \
       -o "~{out_basename}.vcf" \
-      "~{aligned_bam}" \
+      "~{aligned_bam}"
   >>>
 
   output {
