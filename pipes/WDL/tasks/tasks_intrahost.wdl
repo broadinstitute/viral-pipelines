@@ -107,7 +107,7 @@ task lofreq {
   >>>
 
   output {
-    File        report = "~{out_basename}.vcf"
+    File       report_vcf = "~{out_basename}.vcf"
   }
   runtime {
     docker: docker
