@@ -98,7 +98,6 @@ runSpec:
       demux_instance_type="mem1_ssd1_v2_x4"
       demux_threads=$(echo "$demux_instance_type" | cut -dx -f2)
       min_base_quality=25
-      max_reads_in_ram_per_tile=1000000
       max_records_in_ram=2000000
       if [ "$total_tile_count" -le 50 ]; then 
           tar_consolidation_instance_size="mem1_ssd1_v2_x4"
