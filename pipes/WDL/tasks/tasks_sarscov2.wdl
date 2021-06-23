@@ -476,7 +476,7 @@ task crsp_meta_etl {
 
         # create ID map
         collab_ids = sample_meta[['sample_name','hl7_message_id','internal_id','matrix_id']]
-        collab_ids = collab_ids.rename(columns={'sample_name': 'external_id')
+        collab_ids = collab_ids.rename(columns={'sample_name': 'external_id'})
         collab_ids['collaborator_id'] = collab_ids['internal_id']
 
         # write final output
