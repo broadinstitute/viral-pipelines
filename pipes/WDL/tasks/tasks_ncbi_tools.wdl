@@ -164,9 +164,9 @@ task biosample_tsv_filter_preexisting {
         with open('~{meta_submit_tsv}', 'rt') as inf:
             with open('SAMPLES.txt', 'w', newline='') as outf:
                 for row in csv.DictReader(inf, delimiter='\t'):
-                    outf.write(row['isolate'] + '\n')
+                    outf.write(row['sample_name'] + '\n')
         CODE
-        wc -l SAMPLES.txt
+        cat SAMPLES.txt | wc -l | tee COUNT_IN
 
         # fetch attributes file for anything already registered
         /opt/docker/scripts/biosample-fetch_attributes.py \
@@ -180,15 +180,19 @@ task biosample_tsv_filter_preexisting {
                 for row in csv.DictReader(inf, delimiter='\t'):
                     outf.write(row['isolate'] + '\n')
         CODE
-        wc -l FOUND.txt
+        cat FOUND.txt | wc -l | tee COUNT_FOUND
 
         # filter out from input
         set +e
         grep -v -F -f FOUND.txt "~{meta_submit_tsv}" > "~{out_basename}.unsubmitted.tsv"
+        cat "~{out_basename}.unsubmitted.tsv" | wc -l | tee COUNT_UNFOUND
     >>>
     output {
         File    meta_unsubmitted_tsv = "~{out_basename}.unsubmitted.tsv"
         File    biosample_attributes_tsv  = "~{out_basename}.tsv"
+        Int     num_in = read_int("COUNT_IN")
+        Int     num_found = read_int("COUNT_FOUND")
+        Int     num_not_found = read_int("COUNT_UNFOUND") - 1
     }
     runtime {
         cpu:     2
