@@ -124,6 +124,10 @@ workflows:
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/detect_cross_contamination.wdl
    testParameterFiles:
+  - name: detect_cross_contamination_precalled_vcfs
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/detect_cross_contamination_precalled_vcfs.wdl
+   testParameterFiles:
     - empty.json
  - name: diff_genome_sets
    subclass: WDL
