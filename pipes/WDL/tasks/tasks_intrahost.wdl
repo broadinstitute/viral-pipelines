@@ -2,7 +2,7 @@ version 1.0
 
 task detect_cross_contamination {
   input {
-    Array[File] lofreq_vcf
+    Array[File] lofreq_vcfs
     Array[File] genome_fastas
     File        reference_fasta
 

@@ -55,7 +55,7 @@ workflow detect_cross_contamination {
         # take scatter-gathered array of [(vcf1,fasta1),(vcf2,fasta2),(vcf3,fasta3)]
         # and transpose to [[vcf1,vcf2,vcf3],[fasta1,fasta2,fasta3]]
         input:
-            lofreq_vcf      = vcfs_and_genomes[0], # vcfs
+            lofreq_vcfs     = vcfs_and_genomes[0], # vcfs
             genome_fastas   = vcfs_and_genomes[1], # fastas
             reference_fasta = reference_fasta
     }
