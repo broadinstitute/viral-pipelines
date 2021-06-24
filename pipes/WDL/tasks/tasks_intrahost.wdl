@@ -27,7 +27,7 @@ task detect_cross_contamination {
   }
 
   parameter_meta {
-    lofreq_vcf:          { description: "VCF file(s) output by LoFreq or GATK; must use reference provided by reference_fasta" }
+    lofreq_vcfs:          { description: "VCF file(s) output by LoFreq or GATK; must use reference provided by reference_fasta" }
     genome_fastas:       { description: "Unaligned consensus genome or genomes" }
     reference_fasta:     { description: "Reference fasta file" }
     
@@ -58,7 +58,7 @@ task detect_cross_contamination {
 
     polyphonia cross_contamination \
       --ref ~{reference_fasta} \
-      --vcf ~{sep=' ' lofreq_vcf} \
+      --vcf ~{sep=' ' lofreq_vcfs} \
       --consensus ~{sep=' ' genome_fastas} \
       ~{'--min-covered ' + min_genome_coverage} \
       ~{'--min-readcount ' + min_readcount} \
