@@ -11,7 +11,7 @@ workflow detect_cross_contamination_precalled_vcfs {
 
     parameter_meta {
         lofreq_vcfs: {
-            description: "per-sample variant vall files (VCF) called by LoFreq against reference_fasta",
+            description: "per-sample variant call files (VCF) called by LoFreq against reference_fasta",
             patterns: ["*.vcf","*.vcf.gz"]
         }
         genome_fastas: {
