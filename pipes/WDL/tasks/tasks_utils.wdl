@@ -229,7 +229,7 @@ task tsv_join {
   }
 
   runtime {
-    memory: "7 GB"
+    memory: "15 GB"
     cpu: 2
     docker: "python:slim"
     disks: "local-disk 100 HDD"
