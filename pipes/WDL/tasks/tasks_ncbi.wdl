@@ -318,11 +318,12 @@ task gisaid_meta_prep {
       with open('~{source_modifier_table}', 'rt') as inf:
         for row in csv.DictReader(inf, delimiter='\t'):
 
+          isolation_source = row['isolation_source'].lower()
           #covv_specimen
           if strict:
-            valid_isolation_sources = ('Clinical', 'Environmental')
-            assert row['isolation_source'] in valid_isolation_sources, f"Metadata error: 'isolation_source' not one of: {valid_isolation_sources}\n{row}"
-            assert row['host'] == 'Homo sapiens' or row['isolation_source'] == 'Environmental', f"Metadata error: 'host' must be 'Homo sapiens' if 'isolation_source' is not 'Environmental'\n{row}"
+            valid_isolation_sources = ('clinical', 'environmental')
+            assert isolation_source in valid_isolation_sources, f"Metadata error: 'isolation_source' not one of: {valid_isolation_sources}\n{row}"
+            assert row['host'] == 'Homo sapiens' or isolation_source == 'environmental', f"Metadata error: 'host' must be 'Homo sapiens' if 'isolation_source' is not 'Environmental'\n{row}"
             assert row['organism']         == 'Severe acute respiratory syndrome coronavirus 2', f"'organism' != 'Severe acute respiratory syndrome coronavirus 2'\n{row}"
             assert row['db_xref']          == 'taxon:2697049', f"Metadata error: 'db_xref' != 'taxon:2697049'\n{row}"
 
@@ -330,9 +331,9 @@ task gisaid_meta_prep {
           # from "Vocabulary" tab of this sheet:
           #   https://github.com/pha4ge/SARS-CoV-2-Contextual-Data-Specification/blob/master/PHA4GE%20SARS-CoV-2%20Contextual%20Data%20Template.xlsx
           gisaid_specimen_source = "unknown"
-          if row['isolation_source'] == 'Clinical':
+          if isolation_source == 'clinical':
             gisaid_specimen_source = row.get("body_product",row.get("anatomical_material",row.get("anatomical_part","missing")))
-          if row['isolation_source'] == 'Environmental':
+          if isolation_source == 'environmental':
             gisaid_specimen_source = row.get("environmental_material",row.get("environmental_site","missing"))
 
           writer.writerow({
@@ -342,7 +343,7 @@ task gisaid_meta_prep {
 
             'covv_type'           : 'betacoronavirus',
             'covv_passage'        : 'Original',
-            'covv_host'           : 'Human' if row['isolation_source'] == 'Clinical' else row['isolation_source'].replace("Environmental","Environment"),
+            'covv_host'           : 'Human' if isolation_source == 'clinical' else isolation_source.replace("environmental","Environment"),
             'covv_gender'         : 'unknown',
             'covv_patient_age'    : 'unknown',
             'covv_patient_status' : 'unknown',
