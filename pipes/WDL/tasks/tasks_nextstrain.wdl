@@ -408,16 +408,17 @@ task nextstrain_ncov_sanitize_gisaid_data {
     String out_basename = basename(basename(basename(basename(sequences_gisaid_fasta, '.xz'), '.gz'), '.tar'), '.fasta')
     command {
         set -e
+        ncov_path_prefix="/nextstrain/ncov"
         wget -q "https://github.com/nextstrain/ncov/archive/~{nextstrain_ncov_repo_commit}.tar.gz"
-        tar -xf "~{nextstrain_ncov_repo_commit}.tar.gz" --strip-components=1
-        #cat defaults/clades.tsv defaults/subclades.tsv > clades-with-subclades.tsv
+        mkdir -p "$ncov_path_prefix"
+        tar -xf "~{nextstrain_ncov_repo_commit}.tar.gz" --strip-components=1 -C "$ncov_path_prefix"
 
-        python3 scripts/sanitize_sequences.py \
+        python3 "$ncov_path_prefix/scripts/sanitize_sequences.py" \
         --sequences "~{sequences_gisaid_fasta}" \
         ~{"--strip-prefixes=" + prefix_to_strip} \
         --output "~{out_basename}_sequences_sanitized_for_nextstrain.fasta.gz"
 
-        scripts/sanitize_metadata.py \
+        python3 "$ncov_path_prefix/scripts/sanitize_metadata.py" \
         --metadata "~{metadata_gisaid_tsv}" \
         --parse-location-field Location \
         --rename-fields 'Virus name=strain' 'Accession ID=gisaid_epi_isl' 'Collection date=date' \
