@@ -6,7 +6,7 @@ task merge_tarballs {
     String       out_filename
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-core:2.1.31"
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.32"
   }
 
   command {
@@ -141,7 +141,7 @@ task illumina_demux {
     Int?    maxRecordsInRam
 
     Int?    machine_mem_gb
-    String  docker = "quay.io/broadinstitute/viral-core:2.1.31"
+    String  docker = "quay.io/broadinstitute/viral-core:2.1.32"
   }
   parameter_meta {
       flowcell_tgz: {
@@ -222,11 +222,13 @@ task illumina_demux {
         # increase the number of reads in ram per-tile for NextSeq, since the tiles are larger
         # without this setting, reads will spill to disk and may read the limit
         # on the number of files that can be opened
+        # max_reads_in_ram_per_tile=1500000 # deprecared in newer versions of picard, to be removed
         max_records_in_ram=2000000
         echo "Detected $total_tile_count tiles, interpreting as NextSeq (mid-output) run."
     elif [ "$total_tile_count" -le 624 ]; then
         demux_threads=32 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
         mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 80)
+        # max_reads_in_ram_per_tile=600000 # deprecared in newer versions of picard, to be removed
         max_records_in_ram=2000000
         echo "Detected $total_tile_count tiles, interpreting as NovaSeq SP run."
     elif [ "$total_tile_count" -le 768 ]; then
@@ -235,6 +237,7 @@ task illumina_demux {
         # increase the number of reads in ram per-tile for NextSeq, since the tiles are larger
         # without this setting, reads will spill to disk and may read the limit
         # on the number of files that can be opened
+        # max_reads_in_ram_per_tile=1500000 # deprecared in newer versions of picard, to be removed
         max_records_in_ram=2500000
         echo "Detected $total_tile_count tiles, interpreting as NextSeq (high-output) run."
     elif [ "$total_tile_count" -le 896 ]; then
@@ -242,6 +245,7 @@ task illumina_demux {
     elif [ "$total_tile_count" -le 1408 ]; then
         demux_threads=32 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
         mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 80)
+        # max_reads_in_ram_per_tile=600000 # deprecared in newer versions of picard, to be removed
         max_records_in_ram=2000000
         echo "Detected $total_tile_count tiles, interpreting as NovaSeq run."
         echo "  **Note: Q20 threshold used since NovaSeq with RTA3 writes only four Q-score values: 2, 12, 23, and 37.**"
@@ -256,6 +260,7 @@ task illumina_demux {
     elif [ "$total_tile_count" -gt 3744 ]; then
         demux_threads=30 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
         mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 80)
+        # max_reads_in_ram_per_tile=600000 # deprecared in newer versions of picard, to be removed
         max_records_in_ram=2000000
         echo "Tile count: $total_tile_count tiles (unknown instrument type)."
     fi
