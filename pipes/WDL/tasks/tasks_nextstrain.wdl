@@ -376,6 +376,67 @@ task nextstrain_ncov_defaults {
     }
 }
 
+task nextstrain_ncov_sanitize_gisaid_data {
+    meta {
+        description: "Sanitize data downloaded from GISAID for use in Nextstrain/augur. See: https://nextstrain.github.io/ncov/data-prep#curate-data-from-the-full-gisaid-database"
+    }
+
+    input {
+        File sequences_gisaid_fasta
+        File metadata_gisaid_tsv
+
+        String? prefix_to_strip = "hCoV-19/"
+
+        String nextstrain_ncov_repo_commit = "183e94fd5ee73be97d66b7b7d90b167146fa0752"
+        String docker                      = "nextstrain/base:build-20210318T204019Z"
+    }
+
+    parameter_meta {
+        sequences_gisaid_fasta: {
+          description: "Multiple sequences downloaded from GISAID",
+          patterns: ["*.fasta","*.fasta.xy","*.fasta.gz"]
+        }
+        metadata_gisaid_tsv: {
+            description: "Tab-separated metadata file for sequences downloaded from GISAID and passed in via sequences_gisaid_fasta.",
+            patterns: ["*.txt", "*.tsv","*.tsv.xy","*.tsv.gz"]
+        }
+        prefix_to_strip: {
+            description: "String prefix to strip from sequence IDs in both the input fasta and metadata files"
+        }
+    }
+
+    String out_basename = basename(basename(basename(sequences_gisaid_fasta, '.xy'), '.gz'), '.fasta')
+    command {
+        set -e
+        wget -q "https://github.com/nextstrain/ncov/archive/~{nextstrain_ncov_repo_commit}.tar.gz"
+        tar -xf "~{nextstrain_ncov_repo_commit}.tar.gz" --strip-components=1
+        #cat defaults/clades.tsv defaults/subclades.tsv > clades-with-subclades.tsv
+
+        python3 scripts/sanitize_sequences.py \
+        --sequences "~{sequences_gisaid_fasta}" \
+        ~{"--strip-prefixes=" + prefix_to_strip} \
+        --output "~{out_basename}_sequences_sanitized_for_nextstrain.fasta.gz"
+
+        scripts/sanitize_metadata.py \
+        --metadata "~{metadata_gisaid_tsv}" \
+        --parse-location-field Location \
+        --rename-fields 'Virus name=strain' 'Accession ID=gisaid_epi_isl' 'Collection date=date' \
+        ~{"--strip-prefixes=" + prefix_to_strip} \
+        --output "~{out_basename}_metadata_sanitized_for_nextstrain.tsv.gz"
+    }
+    runtime {
+        docker: docker
+        memory: "7 GB"
+        cpu:   1
+        disks:  "local-disk 50 HDD"
+        dx_instance_type: "mem2_ssd1_v2_x2"
+    }
+    output {
+        File sequences_gisaid_sanitized_fasta = "~{out_basename}_sequences_sanitized_for_nextstrain.fasta.gz"
+        File metadata_gisaid_sanitized_tsv    = "~{out_basename}_metadata_sanitized_for_nextstrain.tsv.gz"
+    }
+}
+
 task filter_subsample_sequences {
     meta {
         description: "Filter and subsample a sequence set. See https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/filter.html"
