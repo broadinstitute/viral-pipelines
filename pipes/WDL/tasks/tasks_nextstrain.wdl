@@ -394,18 +394,18 @@ task nextstrain_ncov_sanitize_gisaid_data {
     parameter_meta {
         sequences_gisaid_fasta: {
           description: "Multiple sequences downloaded from GISAID",
-          patterns: ["*.fasta","*.fasta.xy","*.fasta.gz"]
+          patterns: ["*.fasta","*.fasta.xz","*.fasta.gz"]
         }
         metadata_gisaid_tsv: {
             description: "Tab-separated metadata file for sequences downloaded from GISAID and passed in via sequences_gisaid_fasta.",
-            patterns: ["*.txt", "*.tsv","*.tsv.xy","*.tsv.gz"]
+            patterns: ["*.txt", "*.tsv","*.tsv.xz","*.tsv.gz"]
         }
         prefix_to_strip: {
             description: "String prefix to strip from sequence IDs in both the input fasta and metadata files"
         }
     }
 
-    String out_basename = basename(basename(basename(sequences_gisaid_fasta, '.xy'), '.gz'), '.fasta')
+    String out_basename = basename(basename(basename(sequences_gisaid_fasta, '.xz'), '.gz'), '.fasta')
     command {
         set -e
         wget -q "https://github.com/nextstrain/ncov/archive/~{nextstrain_ncov_repo_commit}.tar.gz"
