@@ -347,7 +347,7 @@ task gisaid_meta_prep {
             'covv_gender'         : 'unknown',
             'covv_patient_age'    : 'unknown',
             'covv_patient_status' : 'unknown',
-            'covv_specimen'       : gisaid_specimen_source,
+            'covv_specimen'       : gisaid_specimen_source.capitalize(), # capitalization of the first word seems to be the norm for GISAID
 
             'covv_assembly_method': sample_to_cmt[row['Sequence_ID']]['Assembly Method'],
             'covv_coverage'       : sample_to_cmt[row['Sequence_ID']]['Coverage'],
