@@ -223,7 +223,8 @@ task illumina_demux {
         # without this setting, reads will spill to disk and may read the limit
         # on the number of files that can be opened
         # max_reads_in_ram_per_tile=1500000 # deprecared in newer versions of picard, to be removed
-        max_records_in_ram=2000000
+        demux_threads=32 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
+        max_records_in_ram=1000000
         echo "Detected $total_tile_count tiles, interpreting as NextSeq (mid-output) run."
     elif [ "$total_tile_count" -le 624 ]; then
         demux_threads=32 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
