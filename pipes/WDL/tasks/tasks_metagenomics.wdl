@@ -417,7 +417,7 @@ task build_kraken2_db {
     # prep standard libraries, if specified
     STD_INPUT_CMD=""
     if [ -n "${sep=' ' standard_libraries}" ]; then
-      STD_INPUT_CMD="--standard_libraries ${sep=' ' standard_libraries}"
+      STD_INPUT_CMD="--standard_libraries ~{sep=' ' standard_libraries}"
     fi
 
     # build kraken2 database
