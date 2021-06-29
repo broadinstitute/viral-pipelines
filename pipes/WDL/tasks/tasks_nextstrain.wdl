@@ -421,7 +421,7 @@ task nextstrain_ncov_sanitize_gisaid_data {
         python3 "$ncov_path_prefix/scripts/sanitize_metadata.py" \
         --metadata "~{metadata_gisaid_tsv}" \
         --parse-location-field Location \
-        --rename-fields 'Virus name=strain' 'Accession ID=gisaid_epi_isl' 'Collection date=date' \
+        --rename-fields 'Virus name=strain' 'Accession ID=gisaid_epi_isl' 'Collection date=date' 'Clade=GISAID_clade' 'Pango lineage=pango_lineage' 'Host=host' 'Type=virus' 'Patient age=age'\
         ~{"--strip-prefixes=" + prefix_to_strip} \
         --output "~{out_basename}_metadata_sanitized_for_nextstrain.tsv.gz"
     }
