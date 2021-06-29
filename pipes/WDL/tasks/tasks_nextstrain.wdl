@@ -715,7 +715,7 @@ task mafft_one_chr_chunked {
     }
     input {
         File     sequences
-        File?    ref_fasta
+        File    ref_fasta
         String   basename
         Boolean  remove_reference = false
         Boolean  keep_length = true
