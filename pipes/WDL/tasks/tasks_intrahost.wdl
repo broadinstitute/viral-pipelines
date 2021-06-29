@@ -11,7 +11,7 @@ task detect_cross_contamination {
     Float       min_genome_coverage = 0.98
     Int         max_mismatches      = 1
 
-    File?       plate_map
+    Array[File]? plate_maps
     Int?        plate_size                 = 96
     Int?        plate_columns
     Int?        plate_rows
@@ -27,7 +27,7 @@ task detect_cross_contamination {
   }
 
   parameter_meta {
-    lofreq_vcfs:          { description: "VCF file(s) output by LoFreq or GATK; must use reference provided by reference_fasta" }
+    lofreq_vcfs:         { description: "VCF file(s) output by LoFreq or GATK; must use reference provided by reference_fasta" }
     genome_fastas:       { description: "Unaligned consensus genome or genomes" }
     reference_fasta:     { description: "Reference fasta file" }
     
@@ -36,7 +36,7 @@ task detect_cross_contamination {
     min_genome_coverage: { description: "Minimum proportion genome covered for a sample to be included" }
     max_mismatches:      { description: "Maximum allowed bases in contaminating sample consensus not matching contaminated sample alleles" }
     
-    plate_map:           { description: "Optional plate map (tab-separated, no header: sample name, plate position (e.g., A8)); provides substantial speed-up" }
+    plate_maps:           { description: "Optional plate map(s) (tab-separated, no header: sample name, plate position (e.g., A8)); provides substantial speed-up" }
     plate_size:          { description: "Standard plate size (6-well, 12-well, 24, 48, 96, 384, 1536, 3456)" }
     plate_columns:       { description: "Number columns in plate (e.g., 1, 2, 3, 4)" }
     plate_rows:          { description: "Number rows in plate (e.g., A, B, C, D)" }
@@ -55,6 +55,12 @@ task detect_cross_contamination {
     #polyphonia --version | tee POLYPHONIA_VERSION
 
     mkdir -p figs
+    
+    # prep plate maps input, if specified
+    PLATE_MAPS_INPUT=""
+    if [ -n "${sep=' ' plate_maps}" ]; then
+      PLATE_MAPS_INPUT="--plate-map ~{sep=' ' plate_maps}"
+    fi
 
     polyphonia cross_contamination \
       --ref ~{reference_fasta} \
@@ -64,7 +70,7 @@ task detect_cross_contamination {
       ~{'--min-readcount ' + min_readcount} \
       ~{'--max-mismatches ' + max_mismatches} \
       ~{'--min-maf ' + min_maf} \
-      ~{'--plate-map ' + plate_map} \
+      $PLATE_MAPS_INPUT \
       ~{'--plate-size ' + plate_size} \
       ~{'--plate-columns ' + plate_columns} \
       ~{'--plate-rows ' + plate_rows} \
