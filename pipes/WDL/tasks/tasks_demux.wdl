@@ -125,7 +125,7 @@ task illumina_demux {
   input {
     File    flowcell_tgz
     Int     lane=1
-    Boolean sort_reads=false
+    Boolean sort_reads=true
     File?   samplesheet
     File?   runinfo
     String? sequencingCenter
