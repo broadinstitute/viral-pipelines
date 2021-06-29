@@ -17,6 +17,8 @@ workflow demux_deplete {
         Array[File]+ samplesheets  ## must be in lane order!
         String?      read_structure
 
+        Boolean      sort_reads=true
+
         File?        sample_rename_map
         File?        biosample_map
         Int          min_reads_per_bam = 100
@@ -64,7 +66,8 @@ workflow demux_deplete {
                 flowcell_tgz  = flowcell_tgz,
                 lane          = lane_sheet.left + 1,
                 samplesheet   = samplesheet_rename_ids.new_sheet,
-                readStructure = read_structure
+                readStructure = read_structure,
+                sort_reads    = sort_reads
         }
         call demux.map_map_setdefault as meta_default_sample {
             input:
