@@ -1247,10 +1247,10 @@ task tip_frequencies {
     }
     runtime {
         docker: docker
-        memory: "7 GB"
+        memory: "15 GB"
         cpu :   2
         disks:  "local-disk 100 HDD"
-        dx_instance_type: "mem1_ssd1_v2_x2"
+        dx_instance_type: "mem2_ssd1_v2_x2"
         preemptible: 1
     }
     output {
