@@ -4,7 +4,7 @@ import "../tasks/tasks_intrahost.wdl" as intrahost
 
 workflow detect_cross_contamination_precalled_vcfs {
     meta {
-        description: "Detect cross-contamination between samples using sub-consensus variation, from consensus genomes and pre-called LoFreq vcf files."
+        description: "Detect cross-contamination between samples using consensus-level and sub-consensus variation, from consensus genomes and pre-called LoFreq vcf files."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
     }

@@ -36,7 +36,7 @@ task detect_cross_contamination {
     min_genome_coverage: { description: "Minimum proportion genome covered for a sample to be included" }
     max_mismatches:      { description: "Maximum allowed bases in contaminating sample consensus not matching contaminated sample alleles" }
     
-    plate_maps:           { description: "Optional plate map(s) (tab-separated, no header: sample name, plate position (e.g., A8)); provides substantial speed-up" }
+    plate_maps:           { description: "Optional plate map(s) (tab-separated, no header: sample name, plate position (e.g., A8))" }
     plate_size:          { description: "Standard plate size (6-well, 12-well, 24, 48, 96, 384, 1536, 3456)" }
     plate_columns:       { description: "Number columns in plate (e.g., 1, 2, 3, 4)" }
     plate_rows:          { description: "Number rows in plate (e.g., A, B, C, D)" }
