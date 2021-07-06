@@ -720,11 +720,12 @@ task mafft_one_chr_chunked {
         Boolean  remove_reference = false
         Boolean  keep_length = true
 
-        Int      batch_chunk_size = 150
+        Int      batch_chunk_size = 2000
+        Int      threads_per_job = 2
 
         String   docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
-        Int      mem_size = 20
-        Int      cpus = 32
+        Int      mem_size = 32
+        Int      cpus = 96
     }
     command {
         set -e
@@ -743,10 +744,13 @@ task mafft_one_chr_chunked {
                 SeqIO.write(batch, handle, "fasta-2line")
         CODE
 
+
         # GNU Parallel refresher:
         # ",," is the replacement string; values after ":::" are substituted where it appears
-        parallel --jobs ~{cpus} -I ,, \
-          "mafft --6merpair --keeplength --preservecase --thread 2 --addfragments ,, ~{ref_fasta} > $(basename ,,).msa_chunk.fasta \
+        #parallel --jobs ~{cpus} -I ,, \
+        #parallel --jobs "$(((~{cpus}+1)/~{threads_per_job}))" -I ,, \
+        parallel --jobs "$(( $((~{cpus}/~{threads_per_job}))<1 ? 1 : $((~{cpus}/~{threads_per_job})) ))" -I ,, \
+          "mafft --6merpair --keeplength --preservecase --thread $(((~{threads_per_job}-1)%~{cpus}+1)) --addfragments ,, ~{ref_fasta} > $(basename ,,).msa_chunk.fasta \
           " \
           ::: $(ls -1 sequences_mafft_one_chr_chunked_chunk_*.fasta)
 
