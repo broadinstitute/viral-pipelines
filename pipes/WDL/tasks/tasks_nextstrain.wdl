@@ -429,7 +429,7 @@ task nextstrain_ncov_sanitize_gisaid_data {
         docker: docker
         memory: "7 GB"
         cpu:   1
-        disks:  "local-disk 50 HDD"
+        disks:  "local-disk 375 LOCAL"
         dx_instance_type: "mem2_ssd1_v2_x2"
     }
     output {
