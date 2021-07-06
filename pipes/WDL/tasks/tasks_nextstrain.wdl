@@ -718,7 +718,6 @@ task mafft_one_chr_chunked {
         File     ref_fasta
         String   basename
         Boolean  remove_reference = false
-        Boolean  keep_length = true
 
         Int      batch_chunk_size = 2000
         Int      threads_per_job = 2
