@@ -385,7 +385,7 @@ task nextstrain_ncov_sanitize_gisaid_data {
         File sequences_gisaid_fasta
         File metadata_gisaid_tsv
 
-        String? prefix_to_strip = "hCoV-19/"
+        String? prefix_to_strip
 
         String nextstrain_ncov_repo_commit = "183e94fd5ee73be97d66b7b7d90b167146fa0752"
         String docker                      = "nextstrain/base:build-20210413T201712Z"
