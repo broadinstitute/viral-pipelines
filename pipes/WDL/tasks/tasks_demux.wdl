@@ -125,6 +125,7 @@ task illumina_demux {
   input {
     File    flowcell_tgz
     Int     lane=1
+    Boolean sort_reads=true
     File?   samplesheet
     File?   runinfo
     String? sequencingCenter
@@ -296,6 +297,7 @@ task illumina_demux {
       ~{'--read_structure=' + readStructure} \
       ~{'--minimum_quality=' + minimumQuality} \
       ~{'--run_start_date=' + runStartDate} \
+      ~{true="--sort=true" false="--sort=false" sort_reads} \
       $max_records_in_ram \
       --JVMmemory="$mem_in_mb"m \
       $demux_threads \
