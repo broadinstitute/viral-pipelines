@@ -38,19 +38,37 @@ workflow sarscov2_biosample_load {
             in_file = meta_submit_tsv
     }
 
-    String ftp_target_path = "/~{prod_test}/~{today.date}_~{md5sum.md5}/biosample"
-
-    #call ncbi_tools.fetch_biosamples
-
-    call ncbi_tools.biosample_submit_tsv_ftp_upload {
+    # see if anything already exists in NCBI
+    call ncbi_tools.biosample_tsv_filter_preexisting {
         input:
             meta_submit_tsv = meta_submit_tsv,
-            config_js = ftp_config_js,
-            target_path = ftp_target_path
-    } 
+            out_basename = basename(meta_submit_tsv, '.tsv')
+    }
+
+    # register anything that isn't already in NCBI
+    if (biosample_tsv_filter_preexisting.num_not_found > 0) {
+        call ncbi_tools.biosample_submit_tsv_ftp_upload {
+            input:
+                meta_submit_tsv = biosample_tsv_filter_preexisting.meta_unsubmitted_tsv,
+                config_js = ftp_config_js,
+                target_path = "/~{prod_test}/~{today.date}_~{md5sum.md5}/biosample"
+        }
+    }
+
+    # merge all results and attributes
+    call utils.tsv_join {
+        input:
+            input_tsvs = select_all([
+                biosample_tsv_filter_preexisting.biosample_attributes_tsv,
+                biosample_submit_tsv_ftp_upload.attributes_tsv,
+                meta_submit_tsv
+            ]),
+            id_col = "isolate",
+            out_basename = basename(meta_submit_tsv, '.tsv') + "-attributes"
+    }
 
     output {
-        File           biosample_attributes = biosample_submit_tsv_ftp_upload.attributes_tsv
+        File           biosample_attributes = tsv_join.out_tsv
         File?          id_map_tsv           = crsp_meta_etl.collab_ids_tsv
         File?          collab_ids_tsv       = crsp_meta_etl.collab_ids_tsv
         Array[String]  collab_ids_addcols   = select_first([crsp_meta_etl.collab_ids_addcols, []])
