@@ -1,6 +1,7 @@
 version 1.0
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
+import "../tasks/tasks_terra.wdl" as terra
 
 workflow sarscov2_gisaid_ingest {
     meta {
