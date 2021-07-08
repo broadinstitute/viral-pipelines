@@ -269,11 +269,47 @@ task tsv_to_csv {
   }
 }
 
+
+task tsv_drop_cols {
+    meta {
+        description: "Remove any private IDs prior to public release."
+    }
+    input {
+        File          in_tsv
+        Array[String] drop_cols
+        String        out_basename = basename(in_tsv, '.tsv') + ".drop"
+        String        docker = "quay.io/broadinstitute/py3-bio:0.1.2"
+    }
+    command <<<
+        set -e
+        python3<<CODE
+        import pandas as pd
+        in_tsv = "~{in_tsv}"
+        df = pd.read_csv(in_tsv, sep='\t', dtype=str).dropna(how='all')
+        drop_cols = list(x for x in '~{sep="*" drop_cols}'.split('*') if x)
+        if drop_cols:
+            df.drop(columns=drop_cols, inplace=True)
+        df.to_csv("~{out_basename}.tsv", sep='\t', index=False)
+        CODE
+    >>>
+    runtime {
+        docker: docker
+        memory: "2 GB"
+        cpu:    1
+        disks: "local-disk 50 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+    output {
+        File out_tsv = "~{out_basename}.tsv"
+    }
+}
+
+
 task tsv_stack {
   input {
     Array[File]+ input_tsvs
     String       out_basename
-    String       docker = "quay.io/broadinstitute/viral-core:2.1.31"
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.32"
   }
 
   command {

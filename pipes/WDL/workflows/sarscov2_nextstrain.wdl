@@ -66,7 +66,7 @@ workflow sarscov2_nextstrain {
             sequences_fasta = gzcat.combined,
             min_non_N       = min_unambig_genome
     }
-    call nextstrain.mafft_one_chr as mafft {
+    call nextstrain.mafft_one_chr_chunked as mafft {
         input:
             sequences = filter_sequences_by_length.filtered_fasta,
             ref_fasta = select_first([ref_fasta, nextstrain_ncov_defaults.reference_fasta]),
