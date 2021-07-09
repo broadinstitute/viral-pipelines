@@ -73,19 +73,28 @@ workflow sarscov2_nextstrain {
             basename  = "all_samples_aligned.fasta"
     }
 
+    # repack metadata file(s) as gz regardless of input format
+    scatter(sample_metadata_tsv in sample_metadata_tsvs) {
+        String metadata_basename = sub(basename(sample_metadata_tsv), "\\..*$", "")
+        call utils.zcat as repack_metadata {
+            input:
+                infiles     = [sample_metadata_tsv],
+                output_name = "~{metadata_basename}.tsv.gz" 
+        } 
+    }
 
     #### merge metadata, compute derived cols
     if(length(sample_metadata_tsvs)>1) {
         call utils.tsv_join {
             input:
-                input_tsvs   = sample_metadata_tsvs,
+                input_tsvs   = repack_metadata.combined,
                 id_col       = 'strain',
                 out_basename = "metadata-merged"
         }
     }
     call nextstrain.derived_cols {
         input:
-            metadata_tsv = select_first(flatten([[tsv_join.out_tsv], sample_metadata_tsvs]))
+            metadata_tsv = select_first(flatten([[tsv_join.out_tsv], repack_metadata.combined]))
     }
 
 
