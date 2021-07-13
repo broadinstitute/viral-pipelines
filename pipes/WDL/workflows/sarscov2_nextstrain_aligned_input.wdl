@@ -3,15 +3,15 @@ version 1.0
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_utils.wdl" as utils
 
-workflow sarscov2_nextstrain {
+workflow sarscov2_nextstrain_aligned_input {
     meta {
-        description: "Align assemblies, build trees, and convert to json representation suitable for Nextstrain visualization. See https://nextstrain.org/docs/getting-started/ and https://nextstrain-augur.readthedocs.io/en/stable/"
+        description: "Take aligned assemblies, build trees, and convert to json representation suitable for Nextstrain visualization. See https://nextstrain.org/docs/getting-started/ and https://nextstrain-augur.readthedocs.io/en/stable/"
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
     }
 
     input {
-        Array[File]+    assembly_fastas
+        Array[File]+    aligned_sequences_fasta
         Array[File]+    sample_metadata_tsvs
 
         String          build_name
@@ -24,12 +24,11 @@ workflow sarscov2_nextstrain {
         File?           clades_tsv
         File?           lat_longs_tsv
 
-        Int             min_unambig_genome = 27000
     }
 
     parameter_meta {
-        assembly_fastas: {
-          description: "Set of assembled genomes to align and build trees. These must represent a single chromosome/segment of a genome only. Fastas may be one-sequence-per-individual or a concatenated multi-fasta (unaligned) or a mixture of the two. They may be compressed (gz, bz2, zst, lz4), uncompressed, or a mixture.",
+        aligned_sequences_fasta: {
+          description: "Set of assembled and aligned genomes to build trees. These must represent a single chromosome/segment of a genome only. Fastas may be one-sequence-per-individual or a concatenated multi-fasta (unaligned) or a mixture of the two. They may be compressed (gz, bz2, zst, lz4), uncompressed, or a mixture.",
           patterns: ["*.fasta", "*.fa", "*.fasta.gz", "*.fasta.zst"]
         }
         sample_metadata_tsvs: {
@@ -37,11 +36,8 @@ workflow sarscov2_nextstrain {
             patterns: ["*.txt", "*.tsv"]
         }
         ref_fasta: {
-          description: "A reference assembly (not included in assembly_fastas) to align assembly_fastas against. Typically from NCBI RefSeq or similar.",
+          description: "A reference assembly (not included in aligned_sequences_fasta). Typically from NCBI RefSeq or similar.",
           patterns: ["*.fasta", "*.fa"]
-        }
-        min_unambig_genome: {
-          description: "Minimum number of called bases in genome to pass prefilter."
         }
         ancestral_traits_to_infer: {
           description: "A list of metadata traits to use for ancestral node inference (see https://nextstrain-augur.readthedocs.io/en/stable/usage/cli/traits.html). Multiple traits may be specified; must correspond exactly to column headers in metadata file. Omitting these values will skip ancestral trait inference, and ancestral nodes will not have estimated values for metadata."
@@ -54,54 +50,31 @@ workflow sarscov2_nextstrain {
 
     call nextstrain.nextstrain_ncov_defaults
 
-    #### mafft_and_snp
-
     call utils.zcat {
         input:
-            infiles     = assembly_fastas,
+            infiles     = aligned_sequences_fasta,
             output_name = "all_samples_combined_assembly.fasta"
-    }
-    call nextstrain.filter_sequences_by_length {
-        input:
-            sequences_fasta = zcat.combined,
-            min_non_N       = min_unambig_genome
-    }
-    call nextstrain.mafft_one_chr_chunked as mafft {
-        input:
-            sequences = filter_sequences_by_length.filtered_fasta,
-            ref_fasta = select_first([ref_fasta, nextstrain_ncov_defaults.reference_fasta]),
-            basename  = "all_samples_aligned.fasta"
-    }
-
-    # repack metadata file(s) as gz regardless of input format
-    scatter(sample_metadata_tsv in sample_metadata_tsvs) {
-        String metadata_basename = sub(basename(sample_metadata_tsv), "\\..*$", "")
-        call utils.zcat as repack_metadata {
-            input:
-                infiles     = [sample_metadata_tsv],
-                output_name = "~{metadata_basename}.tsv.gz" 
-        } 
     }
 
     #### merge metadata, compute derived cols
     if(length(sample_metadata_tsvs)>1) {
         call utils.tsv_join {
             input:
-                input_tsvs   = repack_metadata.combined,
+                input_tsvs   = sample_metadata_tsvs,
                 id_col       = 'strain',
                 out_basename = "metadata-merged"
         }
     }
     call nextstrain.derived_cols {
         input:
-            metadata_tsv = select_first(flatten([[tsv_join.out_tsv], repack_metadata.combined]))
+            metadata_tsv = select_first(flatten([[tsv_join.out_tsv], sample_metadata_tsvs]))
     }
 
 
     #### subsample sequences with nextstrain yaml file
     call nextstrain.nextstrain_build_subsample as subsample {
         input:
-            alignment_msa_fasta = mafft.aligned_sequences,
+            alignment_msa_fasta = zcat.combined,
             sample_metadata_tsv = derived_cols.derived_metadata,
             build_name          = build_name,
             builds_yaml         = builds_yaml
@@ -122,6 +95,7 @@ workflow sarscov2_nextstrain {
         input:
             sequences = subsample.subsampled_msa
     }
+
     call nextstrain.draft_augur_tree {
         input:
             msa_or_vcf = augur_mask_sites.masked_sequences
@@ -133,6 +107,7 @@ workflow sarscov2_nextstrain {
             msa_or_vcf = subsample.subsampled_msa,
             metadata   = derived_cols.derived_metadata
     }
+
     if(defined(ancestral_traits_to_infer) && length(select_first([ancestral_traits_to_infer,[]]))>0) {
         call nextstrain.ancestral_traits {
             input:
@@ -141,6 +116,7 @@ workflow sarscov2_nextstrain {
                 columns  = select_first([ancestral_traits_to_infer,[]])
         }
     }
+
     call nextstrain.tip_frequencies {
         input:
             tree                 = refine_augur_tree.tree_refined,
@@ -152,17 +128,20 @@ workflow sarscov2_nextstrain {
             proportion_wide      = 0.0,
             out_basename         = "auspice-~{build_name}"
     }
+
     call nextstrain.ancestral_tree {
         input:
             tree       = refine_augur_tree.tree_refined,
             msa_or_vcf = subsample.subsampled_msa
     }
+
     call nextstrain.translate_augur_tree {
         input:
             tree       = refine_augur_tree.tree_refined,
             nt_muts    = ancestral_tree.nt_muts_json,
             genbank_gb = nextstrain_ncov_defaults.reference_gb
     }
+
     call nextstrain.assign_clades_to_nodes {
         input:
             tree_nwk     = refine_augur_tree.tree_refined,
@@ -171,6 +150,7 @@ workflow sarscov2_nextstrain {
             ref_fasta    = select_first([ref_fasta, nextstrain_ncov_defaults.reference_fasta]),
             clades_tsv   = select_first([clades_tsv, nextstrain_ncov_defaults.clades_tsv])
     }
+
     call nextstrain.export_auspice_json {
         input:
             tree            = refine_augur_tree.tree_refined,
@@ -187,8 +167,7 @@ workflow sarscov2_nextstrain {
     }
 
     output {
-      File             combined_assemblies  = filter_sequences_by_length.filtered_fasta
-      File             multiple_alignment   = mafft.aligned_sequences
+      File             combined_assemblies  = zcat.combined
       File             unmasked_snps        = snp_sites.snps_vcf
       
       File             metadata_merged      = derived_cols.derived_metadata
@@ -200,11 +179,11 @@ workflow sarscov2_nextstrain {
       File             ml_tree              = draft_augur_tree.aligned_tree
       File             time_tree            = refine_augur_tree.tree_refined
       Array[File]      node_data_jsons      = select_all([
-                         refine_augur_tree.branch_lengths,
-                         ancestral_traits.node_data_json,
-                         ancestral_tree.nt_muts_json,
-                         translate_augur_tree.aa_muts_json,
-                         assign_clades_to_nodes.node_clade_data_json])
+                                                 refine_augur_tree.branch_lengths,
+                                                 ancestral_traits.node_data_json,
+                                                 ancestral_tree.nt_muts_json,
+                                                 translate_augur_tree.aa_muts_json,
+                                                 assign_clades_to_nodes.node_clade_data_json])
       File             tip_frequencies_json = tip_frequencies.node_data_json
       File             root_sequence_json   = export_auspice_json.root_sequence_json
       File             auspice_input_json   = export_auspice_json.virus_json

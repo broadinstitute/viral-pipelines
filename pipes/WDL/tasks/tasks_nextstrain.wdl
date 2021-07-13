@@ -715,7 +715,7 @@ task mafft_one_chr_chunked {
     }
     input {
         File     sequences
-        File     ref_fasta
+        File?    ref_fasta # if reference is not provided, it is assumed to be the first sequence in the "sequences" input file
         String   basename
         Boolean  remove_reference = false
 
@@ -729,7 +729,24 @@ task mafft_one_chr_chunked {
     command {
         set -e
 
+        # write out ref
+        if [ -f "~{ref_fasta}" ]; then
+            # if a reference was specified, copy+use it
+            cp "~{ref_fasta}" "~{basename}_ref.fasta"
+        else
+        # otherwise assume the first sequence in the fasta is the ref and export it
         python3 <<CODE
+        from Bio import SeqIO
+        with open("~{basename}_ref.fasta", "w") as handle:
+            record_iter = SeqIO.parse(open("~{sequences}"), "fasta")
+            for record in record_iter:
+                SeqIO.write(record, handle, "fasta-2line")
+                break
+        CODE
+        fi
+
+        python3 <<CODE
+        import os.path
         from Bio import SeqIO
         from itertools import islice, repeat, starmap, takewhile
         from operator import truth
@@ -738,30 +755,39 @@ task mafft_one_chr_chunked {
 
         record_iter = SeqIO.parse(open("~{sequences}"), "fasta")
         for i, batch in enumerate(batch_iterator(record_iter, ~{batch_chunk_size})):
-            filename = "sequences_mafft_one_chr_chunked_chunk_%i.fasta" % (i + 1)
-            with open(filename, "w") as handle:
-                SeqIO.write(batch, handle, "fasta-2line")
+            chunk_filename = "sequences_mafft_one_chr_chunked_chunk_%i.fasta" % (i + 1)
+            # if we're considering the first sequence and the file and the user
+            # did not specify a reference sequence
+            if i==0 and not os.path.isfile("~{ref_fasta}"):
+                # drop first sequence since it's the ref and we've already saved
+                # it separately above
+                # then write out the rest in this chunk
+                with open(chunk_filename, "w") as handle:
+                    for record in batch[1:]:
+                        SeqIO.write(record, handle, "fasta-2line")
+            else:
+                with open(chunk_filename, "w") as handle:
+                    SeqIO.write(batch, handle, "fasta-2line")
         CODE
 
 
         # GNU Parallel refresher:
         # ",," is the replacement string; values after ":::" are substituted where it appears
-        #parallel --jobs ~{cpus} -I ,, \
-        #parallel --jobs "$(((~{cpus}+1)/~{threads_per_job}))" -I ,, \
         parallel --jobs "$(( $((~{cpus}/~{threads_per_job}))<1 ? 1 : $((~{cpus}/~{threads_per_job})) ))" -I ,, \
-          "mafft --6merpair --keeplength --preservecase --thread $(((~{threads_per_job}-1)%~{cpus}+1)) --addfragments ,, ~{ref_fasta} > $(basename ,,).msa_chunk.fasta \
+          "mafft --6merpair --keeplength --preservecase --thread $(((~{threads_per_job}-1)%~{cpus}+1)) --addfragments ,, ~{basename}_ref.fasta > $(basename ,,).msa_chunk.fasta \
           " \
           ::: $(ls -1 sequences_mafft_one_chr_chunked_chunk_*.fasta)
 
         python3 <<CODE
-        import glob
+        import glob, os.path, string
         import Bio.SeqIO
         with open("~{basename}_aligned.fasta", "w") as handle:
             # write a single reference if we are not removing the reference sequence
             if "~{true='remove-ref' false='' remove_reference}" != "remove-ref":
-                ref_seq = Bio.SeqIO.parse("~{ref_fasta}", 'fasta')
+                ref_seq = Bio.SeqIO.parse("~{basename}_ref.fasta", 'fasta')
                 Bio.SeqIO.write(ref_seq, handle, 'fasta-2line')
-            for msa_chunk in glob.glob('*.msa_chunk.fasta'):
+            sorted_alignment_chunks = sorted(glob.glob('*.msa_chunk.fasta'), key=lambda e: int(e.strip(string.ascii_letters+'_.-')))
+            for msa_chunk in sorted_alignment_chunks:
                 seq_it = Bio.SeqIO.parse(msa_chunk, 'fasta')
                 print("dumping " + str(seq_it.__next__().id)) # iterate to remove the reference from each chunk
                 Bio.SeqIO.write(seq_it, handle, 'fasta-2line')
