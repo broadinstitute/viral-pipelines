@@ -29,6 +29,7 @@ env:
   GITHUB_ACTIONS_PULL_REQUEST: ${{ github.event.number }}
   GITHUB_ACTIONS_PULL_REQUEST_BRANCH: ${{ github.head_ref }}
   GITHUB_ACTIONS_PULL_REQUEST_SHA : ${{ github.event.pull_request.head.sha }}
+  GITHUB_ACTIONS_BASE_REF: ${{ github.base_ref }}
 
 jobs:
   validate_wdl_miniwdl:
@@ -54,7 +55,7 @@ jobs:
           #   for builds triggered by a tag, this is the same as the name of the tag (TRAVIS_TAG).
           GITHUB_ACTIONS_BRANCH=$(git rev-parse --abbrev-ref HEAD)
           if [[ $GITHUB_ACTIONS_PULL_REQUEST_BRANCH ]]; then
-            GITHUB_ACTIONS_BRANCH=${GITHUB_BASE_REF##*/}
+            GITHUB_ACTIONS_BRANCH=${GITHUB_ACTIONS_BASE_REF##*/}
           elif [[ "${{ github.event_name }}" == "release" ]]; then
             GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_TAG
           fi
@@ -104,7 +105,7 @@ jobs:
           #   for builds triggered by a tag, this is the same as the name of the tag (TRAVIS_TAG).
           GITHUB_ACTIONS_BRANCH=$(git rev-parse --abbrev-ref HEAD)
           if [[ $GITHUB_ACTIONS_PULL_REQUEST_BRANCH ]]; then
-            GITHUB_ACTIONS_BRANCH=${GITHUB_BASE_REF##*/}
+            GITHUB_ACTIONS_BRANCH=${GITHUB_ACTIONS_BASE_REF##*/}
           elif [[ "${{ github.event_name }}" == "release" ]]; then
             GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_TAG
           fi
@@ -151,7 +152,7 @@ jobs:
           #   for builds triggered by a tag, this is the same as the name of the tag (TRAVIS_TAG).
           GITHUB_ACTIONS_BRANCH=$(git rev-parse --abbrev-ref HEAD)
           if [[ $GITHUB_ACTIONS_PULL_REQUEST_BRANCH ]]; then
-            GITHUB_ACTIONS_BRANCH=${GITHUB_BASE_REF##*/}
+            GITHUB_ACTIONS_BRANCH=${GITHUB_ACTIONS_BASE_REF##*/}
           elif [[ "${{ github.event_name }}" == "release" ]]; then
             GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_TAG
           fi
@@ -193,7 +194,7 @@ jobs:
           #   for builds triggered by a tag, this is the same as the name of the tag (TRAVIS_TAG).
           GITHUB_ACTIONS_BRANCH=$(git rev-parse --abbrev-ref HEAD)
           if [[ $GITHUB_ACTIONS_PULL_REQUEST_BRANCH ]]; then
-            GITHUB_ACTIONS_BRANCH=${GITHUB_BASE_REF##*/}
+            GITHUB_ACTIONS_BRANCH=${GITHUB_ACTIONS_BASE_REF##*/}
           elif [[ "${{ github.event_name }}" == "release" ]]; then
             GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_TAG
           fi
@@ -238,7 +239,7 @@ jobs:
           #   for builds triggered by a tag, this is the same as the name of the tag (TRAVIS_TAG).
           GITHUB_ACTIONS_BRANCH=$(git rev-parse --abbrev-ref HEAD)
           if [[ $GITHUB_ACTIONS_PULL_REQUEST_BRANCH ]]; then
-            GITHUB_ACTIONS_BRANCH=${GITHUB_BASE_REF##*/}
+            GITHUB_ACTIONS_BRANCH=${GITHUB_ACTIONS_BASE_REF##*/}
           elif [[ "${{ github.event_name }}" == "release" ]]; then
             GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_TAG
           fi
@@ -294,7 +295,7 @@ jobs:
           #   for builds triggered by a tag, this is the same as the name of the tag (TRAVIS_TAG).
           GITHUB_ACTIONS_BRANCH=$(git rev-parse --abbrev-ref HEAD)
           if [[ $GITHUB_ACTIONS_PULL_REQUEST_BRANCH ]]; then
-            GITHUB_ACTIONS_BRANCH=${GITHUB_BASE_REF##*/}
+            GITHUB_ACTIONS_BRANCH=${GITHUB_ACTIONS_BASE_REF##*/}
           elif [[ "${{ github.event_name }}" == "release" ]]; then
             GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_TAG
           fi
