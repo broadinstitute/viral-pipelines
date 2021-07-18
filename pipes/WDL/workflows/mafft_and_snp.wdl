@@ -31,14 +31,14 @@ workflow mafft_and_snp {
         }
     }
 
-    call utils.gzcat {
+    call utils.zcat {
         input:
             infiles     = assembly_fastas,
             output_name = "all_samples_combined_assembly.fasta.gz"
     }
     call nextstrain.filter_sequences_by_length {
         input:
-            sequences_fasta = gzcat.combined,
+            sequences_fasta = zcat.combined,
             min_non_N       = min_unambig_genome
     }
     call nextstrain.mafft_one_chr as mafft {
