@@ -26,6 +26,8 @@ workflow sarscov2_data_release {
         File?        gisaid_csv
         File?        gisaid_fasta
 
+        String?      gcs_out_reporting
+
         File?        cdc_s3_credentials
         File?        cdc_passing_fasta
         File?        cdc_final_metadata
@@ -94,6 +96,19 @@ workflow sarscov2_data_release {
             input:
                 infiles = [meta_sanitize.out_tsv],
                 gcs_uri_prefix = select_first([dashboard_bucket_uri])
+        }
+    }
+
+    # deliver to State Public Health Epis
+    if(defined(gcs_out_reporting) && defined(cdc_final_metadata)) {
+        call utils.tsv_to_csv as meta_final_csv {
+          input:
+            tsv = select_first([cdc_final_metadata])
+        }
+        call terra.gcs_copy as gcs_reporting_dump {
+            input:
+              infiles        = [meta_final_csv.csv],
+              gcs_uri_prefix = "~{gcs_out_reporting}/"
         }
     }
 
