@@ -719,6 +719,7 @@ task mafft_one_chr {
         echo "~{true='--large' false='' large}" >> args.txt
         echo "~{true='--memsavetree' false='' memsavetree}" >> args.txt
         echo "--auto" >> args.txt
+        echo "--preservecase" >> args.txt
 
         # if ref_fasta is specified, use "closely related" mode
         # see https://mafft.cbrc.jp/alignment/software/closelyrelatedviralgenomes.html
@@ -735,6 +736,8 @@ task mafft_one_chr {
             ~{true='--keeplength --mapout' false='' keep_length} \
             > msa.fasta
 
+        REMOVE_REF="~{true='--remove-reference' false='' remove_reference}"
+        if [ -n "$REMOVE_REF" -a -f "~{ref_fasta}" ]; then
         # remove reference sequence
         python3 <<CODE
         import Bio.SeqIO
@@ -742,12 +745,115 @@ task mafft_one_chr {
         print("dumping " + str(seq_it.__next__().id))
         Bio.SeqIO.write(seq_it, 'msa_drop_one.fasta', 'fasta')
         CODE
-        REMOVE_REF="~{true='--remove-reference' false='' remove_reference}"
-        if [ -n "$REMOVE_REF" -a -f "~{ref_fasta}" ]; then
             mv msa_drop_one.fasta "~{basename}_aligned.fasta"
         else
             mv msa.fasta "~{basename}_aligned.fasta"
         fi
+
+        # profiling and stats
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg > CPU_LOAD
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
+    }
+    runtime {
+        docker: docker
+        memory: mem_size + " GB"
+        cpu :   cpus
+        disks:  "local-disk 750 LOCAL"
+        preemptible: 0
+        dx_instance_type: "mem3_ssd1_v2_x36"
+    }
+    output {
+        File   aligned_sequences = "~{basename}_aligned.fasta"
+        Int    max_ram_gb        = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec       = ceil(read_float("UPTIME_SEC"))
+        String cpu_load          = read_string("CPU_LOAD")
+    }
+}
+
+task mafft_one_chr_chunked {
+    meta {
+        description: "Align multiple sequences from FASTA. Only appropriate for closely related (within 99% nucleotide conservation) genomes. See https://mafft.cbrc.jp/alignment/software/closelyrelatedviralgenomes.html"
+    }
+    input {
+        File     sequences
+        File?    ref_fasta # if reference is not provided, it is assumed to be the first sequence in the "sequences" input file
+        String   basename
+        Boolean  remove_reference = false
+
+        Int      batch_chunk_size = 2000
+        Int      threads_per_job = 2
+
+        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
+        Int      mem_size = 32
+        Int      cpus = 96
+    }
+    command {
+        set -e
+
+        # write out ref
+        if [ -f "~{ref_fasta}" ]; then
+            # if a reference was specified, copy+use it
+            cp "~{ref_fasta}" "~{basename}_ref.fasta"
+        else
+        # otherwise assume the first sequence in the fasta is the ref and export it
+        python3 <<CODE
+        from Bio import SeqIO
+        with open("~{basename}_ref.fasta", "w") as handle:
+            record_iter = SeqIO.parse(open("~{sequences}"), "fasta")
+            for record in record_iter:
+                SeqIO.write(record, handle, "fasta-2line")
+                break
+        CODE
+        fi
+
+        python3 <<CODE
+        import os.path
+        from Bio import SeqIO
+        from itertools import islice, repeat, starmap, takewhile
+        from operator import truth
+        def batch_iterator(iterable, n):  # https://stackoverflow.com/a/34935239
+            return takewhile(truth, map(tuple, starmap(islice, repeat((iter(iterable), n)))))
+
+        record_iter = SeqIO.parse(open("~{sequences}"), "fasta")
+        for i, batch in enumerate(batch_iterator(record_iter, ~{batch_chunk_size})):
+            chunk_filename = "sequences_mafft_one_chr_chunked_chunk_%i.fasta" % (i + 1)
+            # if we're considering the first sequence and the file and the user
+            # did not specify a reference sequence
+            if i==0 and not os.path.isfile("~{ref_fasta}"):
+                # drop first sequence since it's the ref and we've already saved
+                # it separately above
+                # then write out the rest in this chunk
+                with open(chunk_filename, "w") as handle:
+                    for record in batch[1:]:
+                        SeqIO.write(record, handle, "fasta-2line")
+            else:
+                with open(chunk_filename, "w") as handle:
+                    SeqIO.write(batch, handle, "fasta-2line")
+        CODE
+
+
+        # GNU Parallel refresher:
+        # ",," is the replacement string; values after ":::" are substituted where it appears
+        parallel --jobs "$(( $((~{cpus}/~{threads_per_job}))<1 ? 1 : $((~{cpus}/~{threads_per_job})) ))" -I ,, \
+          "mafft --6merpair --keeplength --preservecase --thread $(((~{threads_per_job}-1)%~{cpus}+1)) --addfragments ,, ~{basename}_ref.fasta > $(basename ,,).msa_chunk.fasta \
+          " \
+          ::: $(ls -1 sequences_mafft_one_chr_chunked_chunk_*.fasta)
+
+        python3 <<CODE
+        import glob, os.path, string
+        import Bio.SeqIO
+        with open("~{basename}_aligned.fasta", "w") as handle:
+            # write a single reference if we are not removing the reference sequence
+            if "~{true='remove-ref' false='' remove_reference}" != "remove-ref":
+                ref_seq = Bio.SeqIO.parse("~{basename}_ref.fasta", 'fasta')
+                Bio.SeqIO.write(ref_seq, handle, 'fasta-2line')
+            sorted_alignment_chunks = sorted(glob.glob('*.msa_chunk.fasta'), key=lambda e: int(e.strip(string.ascii_letters+'_.-')))
+            for msa_chunk in sorted_alignment_chunks:
+                seq_it = Bio.SeqIO.parse(msa_chunk, 'fasta')
+                print("dumping " + str(seq_it.__next__().id)) # iterate to remove the reference from each chunk
+                Bio.SeqIO.write(seq_it, handle, 'fasta-2line')
+        CODE
 
         # profiling and stats
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
@@ -1232,10 +1338,10 @@ task tip_frequencies {
     }
     runtime {
         docker: docker
-        memory: "7 GB"
+        memory: "15 GB"
         cpu :   2
         disks:  "local-disk 100 HDD"
-        dx_instance_type: "mem1_ssd1_v2_x2"
+        dx_instance_type: "mem2_ssd1_v2_x2"
         preemptible: 1
     }
     output {

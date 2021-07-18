@@ -12,7 +12,7 @@ for task_file in $(ls -1 pipes/WDL/tasks/*.wdl); do
     	OLD_TAG=$module
     	NEW_TAG="$module:$version"
         
-        offending_lines="$(grep -n $OLD_TAG "${task_file}" | grep -v $NEW_TAG)"
+        offending_lines="$(grep -nE "^[^#]*$OLD_TAG" "${task_file}" | grep -v $NEW_TAG)"
 
         # if the expected tag is not seen, let us know the file and exit
         if [ $? -eq 0 ]; then
