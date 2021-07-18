@@ -249,7 +249,12 @@ workflows:
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_genbank_ingest.wdl
    testParameterFiles:
-    - empty.json    
+    - empty.json
+ - name: sarscov2_gisaid_ingest
+   subclass: WDL
+   primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_gisaid_ingest.wdl
+   testParameterFiles:
+    - empty.json
  - name: sarscov2_illumina_full
    subclass: WDL
    primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_illumina_full.wdl
