@@ -176,6 +176,7 @@ workflow sarscov2_illumina_full {
             select_first([sarscov2_lineages.nextclade_aa_subs, ""]),
             select_first([sarscov2_lineages.nextclade_aa_dels, ""]),
             select_first([sarscov2_lineages.pangolin_docker, ""]),
+            select_first([sarscov2_lineages.nextclade_version, ""]),
             assemble_refbased.dist_to_ref_snps,
             assemble_refbased.dist_to_ref_indels,
             select_first([vadr.num_alerts, ""]),
@@ -212,7 +213,7 @@ workflow sarscov2_illumina_full {
     Array[String] assembly_tsv_header = [
         'sample', 'sample_sanitized', 'biosample_accession', 'flowcell_id', 'run_date', 'collection_date', 'geo_loc_name', 'host_subject_id',
         'assembly_length_unambiguous', 'assembly_mean_coverage',
-        'pango_lineage', 'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels', 'pangolin_version',
+        'pango_lineage', 'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels', 'pangolin_version', 'nextclade_version',
         'dist_to_ref_snps', 'dist_to_ref_indels', 'vadr_num_alerts',
         'assembly_fasta', 'coverage_plot', 'aligned_bam',
         'replicate_discordant_vcf', 'variants_from_ref_vcf',
