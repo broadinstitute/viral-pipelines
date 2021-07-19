@@ -36,7 +36,8 @@ workflow sarscov2_batch_relineage {
                 nextclade_one_sample.nextclade_clade,
                 nextclade_one_sample.aa_subs_csv,
                 nextclade_one_sample.aa_dels_csv,
-                pangolin_one_sample.version,
+                pangolin_one_sample.pangolin_docker,
+                nextclade_one_sample.nextclade_version,
                 nextclade_one_sample.nextclade_tsv,
                 nextclade_one_sample.nextclade_json,
                 pangolin_one_sample.pango_lineage_report,
@@ -45,7 +46,7 @@ workflow sarscov2_batch_relineage {
     }
     Array[String] meta_header = [
         'sample_sanitized',
-        'pango_lineage', 'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels', 'pangolin_version',
+        'pango_lineage', 'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels', 'pangolin_version', 'nextclade_version',
         'nextclade_tsv', 'nextclade_json', 'pangolin_csv'
     ]
 
