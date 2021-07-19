@@ -156,7 +156,7 @@ task md5sum {
     File in_file
   }
   command {
-    md5sum ${in_file} | cut -f 1 | tee MD5
+    md5sum ~{in_file} | cut -f 1 -d ' ' | tee MD5
   }
   output {
     String md5 = read_string("MD5")
