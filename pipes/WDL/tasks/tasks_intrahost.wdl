@@ -105,6 +105,7 @@ task lofreq {
   input {
     File      aligned_bam
     File      reference_fasta
+    Boolean?  output_all_positions = false # note that this may not output *all* positions (i.e. gVCF) as lofreq does not currently support full output
 
     String    out_basename = basename(aligned_bam, '.bam')
     String    docker = "quay.io/biocontainers/lofreq:2.1.5--py38h588ecb2_4"
@@ -117,10 +118,30 @@ task lofreq {
     samtools faidx "~{reference_fasta}"
     samtools index "~{aligned_bam}"
 
-    lofreq call \
+    OUTPUT_ALL_POS="~{true='output_all' false='' output_all_positions}"
+    if [ -n "$OUTPUT_ALL_POS" ]; then
+      lofreq call-parallel --pp-threads $(nproc --all) --no-default-filter --bonf 1 --sig 1 \
       -f "~{reference_fasta}" \
-      -o "~{out_basename}.vcf" \
+      -o "~{out_basename}.unfiltered.vcf.gz" \
       "~{aligned_bam}"
+      lofreq filter --print-all \
+      --cov-min 10 \
+      --af-min 0.01 \
+      --sb-mtc bonf \
+      --sb-no-compound \
+      --sb-incl-indels \
+      --indelqual-mtc bonf \
+      --snvqual-ntests 0.5 \
+      --indelqual-mtc bonf \
+      --indelqual-ntests 0.5 \
+      --in "~{out_basename}.unfiltered.vcf.gz" \
+      --out "~{out_basename}.vcf"
+    else
+      lofreq call-parallel --pp-threads $(nproc --all) \
+        -f "~{reference_fasta}" \
+        -o "~{out_basename}.vcf" \
+        "~{aligned_bam}"
+    fi
   >>>
 
   output {
@@ -129,10 +150,10 @@ task lofreq {
   }
   runtime {
     docker: docker
-    cpu:    2
-    memory: "3 GB"
+    cpu:    8
+    memory: "30 GB"
     disks:  "local-disk 200 HDD"
-    dx_instance_type: "mem1_ssd1_v2_x2"
+    dx_instance_type: "mem2_ssd1_v2_x8"
   }
 }
 
