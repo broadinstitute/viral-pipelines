@@ -15,7 +15,7 @@ workflow sarscov2_data_release {
     input {
         String       flowcell_id
 
-        File         ncbi_ftp_config_js
+        File?        ncbi_ftp_config_js
         File         genbank_xml
         File         genbank_zip
         File         sra_meta_tsv
@@ -25,6 +25,8 @@ workflow sarscov2_data_release {
         File?        gisaid_auth_token
         File?        gisaid_csv
         File?        gisaid_fasta
+
+        String?      gcs_out_reporting
 
         File?        cdc_s3_credentials
         File?        cdc_passing_fasta
@@ -41,35 +43,33 @@ workflow sarscov2_data_release {
 
     String prefix = "/~{prod_test}/~{ftp_path_prefix}"
 
-    call utils.today {
-        input: timezone = "America/New_York"  # CDC is based in Atlanta
-    }
+    if (defined(ncbi_ftp_config_js)) {
+        # publish to NCBI Genbank
+        call ncbi_tools.ncbi_sftp_upload as genbank_upload {
+            input:
+                config_js        = select_first([ncbi_ftp_config_js]),
+                submission_xml   = genbank_xml,
+                additional_files = [genbank_zip],
+                target_path      = "~{prefix}/genbank",
+                wait_for         = "1"
+        }
 
-    # publish to NCBI Genbank
-    call ncbi_tools.ncbi_sftp_upload as genbank_upload {
-        input:
-            config_js        = ncbi_ftp_config_js,
-            submission_xml   = genbank_xml,
-            additional_files = [genbank_zip],
-            target_path      = "~{prefix}/genbank",
-            wait_for         = "1"
-    }
-
-    # publish to NCBI SRA
-    call ncbi_tools.sra_tsv_to_xml {
-        input:
-            meta_submit_tsv  = sra_meta_tsv,
-            config_js        = ncbi_ftp_config_js,
-            bioproject       = sra_bioproject,
-            data_bucket_uri  = "~{sra_data_bucket_uri}/~{flowcell_id}"
-    }
-    call ncbi_tools.ncbi_sftp_upload as sra_upload {
-        input:
-            config_js        = ncbi_ftp_config_js,
-            submission_xml   = sra_tsv_to_xml.submission_xml,
-            additional_files = [],
-            target_path      = "~{prefix}/sra",
-            wait_for         = "1"
+        # publish to NCBI SRA
+        call ncbi_tools.sra_tsv_to_xml {
+            input:
+                meta_submit_tsv  = sra_meta_tsv,
+                config_js        = select_first([ncbi_ftp_config_js]),
+                bioproject       = sra_bioproject,
+                data_bucket_uri  = "~{sra_data_bucket_uri}/~{flowcell_id}"
+        }
+        call ncbi_tools.ncbi_sftp_upload as sra_upload {
+            input:
+                config_js        = select_first([ncbi_ftp_config_js]),
+                submission_xml   = sra_tsv_to_xml.submission_xml,
+                additional_files = [],
+                target_path      = "~{prefix}/sra",
+                wait_for         = "1"
+        }
     }
 
     # publish to GISAID
@@ -97,8 +97,25 @@ workflow sarscov2_data_release {
         }
     }
 
+    # deliver to State Public Health Epis
+    if(defined(gcs_out_reporting) && defined(cdc_final_metadata)) {
+        call utils.tsv_to_csv as meta_final_csv {
+          input:
+            tsv = select_first([cdc_final_metadata])
+        }
+        call terra.gcs_copy as gcs_reporting_dump {
+            input:
+              infiles        = [meta_final_csv.csv],
+              gcs_uri_prefix = "~{gcs_out_reporting}/"
+        }
+    }
+
     # deliver to CDC
     if (defined(cdc_s3_credentials)) {
+        call utils.today {
+            input: timezone = "America/New_York"  # CDC is based in Atlanta
+        }
+
         String s3_prefix = "~{cdc_s3_uri}/~{today.date}/~{flowcell_id}"
         call utils.make_empty_file as upload_complete {
             input:
@@ -136,8 +153,8 @@ workflow sarscov2_data_release {
     }
 
     output {
-        Array[File]    genbank_response   = genbank_upload.reports_xmls
-        File           sra_xml            = sra_tsv_to_xml.submission_xml
-        Array[File]    sra_response       = sra_upload.reports_xmls
+        Array[File]    genbank_response   = select_first([genbank_upload.reports_xmls, []])
+        File?          sra_xml            = sra_tsv_to_xml.submission_xml
+        Array[File]    sra_response       = select_first([sra_upload.reports_xmls, []])
     }
 }

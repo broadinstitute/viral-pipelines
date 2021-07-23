@@ -23,21 +23,95 @@ task concatenate {
     }
 }
 
-task gzcat {
+task zcat {
     meta {
-        description: "Glue together a bunch of text files that may or may not be compressed (autodetect among gz or uncompressed inputs). Optionally compress the output (depending on requested file extension)"
+        description: "Glue together a bunch of text files that may or may not be compressed (autodetect among gz,xz,bz2,lz4,zst or uncompressed inputs). Optionally compress the output (depending on requested file extension)"
     }
     input {
         Array[File] infiles
         String      output_name
     }
     command <<<
+        pip install -q lz4
+        pip install -q zstandard
+
         python3 <<CODE
-        import gzip
-        open_or_gzopen = lambda *args, **kwargs: gzip.open(*args, **kwargs) if args[0].endswith('.gz') else open(*args, **kwargs)
-        with open_or_gzopen("~{output_name}", 'wt') as outf:
+        import os.path
+        import gzip, lzma, bz2
+        import lz4.frame # pypi library: lz4
+        import zstandard as zstd # pypi library: zstandard
+
+        # zstd_open() from: https://github.com/broadinstitute/viral-core/blob/master/util/file.py
+        def zstd_open(fname, mode='r', **kwargs):
+            '''Handle both text and byte decompression of the file.'''
+            if 'r' in mode:
+                with open(fname, 'rb') as fh:
+                    dctx = zstd.ZstdDecompressor()
+                    stream_reader = dctx.stream_reader(fh)
+                    if 'b' not in mode:
+                        text_stream = io.TextIOWrapper(stream_reader, encoding='utf-8-sig')
+                        yield text_stream
+                        return
+                    yield stream_reader
+            else:
+                with open(fname, 'wb') as fh:
+                    cctx = zstd.ZstdCompressor(level=kwargs.get('level', 10),
+                                               threads=util.misc.sanitize_thread_count(kwargs.get('threads', None)))
+                    stream_writer = cctx.stream_writer(fh)
+                    if 'b' not in mode:
+                        text_stream = io.TextIOWrapper(stream_reader, encoding='utf-8')
+                        yield text_stream
+                        return
+                    yield stream_writer
+
+        # magic bytes from here:
+        # https://en.wikipedia.org/wiki/List_of_file_signatures
+        magic_bytes_to_compressor = {
+            b"\x1f\x8b\x08":             gzip.open,      # .gz
+            b"\xfd\x37\x7a\x58\x5a\x00": lzma.open,      # .xz
+            b"\x42\x5a\x68":             bz2.open,       # .bz2 
+            b"\x04\x22\x4d\x18":         lz4.frame.open, # .lz4
+            b"\x28\xb5\x2f\xfd":         zstd_open       # .zst (open using function above rather than library function)
+        }
+        extension_to_compressor = {
+            ".gz":   gzip.open,      # .gz
+            ".gzip": gzip.open,      # .gz
+            ".xz":   lzma.open,      # .xz
+            ".bz2":  bz2.open,       # .bz2 
+            ".lz4":  lz4.frame.open, # .lz4
+            ".zst":  zstd_open,      # .zst (open using function above rather than library function)
+            ".zstd": zstd_open       # .zst (open using function above rather than library function)
+        }
+
+        # max number of bytes we need to identify one of the files listed above
+        max_len = max(len(x) for x in magic_bytes_to_compressor.keys())
+
+        def open_or_compressed_open(*args, **kwargs):
+            input_file = args[0]
+
+            # if the file exists, try to guess the (de) compressor based on "magic numbers"
+            # at the very start of the file
+            if os.path.isfile(input_file):
+                with open(input_file, "rb") as f:
+                    file_start = f.read(max_len)
+                for magic, compressor_open_fn in magic_bytes_to_compressor.items():
+                    if file_start.startswith(magic):
+                        print("opening via {}: {}".format(compressor_open_fn.__module__,input_file))
+                        return compressor_open_fn(*args, **kwargs)
+                # fall back to generic open if compression type could not be determine from magic numbers
+                return open(*args, **kwargs)
+            else:
+                # if this is a new file, try to choose the opener based on file extension
+                for ext,compressor_open_fn in extension_to_compressor.items():
+                    if str(input_file).lower().endswith(ext):
+                        print("opening via {}: {}".format(compressor_open_fn.__module__,input_file))
+                        return compressor_open_fn(*args, **kwargs)
+                # fall back to generic open if compression type could not be determine from magic numbers
+                return open(*args, **kwargs)
+
+        with open_or_compressed_open("~{output_name}", 'wt') as outf:
             for infname in "~{sep='*' infiles}".split('*'):
-                with open_or_gzopen(infname, 'rt') as inf:
+                with open_or_compressed_open(infname, 'rt') as inf:
                     for line in inf:
                         outf.write(line)
         CODE
@@ -82,7 +156,7 @@ task md5sum {
     File in_file
   }
   command {
-    md5sum ${in_file} | cut -f 1 | tee MD5
+    md5sum ~{in_file} | cut -f 1 -d ' ' | tee MD5
   }
   output {
     String md5 = read_string("MD5")

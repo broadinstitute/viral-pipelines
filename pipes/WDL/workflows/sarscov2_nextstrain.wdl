@@ -13,8 +13,8 @@ workflow sarscov2_nextstrain {
     }
 
     input {
-        Array[File]+    assembly_fastas
-        Array[File]+    sample_metadata_tsvs
+        Array[File]+    assembly_fastas=["gs://nextstrain-data/files/ncov/open/sequences.fasta.xz"]
+        Array[File]+    sample_metadata_tsvs=["gs://nextstrain-data/files/ncov/open/metadata.tsv.gz"]
         File?           ref_fasta
         Int             min_unambig_genome = 27000
     }
@@ -41,7 +41,7 @@ workflow sarscov2_nextstrain {
 
     #### mafft_and_snp
 
-    call utils.gzcat {
+    call utils.zcat {
         input:
             infiles     = assembly_fastas,
             output_name = "all_samples_combined_assembly.fasta"
@@ -49,7 +49,7 @@ workflow sarscov2_nextstrain {
 
     call nextstrain.filter_sequences_by_length {
         input:
-            sequences_fasta = gzcat.combined,
+            sequences_fasta = zcat.combined,
             min_non_N       = min_unambig_genome
     }
 
@@ -68,7 +68,7 @@ workflow sarscov2_nextstrain {
     }
 
     output {
-      File             combined_assemblies  = gzcat.combined
+      File             combined_assemblies  = zcat.combined
       File             multiple_alignment   = mafft.aligned_sequences
       File             unmasked_snps        = sarscov2_nextstrain_aligned_input.unmasked_snps
       

@@ -244,7 +244,7 @@ task nextstrain_build_subsample {
         File?  keep_list
 
         Int?   machine_mem_gb
-        String docker = "nextstrain/base:build-20210318T204019Z"
+        String docker = "nextstrain/base:build-20210413T201712Z"
         String nextstrain_ncov_repo_commit = "0f30b1c801384fbf871f644ca241336a1d8fa04a"
     }
     parameter_meta {
@@ -350,7 +350,7 @@ task nextstrain_build_subsample {
 task nextstrain_ncov_defaults {
     input {
         String nextstrain_ncov_repo_commit = "5dbca8a45a64e39057c22163f154db981f7ed5c1"
-        String docker                      = "nextstrain/base:build-20210318T204019Z"
+        String docker                      = "nextstrain/base:build-20210413T201712Z"
     }
     command {
         set -e
@@ -373,6 +373,68 @@ task nextstrain_ncov_defaults {
         File ids_include     = "defaults/include.txt"
         File ids_exclude     = "defaults/exclude.txt"
         File auspice_config  = "defaults/auspice_config.json"
+    }
+}
+
+task nextstrain_ncov_sanitize_gisaid_data {
+    meta {
+        description: "Sanitize data downloaded from GISAID for use in Nextstrain/augur. See: https://nextstrain.github.io/ncov/data-prep#curate-data-from-the-full-gisaid-database"
+    }
+
+    input {
+        File sequences_gisaid_fasta
+        File metadata_gisaid_tsv
+
+        String? prefix_to_strip
+
+        String nextstrain_ncov_repo_commit = "183e94fd5ee73be97d66b7b7d90b167146fa0752"
+        String docker                      = "nextstrain/base:build-20210413T201712Z"
+    }
+
+    parameter_meta {
+        sequences_gisaid_fasta: {
+          description: "Multiple sequences downloaded from GISAID",
+          patterns: ["*.fasta","*.fasta.xz","*.fasta.gz"]
+        }
+        metadata_gisaid_tsv: {
+            description: "Tab-separated metadata file for sequences downloaded from GISAID and passed in via sequences_gisaid_fasta.",
+            patterns: ["*.txt", "*.tsv","*.tsv.xz","*.tsv.gz"]
+        }
+        prefix_to_strip: {
+            description: "String prefix to strip from sequence IDs in both the input fasta and metadata files"
+        }
+    }
+
+    String out_basename = basename(basename(basename(basename(sequences_gisaid_fasta, '.xz'), '.gz'), '.tar'), '.fasta')
+    command {
+        set -e
+        ncov_path_prefix="/nextstrain/ncov"
+        wget -q "https://github.com/nextstrain/ncov/archive/~{nextstrain_ncov_repo_commit}.tar.gz"
+        mkdir -p "$ncov_path_prefix"
+        tar -xf "~{nextstrain_ncov_repo_commit}.tar.gz" --strip-components=1 -C "$ncov_path_prefix"
+
+        python3 "$ncov_path_prefix/scripts/sanitize_sequences.py" \
+        --sequences "~{sequences_gisaid_fasta}" \
+        ~{"--strip-prefixes=" + prefix_to_strip} \
+        --output "~{out_basename}_sequences_sanitized_for_nextstrain.fasta.gz"
+
+        python3 "$ncov_path_prefix/scripts/sanitize_metadata.py" \
+        --metadata "~{metadata_gisaid_tsv}" \
+        --parse-location-field Location \
+        --rename-fields 'Virus name=strain' 'Accession ID=gisaid_epi_isl' 'Collection date=date' 'Clade=GISAID_clade' 'Pango lineage=pango_lineage' 'Host=host' 'Type=virus' 'Patient age=age' \
+        ~{"--strip-prefixes=" + prefix_to_strip} \
+        --output "~{out_basename}_metadata_sanitized_for_nextstrain.tsv.gz"
+    }
+    runtime {
+        docker: docker
+        memory: "7 GB"
+        cpu:   1
+        disks:  "local-disk 375 LOCAL"
+        dx_instance_type: "mem2_ssd1_v2_x2"
+    }
+    output {
+        File sequences_gisaid_sanitized_fasta = "~{out_basename}_sequences_sanitized_for_nextstrain.fasta.gz"
+        File metadata_gisaid_sanitized_tsv    = "~{out_basename}_metadata_sanitized_for_nextstrain.tsv.gz"
     }
 }
 
@@ -399,7 +461,7 @@ task filter_subsample_sequences {
         Array[String]? exclude_where
         Array[String]? include_where
 
-        String         docker = "nextstrain/base:build-20210318T204019Z"
+        String         docker = "nextstrain/base:build-20210413T201712Z"
     }
     parameter_meta {
         sequences_fasta: {
@@ -540,7 +602,7 @@ task filter_sequences_to_list {
         Array[File]? keep_list
 
         String       out_fname = sub(sub(basename(sequences), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
-        String       docker = "nextstrain/base:build-20210318T204019Z"
+        String       docker = "nextstrain/base:build-20210413T201712Z"
     }
     parameter_meta {
         sequences: {
@@ -715,7 +777,7 @@ task mafft_one_chr_chunked {
     }
     input {
         File     sequences
-        File     ref_fasta
+        File?    ref_fasta # if reference is not provided, it is assumed to be the first sequence in the "sequences" input file
         String   basename
         Boolean  remove_reference = false
 
@@ -729,7 +791,24 @@ task mafft_one_chr_chunked {
     command {
         set -e
 
+        # write out ref
+        if [ -f "~{ref_fasta}" ]; then
+            # if a reference was specified, copy+use it
+            cp "~{ref_fasta}" "~{basename}_ref.fasta"
+        else
+        # otherwise assume the first sequence in the fasta is the ref and export it
         python3 <<CODE
+        from Bio import SeqIO
+        with open("~{basename}_ref.fasta", "w") as handle:
+            record_iter = SeqIO.parse(open("~{sequences}"), "fasta")
+            for record in record_iter:
+                SeqIO.write(record, handle, "fasta-2line")
+                break
+        CODE
+        fi
+
+        python3 <<CODE
+        import os.path
         from Bio import SeqIO
         from itertools import islice, repeat, starmap, takewhile
         from operator import truth
@@ -738,30 +817,39 @@ task mafft_one_chr_chunked {
 
         record_iter = SeqIO.parse(open("~{sequences}"), "fasta")
         for i, batch in enumerate(batch_iterator(record_iter, ~{batch_chunk_size})):
-            filename = "sequences_mafft_one_chr_chunked_chunk_%i.fasta" % (i + 1)
-            with open(filename, "w") as handle:
-                SeqIO.write(batch, handle, "fasta-2line")
+            chunk_filename = "sequences_mafft_one_chr_chunked_chunk_%i.fasta" % (i + 1)
+            # if we're considering the first sequence and the file and the user
+            # did not specify a reference sequence
+            if i==0 and not os.path.isfile("~{ref_fasta}"):
+                # drop first sequence since it's the ref and we've already saved
+                # it separately above
+                # then write out the rest in this chunk
+                with open(chunk_filename, "w") as handle:
+                    for record in batch[1:]:
+                        SeqIO.write(record, handle, "fasta-2line")
+            else:
+                with open(chunk_filename, "w") as handle:
+                    SeqIO.write(batch, handle, "fasta-2line")
         CODE
 
 
         # GNU Parallel refresher:
         # ",," is the replacement string; values after ":::" are substituted where it appears
-        #parallel --jobs ~{cpus} -I ,, \
-        #parallel --jobs "$(((~{cpus}+1)/~{threads_per_job}))" -I ,, \
         parallel --jobs "$(( $((~{cpus}/~{threads_per_job}))<1 ? 1 : $((~{cpus}/~{threads_per_job})) ))" -I ,, \
-          "mafft --6merpair --keeplength --preservecase --thread $(((~{threads_per_job}-1)%~{cpus}+1)) --addfragments ,, ~{ref_fasta} > $(basename ,,).msa_chunk.fasta \
+          "mafft --6merpair --keeplength --preservecase --thread $(((~{threads_per_job}-1)%~{cpus}+1)) --addfragments ,, ~{basename}_ref.fasta > $(basename ,,).msa_chunk.fasta \
           " \
           ::: $(ls -1 sequences_mafft_one_chr_chunked_chunk_*.fasta)
 
         python3 <<CODE
-        import glob
+        import glob, os.path, string
         import Bio.SeqIO
         with open("~{basename}_aligned.fasta", "w") as handle:
             # write a single reference if we are not removing the reference sequence
             if "~{true='remove-ref' false='' remove_reference}" != "remove-ref":
-                ref_seq = Bio.SeqIO.parse("~{ref_fasta}", 'fasta')
+                ref_seq = Bio.SeqIO.parse("~{basename}_ref.fasta", 'fasta')
                 Bio.SeqIO.write(ref_seq, handle, 'fasta-2line')
-            for msa_chunk in glob.glob('*.msa_chunk.fasta'):
+            sorted_alignment_chunks = sorted(glob.glob('*.msa_chunk.fasta'), key=lambda e: int(e.strip(string.ascii_letters+'_.-')))
+            for msa_chunk in sorted_alignment_chunks:
                 seq_it = Bio.SeqIO.parse(msa_chunk, 'fasta')
                 print("dumping " + str(seq_it.__next__().id)) # iterate to remove the reference from each chunk
                 Bio.SeqIO.write(seq_it, handle, 'fasta-2line')
@@ -801,7 +889,7 @@ task augur_mafft_align {
         Boolean fill_gaps = true
         Boolean remove_reference = true
 
-        String  docker = "nextstrain/base:build-20210318T204019Z"
+        String  docker = "nextstrain/base:build-20210413T201712Z"
     }
     command {
         set -e
@@ -868,7 +956,7 @@ task augur_mask_sites {
         File   sequences
         File?  mask_bed
 
-        String docker = "nextstrain/base:build-20210318T204019Z"
+        String docker = "nextstrain/base:build-20210413T201712Z"
     }
     parameter_meta {
         sequences: {
@@ -923,7 +1011,7 @@ task draft_augur_tree {
         String? tree_builder_args
 
         Int?    cpus
-        String  docker = "nextstrain/base:build-20210318T204019Z"
+        String  docker = "nextstrain/base:build-20210413T201712Z"
     }
     parameter_meta {
         msa_or_vcf: {
@@ -989,7 +1077,7 @@ task refine_augur_tree {
         String?  divergence_units = "mutations"
         File?    vcf_reference
 
-        String   docker = "nextstrain/base:build-20210318T204019Z"
+        String   docker = "nextstrain/base:build-20210413T201712Z"
     }
     parameter_meta {
         msa_or_vcf: {
@@ -1058,7 +1146,7 @@ task ancestral_traits {
         File?         weights
         Float?        sampling_bias_correction
 
-        String        docker = "nextstrain/base:build-20210318T204019Z"
+        String        docker = "nextstrain/base:build-20210413T201712Z"
     }
     String out_basename = basename(tree, '.nwk')
     command {
@@ -1108,7 +1196,7 @@ task ancestral_tree {
         File?    vcf_reference
         File?    output_vcf
 
-        String   docker = "nextstrain/base:build-20210318T204019Z"
+        String   docker = "nextstrain/base:build-20210413T201712Z"
     }
     parameter_meta {
         msa_or_vcf: {
@@ -1166,7 +1254,7 @@ task translate_augur_tree {
         File?  vcf_reference_output
         File?  vcf_reference
 
-        String docker = "nextstrain/base:build-20210318T204019Z"
+        String docker = "nextstrain/base:build-20210413T201712Z"
     }
     String out_basename = basename(tree, '.nwk')
     command {
@@ -1219,7 +1307,7 @@ task tip_frequencies {
         Boolean  censored = false
         Boolean  include_internal_nodes = false
 
-        String   docker = "nextstrain/base:build-20210318T204019Z"
+        String   docker = "nextstrain/base:build-20210413T201712Z"
         String   out_basename = basename(tree, '.nwk')
     }
     command {
@@ -1276,7 +1364,7 @@ task assign_clades_to_nodes {
         File ref_fasta
         File clades_tsv
 
-        String docker = "nextstrain/base:build-20210318T204019Z"
+        String docker = "nextstrain/base:build-20210413T201712Z"
     }
     String out_basename = basename(basename(tree_nwk, ".nwk"), "_timetree")
     command {
@@ -1318,7 +1406,7 @@ task augur_import_beast {
         String? tip_date_delimiter
 
         Int?    machine_mem_gb
-        String  docker = "nextstrain/base:build-20210318T204019Z"
+        String  docker = "nextstrain/base:build-20210413T201712Z"
     }
     String tree_basename = basename(beast_mcc_tree, ".tree")
     command {
@@ -1375,7 +1463,7 @@ task export_auspice_json {
 
         String out_basename = basename(basename(tree, ".nwk"), "_timetree")
 
-        String docker = "nextstrain/base:build-20210318T204019Z"
+        String docker = "nextstrain/base:build-20210413T201712Z"
     }
     
     command {

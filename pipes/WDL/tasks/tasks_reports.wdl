@@ -88,10 +88,21 @@ task plot_coverage {
     File    aligned_reads_bam
     String  sample_name
 
-    Boolean skip_mark_dupes = false
-    Boolean plot_only_non_duplicates = false
-    Boolean bin_large_plots = false
+    Boolean skip_mark_dupes           = false
+    Boolean plot_only_non_duplicates  = false
+    Boolean bin_large_plots           = false
     String? binning_summary_statistic = "max" # max or min
+
+    Int? plot_width_pixels            = 1100
+    Int? plot_height_pixels           = 850
+    Int? plot_pixels_per_inch         = 100
+
+    Int? max_coverage_depth
+    Int? base_q_threshold
+    Int? mapping_q_threshold
+    Int? read_length_threshold
+    String? plotXLimits # of the form "min max" (ints, space between)
+    String? plotYLimits # of the form "min max" (ints, space between)
 
     String  docker = "quay.io/broadinstitute/viral-core:2.1.32"
   }
@@ -121,6 +132,12 @@ task plot_coverage {
         --plotWidth 1100 \
         --plotHeight 850 \
         --plotDPI 100 \
+        ${"-m " + max_coverage_depth} \
+        ${"-q " + base_q_threshold} \
+        ${"-Q " + mapping_q_threshold} \
+        ${"-l " + read_length_threshold} \
+        ${"--plotXLimits " + plotXLimits} \
+        ${"--plotYLimits " + plotYLimits} \
         $PLOT_DUPE_OPTION \
         $BINNING_OPTION \
         --binningSummaryStatistic ${binning_summary_statistic} \

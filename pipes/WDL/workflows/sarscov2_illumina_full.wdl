@@ -55,7 +55,6 @@ workflow sarscov2_illumina_full {
         File?         collab_ids_tsv
 
         String?       gcs_out_metrics
-        String?       gcs_out_reporting
         String?       gcs_out_cdc
         String?       gcs_out_sra
     }
@@ -177,6 +176,7 @@ workflow sarscov2_illumina_full {
             select_first([sarscov2_lineages.nextclade_aa_subs, ""]),
             select_first([sarscov2_lineages.nextclade_aa_dels, ""]),
             select_first([sarscov2_lineages.pangolin_docker, ""]),
+            select_first([sarscov2_lineages.nextclade_version, ""]),
             assemble_refbased.dist_to_ref_snps,
             assemble_refbased.dist_to_ref_indels,
             select_first([vadr.num_alerts, ""]),
@@ -213,7 +213,7 @@ workflow sarscov2_illumina_full {
     Array[String] assembly_tsv_header = [
         'sample', 'sample_sanitized', 'biosample_accession', 'flowcell_id', 'run_date', 'collection_date', 'geo_loc_name', 'host_subject_id',
         'assembly_length_unambiguous', 'assembly_mean_coverage',
-        'pango_lineage', 'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels', 'pangolin_version',
+        'pango_lineage', 'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels', 'pangolin_version', 'nextclade_version',
         'dist_to_ref_snps', 'dist_to_ref_indels', 'vadr_num_alerts',
         'assembly_fasta', 'coverage_plot', 'aligned_bam',
         'replicate_discordant_vcf', 'variants_from_ref_vcf',
@@ -401,17 +401,6 @@ workflow sarscov2_illumina_full {
             input:
               infiles        = flatten([[assembly_meta_tsv.combined, sc2_meta_final.meta_tsv, ivar_trim_stats.trim_stats_tsv, demux_deplete.multiqc_report_raw, demux_deplete.multiqc_report_cleaned, demux_deplete.spikein_counts, picard_wgs_merge.out_tsv, picard_alignment_merge.out_tsv, picard_insertsize_merge.out_tsv, nextclade_many_samples.nextclade_json, nextclade_many_samples.nextclade_tsv], demux_deplete.demux_metrics]),
               gcs_uri_prefix = "~{gcs_out_metrics}/~{flowcell_id}/"
-        }
-    }
-    if(defined(gcs_out_reporting)) {
-        call utils.tsv_to_csv as meta_final_csv {
-          input:
-            tsv = sc2_meta_final.meta_tsv
-        }
-        call terra.gcs_copy as gcs_reporting_dump {
-            input:
-              infiles        = [meta_final_csv.csv],
-              gcs_uri_prefix = "~{gcs_out_reporting}/"
         }
     }
     if(defined(gcs_out_cdc)) {

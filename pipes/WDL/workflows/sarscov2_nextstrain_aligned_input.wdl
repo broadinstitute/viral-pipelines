@@ -50,7 +50,7 @@ workflow sarscov2_nextstrain_aligned_input {
 
     call nextstrain.nextstrain_ncov_defaults
 
-    call utils.gzcat {
+    call utils.zcat {
         input:
             infiles     = aligned_sequences_fasta,
             output_name = "all_samples_combined_assembly.fasta"
@@ -74,7 +74,7 @@ workflow sarscov2_nextstrain_aligned_input {
     #### subsample sequences with nextstrain yaml file
     call nextstrain.nextstrain_build_subsample as subsample {
         input:
-            alignment_msa_fasta = gzcat.combined,
+            alignment_msa_fasta = zcat.combined,
             sample_metadata_tsv = derived_cols.derived_metadata,
             build_name          = build_name,
             builds_yaml         = builds_yaml
@@ -167,7 +167,7 @@ workflow sarscov2_nextstrain_aligned_input {
     }
 
     output {
-      File             combined_assemblies  = gzcat.combined
+      File             combined_assemblies  = zcat.combined
       File             unmasked_snps        = snp_sites.snps_vcf
       
       File             metadata_merged      = derived_cols.derived_metadata

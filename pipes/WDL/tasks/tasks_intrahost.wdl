@@ -1,5 +1,141 @@
 version 1.0
 
+task detect_cross_contamination {
+  input {
+    Array[File] lofreq_vcfs
+    Array[File] genome_fastas
+    File        reference_fasta
+
+    Int         min_readcount       = 10
+    Float       min_maf             = 0.03
+    Float       min_genome_coverage = 0.98
+    Int         max_mismatches      = 1
+
+    Array[File]? plate_maps
+    Int?        plate_size                 = 96
+    Int?        plate_columns
+    Int?        plate_rows
+    Boolean?    compare_direct_neighbors   = true
+    Boolean?    compare_diagonal_neighbors = false
+    Boolean?    compare_full_row           = false
+    Boolean?    compare_full_column        = false
+    Boolean?    compare_full_plate         = false
+
+    String         out_basename = "potential_cross_contamination"
+
+    String         docker = "quay.io/broadinstitute/polyphonia:latest"
+  }
+
+  parameter_meta {
+    lofreq_vcfs:         { description: "VCF file(s) output by LoFreq or GATK; must use reference provided by reference_fasta" }
+    genome_fastas:       { description: "Unaligned consensus genome or genomes" }
+    reference_fasta:     { description: "Reference fasta file" }
+    
+    min_readcount:       { description: "Minimum minor allele readcount for position to be considered heterozygous" }
+    min_maf:             { description: "Minimum minor allele frequency for position to be considered heterozygous" }
+    min_genome_coverage: { description: "Minimum proportion genome covered for a sample to be included" }
+    max_mismatches:      { description: "Maximum allowed bases in contaminating sample consensus not matching contaminated sample alleles" }
+    
+    plate_maps:           { description: "Optional plate map(s) (tab-separated, no header: sample name, plate position (e.g., A8))" }
+    plate_size:          { description: "Standard plate size (6-well, 12-well, 24, 48, 96, 384, 1536, 3456)" }
+    plate_columns:       { description: "Number columns in plate (e.g., 1, 2, 3, 4)" }
+    plate_rows:          { description: "Number rows in plate (e.g., A, B, C, D)" }
+    compare_direct_neighbors:  { description: "Compare direct plate neighbors (left, right, top, bottom)" }
+    compare_diagonal_neighbors:{ description: "Compare diagonal plate neighbors (top-right, bottom-right, top-left, bottom-left)" }
+    compare_full_row:    { description: "Compare samples in the same row (e.g., row A)" }
+    compare_full_column: { description: "Compare samples in the same column (e.g., column 8)" }
+    compare_full_plate:  { description: "Compare all samples in the same plate map" }
+    
+  }
+
+  command <<<
+    set -e -o pipefail
+
+    # commented out until polyphonia can report its own version
+    #polyphonia --version | tee POLYPHONIA_VERSION
+
+    mkdir -p figs
+    
+    # prep plate maps input, if specified
+    PLATE_MAPS_INPUT=""
+    if [ -n "${sep=' ' plate_maps}" ]; then
+      PLATE_MAPS_INPUT="--plate-map ~{sep=' ' plate_maps}"
+    fi
+
+    polyphonia cross_contamination \
+      --ref ~{reference_fasta} \
+      --vcf ~{sep=' ' lofreq_vcfs} \
+      --consensus ~{sep=' ' genome_fastas} \
+      ~{'--min-covered ' + min_genome_coverage} \
+      ~{'--min-readcount ' + min_readcount} \
+      ~{'--max-mismatches ' + max_mismatches} \
+      ~{'--min-maf ' + min_maf} \
+      $PLATE_MAPS_INPUT \
+      ~{'--plate-size ' + plate_size} \
+      ~{'--plate-columns ' + plate_columns} \
+      ~{'--plate-rows ' + plate_rows} \
+      --compare-direct ~{true="TRUE" false="FALSE" compare_direct_neighbors} \
+      --compare-diagonal ~{true="TRUE" false="FALSE" compare_diagonal_neighbors} \
+      --compare-row ~{true="TRUE" false="FALSE" compare_full_row} \
+      --compare-column ~{true="TRUE" false="FALSE" compare_full_column} \
+      --compare-plate ~{true="TRUE" false="FALSE" compare_full_plate} \
+      --output ~{out_basename}.txt \
+      --out-figures figs \
+      --cores `nproc` \
+      --verbose TRUE \
+      --overwrite TRUE
+  >>>
+
+  output {
+    File        report             = "~{out_basename}.txt"
+    Array[File] figures            = glob("figs/*")
+    # commented out until polyphonia can report its own version
+    #String      polyphonia_version = read_string("POLYPHONIA_VERSION")
+  }
+  runtime {
+    docker: docker
+    cpu:    4
+    memory: "13 GB"
+    disks:  "local-disk 100 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x4"
+  }
+}
+
+task lofreq {
+  input {
+    File      aligned_bam
+    File      reference_fasta
+
+    String    out_basename = basename(aligned_bam, '.bam')
+    String    docker = "quay.io/biocontainers/lofreq:2.1.5--py38h588ecb2_4"
+  }
+  command <<<
+    set -e -o pipefail
+
+    lofreq version | grep version | sed 's/.* \(.*\)/\1/g' | tee LOFREQ_VERSION
+
+    samtools faidx "~{reference_fasta}"
+    samtools index "~{aligned_bam}"
+
+    lofreq call \
+      -f "~{reference_fasta}" \
+      -o "~{out_basename}.vcf" \
+      "~{aligned_bam}"
+  >>>
+
+  output {
+    File   report_vcf     = "~{out_basename}.vcf"
+    String lofreq_version = read_string("LOFREQ_VERSION")
+  }
+  runtime {
+    docker: docker
+    cpu:    2
+    memory: "3 GB"
+    disks:  "local-disk 200 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
+
 task isnvs_per_sample {
   input {
     File    mapped_bam
