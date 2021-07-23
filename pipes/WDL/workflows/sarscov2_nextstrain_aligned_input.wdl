@@ -11,8 +11,8 @@ workflow sarscov2_nextstrain_aligned_input {
     }
 
     input {
-        Array[File]+    aligned_sequences_fasta
-        Array[File]+    sample_metadata_tsvs
+        Array[File]+    aligned_sequences_fasta=["gs://nextstrain-data/files/ncov/open/aligned.fasta.xz"]
+        Array[File]+    sample_metadata_tsvs=["gs://nextstrain-data/files/ncov/open/metadata.tsv.gz"]
 
         String          build_name
         File            builds_yaml
