@@ -388,6 +388,11 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_nextstrain.wdl
     testParameterFiles:
       - empty.json
+  - name: sarscov2_nextstrain_aligned_input
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_nextstrain_aligned_input.wdl
+    testParameterFiles:
+      - empty.json
   - name: sarscov2_sequencing_reports
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_sequencing_reports.wdl
