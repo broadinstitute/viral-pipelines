@@ -8,7 +8,8 @@ task detect_cross_contamination {
 
     Int         min_readcount       = 10
     Float       min_maf             = 0.03
-    Float       min_genome_coverage = 0.98
+    Float       min_genome_coverage = 0.95
+    Int         min_read_depth      = 100
     Int         max_mismatches      = 1
 
     Array[File]? plate_maps
@@ -33,10 +34,11 @@ task detect_cross_contamination {
     
     min_readcount:       { description: "Minimum minor allele readcount for position to be considered heterozygous" }
     min_maf:             { description: "Minimum minor allele frequency for position to be considered heterozygous" }
+    min_read_depth:      { description: "Minimum read depth for a position to be used for comparison" }
     min_genome_coverage: { description: "Minimum proportion genome covered for a sample to be included" }
     max_mismatches:      { description: "Maximum allowed bases in contaminating sample consensus not matching contaminated sample alleles" }
     
-    plate_maps:           { description: "Optional plate map(s) (tab-separated, no header: sample name, plate position (e.g., A8))" }
+    plate_maps:          { description: "Optional plate map(s) (tab-separated, no header: sample name, plate position (e.g., A8))" }
     plate_size:          { description: "Standard plate size (6-well, 12-well, 24, 48, 96, 384, 1536, 3456)" }
     plate_columns:       { description: "Number columns in plate (e.g., 1, 2, 3, 4)" }
     plate_rows:          { description: "Number rows in plate (e.g., A, B, C, D)" }
@@ -67,6 +69,7 @@ task detect_cross_contamination {
       --vcf ~{sep=' ' lofreq_vcfs} \
       --consensus ~{sep=' ' genome_fastas} \
       ~{'--min-covered ' + min_genome_coverage} \
+      ~{'--min-depth ' + min_read_depth} \
       ~{'--min-readcount ' + min_readcount} \
       ~{'--max-mismatches ' + max_mismatches} \
       ~{'--min-maf ' + min_maf} \
