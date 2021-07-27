@@ -21,6 +21,8 @@ task detect_cross_contamination {
     Boolean?    compare_full_row           = false
     Boolean?    compare_full_column        = false
     Boolean?    compare_full_plate         = false
+    
+    Boolean?    print_all           = false
 
     String         out_basename = "potential_cross_contamination"
 
@@ -47,6 +49,8 @@ task detect_cross_contamination {
     compare_full_row:    { description: "Compare samples in the same row (e.g., row A)" }
     compare_full_column: { description: "Compare samples in the same column (e.g., column 8)" }
     compare_full_plate:  { description: "Compare all samples in the same plate map" }
+    
+    print_all:           { description: "Output outcomes of all comparisons (all comparisons are marked as potential cross-contamination)" }
     
   }
 
@@ -86,7 +90,8 @@ task detect_cross_contamination {
       --out-figures figs \
       --cores `nproc` \
       --verbose TRUE \
-      --overwrite TRUE
+      --overwrite TRUE \
+      --print-all ~{true="TRUE" false="FALSE" print_all}
   >>>
 
   output {
