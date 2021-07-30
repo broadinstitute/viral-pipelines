@@ -19,6 +19,8 @@ workflow sarscov2_nextstrain_aligned_input {
 
         Array[String]?  ancestral_traits_to_infer
 
+        String?         tree_root_seq_id="Wuhan-Hu-1/2019"
+
         File?           auspice_config
         File?           ref_fasta
         File?           clades_tsv
@@ -105,7 +107,8 @@ workflow sarscov2_nextstrain_aligned_input {
         input:
             raw_tree   = draft_augur_tree.aligned_tree,
             msa_or_vcf = subsample.subsampled_msa,
-            metadata   = derived_cols.derived_metadata
+            metadata   = derived_cols.derived_metadata,
+            root       = tree_root_seq_id
     }
 
     if(defined(ancestral_traits_to_infer) && length(select_first([ancestral_traits_to_infer,[]]))>0) {
