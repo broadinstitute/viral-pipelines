@@ -73,10 +73,15 @@ workflow sarscov2_nextstrain_aligned_input {
     }
 
 
+    call nextstrain.nextstrain_deduplicate_sequences as dedup_seqs {
+        input:
+            sequences_fasta = zcat.combined
+    }
+
     #### subsample sequences with nextstrain yaml file
     call nextstrain.nextstrain_build_subsample as subsample {
         input:
-            alignment_msa_fasta = zcat.combined,
+            alignment_msa_fasta = dedup_seqs.sequences_deduplicated_fasta,
             sample_metadata_tsv = derived_cols.derived_metadata,
             build_name          = build_name,
             builds_yaml         = builds_yaml
