@@ -18,7 +18,6 @@ workflow detect_cross_contamination {
             description: "consensus sequences, one per file in aligned_bams, in corresponding order",
             patterns: ["*.fasta"]
         }
-
         reference_fasta: {
             description: "Reference genome to which reads have be aligned, needed here for variant calling",
             patterns: ["*.fasta"]
