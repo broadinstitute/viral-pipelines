@@ -1,6 +1,7 @@
 version 1.0
 
 import "../tasks/tasks_intrahost.wdl" as intrahost
+import "../tasks/tasks_read_utils.wdl" as read_utils
 
 workflow detect_cross_contamination {
     meta {
@@ -38,6 +39,11 @@ workflow detect_cross_contamination {
                 reference_fasta = reference_fasta
         }
         
+        call read_utils.read_depths as depth {
+            input:
+                aligned_bam = sample.left
+        }
+        
         # pair the lofreq and read depth outputs with the corresponding (input) consensus
         # fasta since we do not actually use the consensus fasta in the scattered task
         # (and thus cannot access it by task_name.input_name reference outside the scatter)
@@ -46,7 +52,8 @@ workflow detect_cross_contamination {
         # https://github.com/openwdl/wdl/blob/main/versions/1.0/SPEC.md
         Array[File] vcf_genome_read_depth_triplets = [
             lofreq.report_vcf,
-            sample.right
+            sample.right,
+            depth.read_depths
         ]
     }
 
@@ -64,6 +71,7 @@ workflow detect_cross_contamination {
     output {
         File        contamination_report  = detect_cross_contam.report
         Array[File] lofreq_vcfs           = lofreq.report_vcf
+        Array[File] read_depths           = depth.read_depths
         Array[File] contamination_figures = detect_cross_contam.figures
         String      lofreq_version        = lofreq.lofreq_version[0]
         # commented out until polyphonia can report its own version
