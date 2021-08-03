@@ -361,8 +361,6 @@ task read_depths {
   command <<<
     set -e -o pipefail
 
-    lofreq version | grep version | sed 's/.* \(.*\)/\1/g' | tee LOFREQ_VERSION
-
     samtools depth "~{aligned_bam}" > "~{out_basename}.read_depths.txt"
   >>>
 
