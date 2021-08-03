@@ -19,7 +19,7 @@ workflow detect_cross_contamination_precalled_vcfs {
             patterns: ["*.fasta"]
         }
         reference_fasta: {
-            description: "Reference genome to which reads have be aligned, needed here for variant calling",
+            description: "Reference genome to which reads have been aligned, needed here for variant calling",
             patterns: ["*.fasta"]
         }
 
