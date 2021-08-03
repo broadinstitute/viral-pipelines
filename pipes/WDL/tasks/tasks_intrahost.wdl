@@ -74,7 +74,7 @@ task detect_cross_contamination {
       --ref ~{reference_fasta} \
       --vcf ~{sep=' ' lofreq_vcfs} \
       --consensus ~{sep=' ' genome_fastas} \
-      --read-depth ~{sep=' ' read_depths} \
+      --read-depths ~{sep=' ' read_depths} \
       ~{'--min-covered ' + min_genome_coverage} \
       ~{'--min-depth ' + min_read_depth} \
       ~{'--min-readcount ' + min_readcount} \

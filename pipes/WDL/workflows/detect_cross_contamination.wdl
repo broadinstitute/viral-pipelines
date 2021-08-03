@@ -37,25 +37,27 @@ workflow detect_cross_contamination {
                 aligned_bam = sample.left,
                 reference_fasta = reference_fasta
         }
-        # pair the lofreq output with the corresponding (input) consensus fasta
-        # since we do not actually use the consensus fasta in the scattered task
+        
+        # pair the lofreq and read depth outputs with the corresponding (input) consensus
+        # fasta since we do not actually use the consensus fasta in the scattered task
         # (and thus cannot access it by task_name.input_name reference outside the scatter)
         # and since the WDL 1.0 spec is not explicit about whether order is preserved
         # during the gather phase (executor implementations may vary)
         # https://github.com/openwdl/wdl/blob/main/versions/1.0/SPEC.md
-        Array[File] vcf_genome_pairs = [
+        Array[File] vcf_genome_read_depth_triplets = [
             lofreq.report_vcf,
             sample.right
         ]
     }
 
-    Array[Array[File]] vcfs_and_genomes = transpose(vcf_genome_pairs)
+    Array[Array[File]] vcfs_and_genomes = transpose(vcf_genome_read_depth_triplets)
     call intrahost.detect_cross_contamination as detect_cross_contam {
         # take scatter-gathered array of [(vcf1,fasta1),(vcf2,fasta2),(vcf3,fasta3)]
         # and transpose to [[vcf1,vcf2,vcf3],[fasta1,fasta2,fasta3]]
         input:
             lofreq_vcfs     = vcfs_and_genomes[0], # vcfs
             genome_fastas   = vcfs_and_genomes[1], # fastas
+            read_depths     = vcfs_and_genomes[2], # read depth tables
             reference_fasta = reference_fasta
     }
 
