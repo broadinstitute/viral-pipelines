@@ -400,7 +400,7 @@ task nextstrain_deduplicate_sequences {
     }
 
     String out_basename = basename(basename(basename(basename(sequences_fasta, '.xz'), '.gz'), '.tar'), '.fasta')
-    String out_filename = "~{out_basename}_sequences_deduplicated.fasta.xz"
+    String out_filename = "~{out_basename}_sequences_deduplicated.fasta"
     command {
         set -e
         ncov_path_prefix="/nextstrain/ncov"
