@@ -400,6 +400,7 @@ task nextstrain_deduplicate_sequences {
     }
 
     String out_basename = basename(basename(basename(basename(sequences_fasta, '.xz'), '.gz'), '.tar'), '.fasta')
+    String out_filename = "~{out_basename}_sequences_deduplicated.fasta.xz"
     command {
         set -e
         ncov_path_prefix="/nextstrain/ncov"
@@ -410,7 +411,7 @@ task nextstrain_deduplicate_sequences {
         python3 "$ncov_path_prefix/scripts/sanitize_sequences.py" \
         --sequences "~{sequences_fasta}" \
         ${true="--error-on-duplicate-strains" false="" error_on_seq_diff} \
-        --output "~{out_basename}_sequences_deduplicated.fasta.gz"
+        --output "~{out_filename}"
     }
     runtime {
         docker: docker
@@ -420,7 +421,7 @@ task nextstrain_deduplicate_sequences {
         dx_instance_type: "mem2_ssd1_v2_x2"
     }
     output {
-        File sequences_deduplicated_fasta = "~{out_basename}_sequences_deduplicated.fasta.gz"
+        File sequences_deduplicated_fasta = "~{out_filename}"
     }
 }
 
