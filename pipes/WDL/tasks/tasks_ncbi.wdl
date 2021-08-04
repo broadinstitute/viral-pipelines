@@ -362,7 +362,7 @@ task gisaid_meta_prep {
             'submitter'           : "~{default='REQUIRED' username}",
             'fn'                  : "~{default='REQUIRED' fasta_filename}",
 
-            'covv_add_host_info'  : row.get('note',''),
+            'covv_sampling_strategy'  : row.get('note',''),
           })
 
     CODE
