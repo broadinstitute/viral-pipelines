@@ -56,7 +56,7 @@ task nextmeta_prep {
             'originating_lab': sample_to_gisaid[sample]['covv_orig_lab'],
             'submitting_lab': sample_to_gisaid[sample]['covv_subm_lab'],
             'authors': sample_to_gisaid[sample]['covv_authors'],
-            'purpose_of_sequencing': sample_to_gisaid[sample]['covv_add_host_info'],
+            'purpose_of_sequencing': sample_to_gisaid[sample].get('covv_sampling_strategy', sample_to_gisaid[sample].get('covv_add_host_info')),
             })
 
     CODE
