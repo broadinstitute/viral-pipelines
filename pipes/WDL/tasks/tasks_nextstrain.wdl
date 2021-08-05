@@ -376,6 +376,55 @@ task nextstrain_ncov_defaults {
     }
 }
 
+task nextstrain_deduplicate_sequences {
+    meta {
+        description: "This uses the Nextstrain sanitize_sequences.py script to deduplicate sequences by sequence ID. If the sequences themselves differ, and error is optionally raised. See: https://github.com/nextstrain/ncov/blob/c4747c1f53cd84baaeacdbd044390604d1af2cfc/scripts/sanitize_sequences.py"
+    }
+
+    input {
+        File sequences_fasta
+        Boolean error_on_seq_diff = false
+
+        String nextstrain_ncov_repo_commit = "99ccfc5c6601e78468e7db193ee453128ba593ff"
+        String docker                      = "nextstrain/base:build-20210413T201712Z"
+    }
+
+    parameter_meta {
+        sequences_fasta: {
+          description: "FASTA file with multiple sequences",
+          patterns: ["*.fasta","*.fasta.xz","*.fasta.gz"]
+        }
+        error_on_seq_diff: {
+            description: "If error_on_seq_diff=true, an error will be raised if duplicate sequence IDs exist but have different sequences. By default, use the first occurrence of each duplicated sequence."
+        }
+    }
+
+    String out_basename = basename(basename(basename(basename(sequences_fasta, '.xz'), '.gz'), '.tar'), '.fasta')
+    String out_filename = "~{out_basename}_sequences_deduplicated.fasta"
+    command {
+        set -e
+        ncov_path_prefix="/nextstrain/ncov"
+        wget -q "https://github.com/nextstrain/ncov/archive/~{nextstrain_ncov_repo_commit}.tar.gz"
+        mkdir -p "$ncov_path_prefix"
+        tar -xf "~{nextstrain_ncov_repo_commit}.tar.gz" --strip-components=1 -C "$ncov_path_prefix"
+
+        python3 "$ncov_path_prefix/scripts/sanitize_sequences.py" \
+        --sequences "~{sequences_fasta}" \
+        ${true="--error-on-duplicate-strains" false="" error_on_seq_diff} \
+        --output "~{out_filename}"
+    }
+    runtime {
+        docker: docker
+        memory: "7 GB"
+        cpu:   1
+        disks:  "local-disk 375 LOCAL"
+        dx_instance_type: "mem2_ssd1_v2_x2"
+    }
+    output {
+        File sequences_deduplicated_fasta = "~{out_filename}"
+    }
+}
+
 task nextstrain_ncov_sanitize_gisaid_data {
     meta {
         description: "Sanitize data downloaded from GISAID for use in Nextstrain/augur. See: https://nextstrain.github.io/ncov/data-prep#curate-data-from-the-full-gisaid-database"

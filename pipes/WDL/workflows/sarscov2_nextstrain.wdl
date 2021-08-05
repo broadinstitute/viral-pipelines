@@ -58,9 +58,14 @@ workflow sarscov2_nextstrain {
             output_name = "all_samples_combined_assembly.fasta"
     }
 
+    call nextstrain.nextstrain_deduplicate_sequences as dedup_seqs {
+        input:
+            sequences_fasta = zcat.combined
+    }
+
     call nextstrain.filter_sequences_by_length {
         input:
-            sequences_fasta = zcat.combined,
+            sequences_fasta = dedup_seqs.sequences_deduplicated_fasta,
             min_non_N       = min_unambig_genome
     }
 
