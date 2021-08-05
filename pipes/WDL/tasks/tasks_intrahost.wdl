@@ -2,28 +2,32 @@ version 1.0
 
 task detect_cross_contamination {
   input {
-    Array[File] lofreq_vcfs
-    Array[File] genome_fastas
-    File        reference_fasta
+    Array[File]  lofreq_vcfs
+    Array[File]  genome_fastas
+    File         reference_fasta
 
-    Int         min_readcount       = 10
-    Float       min_maf             = 0.03
-    Float       min_genome_coverage = 0.98
-    Int         max_mismatches      = 1
+    Int          min_readcount       = 10
+    Float        min_maf             = 0.03
+    Float        min_genome_coverage = 0.95
+    Int          min_read_depth      = 100
+    Array[File]? read_depths
+    Int          max_mismatches      = 1
 
     Array[File]? plate_maps
-    Int?        plate_size                 = 96
-    Int?        plate_columns
-    Int?        plate_rows
-    Boolean?    compare_direct_neighbors   = true
-    Boolean?    compare_diagonal_neighbors = false
-    Boolean?    compare_full_row           = false
-    Boolean?    compare_full_column        = false
-    Boolean?    compare_full_plate         = false
+    Int?         plate_size                 = 96
+    Int?         plate_columns
+    Int?         plate_rows
+    Boolean?     compare_direct_neighbors   = true
+    Boolean?     compare_diagonal_neighbors = false
+    Boolean?     compare_full_row           = false
+    Boolean?     compare_full_column        = false
+    Boolean?     compare_full_plate         = false
+    
+    Boolean?     print_all           = false
 
-    String         out_basename = "potential_cross_contamination"
+    String       out_basename = "potential_cross_contamination"
 
-    String         docker = "quay.io/broadinstitute/polyphonia:latest"
+    String       docker = "quay.io/broadinstitute/polyphonia:latest"
   }
 
   parameter_meta {
@@ -33,10 +37,12 @@ task detect_cross_contamination {
     
     min_readcount:       { description: "Minimum minor allele readcount for position to be considered heterozygous" }
     min_maf:             { description: "Minimum minor allele frequency for position to be considered heterozygous" }
+    min_read_depth:      { description: "Minimum read depth for a position to be used for comparison" }
+    read_depths:         { description: "Read depth tables (tab-separated, no header: reference name, position, read depth); provide alongside vcf files or heterozygosity tables if min-depth>0" }
     min_genome_coverage: { description: "Minimum proportion genome covered for a sample to be included" }
     max_mismatches:      { description: "Maximum allowed bases in contaminating sample consensus not matching contaminated sample alleles" }
     
-    plate_maps:           { description: "Optional plate map(s) (tab-separated, no header: sample name, plate position (e.g., A8))" }
+    plate_maps:          { description: "Optional plate map(s) (tab-separated, no header: sample name, plate position (e.g., A8))" }
     plate_size:          { description: "Standard plate size (6-well, 12-well, 24, 48, 96, 384, 1536, 3456)" }
     plate_columns:       { description: "Number columns in plate (e.g., 1, 2, 3, 4)" }
     plate_rows:          { description: "Number rows in plate (e.g., A, B, C, D)" }
@@ -45,6 +51,8 @@ task detect_cross_contamination {
     compare_full_row:    { description: "Compare samples in the same row (e.g., row A)" }
     compare_full_column: { description: "Compare samples in the same column (e.g., column 8)" }
     compare_full_plate:  { description: "Compare all samples in the same plate map" }
+    
+    print_all:           { description: "Output outcomes of all comparisons (all comparisons are marked as potential cross-contamination)" }
     
   }
 
@@ -66,7 +74,9 @@ task detect_cross_contamination {
       --ref ~{reference_fasta} \
       --vcf ~{sep=' ' lofreq_vcfs} \
       --consensus ~{sep=' ' genome_fastas} \
+      --read-depths ~{sep=' ' read_depths} \
       ~{'--min-covered ' + min_genome_coverage} \
+      ~{'--min-depth ' + min_read_depth} \
       ~{'--min-readcount ' + min_readcount} \
       ~{'--max-mismatches ' + max_mismatches} \
       ~{'--min-maf ' + min_maf} \
@@ -83,7 +93,8 @@ task detect_cross_contamination {
       --out-figures figs \
       --cores `nproc` \
       --verbose TRUE \
-      --overwrite TRUE
+      --overwrite TRUE \
+      --print-all ~{true="TRUE" false="FALSE" print_all}
   >>>
 
   output {

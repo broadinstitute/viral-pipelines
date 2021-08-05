@@ -350,3 +350,28 @@ task FastqToUBAM {
     File unmapped_bam = "~{sample_name}.bam"
   }
 }
+
+task read_depths {
+  input {
+    File      aligned_bam
+
+    String    out_basename = basename(aligned_bam, '.bam')
+    String    docker = "quay.io/broadinstitute/viral-core:2.1.32"
+  }
+  command <<<
+    set -e -o pipefail
+
+    samtools depth "~{aligned_bam}" > "~{out_basename}.read_depths.txt"
+  >>>
+
+  output {
+    File   read_depths    = "~{out_basename}.read_depths.txt"
+  }
+  runtime {
+    docker: docker
+    cpu:    2
+    memory: "3 GB"
+    disks:  "local-disk 200 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+  }
+}
