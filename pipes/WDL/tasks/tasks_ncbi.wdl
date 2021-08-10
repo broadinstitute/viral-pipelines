@@ -897,9 +897,9 @@ task vadr {
   }
   input {
     File   genome_fasta
-    String vadr_opts = "--glsearch -s -r --nomisc --mkey sarscov2 --alt_fail lowscore,fstukcnf,insertnn,deletinn"
+    String vadr_opts = "--glsearch -s -r --nomisc --mkey sarscov2 --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn"
 
-    String docker = "staphb/vadr:1.2"
+    String docker = "quay.io/staphb/vadr:1.3"
     Int    minlen = 50
     Int    maxlen = 30000
   }
