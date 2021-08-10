@@ -480,6 +480,7 @@ workflow sarscov2_illumina_full {
         File          nextmeta_tsv                 = nextmeta_prep.nextmeta_tsv
         
         File          nextclade_all_json           = nextclade_many_samples.nextclade_json
+        File          nextclade_all_tsv            = nextclade_many_samples.nextclade_tsv
         File          nextclade_auspice_json       = nextclade_many_samples.auspice_json
         
         File          passing_fasta                = passing_cat.filtered_fasta
