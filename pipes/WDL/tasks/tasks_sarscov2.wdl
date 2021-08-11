@@ -376,7 +376,7 @@ task crsp_meta_etl {
         String        ontology_map_body_part = '{"AN SWAB": "Anterior Nares", "AN Swab": "Anterior Nares", "Swab": "Upper respiratory tract", "Viral": "Upper respiratory tract", "Null": "Anterior Nares", "NP Swab": "Nasopharynx (NP)"}'
         String        address_map = '{"Broad Institute Clinical Research Sequencing Platform": "320 Charles St, Cambridge, MA 02142, USA", "Massachusetts General Hospital": "55 Fruit St, Boston, MA 02114, USA", "Rhode Island Department of Health": "RI State Health Laboratories, 50 Orms Street, Providence, Rhode Island 02904, United States", "Biobot Analytics": "501 Massachusetts Avenue, Cambridge, MA 02139"}'
         String        prefix_map = '{"Broad Institute Clinical Research Sequencing Platform": "CRSP_", "Massachusetts General Hospital": "MGH_", "Rhode Island Department of Health": "RIDOH_", "Biobot Analytics": "Biobot_"}'
-        String        allowed_purposes = '["Baseline Surveillance (random sampling)", "Targeted surveillance (non-random sampling)", "Screening for Variants of Concern (VOC)", "Longitudinal surveillance (repeat sampling of individuals)", "Vaccine escape surveillance", "Cluster/Outbreak investigation"]'
+        String        allowed_purposes = '["Baseline surveillance (random sampling)", "Targeted surveillance (non-random sampling)", "Screening for Variants of Concern (VOC)", "Longitudinal surveillance (repeat sampling of individuals)", "Vaccine escape surveillance", "Cluster/Outbreak investigation"]'
 
         String        docker = "quay.io/broadinstitute/py3-bio:0.1.2"
     }
@@ -423,9 +423,10 @@ task crsp_meta_etl {
         assert (sample_meta.hl7_message_id.isna() & sample_meta.matrix_id.isna()).sum() == 0, "error: some samples missing hl7_message_id and matrix_id (at least one must be defined per sample)"
         assert sample_meta.internal_id.isna().sum() == 0, "error: some samples missing internal_id"
         assert sample_meta.purpose_of_sequencing.isna().sum() == 0, "error: fillna didnt work on purpose_of_sequencing"
-        assert all(x in allowed_purposes for x in sample_meta.purpose_of_sequencing), "error: some samples have invalid research_purpose"
-        assert all(x in address_map for x in sample_meta.collected_by), "error: some samples have invalid collected_by"
-        assert all(x in prefix_map for x in sample_meta.collected_by), "error: some samples have invalid collected_by"
+        bad_purposes = set(x for x in sample_meta.purpose_of_sequencing if x not in allowed_purposes)
+        assert not bad_purposes, f"error: some samples have invalid research_purpose values: {str(bad_purposes)}"
+        bad_orgs = set(x for x in sample_meta.collected_by if x not in address_map or x not in prefix_map)
+        assert not bad_orgs, f"error: some samples have invalid collected_by values: {str(bad_orgs)}"
 
         # clean geoloc
         sample_meta.loc[:,'geo_loc_state_abbr'] = sample_meta.loc[:,'geo_loc_name']
@@ -472,7 +473,7 @@ task crsp_meta_etl {
             for id in sample_meta['sample_name']]
 
         # prep biosample submission table
-        biosample = sample_meta[['sample_name', 'isolate', 'collected_by', 'collection_date', 'geo_loc_name', 'host_subject_id', 'anatomical_part', 'body_product', 'purpose_of_sequencing']]
+        biosample = sample_meta[['sample_name', 'isolate', 'collected_by', 'collection_date', 'geo_loc_name', 'host_subject_id', 'anatomical_part', 'body_product']]
         biosample = biosample.assign(
             bioproject_accession = '~{bioproject}',
             attribute_package = 'Pathogen.cl',
@@ -483,6 +484,7 @@ task crsp_meta_etl {
             host_disease = 'COVID-19',
             purpose_of_sampling = 'Diagnostic Testing'
         )
+        biosample['purpose_of_sequencing'] = sample_meta['purpose_of_sequencing']
         biosample = biosample.reindex(columns= biosample.columns.tolist() + [
             'host_health_state',' host_disease_outcome', 'host_age', 'host_sex',
             'anatomical_material', 'collection_device', 'collection_method',
