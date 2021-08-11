@@ -11,7 +11,7 @@ task nextclade_one_sample {
         File? qc_config_json
         File? gene_annotations_json
         File? pcr_primers_csv
-        String docker = "neherlab/nextclade:0.14.4"
+        String docker = "nextstrain/nextclade:0.14.4"
     }
     String basename = basename(genome_fasta, ".fasta")
     command {
@@ -70,7 +70,7 @@ task nextclade_many_samples {
         File?        gene_annotations_json
         File?        pcr_primers_csv
         String       basename
-        String       docker = "neherlab/nextclade:0.14.4"
+        String       docker = "nextstrain/nextclade:0.14.4"
     }
     command {
         set -e
@@ -110,8 +110,8 @@ task pangolin_one_sample {
         File    genome_fasta
         Int?    min_length
         Float?  max_ambig
-        Boolean inference_usher=false
-        String  docker = "quay.io/staphb/pangolin:3.1.7-pangolearn-2021-07-09"
+        Boolean inference_usher=true
+        String  docker = "quay.io/staphb/pangolin:3.1.8-pangolearn-2021-07-28"
     }
     String basename = basename(genome_fasta, ".fasta")
     command <<<
@@ -372,9 +372,11 @@ task crsp_meta_etl {
         String        bioproject
 
         String        country = 'USA'
-        String        collected_by = 'Broad Institute Clinical Research Sequencing Platform'
         String        ontology_map_states = '{"AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California", "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "DC": "District of Columbia", "FL": "Florida", "GA": "Georgia", "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois", "IN": "Indiana", "IA": "Iowa", "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine", "MD": "Maryland", "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi", "MO": "Missouri", "MT": "Montana", "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire", "NJ": "New Jersey", "NM": "New Mexico", "NY": "New York", "NC": "North Carolina", "ND": "North Dakota", "OH": "Ohio", "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania", "RI": "Rhode Island", "SC": "South Carolina", "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah", "VT": "Vermont", "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"}'
         String        ontology_map_body_part = '{"AN SWAB": "Anterior Nares", "AN Swab": "Anterior Nares", "Swab": "Upper respiratory tract", "Viral": "Upper respiratory tract", "Null": "Anterior Nares", "NP Swab": "Nasopharynx (NP)"}'
+        String        address_map = '{"Broad Institute Clinical Research Sequencing Platform": "320 Charles St, Cambridge, MA 02142, USA", "Massachusetts General Hospital": "55 Fruit St, Boston, MA 02114, USA", "Rhode Island Department of Health": "RI State Health Laboratories, 50 Orms Street, Providence, Rhode Island 02904, United States", "Biobot Analytics": "501 Massachusetts Avenue, Cambridge, MA 02139"}'
+        String        prefix_map = '{"Broad Institute Clinical Research Sequencing Platform": "CRSP_", "Massachusetts General Hospital": "MGH_", "Rhode Island Department of Health": "RIDOH_", "Biobot Analytics": "Biobot_"}'
+        String        allowed_purposes = '["Baseline surveillance (random sampling)", "Targeted surveillance (non-random sampling)", "Screening for Variants of Concern (VOC)", "Longitudinal surveillance (repeat sampling of individuals)", "Vaccine escape surveillance", "Cluster/Outbreak investigation"]'
 
         String        docker = "quay.io/broadinstitute/py3-bio:0.1.2"
     }
@@ -393,6 +395,9 @@ task crsp_meta_etl {
         salt = '~{salt}'.strip()
         ontology_map_states = json.loads('~{ontology_map_states}')
         ontology_map_body_part = json.loads('~{ontology_map_body_part}')
+        address_map = json.loads('~{address_map}')
+        prefix_map = json.loads('~{prefix_map}')
+        allowed_purposes = json.loads('~{allowed_purposes}')
 
         # read input files
         sample_meta = pd.read_csv('~{sample_meta_crsp}', sep='\t')
@@ -401,18 +406,27 @@ task crsp_meta_etl {
         sample_meta = sample_meta.astype({'collection_date':'datetime64[D]'})
         sample_meta.loc[:,'collection_year'] = list(d.year for d in sample_meta.loc[:,'collection_date'])
 
-        # validation checks
-        assert sample_meta.geo_loc_name.isna().sum() == 0, "error: some samples missing geo_loc_name"
-        assert sample_meta.collection_date.isna().sum() == 0, "error: some samples missing collection_date"
-        assert sample_meta.collected_by.isna().sum() == 0, "error: some samples missing collected_by"
-        assert all(sample_meta.collected_by == '~{collected_by}'), "error: not all samples collected by same lab"
-        assert sample_meta.anatomical_part.isna().sum() == 0, "error: some samples missing anatomical_part"
-        assert sample_meta.hl7_message_id.isna().sum() == 0, "error: some samples missing hl7_message_id"
-        assert sample_meta.internal_id.isna().sum() == 0, "error: some samples missing internal_id"
+        # clean purpose_of_sequencing
+        if 'research_purpose' not in sample_meta.columns:
+            sample_meta['research_purpose'] = np.nan
+        sample_meta['purpose_of_sequencing'] = sample_meta['research_purpose'].fillna('Baseline surveillance (random sampling)').replace('Not Provided', 'Baseline surveillance (random sampling)')
 
         # stub matrix_id if it doesn't exist
         if 'matrix_id' not in sample_meta.columns:
             sample_meta['matrix_id'] = np.nan
+
+        # validation checks
+        assert sample_meta.geo_loc_name.isna().sum() == 0, "error: some samples missing geo_loc_name"
+        assert sample_meta.collection_date.isna().sum() == 0, "error: some samples missing collection_date"
+        assert sample_meta.collected_by.isna().sum() == 0, "error: some samples missing collected_by"
+        assert sample_meta.anatomical_part.isna().sum() == 0, "error: some samples missing anatomical_part"
+        assert (sample_meta.hl7_message_id.isna() & sample_meta.matrix_id.isna()).sum() == 0, "error: some samples missing hl7_message_id and matrix_id (at least one must be defined per sample)"
+        assert sample_meta.internal_id.isna().sum() == 0, "error: some samples missing internal_id"
+        assert sample_meta.purpose_of_sequencing.isna().sum() == 0, "error: fillna didnt work on purpose_of_sequencing"
+        bad_purposes = set(x for x in sample_meta.purpose_of_sequencing if x not in allowed_purposes)
+        assert not bad_purposes, f"error: some samples have invalid research_purpose values: {str(bad_purposes)}"
+        bad_orgs = set(x for x in sample_meta.collected_by if x not in address_map or x not in prefix_map)
+        assert not bad_orgs, f"error: some samples have invalid collected_by values: {str(bad_orgs)}"
 
         # clean geoloc
         sample_meta.loc[:,'geo_loc_state_abbr'] = sample_meta.loc[:,'geo_loc_name']
@@ -437,14 +451,20 @@ task crsp_meta_etl {
             information available to them (e.g. hl7_message_id).
             3: The hashes should not collide across the range of
             hl7_message_id inputs.
+
+            Update: when hl7_message_id is not present, use matrix_id
+            as the input to the hash, but otherwise do the same thing.
         '''
+        hash_input_ids = sample_meta.apply(lambda row:
+            row['hl7_message_id'] if not pd.isna(row['hl7_message_id']) else row['matrix_id']
+            , axis=1)
         sample_meta.loc[:,'hl7_hashed'] = [
             base64.b32encode(hashlib.pbkdf2_hmac('sha256', id.encode('UTF-8'), salt.encode('UTF-8'), 20000, dklen=10)).decode('UTF-8')
-            for id in sample_meta.loc[:,'hl7_message_id']
+            for id in hash_input_ids
         ]
-        sample_meta['host_subject_id'] = [
-            f'CDCBI-CRSP_{id}' for id
-            in sample_meta['hl7_hashed']]
+        sample_meta['host_subject_id'] = sample_meta.apply(lambda row:
+            'CDCBI-' + prefix_map[row['collected_by']] + row['hl7_hashed']
+            , axis=1)
         sample_meta['sample_name'] = [
             f'{country}/{state}-{id}/{year}'
             for country, state, id, year
@@ -462,9 +482,9 @@ task crsp_meta_etl {
             lat_lon = 'missing',
             host = 'Homo sapiens',
             host_disease = 'COVID-19',
-            purpose_of_sampling = 'Diagnostic Testing',
-            purpose_of_sequencing = 'Baseline surveillance (random sampling)'
+            purpose_of_sampling = 'Diagnostic Testing'
         )
+        biosample['purpose_of_sequencing'] = sample_meta['purpose_of_sequencing']
         biosample = biosample.reindex(columns= biosample.columns.tolist() + [
             'host_health_state',' host_disease_outcome', 'host_age', 'host_sex',
             'anatomical_material', 'collection_device', 'collection_method',
