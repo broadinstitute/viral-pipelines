@@ -402,7 +402,8 @@ task crsp_meta_etl {
         allowed_purposes = json.loads('~{allowed_purposes}')
 
         # read input files
-        sample_meta = pd.read_csv('~{sample_meta_crsp}', sep='\t')
+        sample_meta = pd.read_csv('~{sample_meta_crsp}', sep='\t',
+            dtype={'matrix_id':str, 'internal_id':str, 'hl7_message_id':str})
 
         # clean collection_date
         sample_meta = sample_meta.astype({'collection_date':'datetime64[D]'})
