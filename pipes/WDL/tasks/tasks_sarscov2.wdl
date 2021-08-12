@@ -376,6 +376,7 @@ task crsp_meta_etl {
         String        ontology_map_body_part = '{"AN SWAB": "Anterior Nares", "AN Swab": "Anterior Nares", "Swab": "Upper respiratory tract", "Viral": "Upper respiratory tract", "Null": "Anterior Nares", "NP Swab": "Nasopharynx (NP)"}'
         String        address_map = '{"Broad Institute Clinical Research Sequencing Platform": "320 Charles St, Cambridge, MA 02142, USA", "Massachusetts General Hospital": "55 Fruit St, Boston, MA 02114, USA", "Rhode Island Department of Health": "RI State Health Laboratories, 50 Orms Street, Providence, Rhode Island 02904, United States", "Biobot Analytics": "501 Massachusetts Avenue, Cambridge, MA 02139"}'
         String        prefix_map = '{"Broad Institute Clinical Research Sequencing Platform": "CRSP_", "Massachusetts General Hospital": "MGH_", "Rhode Island Department of Health": "RIDOH_", "Biobot Analytics": "Biobot_"}'
+        String        org_name_map = '"Broad Institute Clinical Research Sequencing Platform": "Broad Institute Clinical Research Sequencing Platform", "Massachusetts General Hospital": "Massachusetts General Hospital", "RIDOH": "Rhode Island Department of Health", "Biobot Analytics": "Biobot Analytics"}'
         String        allowed_purposes = '["Baseline surveillance (random sampling)", "Targeted surveillance (non-random sampling)", "Screening for Variants of Concern (VOC)", "Longitudinal surveillance (repeat sampling of individuals)", "Vaccine escape surveillance", "Cluster/Outbreak investigation"]'
 
         String        docker = "quay.io/broadinstitute/py3-bio:0.1.2"
@@ -397,6 +398,7 @@ task crsp_meta_etl {
         ontology_map_body_part = json.loads('~{ontology_map_body_part}')
         address_map = json.loads('~{address_map}')
         prefix_map = json.loads('~{prefix_map}')
+        org_name_map = json.loads('~{org_name_map}')
         allowed_purposes = json.loads('~{allowed_purposes}')
 
         # read input files
@@ -425,8 +427,13 @@ task crsp_meta_etl {
         assert sample_meta.purpose_of_sequencing.isna().sum() == 0, "error: fillna didnt work on purpose_of_sequencing"
         bad_purposes = set(x for x in sample_meta.purpose_of_sequencing if x not in allowed_purposes)
         assert not bad_purposes, f"error: some samples have invalid research_purpose values: {str(bad_purposes)}"
-        bad_orgs = set(x for x in sample_meta.collected_by if x not in address_map or x not in prefix_map)
+        bad_orgs = set(x for x in sample_meta.collected_by if x not in org_name_map)
         assert not bad_orgs, f"error: some samples have invalid collected_by values: {str(bad_orgs)}"
+
+        # clean collected_by
+        sample_meta.loc[:,'collected_by'] = [org_name_map[x] for x in sample_meta.loc[:,'collected_by']]
+        bad_orgs = set(x for x in sample_meta.collected_by if x not in address_map or x not in prefix_map)
+        assert not bad_orgs, f"error: some samples have invalid remapped collected_by values: {str(bad_orgs)}"
 
         # clean geoloc
         sample_meta.loc[:,'geo_loc_state_abbr'] = sample_meta.loc[:,'geo_loc_name']
