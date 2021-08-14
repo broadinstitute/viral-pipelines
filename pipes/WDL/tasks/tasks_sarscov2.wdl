@@ -540,7 +540,10 @@ task gisaid_uploader {
     gisaid_uploader CoV upload \
         --fasta "~{gisaid_sequences_fasta}" \
         --csv "~{gisaid_meta_csv}" \
-        --failedout failed_metadata.csv
+        --failedout failed_metadata.csv \
+        | tee logs.txt
+    # the following grep statement will exit 1 if anything failed
+    grep "submissions failed: 0" logs.txt > /dev/null
   }
   output {
     File  failed_metadata = "failed_metadata.csv"
