@@ -34,6 +34,7 @@ task merge_tarballs {
     cpu: 16
     disks: "local-disk 2625 LOCAL"
     dx_instance_type: "mem1_ssd2_v2_x16"
+    maxRetries: 2
     preemptible: 0
   }
 }
@@ -393,6 +394,7 @@ task illumina_demux {
     disks: "local-disk 2625 LOCAL"
     dx_instance_type: "mem3_ssd2_v2_x32"
     dx_timeout: "20H"
+    maxRetries: 2
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
   }
 }
