@@ -59,6 +59,7 @@ task assemble {
         cpu: 4
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
+        maxRetries: 2
     }
 
 }
@@ -151,6 +152,7 @@ task scaffold {
         cpu: 4
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
+        maxRetries: 2
     }
 }
 
@@ -215,6 +217,7 @@ task ivar_trim {
         cpu: 4
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x4"
+        maxRetries: 2
     }
 }
 
@@ -389,6 +392,7 @@ task align_reads {
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: 1
+    maxRetries: 2
   }
 }
 
@@ -487,6 +491,7 @@ task refine_assembly_with_aligned_reads {
         cpu: 8
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
+        maxRetries: 2
     }
 }
 
@@ -550,6 +555,7 @@ task refine {
         cpu: 8
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
+        maxRetries: 2
     }
 }
 
@@ -694,6 +700,7 @@ task refine_2x_and_plot {
         cpu: 8
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
+        maxRetries: 2
     }
 }
 
@@ -769,6 +776,7 @@ task run_discordance {
         disks: "local-disk 100 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 1
+        maxRetries: 2
     }
 }
 
@@ -864,6 +872,7 @@ task filter_bad_ntc_batches {
         cpu:    1
         disks: "local-disk 50 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         File           seqids_kept      = "seqids.filtered.txt"

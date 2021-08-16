@@ -96,6 +96,7 @@ task deplete_taxa {
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: 1
+    maxRetries: 2
   }
 }
 
@@ -158,6 +159,7 @@ task filter_to_taxon {
     cpu: 16
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x8"
+    maxRetries: 2
   }
 }
 
@@ -192,6 +194,7 @@ task build_lastal_db {
     cpu: 2
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x4"
+    maxRetries: 2
   }
 }
 
@@ -240,5 +243,6 @@ task merge_one_per_sample {
     docker: "${docker}"
     disks: "local-disk 750 LOCAL"
     dx_instance_type: "mem1_ssd2_v2_x4"
+    maxRetries: 2
   }
 }

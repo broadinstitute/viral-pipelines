@@ -184,6 +184,7 @@ task merge_and_reheader_bams {
         disks: "local-disk 750 LOCAL"
         dx_instance_type: "mem1_ssd2_v2_x4"
         preemptible: 0
+        maxRetries: 2
     }
 }
 
@@ -236,6 +237,7 @@ task rmdup_ubam {
     cpu:    2
     disks:  "local-disk 375 LOCAL"
     dx_instance_type: "mem2_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -292,6 +294,7 @@ task downsample_bams {
     cpu:    4
     disks:  "local-disk 750 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x4"
+    maxRetries: 2
   }
 }
 
@@ -345,6 +348,7 @@ task FastqToUBAM {
     memory: "3 GB"
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
   output {
     File unmapped_bam = "~{sample_name}.bam"
