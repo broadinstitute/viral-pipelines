@@ -11,19 +11,31 @@ task nextclade_one_sample {
         File? qc_config_json
         File? gene_annotations_json
         File? pcr_primers_csv
-        String docker = "nextstrain/nextclade:0.14.4"
+        String docker = "nextstrain/nextclade:1.2.3"
     }
     String basename = basename(genome_fasta, ".fasta")
     command {
         set -e
-        nextclade.js --version > VERSION
-        nextclade.js \
+        apt-get update
+        apt-get -y install python3
+
+        NEXTCLADE_VERSION="$(nextclade --version)"
+        echo $NEXTCLADE_VERSION > VERSION
+
+        # grab reference data for SARS-CoV-2
+        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/reference.fasta > reference.fasta
+        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/genemap.gff > genemap.gff
+        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/tree.json > tree.json
+        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/qc.json > qc.json
+        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/primers.csv > primers.csv
+
+        nextclade \
             --input-fasta "~{genome_fasta}" \
-            ~{"--input-root-seq " + root_sequence} \
-            ~{"--input-tree " + auspice_reference_tree_json} \
-            ~{"--input-qc-config " + qc_config_json} \
-            ~{"--input-gene-map " + gene_annotations_json} \
-            ~{"--input-pcr-primers " + pcr_primers_csv} \
+            --input-root-seq ~{default="reference.fasta" root_sequence} \
+            --input-tree ~{default="tree.json" auspice_reference_tree_json} \
+            --input-qc-config ~{default="qc.json" qc_config_json} \
+            --input-gene-map ~{default="genemap.gff" gene_annotations_json} \
+            --input-pcr-primers ~{default="primers.csv" pcr_primers_csv} \
             --output-json "~{basename}".nextclade.json \
             --output-tsv  "~{basename}".nextclade.tsv \
             --output-tree "~{basename}".nextclade.auspice.json
@@ -70,19 +82,31 @@ task nextclade_many_samples {
         File?        gene_annotations_json
         File?        pcr_primers_csv
         String       basename
-        String       docker = "nextstrain/nextclade:0.14.4"
+        String       docker = "nextstrain/nextclade:1.2.3"
     }
     command {
         set -e
-        nextclade.js --version > VERSION
+        apt-get update
+        apt-get -y install python3
+
+        NEXTCLADE_VERSION="$(nextclade --version)"
+        echo $NEXTCLADE_VERSION > VERSION
+
+        # grab reference data for SARS-CoV-2
+        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/reference.fasta > reference.fasta
+        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/genemap.gff > genemap.gff
+        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/tree.json > tree.json
+        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/qc.json > qc.json
+        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/primers.csv > primers.csv
+
         cat ~{sep=" " genome_fastas} > genomes.fasta
-        nextclade.js \
+        nextclade \
             --input-fasta genomes.fasta \
-            ~{"--input-root-seq " + root_sequence} \
-            ~{"--input-tree " + auspice_reference_tree_json} \
-            ~{"--input-qc-config " + qc_config_json} \
-            ~{"--input-gene-map " + gene_annotations_json} \
-            ~{"--input-pcr-primers " + pcr_primers_csv} \
+            --input-root-seq ~{default="reference.fasta" root_sequence} \
+            --input-tree ~{default="tree.json" auspice_reference_tree_json} \
+            --input-qc-config ~{default="qc.json" qc_config_json} \
+            --input-gene-map ~{default="genemap.gff" gene_annotations_json} \
+            --input-pcr-primers ~{default="primers.csv" pcr_primers_csv} \
             --output-json "~{basename}".nextclade.json \
             --output-tsv  "~{basename}".nextclade.tsv \
             --output-tree "~{basename}".nextclade.auspice.json
