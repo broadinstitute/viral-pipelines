@@ -19,15 +19,16 @@ task nextclade_one_sample {
         apt-get update
         apt-get -y install python3
 
+        URI=$(echo "~{docker}" | sed 's|:|/|g')
         NEXTCLADE_VERSION="$(nextclade --version)"
         echo $NEXTCLADE_VERSION > VERSION
 
         # grab reference data for SARS-CoV-2
-        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/reference.fasta > reference.fasta
-        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/genemap.gff > genemap.gff
-        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/tree.json > tree.json
-        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/qc.json > qc.json
-        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/primers.csv > primers.csv
+        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/reference.fasta > reference.fasta
+        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/genemap.gff > genemap.gff
+        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/tree.json > tree.json
+        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/qc.json > qc.json
+        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/primers.csv > primers.csv
 
         nextclade \
             --input-fasta "~{genome_fasta}" \
@@ -89,15 +90,16 @@ task nextclade_many_samples {
         apt-get update
         apt-get -y install python3
 
+        URI=$(echo "~{docker}" | sed 's|:|/|g')
         NEXTCLADE_VERSION="$(nextclade --version)"
         echo $NEXTCLADE_VERSION > VERSION
 
         # grab reference data for SARS-CoV-2
-        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/reference.fasta > reference.fasta
-        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/genemap.gff > genemap.gff
-        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/tree.json > tree.json
-        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/qc.json > qc.json
-        curl https://raw.githubusercontent.com/nextstrain/nextclade/$NEXTCLADE_VERSION/data/sars-cov-2/primers.csv > primers.csv
+        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/reference.fasta > reference.fasta
+        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/genemap.gff > genemap.gff
+        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/tree.json > tree.json
+        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/qc.json > qc.json
+        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/primers.csv > primers.csv
 
         cat ~{sep=" " genome_fastas} > genomes.fasta
         nextclade \
