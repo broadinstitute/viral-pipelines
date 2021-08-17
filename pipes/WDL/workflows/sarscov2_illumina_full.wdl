@@ -466,7 +466,9 @@ workflow sarscov2_illumina_full {
         
         File          assembly_stats_tsv           = assembly_meta_tsv.combined
         File          assembly_stats_final_tsv     = sc2_meta_final.meta_tsv
-        
+        File          assembly_stats_relineage_tsv = assembly_meta_tsv.combined
+        File          assembly_stats_final_relineage_tsv = sc2_meta_final.meta_tsv
+
         File          submission_zip               = package_genbank_ftp_submission.submission_zip
         File          submission_xml               = package_genbank_ftp_submission.submission_xml
         File          submit_ready                 = package_genbank_ftp_submission.submit_ready

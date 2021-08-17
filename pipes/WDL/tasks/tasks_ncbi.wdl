@@ -290,18 +290,24 @@ task gisaid_meta_prep {
     String  continent = "North America"
     Boolean strict = true
     String? username
-    String? submitting_lab_name
-    String? submitting_lab_addr
-    String? originating_lab_addr
-    String? authors
+    String  submitting_lab_name
     String? fasta_filename
+
+    String  address_map = '{}'
+    String  authors_map = '{}'
   }
   command <<<
     python3 << CODE
     import os.path
     import csv
+    import json
 
     strict = ~{true="True" false="False" strict}
+
+    # institutional mappings
+    address_map = json.loads('~{address_map}')
+    authors_map = json.loads('~{authors_map}')
+    assert "~{submitting_lab_name}" in address_map, f"error: institution '{submitting_lab_name}' not found in address_map"
 
     # lookup table files to dicts
     sample_to_cmt = {}
@@ -326,6 +332,10 @@ task gisaid_meta_prep {
             assert row['host'] == 'Homo sapiens' or isolation_source == 'environmental', f"Metadata error: 'host' must be 'Homo sapiens' if 'isolation_source' is not 'Environmental'\n{row}"
             assert row['organism']         == 'Severe acute respiratory syndrome coronavirus 2', f"'organism' != 'Severe acute respiratory syndrome coronavirus 2'\n{row}"
             assert row['db_xref']          == 'taxon:2697049', f"Metadata error: 'db_xref' != 'taxon:2697049'\n{row}"
+
+            collected_by = row['collected_by']
+            assert collected_by in address_map, f"error: institution '{collected_by}' not found in address_map"
+            assert collected_by in authors_map, f"error: institution '{collected_by}' not found in authors_map"
 
           # PHA4GE/INSDC controlled vocabulary for source information
           # from "Vocabulary" tab of this sheet:
@@ -355,10 +365,10 @@ task gisaid_meta_prep {
             'covv_seq_technology' : sample_to_cmt[row['Sequence_ID']]['Sequencing Technology'],
 
             'covv_orig_lab'       : row['collected_by'],
-            'covv_subm_lab'       : "~{default='REQUIRED' submitting_lab_name}",
-            'covv_authors'        : "~{default='REQUIRED' authors}",
-            'covv_orig_lab_addr'  : "~{default='REQUIRED' originating_lab_addr}",
-            'covv_subm_lab_addr'  : "~{default='REQUIRED' submitting_lab_addr}",
+            'covv_subm_lab'       : "~{submitting_lab_name}",
+            'covv_authors'        : authors_map.get(row['collected_by'], 'REQUIRED'),
+            'covv_orig_lab_addr'  : address_map.get(row['collected_by'], 'REQUIRED'),
+            'covv_subm_lab_addr'  : address_map.get("~{submitting_lab_name}", 'REQUIRED'),
 
             'submitter'           : "~{default='REQUIRED' username}",
             'fn'                  : "~{default='REQUIRED' fasta_filename}",
