@@ -400,7 +400,6 @@ task crsp_meta_etl {
         String        country = 'USA'
         String        ontology_map_states = '{"AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California", "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "DC": "District of Columbia", "FL": "Florida", "GA": "Georgia", "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois", "IN": "Indiana", "IA": "Iowa", "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine", "MD": "Maryland", "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi", "MO": "Missouri", "MT": "Montana", "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire", "NJ": "New Jersey", "NM": "New Mexico", "NY": "New York", "NC": "North Carolina", "ND": "North Dakota", "OH": "Ohio", "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania", "RI": "Rhode Island", "SC": "South Carolina", "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah", "VT": "Vermont", "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"}'
         String        ontology_map_body_part = '{"AN SWAB": "Anterior Nares", "AN Swab": "Anterior Nares", "Swab": "Upper respiratory tract", "Viral": "Upper respiratory tract", "Null": "Anterior Nares", "NP Swab": "Nasopharynx (NP)", "Nasopharynx (NP)": "Nasopharynx (NP)"}'
-        String        address_map = '{"Broad Institute Clinical Research Sequencing Platform": "320 Charles St, Cambridge, MA 02142, USA", "Massachusetts General Hospital": "55 Fruit St, Boston, MA 02114, USA", "Rhode Island Department of Health": "RI State Health Laboratories, 50 Orms Street, Providence, Rhode Island 02904, United States", "Biobot Analytics": "501 Massachusetts Avenue, Cambridge, MA 02139"}'
         String        prefix_map = '{"Broad Institute Clinical Research Sequencing Platform": "CRSP_", "Massachusetts General Hospital": "MGH_", "Rhode Island Department of Health": "RIDOH_", "Biobot Analytics": "Biobot_"}'
         String        org_name_map = '{"Broad Institute Clinical Research Sequencing Platform": "Broad Institute Clinical Research Sequencing Platform", "Massachusetts General Hospital": "Massachusetts General Hospital", "RIDOH": "Rhode Island Department of Health", "Biobot Analytics": "Biobot Analytics"}'
         String        allowed_purposes = '["Baseline surveillance (random sampling)", "Targeted surveillance (non-random sampling)", "Screening for Variants of Concern (VOC)", "Longitudinal surveillance (repeat sampling of individuals)", "Vaccine escape surveillance", "Cluster/Outbreak investigation"]'
@@ -422,7 +421,6 @@ task crsp_meta_etl {
         salt = '~{salt}'.strip()
         ontology_map_states = json.loads('~{ontology_map_states}')
         ontology_map_body_part = json.loads('~{ontology_map_body_part}')
-        address_map = json.loads('~{address_map}')
         prefix_map = json.loads('~{prefix_map}')
         org_name_map = json.loads('~{org_name_map}')
         allowed_purposes = json.loads('~{allowed_purposes}')
@@ -459,7 +457,7 @@ task crsp_meta_etl {
 
         # clean collected_by
         sample_meta.loc[:,'collected_by'] = [org_name_map[x] for x in sample_meta.loc[:,'collected_by']]
-        bad_orgs = set(x for x in sample_meta.collected_by if x not in address_map or x not in prefix_map)
+        bad_orgs = set(x for x in sample_meta.collected_by if x not in prefix_map)
         assert not bad_orgs, f"error: some samples have invalid remapped collected_by values: {str(bad_orgs)}"
 
         # clean geoloc
