@@ -11,6 +11,7 @@ import "../tasks/tasks_utils.wdl" as utils
 import "demux_deplete.wdl"
 import "assemble_refbased.wdl"
 import "sarscov2_lineages.wdl"
+import "sarscov2_biosample_load.wdl"
 
 workflow sarscov2_illumina_full {
     meta {
@@ -49,6 +50,7 @@ workflow sarscov2_illumina_full {
         Int           min_genome_bases = 24000
         Int           max_vadr_alerts = 0
 
+        File?         sample_rename_map
 
         String?       workspace_name
         String?       terra_project
@@ -61,10 +63,15 @@ workflow sarscov2_illumina_full {
     Int     taxid         = 2697049
     String  gisaid_prefix = 'hCoV-19/'
 
+    # Broad production pipeline only: metadata ETL and NCBI BioSample registration
+    if(length(biosample_attributes) == 0) {
+      call sarscov2_biosample_load.sarscov2_biosample_load
+    }
+
     # merge biosample attributes tables
     call utils.tsv_join as biosample_merge {
         input:
-            input_tsvs   = biosample_attributes,
+            input_tsvs   = select_all(flatten([[sarscov2_biosample_load.biosample_attributes], biosample_attributes])),
             id_col       = 'accession',
             out_basename = "biosample_attributes-merged"
     }
@@ -81,7 +88,8 @@ workflow sarscov2_illumina_full {
             biosample_map                   = biosample_merge.out_tsv,
             instrument_model_user_specified = instrument_model,
             sra_title                       = sra_title,
-            read_structure                  = read_structure
+            read_structure                  = read_structure,
+            sample_rename_map               = select_first([sample_rename_map, sarscov2_biosample_load.id_map_tsv])
     }
     String  flowcell_id = demux_deplete.run_id
 
@@ -277,7 +285,7 @@ workflow sarscov2_illumina_full {
       # this decorates assembly_meta_tsv with collab/internal IDs, genome_status, and many other columns
       input:
         assembly_stats_tsv = assembly_meta_tsv.combined,
-        collab_ids_tsv = collab_ids_tsv,
+        collab_ids_tsv = select_first([collab_ids_tsv, sarscov2_biosample_load.collab_ids_tsv]),
         drop_file_cols = true,
         min_unambig = min_genome_bases,
         genome_status_json = filter_bad_ntc_batches.fail_meta_json
@@ -382,7 +390,7 @@ workflow sarscov2_illumina_full {
       call sarscov2.sequencing_report {
         input:
             assembly_stats_tsv = download_entities_tsv.tsv_file,
-            collab_ids_tsv     = collab_ids_tsv,
+            collab_ids_tsv     = select_first([collab_ids_tsv, sarscov2_biosample_load.collab_ids_tsv]),
             max_date           = demux_deplete.run_date,
             min_unambig        = min_genome_bases
       }
@@ -502,6 +510,9 @@ workflow sarscov2_illumina_full {
         String        run_id                       = demux_deplete.run_id
         
         File?         sequencing_reports           = sequencing_report.all_zip
+
+        File?         id_map_tsv                   = sarscov2_biosample_load.id_map_tsv
+        Array[File]   biosample_attributes_out     = select_all(flatten([[sarscov2_biosample_load.biosample_attributes], biosample_attributes]))
         
         Array[String] data_tables_out              = select_first([data_tables.tables, []])
     }
