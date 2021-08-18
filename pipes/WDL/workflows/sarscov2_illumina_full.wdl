@@ -512,7 +512,7 @@ workflow sarscov2_illumina_full {
         File?         sequencing_reports           = sequencing_report.all_zip
 
         File?         id_map_tsv                   = sarscov2_biosample_load.id_map_tsv
-        File?         biosample_attributes_out     = sarscov2_biosample_load.biosample_attributes
+        Array[File]   biosample_attributes_out     = select_all(flatten([[sarscov2_biosample_load.biosample_attributes], biosample_attributes]))
         
         Array[String] data_tables_out              = select_first([data_tables.tables, []])
     }
