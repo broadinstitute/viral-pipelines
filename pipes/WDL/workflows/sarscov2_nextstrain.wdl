@@ -124,7 +124,7 @@ workflow sarscov2_nextstrain {
     call nextstrain.refine_augur_tree {
         input:
             raw_tree   = draft_augur_tree.aligned_tree,
-            msa_or_vcf = subsample.subsampled_msa,
+            msa_or_vcf = augur_mask_sites.masked_sequences,
             metadata   = derived_cols.derived_metadata,
             root       = tree_root_seq_id
     }
@@ -153,7 +153,7 @@ workflow sarscov2_nextstrain {
     call nextstrain.ancestral_tree {
         input:
             tree       = refine_augur_tree.tree_refined,
-            msa_or_vcf = subsample.subsampled_msa
+            msa_or_vcf = augur_mask_sites.masked_sequences
     }
 
     call nextstrain.translate_augur_tree {
@@ -196,6 +196,7 @@ workflow sarscov2_nextstrain {
       File             metadata_merged      = derived_cols.derived_metadata
       File             keep_list            = fasta_to_ids.ids_txt
       File             subsampled_sequences = subsample.subsampled_msa
+      File             masked_alignment     = augur_mask_sites.masked_sequences
       Int              sequences_kept       = subsample.sequences_out
       Map[String, Int] counts_by_group      = subsample.counts_by_group
       
