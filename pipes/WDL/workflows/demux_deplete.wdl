@@ -158,7 +158,7 @@ workflow demux_deplete {
             input:
                 in_bams      = name_reads.right,
                 sample_name  = orig_name,
-                out_basename = orig_name
+                out_basename = "${orig_name}.merged"
         }
     }
 
