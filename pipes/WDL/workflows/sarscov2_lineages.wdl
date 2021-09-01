@@ -36,5 +36,6 @@ workflow sarscov2_lineages {
         String pangolin_docker    = pangolin_one_sample.pangolin_docker
         String pangolin_version   = pangolin_one_sample.pangolin_version
         String pangolearn_version = pangolin_one_sample.pangolearn_version
+        String pangolin_versions  = pangolin_one_sample.pangolin_versions
     }
 }
