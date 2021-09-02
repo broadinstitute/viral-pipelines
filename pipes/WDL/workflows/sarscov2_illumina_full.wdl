@@ -183,7 +183,7 @@ workflow sarscov2_illumina_full {
             select_first([sarscov2_lineages.nextclade_clade, ""]),
             select_first([sarscov2_lineages.nextclade_aa_subs, ""]),
             select_first([sarscov2_lineages.nextclade_aa_dels, ""]),
-            select_first([sarscov2_lineages.pangolin_docker, ""]),
+            select_first([sarscov2_lineages.pangolin_versions, ""]),
             select_first([sarscov2_lineages.nextclade_version, ""]),
             assemble_refbased.dist_to_ref_snps,
             assemble_refbased.dist_to_ref_indels,

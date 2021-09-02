@@ -137,7 +137,7 @@ task pangolin_one_sample {
         Int?    min_length
         Float?  max_ambig
         Boolean inference_usher=true
-        String  docker = "quay.io/staphb/pangolin:3.1.11-pangolearn-2021-08-09"
+        String  docker = "quay.io/staphb/pangolin:3.1.11-pangolearn-2021-08-24"
     }
     String basename = basename(genome_fasta, ".fasta")
     command <<<
@@ -146,6 +146,7 @@ task pangolin_one_sample {
         set -ex
         pangolin -v | tee VERSION_PANGOLIN
         pangolin -pv | tee VERSION_PANGOLEARN
+        pangolin --all-versions | tr '\n' ';' | cut -f -5 -d ';' | tee VERSION_PANGOLIN_ALL
 
         pangolin "~{genome_fasta}" \
             ~{true='--usher' false='' inference_usher} \
@@ -191,6 +192,7 @@ task pangolin_one_sample {
         String     pangolin_version       = read_string("VERSION_PANGOLIN")
         String     pangolearn_version     = read_string("VERSION_PANGOLEARN")
         String     pangolin_docker        = docker
+        String     pangolin_versions      = read_string("VERSION_PANGOLIN_ALL")
         File       pango_lineage_report   = "${basename}.pangolin_report.csv"
         File       msa_fasta              = "~{basename}.pangolin_msa.fasta"
     }

@@ -36,7 +36,7 @@ workflow sarscov2_batch_relineage {
                 nextclade_one_sample.nextclade_clade,
                 nextclade_one_sample.aa_subs_csv,
                 nextclade_one_sample.aa_dels_csv,
-                pangolin_one_sample.pangolin_docker,
+                pangolin_one_sample.pangolin_versions,
                 nextclade_one_sample.nextclade_version,
                 nextclade_one_sample.nextclade_tsv,
                 nextclade_one_sample.nextclade_json,
