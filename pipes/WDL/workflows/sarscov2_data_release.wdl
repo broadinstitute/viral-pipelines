@@ -88,7 +88,7 @@ workflow sarscov2_data_release {
             input:
                 in_tsv = select_first([cdc_cumulative_metadata]),
                 drop_cols = ['internal_id','collaborator_id','matrix_id','hl7_message_id'],
-                out_basename = "metadata-cumulative"
+                out_filename = "metadata-cumulative.txt"
         }
         call terra.gcs_copy as dashboard_delivery {
             input:
