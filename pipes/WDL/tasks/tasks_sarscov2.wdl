@@ -215,7 +215,7 @@ task sequencing_report {
         String? voc_list
         String? voi_list
 
-        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.24"
+        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.25"
     }
     command {
         set -e
