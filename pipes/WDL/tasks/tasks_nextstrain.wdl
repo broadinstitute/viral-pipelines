@@ -295,7 +295,8 @@ task nextstrain_build_subsample {
         # hard inclusion list
         KEEP_LIST="~{default='' keep_list}"
         if [ -n "$KEEP_LIST" ]; then
-            cat $KEEP_LIST >> defaults/include.txt
+            for i in $(cat defaults/include.txt); do echo $i; done > include-ncov-default-cleannewlines.txt
+            cat include-ncov-default-cleannewlines.txt $KEEP_LIST > defaults/include.txt
         fi
 
         # seed input data (skip some upstream steps in the DAG)
