@@ -125,6 +125,11 @@ task nextclade_many_samples {
                             outf_aasubs.write('\t'.join([row['seqName'], row['aaSubstitutions']])+'\n')
                             outf_aadels.write('\t'.join([row['seqName'], row['aaDeletions']])+'\n')
         CODE
+
+        # gather runtime metrics
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg > CPU_LOAD
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     }
     runtime {
         docker: docker
@@ -134,13 +139,16 @@ task nextclade_many_samples {
         dx_instance_type: "mem1_ssd1_v2_x16"
     }
     output {
+        Map[String,String] nextclade_clade   = read_map("NEXTCLADE_CLADE")
+        Map[String,String] aa_subs_csv       = read_map("NEXTCLADE_AASUBS")
+        Map[String,String] aa_dels_csv       = read_map("NEXTCLADE_AADELS")
         String             nextclade_version = read_string("VERSION")
         File               nextclade_json    = "~{basename}.nextclade.json"
         File               auspice_json      = "~{basename}.nextclade.auspice.json"
         File               nextclade_tsv     = "~{basename}.nextclade.tsv"
-        Map[String,String] nextclade_clade   = read_map("NEXTCLADE_CLADE")
-        Map[String,String] aa_subs_csv       = read_map("NEXTCLADE_AASUBS")
-        Map[String,String] aa_dels_csv       = read_map("NEXTCLADE_AADELS")
+        Int                max_ram_gb        = ceil(read_float("MEM_BYTES")/1000000000)
+        Int                runtime_sec       = ceil(read_float("UPTIME_SEC"))
+        String             cpu_load          = read_string("CPU_LOAD")
     }
 }
 
@@ -265,6 +273,11 @@ task pangolin_many_samples {
                             outf_conflicts.write('\t'.join([row['taxon'], row['conflict']])+'\n')
                             outf_note.write('\t'.join([row['taxon'], row['note']])+'\n')
         CODE
+
+        # gather runtime metrics
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg > CPU_LOAD
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -286,6 +299,9 @@ task pangolin_many_samples {
         String             pangolearn_version     = read_string("VERSION_PANGOLEARN")
         File               pango_lineage_report   = "${basename}.pangolin_report.csv"
         File               msa_fasta              = "~{basename}.pangolin_msa.fasta"
+        Int                max_ram_gb             = ceil(read_float("MEM_BYTES")/1000000000)
+        Int                runtime_sec            = ceil(read_float("UPTIME_SEC"))
+        String             cpu_load               = read_string("CPU_LOAD")
     }
 }
 
