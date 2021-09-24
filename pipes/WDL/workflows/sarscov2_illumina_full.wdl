@@ -234,6 +234,18 @@ workflow sarscov2_illumina_full {
         'Ct'
         ]
 
+    # create full nextclade trees on full data set
+    call sarscov2.nextclade_many_samples {
+        input:
+            genome_fastas = assemble_refbased.assembly_fasta,
+            basename      = "nextclade-~{flowcell_id}"
+    }
+    call sarscov2.pangolin_many_samples {
+        input:
+            genome_fastas = assemble_refbased.assembly_fasta,
+            basename      = "pangolin-~{flowcell_id}"
+    }
+
     ### summary stats
     call utils.concatenate as assembly_meta_tsv {
       input:
@@ -394,13 +406,6 @@ workflow sarscov2_illumina_full {
             max_date           = demux_deplete.run_date,
             min_unambig        = min_genome_bases
       }
-    }
-
-    # create full nextclade trees on full data set
-    call sarscov2.nextclade_many_samples {
-        input:
-            genome_fastas = assemble_refbased.assembly_fasta,
-            basename      = "nextclade-~{flowcell_id}"
     }
 
     # bucket deliveries

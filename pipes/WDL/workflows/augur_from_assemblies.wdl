@@ -86,7 +86,7 @@ workflow augur_from_assemblies {
             infiles     = assembly_fastas,
             output_name = "all_samples_combined_assembly.fasta"
     }
-    call nextstrain.filter_sequences_by_length {
+    call utils.filter_sequences_by_length {
         input:
             sequences_fasta = zcat.combined,
             min_non_N       = min_unambig_genome
