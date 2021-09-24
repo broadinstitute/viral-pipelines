@@ -148,10 +148,9 @@ workflow sarscov2_illumina_full {
             # VADR annotation & QC
             call ncbi.vadr {
               input:
-                genome_fasta = passing_assemblies
+                genome_fasta = assemble_refbased.assembly_fasta
             }
             if (vadr.num_alerts<=max_vadr_alerts) {
-              File submittable_genomes = passing_assemblies
               String submittable_id    = orig_name
             }
             if (vadr.num_alerts>max_vadr_alerts) {
