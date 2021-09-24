@@ -252,6 +252,7 @@ task tsv_join {
     Array[File]+   input_tsvs
     String         id_col
     String         out_basename = "merged"
+    String         out_suffix = ".txt"
   }
 
   command <<<
@@ -291,7 +292,7 @@ task tsv_join {
     out_ids = list(collections.OrderedDict(((i,0) for i in out_ids)).keys())
 
     # write output
-    with open(out_basename+'.txt', 'w', newline='') as outf:
+    with open(out_basename+'~{out_suffix}', 'w', newline='') as outf:
         writer = csv.DictWriter(outf, header, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
         writer.writeheader()
         writer.writerows(out_row_by_id[row_id] for row_id in out_ids)
@@ -299,7 +300,7 @@ task tsv_join {
   >>>
 
   output {
-    File out_tsv = "${out_basename}.txt"
+    File out_tsv = "~{out_basename}~{out_suffix}"
   }
 
   runtime {

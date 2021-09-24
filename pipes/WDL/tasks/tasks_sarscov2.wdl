@@ -113,6 +113,8 @@ task nextclade_many_samples {
             --output-tsv  "~{basename}".nextclade.tsv \
             --output-tree "~{basename}".nextclade.auspice.json
 
+        cp genomes.aligned.fasta "~{basename}".nextalign.msa.fasta
+
         python3 <<CODE
         # transpose table
         import codecs, csv
@@ -143,6 +145,7 @@ task nextclade_many_samples {
         Map[String,String] aa_subs_csv       = read_map("NEXTCLADE_AASUBS")
         Map[String,String] aa_dels_csv       = read_map("NEXTCLADE_AADELS")
         String             nextclade_version = read_string("VERSION")
+        File               nextalign_msa     = "~{basename}.nextalign.msa.fasta"
         File               nextclade_json    = "~{basename}.nextclade.json"
         File               auspice_json      = "~{basename}.nextclade.auspice.json"
         File               nextclade_tsv     = "~{basename}.nextclade.tsv"
