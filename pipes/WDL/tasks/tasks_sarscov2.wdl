@@ -112,6 +112,19 @@ task nextclade_many_samples {
             --output-json "~{basename}".nextclade.json \
             --output-tsv  "~{basename}".nextclade.tsv \
             --output-tree "~{basename}".nextclade.auspice.json
+
+        python3 <<CODE
+        # transpose table
+        import codecs, csv
+        with codecs.open('~{basename}.nextclade.tsv', 'r', encoding='utf-8') as inf:
+            with codecs.open('NEXTCLADE_CLADE', 'w', encoding='utf-8') as outf_clade:
+                with codecs.open('NEXTCLADE_AASUBS', 'w', encoding='utf-8') as outf_aasubs:
+                    with codecs.open('NEXTCLADE_AADELS', 'w', encoding='utf-8') as outf_aadels:
+                        for row in csv.DictReader(inf, delimiter='\t'):
+                            outf_clade.write('\t'.join([row['seqName'], row['clade']])+'\n')
+                            outf_aasubs.write('\t'.join([row['seqName'], row['aaSubstitutions']])+'\n')
+                            outf_aadels.write('\t'.join([row['seqName'], row['aaDeletions']])+'\n')
+        CODE
     }
     runtime {
         docker: docker
@@ -121,10 +134,13 @@ task nextclade_many_samples {
         dx_instance_type: "mem1_ssd1_v2_x16"
     }
     output {
-        String nextclade_version = read_string("VERSION")
-        File   nextclade_json    = "~{basename}.nextclade.json"
-        File   auspice_json      = "~{basename}.nextclade.auspice.json"
-        File   nextclade_tsv     = "~{basename}.nextclade.tsv"
+        String             nextclade_version = read_string("VERSION")
+        File               nextclade_json    = "~{basename}.nextclade.json"
+        File               auspice_json      = "~{basename}.nextclade.auspice.json"
+        File               nextclade_tsv     = "~{basename}.nextclade.tsv"
+        Map[String,String] nextclade_clade   = read_map("NEXTCLADE_CLADE")
+        Map[String,String] aa_subs_csv       = read_map("NEXTCLADE_AASUBS")
+        Map[String,String] aa_dels_csv       = read_map("NEXTCLADE_AADELS")
     }
 }
 
@@ -198,6 +214,78 @@ task pangolin_one_sample {
     }
 }
 
+task pangolin_many_samples {
+    meta {
+        description: "Pangolin classification of multiple SARS-CoV-2 samples."
+    }
+    input {
+        Array[File]+ genome_fastas
+        Int?         min_length
+        Float?       max_ambig
+        Boolean      inference_usher=true
+        String       basename
+        String       docker = "quay.io/staphb/pangolin:3.1.11-pangolearn-2021-09-17"
+    }
+    command <<<
+        date | tee DATE
+        conda list -n pangolin | grep "usher" | awk -F ' +' '{print$1, $2}' | tee VERSION_PANGO_USHER
+        set -ex
+        pangolin -v | tee VERSION_PANGOLIN
+        pangolin -pv | tee VERSION_PANGOLEARN
+        pangolin --all-versions | tr '\n' ';' | cut -f -5 -d ';' | tee VERSION_PANGOLIN_ALL
+
+        cat ~{sep=" " genome_fastas} > unaligned.fasta
+        pangolin unaligned.fasta \
+            ~{true='--usher' false='' inference_usher} \
+            --outfile "~{basename}.pangolin_report.csv" \
+            ~{"--min-length " + min_length} \
+            ~{"--max-ambig " + max_ambig} \
+            --alignment \
+            --verbose
+
+        cp sequences.aln.fasta "~{basename}.pangolin_msa.fasta"
+        python3 <<CODE
+        import csv
+        #grab output values by column header
+        with open("~{basename}.pangolin_report.csv", 'rt') as csv_file:
+            for line in csv.DictReader(csv_file):
+                with open("VERSION", 'wt') as outf:
+                    pangolin_version=line["pangolin_version"]
+                    version=line["version"]
+                    outf.write(f"pangolin {pangolin_version}; {version}")
+                break
+        with open("~{basename}.pangolin_report.csv", 'rt') as csv_file:
+            with open("PANGO_LINEAGE", 'wt') as outf_lineage:
+                with open("PANGOLIN_CONFLICTS", 'wt') as outf_conflicts:
+                    with open("PANGOLIN_NOTES", 'wt') as outf_note:
+                        for row in csv.DictReader(csv_file):
+                            outf_lineage.write('\t'.join([row['taxon'], row['lineage']])+'\n')
+                            outf_conflicts.write('\t'.join([row['taxon'], row['conflict']])+'\n')
+                            outf_note.write('\t'.join([row['taxon'], row['note']])+'\n')
+        CODE
+    >>>
+    runtime {
+        docker: docker
+        memory: "14 GB"
+        cpu:    16
+        disks: "local-disk 100 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x16"
+    }
+    output {
+        Map[String,String] pango_lineage          = read_map("PANGO_LINEAGE")
+        Map[String,String] pangolin_conflicts     = read_map("PANGOLIN_CONFLICTS")
+        Map[String,String] pangolin_notes         = read_map("PANGOLIN_NOTES")
+        String             date                   = read_string("DATE")
+        String             version                = read_string("VERSION")
+        String             pangolin_docker        = docker
+        String             pangolin_versions      = read_string("VERSION_PANGOLIN_ALL")
+        String             pangolin_usher_version = read_string("VERSION_PANGO_USHER")
+        String             pangolin_version       = read_string("VERSION_PANGOLIN")
+        String             pangolearn_version     = read_string("VERSION_PANGOLEARN")
+        File               pango_lineage_report   = "${basename}.pangolin_report.csv"
+        File               msa_fasta              = "~{basename}.pangolin_msa.fasta"
+    }
+}
 
 task sequencing_report {
     meta {
