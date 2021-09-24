@@ -170,6 +170,7 @@ task pangolin_one_sample {
             ~{"--min-length " + min_length} \
             ~{"--max-ambig " + max_ambig} \
             --alignment \
+            --threads $(nproc) \
             --verbose
 
         cp sequences.aln.fasta "~{basename}.pangolin_msa.fasta"
@@ -241,6 +242,7 @@ task pangolin_many_samples {
             ~{"--min-length " + min_length} \
             ~{"--max-ambig " + max_ambig} \
             --alignment \
+            --threads $(nproc) \
             --verbose
 
         cp sequences.aln.fasta "~{basename}.pangolin_msa.fasta"
