@@ -85,7 +85,7 @@ task nextclade_many_samples {
         String       basename
         String       docker = "nextstrain/nextclade:1.2.3"
     }
-    command {
+    command <<<
         set -e
         apt-get update
         apt-get -y install python3
@@ -117,7 +117,8 @@ task nextclade_many_samples {
 
         python3 <<CODE
         # transpose table
-        import codecs, csv
+        import codecs, csv, json
+        out_maps = {'clade':{}, 'aaSubstitutions':{}, 'aaDeletions':{}}
         with codecs.open('~{basename}.nextclade.tsv', 'r', encoding='utf-8') as inf:
             with codecs.open('NEXTCLADE_CLADE', 'w', encoding='utf-8') as outf_clade:
                 with codecs.open('NEXTCLADE_AASUBS', 'w', encoding='utf-8') as outf_aasubs:
@@ -126,13 +127,21 @@ task nextclade_many_samples {
                             outf_clade.write('\t'.join([row['seqName'], row['clade']])+'\n')
                             outf_aasubs.write('\t'.join([row['seqName'], row['aaSubstitutions']])+'\n')
                             outf_aadels.write('\t'.join([row['seqName'], row['aaDeletions']])+'\n')
+                            for k in ('clade','aaSubstitutions','aaDeletions'):
+                                out_maps[k][row['seqName']] = row[k]
+        with codecs.open('NEXTCLADE_CLADE.json', 'w', encoding='utf-8') as outf:
+            json.dump(out_maps['clade'], outf)
+        with codecs.open('NEXTCLADE_AASUBS.json', 'w', encoding='utf-8') as outf:
+            json.dump(out_maps['aaSubstitutions'], outf)
+        with codecs.open('NEXTCLADE_AADELS.json', 'w', encoding='utf-8') as outf:
+            json.dump(out_maps['aaDeletions'], outf)
         CODE
 
         # gather runtime metrics
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
-    }
+    >>>
     runtime {
         docker: docker
         memory: "14 GB"
@@ -141,9 +150,12 @@ task nextclade_many_samples {
         dx_instance_type: "mem1_ssd1_v2_x16"
     }
     output {
-        Map[String,String] nextclade_clade   = read_map("NEXTCLADE_CLADE")
-        Map[String,String] aa_subs_csv       = read_map("NEXTCLADE_AASUBS")
-        Map[String,String] aa_dels_csv       = read_map("NEXTCLADE_AADELS")
+        #Map[String,String] nextclade_clade   = read_map("NEXTCLADE_CLADE")
+        #Map[String,String] aa_subs_csv       = read_map("NEXTCLADE_AASUBS")
+        #Map[String,String] aa_dels_csv       = read_map("NEXTCLADE_AADELS")
+        Map[String,String] nextclade_clade   = read_json("NEXTCLADE_CLADE.json")
+        Map[String,String] aa_subs_csv       = read_json("NEXTCLADE_AASUBS.json")
+        Map[String,String] aa_dels_csv       = read_json("NEXTCLADE_AADELS.json")
         String             nextclade_version = read_string("VERSION")
         File               nextalign_msa     = "~{basename}.nextalign.msa.fasta"
         File               nextclade_json    = "~{basename}.nextclade.json"
@@ -258,7 +270,7 @@ task pangolin_many_samples {
 
         cp sequences.aln.fasta "~{basename}.pangolin_msa.fasta"
         python3 <<CODE
-        import csv
+        import csv, json
         #grab output values by column header
         with open("~{basename}.pangolin_report.csv", 'rt') as csv_file:
             for line in csv.DictReader(csv_file):
@@ -267,6 +279,7 @@ task pangolin_many_samples {
                     version=line["version"]
                     outf.write(f"pangolin {pangolin_version}; {version}")
                 break
+        out_maps = {'lineage':{}, 'conflict':{}, 'note':{}}
         with open("~{basename}.pangolin_report.csv", 'rt') as csv_file:
             with open("PANGO_LINEAGE", 'wt') as outf_lineage:
                 with open("PANGOLIN_CONFLICTS", 'wt') as outf_conflicts:
@@ -275,6 +288,14 @@ task pangolin_many_samples {
                             outf_lineage.write('\t'.join([row['taxon'], row['lineage']])+'\n')
                             outf_conflicts.write('\t'.join([row['taxon'], row['conflict']])+'\n')
                             outf_note.write('\t'.join([row['taxon'], row['note']])+'\n')
+                            for k in ('lineage','conflict','note'):
+                                out_maps[k][row['taxon']] = row[k]
+        with open('PANGO_LINEAGE.json', 'wt') as outf:
+            json.dump(out_maps['lineage'], outf)
+        with open('PANGOLIN_CONFLICTS.json', 'wt') as outf:
+            json.dump(out_maps['conflict'], outf)
+        with open('PANGOLIN_NOTES.json', 'wt') as outf:
+            json.dump(out_maps['note'], outf)
         CODE
 
         # gather runtime metrics
@@ -290,9 +311,12 @@ task pangolin_many_samples {
         dx_instance_type: "mem1_ssd1_v2_x16"
     }
     output {
-        Map[String,String] pango_lineage          = read_map("PANGO_LINEAGE")
-        Map[String,String] pangolin_conflicts     = read_map("PANGOLIN_CONFLICTS")
-        Map[String,String] pangolin_notes         = read_map("PANGOLIN_NOTES")
+        #Map[String,String] pango_lineage          = read_map("PANGO_LINEAGE")
+        #Map[String,String] pangolin_conflicts     = read_map("PANGOLIN_CONFLICTS")
+        #Map[String,String] pangolin_notes         = read_map("PANGOLIN_NOTES")
+        Map[String,String] pango_lineage          = read_json("PANGO_LINEAGE.json")
+        Map[String,String] pangolin_conflicts     = read_json("PANGOLIN_CONFLICTS.json")
+        Map[String,String] pangolin_notes         = read_json("PANGOLIN_NOTES.json")
         String             date                   = read_string("DATE")
         String             version                = read_string("VERSION")
         String             pangolin_docker        = docker
