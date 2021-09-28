@@ -31,7 +31,7 @@ workflow detect_cross_contamination_precalled_vcfs {
         File         reference_fasta
     }
 
-    call intrahost.detect_cross_contamination as detect_cross_contam {
+    call intrahost.polyphonia_detect_cross_contamination as detect_cross_contam {
         input:
             lofreq_vcfs     = lofreq_vcfs,
             genome_fastas   = genome_fastas,
