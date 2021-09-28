@@ -151,8 +151,8 @@ workflow demux_deplete {
     }
 
     scatter(name_reads in zip(grouped_passing.sample_names, grouped_passing.grouped_bam_filepaths)) {
-        Boolean ampseq   = (meta_by_sample[name_reads.left]["amplicon_set"] != "")
-        String orig_name = meta_by_sample[name_reads.left]["sample_original"]
+        Boolean ampseq   = (meta_sample.merged[name_reads.left]["amplicon_set"] != "")
+        String orig_name = meta_sample.merged[name_reads.left]["sample_original"]
 
         call read_utils.merge_and_reheader_bams {
             input:
