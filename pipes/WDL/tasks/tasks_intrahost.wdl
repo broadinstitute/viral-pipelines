@@ -1,6 +1,6 @@
 version 1.0
 
-task detect_cross_contamination {
+task polyphonia_detect_cross_contamination {
   input {
     Array[File]  lofreq_vcfs
     Array[File]  genome_fastas
