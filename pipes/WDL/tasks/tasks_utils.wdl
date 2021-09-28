@@ -351,7 +351,7 @@ task tsv_drop_cols {
     input {
         File          in_tsv
         Array[String] drop_cols
-        String        out_basename = basename(in_tsv, '.tsv') + ".drop"
+        String        out_filename = basename(in_tsv, '.tsv') + ".drop.tsv"
         String        docker = "quay.io/broadinstitute/py3-bio:0.1.2"
     }
     command <<<
@@ -363,7 +363,7 @@ task tsv_drop_cols {
         drop_cols = list(x for x in '~{sep="*" drop_cols}'.split('*') if x)
         if drop_cols:
             df.drop(columns=drop_cols, inplace=True)
-        df.to_csv("~{out_basename}.tsv", sep='\t', index=False)
+        df.to_csv("~{out_filename}", sep='\t', index=False)
         CODE
     >>>
     runtime {
@@ -374,7 +374,7 @@ task tsv_drop_cols {
         dx_instance_type: "mem1_ssd1_v2_x2"
     }
     output {
-        File out_tsv = "~{out_basename}.tsv"
+        File out_tsv = "~{out_filename}"
     }
 }
 

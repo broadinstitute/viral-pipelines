@@ -137,7 +137,7 @@ task pangolin_one_sample {
         Int?    min_length
         Float?  max_ambig
         Boolean inference_usher=true
-        String  docker = "quay.io/staphb/pangolin:3.1.11-pangolearn-2021-08-09"
+        String  docker = "quay.io/staphb/pangolin:3.1.11-pangolearn-2021-09-17"
     }
     String basename = basename(genome_fasta, ".fasta")
     command <<<
@@ -146,6 +146,7 @@ task pangolin_one_sample {
         set -ex
         pangolin -v | tee VERSION_PANGOLIN
         pangolin -pv | tee VERSION_PANGOLEARN
+        pangolin --all-versions | tr '\n' ';' | cut -f -5 -d ';' | tee VERSION_PANGOLIN_ALL
 
         pangolin "~{genome_fasta}" \
             ~{true='--usher' false='' inference_usher} \
@@ -191,6 +192,7 @@ task pangolin_one_sample {
         String     pangolin_version       = read_string("VERSION_PANGOLIN")
         String     pangolearn_version     = read_string("VERSION_PANGOLEARN")
         String     pangolin_docker        = docker
+        String     pangolin_versions      = read_string("VERSION_PANGOLIN_ALL")
         File       pango_lineage_report   = "${basename}.pangolin_report.csv"
         File       msa_fasta              = "~{basename}.pangolin_msa.fasta"
     }
@@ -213,7 +215,7 @@ task sequencing_report {
         String? voc_list
         String? voi_list
 
-        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.24"
+        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.25"
     }
     command {
         set -e
@@ -400,8 +402,8 @@ task crsp_meta_etl {
         String        country = 'USA'
         String        ontology_map_states = '{"AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California", "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "DC": "District of Columbia", "FL": "Florida", "GA": "Georgia", "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois", "IN": "Indiana", "IA": "Iowa", "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine", "MD": "Maryland", "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi", "MO": "Missouri", "MT": "Montana", "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire", "NJ": "New Jersey", "NM": "New Mexico", "NY": "New York", "NC": "North Carolina", "ND": "North Dakota", "OH": "Ohio", "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania", "RI": "Rhode Island", "SC": "South Carolina", "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah", "VT": "Vermont", "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"}'
         String        ontology_map_body_part = '{"AN SWAB": "Anterior Nares", "AN Swab": "Anterior Nares", "Anterior Nares": "Anterior Nares", "Swab": "Upper respiratory tract", "Viral": "Upper respiratory tract", "Null": "Anterior Nares", "NP Swab": "Nasopharynx (NP)", "Nasopharynx (NP)": "Nasopharynx (NP)", "Oropharynx (OP)": "Oropharynx (OP)"}'
-        String        prefix_map = '{"Broad Institute Clinical Research Sequencing Platform": "CRSP_", "Massachusetts General Hospital": "MGH_", "Rhode Island Department of Health": "RIDOH_", "Biobot Analytics": "Biobot_"}'
-        String        org_name_map = '{"Broad Institute Clinical Research Sequencing Platform": "Broad Institute Clinical Research Sequencing Platform", "Massachusetts General Hospital": "Massachusetts General Hospital", "RIDOH": "Rhode Island Department of Health", "Biobot Analytics": "Biobot Analytics"}'
+        String        prefix_map = '{"Broad Institute Clinical Research Sequencing Platform": "CRSP_", "Massachusetts General Hospital": "MGH_", "Rhode Island Department of Health": "RIDOH_", "Biobot Analytics": "Biobot_", "Flow Health":"FlowHealth_", "Colorado Mesa University":"CMU_", "Capture Diagnostics Hawaii":"Capture_", "Boston Medical Center":"BMC_", "University of Central Florida":"UCF_"}'
+        String        org_name_map = '{"Broad Institute Clinical Research Sequencing Platform": "Broad Institute Clinical Research Sequencing Platform", "Massachusetts General Hospital": "Massachusetts General Hospital", "RIDOH": "Rhode Island Department of Health", "BIOBOT": "Biobot Analytics", "FLOW":"Flow Health", "MESA":"Colorado Mesa University", "CAPTURE":"Capture Diagnostics Hawaii", "BUBMC":"Boston Medical Center", "UCF":"University of Central Florida"}'
         String        allowed_purposes = '["Baseline surveillance (random sampling)", "Targeted surveillance (non-random sampling)", "Screening for Variants of Concern (VOC)", "Longitudinal surveillance (repeat sampling of individuals)", "Vaccine escape surveillance", "Cluster/Outbreak investigation"]'
 
         String        docker = "quay.io/broadinstitute/py3-bio:0.1.2"

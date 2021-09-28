@@ -295,7 +295,8 @@ task nextstrain_build_subsample {
         # hard inclusion list
         KEEP_LIST="~{default='' keep_list}"
         if [ -n "$KEEP_LIST" ]; then
-            cat $KEEP_LIST >> defaults/include.txt
+            for i in $(cat defaults/include.txt); do echo $i; done > include-ncov-default-cleannewlines.txt
+            cat include-ncov-default-cleannewlines.txt $KEEP_LIST > defaults/include.txt
         fi
 
         # seed input data (skip some upstream steps in the DAG)
@@ -1224,10 +1225,10 @@ task ancestral_traits {
     }
     runtime {
         docker: docker
-        memory: "7 GB"
-        cpu :   2
-        disks:  "local-disk 50 HDD"
-        dx_instance_type: "mem1_ssd1_v2_x2"
+        memory: "32 GB"
+        cpu :   4
+        disks:  "local-disk 100 HDD"
+        dx_instance_type: "mem3_ssd1_v2_x4"
         preemptible: 1
         maxRetries: 2
     }
@@ -1588,10 +1589,10 @@ task export_auspice_json {
     }
     runtime {
         docker: docker
-        memory: "13 GB"
-        cpu :   2
+        memory: "32 GB"
+        cpu :   4
         disks:  "local-disk 100 HDD"
-        dx_instance_type: "mem1_ssd1_v2_x2"
+        dx_instance_type: "mem3_ssd1_v2_x4"
         preemptible: 0
         maxRetries: 2
     }
