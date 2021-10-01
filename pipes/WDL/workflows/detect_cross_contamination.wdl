@@ -58,7 +58,7 @@ workflow detect_cross_contamination {
     }
 
     Array[Array[File]] vcfs_and_genomes = transpose(vcf_genome_read_depth_triplets)
-    call intrahost.detect_cross_contamination as detect_cross_contam {
+    call intrahost.polyphonia_detect_cross_contamination as detect_cross_contam {
         # take scatter-gathered array of [(vcf1,fasta1),(vcf2,fasta2),(vcf3,fasta3)]
         # and transpose to [[vcf1,vcf2,vcf3],[fasta1,fasta2,fasta3]]
         input:
