@@ -13,7 +13,8 @@ workflow sarscov2_lineages {
 
     call sarscov2.nextclade_one_sample {
         input:
-            genome_fasta = genome_fasta
+            genome_fasta = genome_fasta,
+            dataset_name  = "sars-cov-2"
     }
 
     call sarscov2.pangolin_one_sample {

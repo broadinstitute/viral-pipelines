@@ -13,7 +13,8 @@ workflow sarscov2_nextclade_multi {
 
     call sarscov2.nextclade_many_samples {
         input:
-            genome_fastas = genome_fastas
+            genome_fastas = genome_fastas,
+            dataset_name  = "sars-cov-2"
     }
 
     output {

@@ -11,6 +11,7 @@ task nextclade_one_sample {
         File? qc_config_json
         File? gene_annotations_json
         File? pcr_primers_csv
+        String? dataset_name
         String docker = "nextstrain/nextclade:1.4.0"
     }
     String basename = basename(genome_fasta, ".fasta")
@@ -19,16 +20,20 @@ task nextclade_one_sample {
         apt-get update
         apt-get -y install python3
 
-        URI=$(echo "~{docker}" | sed 's|:|/|g')
-        NEXTCLADE_VERSION="$(nextclade --version)"
+        export NEXTCLADE_VERSION="$(nextclade --version)"
         echo $NEXTCLADE_VERSION > VERSION
 
-        # grab reference data for SARS-CoV-2
-        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/reference.fasta > reference.fasta
-        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/genemap.gff > genemap.gff
-        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/tree.json > tree.json
-        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/qc.json > qc.json
-        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/primers.csv > primers.csv
+        # grab named nextclade dataset
+        if [ -n "~{default='' dataset_name}" ]; then
+            nextclade dataset get --name="~{default='' dataset_name}" --output-dir=.
+            python3 <<CODE
+            import json, os
+            with open('tag.json', 'rt') as inf:
+                datasetinfo = json.load(inf)
+            with open('VERSION', 'wt') as outf:
+                outf.write(os.environ['NEXTCLADE_VERSION'] + "; name=" + datasetinfo['name'] + "; tag=" + datasetinfo['tag'] + "\n")
+            CODE > VERSION
+        fi
 
         nextclade \
             --input-fasta "~{genome_fasta}" \
@@ -82,6 +87,7 @@ task nextclade_many_samples {
         File?        qc_config_json
         File?        gene_annotations_json
         File?        pcr_primers_csv
+        String?      dataset_name
         String       basename
         String       docker = "nextstrain/nextclade:1.4.0"
     }
@@ -90,16 +96,20 @@ task nextclade_many_samples {
         apt-get update
         apt-get -y install python3
 
-        URI=$(echo "~{docker}" | sed 's|:|/|g')
-        NEXTCLADE_VERSION="$(nextclade --version)"
+        export NEXTCLADE_VERSION="$(nextclade --version)"
         echo $NEXTCLADE_VERSION > VERSION
 
-        # grab reference data for SARS-CoV-2
-        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/reference.fasta > reference.fasta
-        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/genemap.gff > genemap.gff
-        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/tree.json > tree.json
-        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/qc.json > qc.json
-        curl https://raw.githubusercontent.com/$URI/data/sars-cov-2/primers.csv > primers.csv
+        # grab named nextclade dataset
+        if [ -n "~{default='' dataset_name}" ]; then
+            nextclade dataset get --name="~{default='' dataset_name}" --output-dir=.
+            python3 <<CODE
+            import json, os
+            with open('tag.json', 'rt') as inf:
+                datasetinfo = json.load(inf)
+            with open('VERSION', 'wt') as outf:
+                outf.write(os.environ['NEXTCLADE_VERSION'] + "; name=" + datasetinfo['name'] + "; tag=" + datasetinfo['tag'] + "\n")
+            CODE > VERSION
+        fi
 
         cat ~{sep=" " genome_fastas} > genomes.fasta
         nextclade \
