@@ -1,6 +1,5 @@
 version 1.0
 
-import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_sarscov2.wdl" as sarscov2
 import "../tasks/tasks_utils.wdl" as utils
 
@@ -10,66 +9,87 @@ workflow sarscov2_batch_relineage {
     }
 
     input {
+        String      flowcell_id
         Array[File] genomes_fasta
         File        metadata_annotated_tsv
         File        metadata_raw_tsv
         Int         min_genome_bases = 24000
     }
 
-    scatter(genome_fasta in genomes_fasta) {
-        call reports.assembly_bases {
-            input: fasta = genome_fasta
-        }
+    call utils.zcat {
+        input:
+            infiles     = genomes_fasta,
+            output_name = "all-genomes.fasta"
+    }
 
-        if (assembly_bases.assembly_length_unambiguous >= min_genome_bases) {
-            call sarscov2.nextclade_one_sample {
-                input:
-                    genome_fasta = genome_fasta
-            }
-            call sarscov2.pangolin_one_sample {
-                input:
-                    genome_fasta = genome_fasta
-            }
-            Array[String] metadata = [
-                basename(genome_fasta, '.fasta'),
-                pangolin_one_sample.pango_lineage,
-                nextclade_one_sample.nextclade_clade,
-                nextclade_one_sample.aa_subs_csv,
-                nextclade_one_sample.aa_dels_csv,
-                pangolin_one_sample.pangolin_versions,
-                nextclade_one_sample.nextclade_version,
-                nextclade_one_sample.nextclade_tsv,
-                nextclade_one_sample.nextclade_json,
-                pangolin_one_sample.pango_lineage_report,
-            ]
-        }
+    call utils.filter_sequences_by_length {
+        input:
+            sequences_fasta = zcat.combined,
+            min_non_N       = min_genome_bases
+    }
+
+    call utils.fasta_to_ids {
+        input:
+            sequences_fasta = filter_sequences_by_length.filtered_fasta
+    }
+
+    call sarscov2.nextclade_many_samples {
+        input:
+            genome_fastas = [filter_sequences_by_length.filtered_fasta],
+            basename      = "nextclade-~{flowcell_id}"
+    }
+
+    call sarscov2.pangolin_many_samples {
+        input:
+            genome_fastas = [filter_sequences_by_length.filtered_fasta],
+            basename      = "pangolin-~{flowcell_id}"
+    }
+
+    scatter(sample_sanitized in read_lines(fasta_to_ids.ids_txt)) {
+        Array[String] metadata = [
+            sample_sanitized,
+            pangolin_many_samples.pango_lineage[sample_sanitized],
+            nextclade_many_samples.nextclade_clade[sample_sanitized],
+            nextclade_many_samples.aa_subs_csv[sample_sanitized],
+            nextclade_many_samples.aa_dels_csv[sample_sanitized],
+            pangolin_many_samples.pangolin_versions,
+            nextclade_many_samples.nextclade_version
+        ]
     }
     Array[String] meta_header = [
         'sample_sanitized',
-        'pango_lineage', 'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels', 'pangolin_version', 'nextclade_version',
-        'nextclade_tsv', 'nextclade_json', 'pangolin_csv'
+        'pango_lineage', 'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels',
+        'pangolin_version', 'nextclade_version'
     ]
 
     call utils.today
 
     call utils.tsv_join as merge_raw {
         input:
-            input_tsvs = [write_tsv(flatten([[meta_header], select_all(metadata)])),
+            input_tsvs = [write_tsv(flatten([[meta_header], metadata])),
                 metadata_raw_tsv],
             id_col = "sample_sanitized",
-            out_basename = basename(metadata_raw_tsv, '.tsv') + ".relineage_~{today.date}.tsv"
+            out_suffix = ".tsv",
+            out_basename = basename(metadata_raw_tsv, '.tsv') + ".relineage_~{today.date}"
     }
 
     call utils.tsv_join as merge_annotated {
         input:
-            input_tsvs = [write_tsv(flatten([[meta_header], select_all(metadata)])),
+            input_tsvs = [write_tsv(flatten([[meta_header], metadata])),
                 metadata_annotated_tsv],
             id_col = "sample_sanitized",
-            out_basename = basename(metadata_annotated_tsv, '.tsv') + ".relineage_~{today.date}.tsv"
+            out_suffix = ".tsv",
+            out_basename = basename(metadata_annotated_tsv, '.tsv') + ".relineage_~{today.date}"
     }
 
     output {
         File   assembly_stats_relineage_tsv = merge_raw.out_tsv
         File   assembly_stats_final_relineage_tsv = merge_annotated.out_tsv
+        File   nextclade_all_json           = nextclade_many_samples.nextclade_json
+        File   nextclade_all_tsv            = nextclade_many_samples.nextclade_tsv
+        File   nextclade_auspice_json       = nextclade_many_samples.auspice_json
+        File   nextalign_msa                = nextclade_many_samples.nextalign_msa
+        File   pangolin_report              = pangolin_many_samples.pango_lineage_report
+        File   pangolin_msa                 = pangolin_many_samples.msa_fasta
     }
 }

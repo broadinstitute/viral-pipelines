@@ -10,7 +10,7 @@ import "../tasks/tasks_utils.wdl" as utils
 
 import "demux_deplete.wdl"
 import "assemble_refbased.wdl"
-import "sarscov2_lineages.wdl"
+import "sarscov2_batch_relineage.wdl"
 import "sarscov2_biosample_load.wdl"
 
 workflow sarscov2_illumina_full {
@@ -145,19 +145,12 @@ workflow sarscov2_illumina_full {
             String passing_assembly_ids = orig_name
             Array[String] assembly_cmt  = [orig_name, "Broad viral-ngs v. " + demux_deplete.demux_viral_core_version, assemble_refbased.assembly_mean_coverage, demux_deplete.instrument_model_inferred]
 
-            # lineage assignment
-            call sarscov2_lineages.sarscov2_lineages {
-                input:
-                    genome_fasta = passing_assemblies
-            }
-
             # VADR annotation & QC
             call ncbi.vadr {
               input:
-                genome_fasta = passing_assemblies
+                genome_fasta = assemble_refbased.assembly_fasta
             }
             if (vadr.num_alerts<=max_vadr_alerts) {
-              File submittable_genomes = passing_assemblies
               String submittable_id    = orig_name
             }
             if (vadr.num_alerts>max_vadr_alerts) {
@@ -179,12 +172,6 @@ workflow sarscov2_illumina_full {
             biosample.map["host_subject_id"],
             assemble_refbased.assembly_length_unambiguous,
             assemble_refbased.assembly_mean_coverage,
-            select_first([sarscov2_lineages.pango_lineage, ""]),
-            select_first([sarscov2_lineages.nextclade_clade, ""]),
-            select_first([sarscov2_lineages.nextclade_aa_subs, ""]),
-            select_first([sarscov2_lineages.nextclade_aa_dels, ""]),
-            select_first([sarscov2_lineages.pangolin_versions, ""]),
-            select_first([sarscov2_lineages.nextclade_version, ""]),
             assemble_refbased.dist_to_ref_snps,
             assemble_refbased.dist_to_ref_indels,
             select_first([vadr.num_alerts, ""]),
@@ -193,9 +180,6 @@ workflow sarscov2_illumina_full {
             assemble_refbased.align_to_ref_merged_aligned_trimmed_only_bam,
             assemble_refbased.replicate_discordant_vcf,
             assemble_refbased.align_to_ref_variants_vcf_gz,
-            select_first([sarscov2_lineages.nextclade_tsv, ""]),
-            select_first([sarscov2_lineages.nextclade_json, ""]),
-            select_first([sarscov2_lineages.pango_lineage_report, ""]),
             select_first([vadr.outputs_tgz, ""]),
             demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"],
             assemble_refbased.replicate_concordant_sites,
@@ -221,11 +205,10 @@ workflow sarscov2_illumina_full {
     Array[String] assembly_tsv_header = [
         'sample', 'sample_sanitized', 'biosample_accession', 'flowcell_id', 'run_date', 'collection_date', 'geo_loc_name', 'host_subject_id',
         'assembly_length_unambiguous', 'assembly_mean_coverage',
-        'pango_lineage', 'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels', 'pangolin_version', 'nextclade_version',
         'dist_to_ref_snps', 'dist_to_ref_indels', 'vadr_num_alerts',
         'assembly_fasta', 'coverage_plot', 'aligned_bam',
         'replicate_discordant_vcf', 'variants_from_ref_vcf',
-        'nextclade_tsv', 'nextclade_json', 'pangolin_csv', 'vadr_tgz',
+        'vadr_tgz',
         'amplicon_set',
         'replicate_concordant_sites', 'replicate_discordant_snps', 'replicate_discordant_indels', 'num_read_groups', 'num_libraries',
         'align_to_ref_merged_reads_aligned', 'align_to_ref_merged_bases_aligned',
@@ -241,12 +224,22 @@ workflow sarscov2_illumina_full {
         output_name = "assembly_metadata-~{flowcell_id}.tsv"
     }
 
+    # nextclade and pangolin on full data set
+    call sarscov2_batch_relineage.sarscov2_batch_relineage {
+      input:
+        flowcell_id = flowcell_id,
+        genomes_fasta = assemble_refbased.assembly_fasta,
+        metadata_annotated_tsv = assembly_meta_tsv.combined,
+        metadata_raw_tsv = assembly_meta_tsv.combined,
+        min_genome_bases = min_genome_bases
+    }
+
     ### mark up the bad batches or lanes where NTCs assemble
     call assembly.filter_bad_ntc_batches {
       input:
         seqid_list = write_lines(select_all(passing_assembly_ids)),
         demux_meta_by_sample_json = demux_deplete.meta_by_sample_json,
-        assembly_meta_tsv = assembly_meta_tsv.combined,
+        assembly_meta_tsv = sarscov2_batch_relineage.assembly_stats_relineage_tsv,
         ntc_min_unambig = 15000
     }
 
@@ -284,7 +277,7 @@ workflow sarscov2_illumina_full {
     call sarscov2.sc2_meta_final {
       # this decorates assembly_meta_tsv with collab/internal IDs, genome_status, and many other columns
       input:
-        assembly_stats_tsv = assembly_meta_tsv.combined,
+        assembly_stats_tsv = sarscov2_batch_relineage.assembly_stats_relineage_tsv,
         collab_ids_tsv = select_first([collab_ids_tsv, sarscov2_biosample_load.collab_ids_tsv]),
         drop_file_cols = true,
         min_unambig = min_genome_bases,
@@ -363,7 +356,7 @@ workflow sarscov2_illumina_full {
     call nextstrain.nextmeta_prep {
       input:
         gisaid_meta   = gisaid_meta_prep.meta_csv,
-        assembly_meta = assembly_meta_tsv.combined,
+        assembly_meta = sarscov2_batch_relineage.assembly_stats_relineage_tsv,
         out_name      = "nextmeta-~{flowcell_id}.tsv",
         filter_to_ids = filter_bad_ntc_batches.seqids_kept
     }
@@ -374,7 +367,7 @@ workflow sarscov2_illumina_full {
         input:
           workspace_name                      = select_first([workspace_name]),
           terra_project                       = select_first([terra_project]),
-          tsv_file                            = assembly_meta_tsv.combined,
+          tsv_file                            = sarscov2_batch_relineage.assembly_stats_relineage_tsv,
           cleaned_reads_unaligned_bams_string = demux_deplete.cleaned_reads_unaligned_bams,
           meta_by_filename_json               = demux_deplete.meta_by_filename_json
       }
@@ -396,18 +389,11 @@ workflow sarscov2_illumina_full {
       }
     }
 
-    # create full nextclade trees on full data set
-    call sarscov2.nextclade_many_samples {
-        input:
-            genome_fastas = assemble_refbased.assembly_fasta,
-            basename      = "nextclade-~{flowcell_id}"
-    }
-
     # bucket deliveries
     if(defined(gcs_out_metrics)) {
         call terra.gcs_copy as gcs_metrics_dump {
             input:
-              infiles        = flatten([[assembly_meta_tsv.combined, sc2_meta_final.meta_tsv, ivar_trim_stats.trim_stats_tsv, demux_deplete.multiqc_report_raw, demux_deplete.multiqc_report_cleaned, demux_deplete.spikein_counts, picard_wgs_merge.out_tsv, picard_alignment_merge.out_tsv, picard_insertsize_merge.out_tsv, nextclade_many_samples.nextclade_json, nextclade_many_samples.nextclade_tsv], demux_deplete.demux_metrics]),
+              infiles        = flatten([[assembly_meta_tsv.combined, sc2_meta_final.meta_tsv, ivar_trim_stats.trim_stats_tsv, demux_deplete.multiqc_report_raw, demux_deplete.multiqc_report_cleaned, demux_deplete.spikein_counts, picard_wgs_merge.out_tsv, picard_alignment_merge.out_tsv, picard_insertsize_merge.out_tsv, sarscov2_batch_relineage.nextclade_all_json, sarscov2_batch_relineage.nextclade_all_tsv], demux_deplete.demux_metrics]),
               gcs_uri_prefix = "~{gcs_out_metrics}/~{flowcell_id}/"
         }
     }
@@ -474,7 +460,7 @@ workflow sarscov2_illumina_full {
         
         File          assembly_stats_tsv           = assembly_meta_tsv.combined
         File          assembly_stats_final_tsv     = sc2_meta_final.meta_tsv
-        File          assembly_stats_relineage_tsv = assembly_meta_tsv.combined
+        File          assembly_stats_relineage_tsv = sarscov2_batch_relineage.assembly_stats_relineage_tsv
         File          assembly_stats_final_relineage_tsv = sc2_meta_final.meta_tsv
 
         File          submission_zip               = package_genbank_ftp_submission.submission_zip
@@ -489,10 +475,13 @@ workflow sarscov2_illumina_full {
         File          genbank_fasta                = submit_genomes.filtered_fasta
         File          nextmeta_tsv                 = nextmeta_prep.nextmeta_tsv
         
-        File          nextclade_all_json           = nextclade_many_samples.nextclade_json
-        File          nextclade_all_tsv            = nextclade_many_samples.nextclade_tsv
-        File          nextclade_auspice_json       = nextclade_many_samples.auspice_json
-        
+        File          nextclade_all_json           = sarscov2_batch_relineage.nextclade_all_json
+        File          nextclade_all_tsv            = sarscov2_batch_relineage.nextclade_all_tsv
+        File          nextclade_auspice_json       = sarscov2_batch_relineage.nextclade_auspice_json
+        File          nextalign_msa                = sarscov2_batch_relineage.nextalign_msa
+        File          pangolin_report              = sarscov2_batch_relineage.pangolin_report
+        File          pangolin_msa                 = sarscov2_batch_relineage.pangolin_msa
+
         File          passing_fasta                = passing_cat.filtered_fasta
         
         Array[String] assembled_ids                = select_all(passing_assembly_ids)
