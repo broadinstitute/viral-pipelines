@@ -26,13 +26,13 @@ task nextclade_one_sample {
         # grab named nextclade dataset
         if [ -n "~{default='' dataset_name}" ]; then
             nextclade dataset get --name="~{default='' dataset_name}" --output-dir=.
-            python3 <<CODE
+            python3<<CODE1
             import json, os
             with open('tag.json', 'rt') as inf:
                 datasetinfo = json.load(inf)
             with open('VERSION', 'wt') as outf:
                 outf.write(os.environ['NEXTCLADE_VERSION'] + "; name=" + datasetinfo['name'] + "; tag=" + datasetinfo['tag'] + "\n")
-            CODE > VERSION
+            CODE1
         fi
 
         nextclade \
@@ -102,13 +102,13 @@ task nextclade_many_samples {
         # grab named nextclade dataset
         if [ -n "~{default='' dataset_name}" ]; then
             nextclade dataset get --name="~{default='' dataset_name}" --output-dir=.
-            python3 <<CODE
+            python3<<CODE1
             import json, os
             with open('tag.json', 'rt') as inf:
                 datasetinfo = json.load(inf)
             with open('VERSION', 'wt') as outf:
                 outf.write(os.environ['NEXTCLADE_VERSION'] + "; name=" + datasetinfo['name'] + "; tag=" + datasetinfo['tag'] + "\n")
-            CODE > VERSION
+            CODE1
         fi
 
         cat ~{sep=" " genome_fastas} > genomes.fasta
