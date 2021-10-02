@@ -1,6 +1,6 @@
 version 1.0
 
-import "../tasks/tasks_sarscov2.wdl" as sarscov2
+import "../tasks/tasks_nextstrain.wdl" as nextstrain
 
 workflow sarscov2_nextclade_multi {
     meta {
@@ -11,7 +11,7 @@ workflow sarscov2_nextclade_multi {
         Array[File]+ genome_fastas
     }
 
-    call sarscov2.nextclade_many_samples {
+    call nextstrain.nextclade_many_samples {
         input:
             genome_fastas = genome_fastas,
             dataset_name  = "sars-cov-2"

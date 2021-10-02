@@ -1,5 +1,6 @@
 version 1.0
 
+import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_sarscov2.wdl" as sarscov2
 
 workflow sarscov2_lineages {
@@ -11,7 +12,7 @@ workflow sarscov2_lineages {
         File genome_fasta
     }
 
-    call sarscov2.nextclade_one_sample {
+    call nextstrain.nextclade_one_sample {
         input:
             genome_fasta = genome_fasta,
             dataset_name  = "sars-cov-2"

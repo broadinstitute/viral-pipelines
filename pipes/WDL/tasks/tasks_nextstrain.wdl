@@ -1,5 +1,181 @@
 version 1.0
 
+task nextclade_one_sample {
+    meta {
+        description: "Nextclade classification of one sample. Leaving optional inputs unspecified will use SARS-CoV-2 defaults."
+    }
+    input {
+        File  genome_fasta
+        File? root_sequence
+        File? auspice_reference_tree_json
+        File? qc_config_json
+        File? gene_annotations_json
+        File? pcr_primers_csv
+        String? dataset_name
+        String docker = "nextstrain/nextclade:1.4.0"
+    }
+    String basename = basename(genome_fasta, ".fasta")
+    command {
+        set -e
+        apt-get update
+        apt-get -y install python3
+
+        export NEXTCLADE_VERSION="$(nextclade --version)"
+        echo $NEXTCLADE_VERSION > VERSION
+
+        # grab named nextclade dataset
+        if [ -n "~{default='' dataset_name}" ]; then
+            nextclade dataset get --name="~{default='' dataset_name}" --output-dir=.
+        python3<<CODE1
+        import json, os
+        with open('tag.json', 'rt') as inf:
+            datasetinfo = json.load(inf)
+        with open('VERSION', 'wt') as outf:
+            outf.write(os.environ['NEXTCLADE_VERSION'] + "; name=" + datasetinfo['name'] + "; tag=" + datasetinfo['tag'] + "\n")
+        CODE1
+        fi
+
+        nextclade \
+            --input-fasta "~{genome_fasta}" \
+            --input-root-seq ~{default="reference.fasta" root_sequence} \
+            --input-tree ~{default="tree.json" auspice_reference_tree_json} \
+            --input-qc-config ~{default="qc.json" qc_config_json} \
+            --input-gene-map ~{default="genemap.gff" gene_annotations_json} \
+            --input-pcr-primers ~{default="primers.csv" pcr_primers_csv} \
+            --output-json "~{basename}".nextclade.json \
+            --output-tsv  "~{basename}".nextclade.tsv \
+            --output-tree "~{basename}".nextclade.auspice.json
+        cp "~{basename}".nextclade.tsv input.tsv
+        python3 <<CODE
+        # transpose table
+        import codecs
+        with codecs.open('input.tsv', 'r', encoding='utf-8') as inf:
+            with codecs.open('transposed.tsv', 'w', encoding='utf-8') as outf:
+                for c in zip(*(l.rstrip().split('\t') for l in inf)):
+                    outf.write('\t'.join(c)+'\n')
+        CODE
+        grep ^clade transposed.tsv | cut -f 2 | grep -v clade > NEXTCLADE_CLADE
+        grep ^aaSubstitutions transposed.tsv | cut -f 2 | grep -v aaSubstitutions > NEXTCLADE_AASUBS
+        grep ^aaDeletions transposed.tsv | cut -f 2 | grep -v aaDeletions > NEXTCLADE_AADELS
+    }
+    runtime {
+        docker: docker
+        memory: "3 GB"
+        cpu:    2
+        disks: "local-disk 50 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+    output {
+        String nextclade_version = read_string("VERSION")
+        File   nextclade_json    = "~{basename}.nextclade.json"
+        File   auspice_json      = "~{basename}.nextclade.auspice.json"
+        File   nextclade_tsv     = "~{basename}.nextclade.tsv"
+        String nextclade_clade   = read_string("NEXTCLADE_CLADE")
+        String aa_subs_csv       = read_string("NEXTCLADE_AASUBS")
+        String aa_dels_csv       = read_string("NEXTCLADE_AADELS")
+    }
+}
+
+task nextclade_many_samples {
+    meta {
+        description: "Nextclade classification of many samples. Leaving optional inputs unspecified will use SARS-CoV-2 defaults."
+    }
+    input {
+        Array[File]+ genome_fastas
+        File?        root_sequence
+        File?        auspice_reference_tree_json
+        File?        qc_config_json
+        File?        gene_annotations_json
+        File?        pcr_primers_csv
+        String?      dataset_name
+        String       basename
+        String       docker = "nextstrain/nextclade:1.4.0"
+    }
+    command <<<
+        set -e
+        apt-get update
+        apt-get -y install python3
+
+        export NEXTCLADE_VERSION="$(nextclade --version)"
+        echo $NEXTCLADE_VERSION > VERSION
+
+        # grab named nextclade dataset
+        if [ -n "~{default='' dataset_name}" ]; then
+            nextclade dataset get --name="~{default='' dataset_name}" --output-dir=.
+        python3<<CODE1
+        import json, os
+        with open('tag.json', 'rt') as inf:
+            datasetinfo = json.load(inf)
+        with open('VERSION', 'wt') as outf:
+            outf.write(os.environ['NEXTCLADE_VERSION'] + "; name=" + datasetinfo['name'] + "; tag=" + datasetinfo['tag'] + "\n")
+        CODE1
+        fi
+
+        cat ~{sep=" " genome_fastas} > genomes.fasta
+        nextclade \
+            --input-fasta genomes.fasta \
+            --input-root-seq ~{default="reference.fasta" root_sequence} \
+            --input-tree ~{default="tree.json" auspice_reference_tree_json} \
+            --input-qc-config ~{default="qc.json" qc_config_json} \
+            --input-gene-map ~{default="genemap.gff" gene_annotations_json} \
+            --input-pcr-primers ~{default="primers.csv" pcr_primers_csv} \
+            --output-json "~{basename}".nextclade.json \
+            --output-tsv  "~{basename}".nextclade.tsv \
+            --output-tree "~{basename}".nextclade.auspice.json
+
+        cp genomes.aligned.fasta "~{basename}".nextalign.msa.fasta
+
+        python3 <<CODE
+        # transpose table
+        import codecs, csv, json
+        out_maps = {'clade':{}, 'aaSubstitutions':{}, 'aaDeletions':{}}
+        with codecs.open('~{basename}.nextclade.tsv', 'r', encoding='utf-8') as inf:
+            with codecs.open('NEXTCLADE_CLADE', 'w', encoding='utf-8') as outf_clade:
+                with codecs.open('NEXTCLADE_AASUBS', 'w', encoding='utf-8') as outf_aasubs:
+                    with codecs.open('NEXTCLADE_AADELS', 'w', encoding='utf-8') as outf_aadels:
+                        for row in csv.DictReader(inf, delimiter='\t'):
+                            outf_clade.write('\t'.join([row['seqName'], row['clade']])+'\n')
+                            outf_aasubs.write('\t'.join([row['seqName'], row['aaSubstitutions']])+'\n')
+                            outf_aadels.write('\t'.join([row['seqName'], row['aaDeletions']])+'\n')
+                            for k in ('clade','aaSubstitutions','aaDeletions'):
+                                out_maps[k][row['seqName']] = row[k]
+        with codecs.open('NEXTCLADE_CLADE.json', 'w', encoding='utf-8') as outf:
+            json.dump(out_maps['clade'], outf)
+        with codecs.open('NEXTCLADE_AASUBS.json', 'w', encoding='utf-8') as outf:
+            json.dump(out_maps['aaSubstitutions'], outf)
+        with codecs.open('NEXTCLADE_AADELS.json', 'w', encoding='utf-8') as outf:
+            json.dump(out_maps['aaDeletions'], outf)
+        CODE
+
+        # gather runtime metrics
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg > CPU_LOAD
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
+    >>>
+    runtime {
+        docker: docker
+        memory: "14 GB"
+        cpu:    16
+        disks: "local-disk 100 HDD"
+        dx_instance_type: "mem1_ssd1_v2_x16"
+    }
+    output {
+        #Map[String,String] nextclade_clade   = read_map("NEXTCLADE_CLADE")
+        #Map[String,String] aa_subs_csv       = read_map("NEXTCLADE_AASUBS")
+        #Map[String,String] aa_dels_csv       = read_map("NEXTCLADE_AADELS")
+        Map[String,String] nextclade_clade   = read_json("NEXTCLADE_CLADE.json")
+        Map[String,String] aa_subs_csv       = read_json("NEXTCLADE_AASUBS.json")
+        Map[String,String] aa_dels_csv       = read_json("NEXTCLADE_AADELS.json")
+        String             nextclade_version = read_string("VERSION")
+        File               nextalign_msa     = "~{basename}.nextalign.msa.fasta"
+        File               nextclade_json    = "~{basename}.nextclade.json"
+        File               auspice_json      = "~{basename}.nextclade.auspice.json"
+        File               nextclade_tsv     = "~{basename}.nextclade.tsv"
+        Int                max_ram_gb        = ceil(read_float("MEM_BYTES")/1000000000)
+        Int                runtime_sec       = ceil(read_float("UPTIME_SEC"))
+        String             cpu_load          = read_string("CPU_LOAD")
+    }
+}
 
 task nextmeta_prep {
   input {
