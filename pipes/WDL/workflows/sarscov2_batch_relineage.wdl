@@ -1,5 +1,6 @@
 version 1.0
 
+import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_sarscov2.wdl" as sarscov2
 import "../tasks/tasks_utils.wdl" as utils
 
@@ -33,10 +34,11 @@ workflow sarscov2_batch_relineage {
             sequences_fasta = filter_sequences_by_length.filtered_fasta
     }
 
-    call sarscov2.nextclade_many_samples {
+    call nextstrain.nextclade_many_samples {
         input:
             genome_fastas = [filter_sequences_by_length.filtered_fasta],
-            basename      = "nextclade-~{flowcell_id}"
+            basename      = "nextclade-~{flowcell_id}",
+            dataset_name  = "sars-cov-2"
     }
 
     call sarscov2.pangolin_many_samples {
