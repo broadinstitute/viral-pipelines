@@ -1,4 +1,5 @@
 version 1.0
+#DX_SKIP_WORKFLOW
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_utils.wdl" as utils
