@@ -118,7 +118,7 @@ task pangolin_many_samples {
                 for row in csv.DictReader(csv_file):
                     for k in ('lineage','conflict','note'):
                         out_maps[k][row['taxon']] = row[k]
-                    outf_ids.write(row['seqName']+'\n')
+                    outf_ids.write(row['taxon']+'\n')
         with open('PANGO_LINEAGE.json', 'wt') as outf:
             json.dump(out_maps['lineage'], outf)
         with open('PANGOLIN_CONFLICTS.json', 'wt') as outf:
