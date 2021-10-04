@@ -114,15 +114,11 @@ task pangolin_many_samples {
                 break
         out_maps = {'lineage':{}, 'conflict':{}, 'note':{}}
         with open("~{basename}.pangolin_report.csv", 'rt') as csv_file:
-            with open("PANGO_LINEAGE", 'wt') as outf_lineage:
-                with open("PANGOLIN_CONFLICTS", 'wt') as outf_conflicts:
-                    with open("PANGOLIN_NOTES", 'wt') as outf_note:
-                        for row in csv.DictReader(csv_file):
-                            outf_lineage.write('\t'.join([row['taxon'], row['lineage']])+'\n')
-                            outf_conflicts.write('\t'.join([row['taxon'], row['conflict']])+'\n')
-                            outf_note.write('\t'.join([row['taxon'], row['note']])+'\n')
-                            for k in ('lineage','conflict','note'):
-                                out_maps[k][row['taxon']] = row[k]
+            with open('IDLIST', 'wt') as outf_ids:
+                for row in csv.DictReader(csv_file):
+                    for k in ('lineage','conflict','note'):
+                        out_maps[k][row['taxon']] = row[k]
+                    outf_ids.write(row['seqName']+'\n')
         with open('PANGO_LINEAGE.json', 'wt') as outf:
             json.dump(out_maps['lineage'], outf)
         with open('PANGOLIN_CONFLICTS.json', 'wt') as outf:
@@ -144,12 +140,10 @@ task pangolin_many_samples {
         dx_instance_type: "mem1_ssd1_v2_x16"
     }
     output {
-        #Map[String,String] pango_lineage          = read_map("PANGO_LINEAGE")
-        #Map[String,String] pangolin_conflicts     = read_map("PANGOLIN_CONFLICTS")
-        #Map[String,String] pangolin_notes         = read_map("PANGOLIN_NOTES")
         Map[String,String] pango_lineage          = read_json("PANGO_LINEAGE.json")
         Map[String,String] pangolin_conflicts     = read_json("PANGOLIN_CONFLICTS.json")
         Map[String,String] pangolin_notes         = read_json("PANGOLIN_NOTES.json")
+        Array[String]      genome_ids             = read_lines("IDLIST")
         String             date                   = read_string("DATE")
         String             version                = read_string("VERSION")
         String             pangolin_docker        = docker
