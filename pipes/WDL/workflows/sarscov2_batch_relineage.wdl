@@ -20,7 +20,8 @@ workflow sarscov2_batch_relineage {
     call utils.zcat {
         input:
             infiles     = genomes_fasta,
-            output_name = "all-genomes.fasta"
+            output_name = "all-genomes.fasta",
+            cpus        = 8
     }
 
     call utils.filter_sequences_by_length {

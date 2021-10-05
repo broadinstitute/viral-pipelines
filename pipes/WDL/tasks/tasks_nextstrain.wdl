@@ -130,15 +130,11 @@ task nextclade_many_samples {
         import codecs, csv, json
         out_maps = {'clade':{}, 'aaSubstitutions':{}, 'aaDeletions':{}}
         with codecs.open('~{basename}.nextclade.tsv', 'r', encoding='utf-8') as inf:
-            with codecs.open('NEXTCLADE_CLADE', 'w', encoding='utf-8') as outf_clade:
-                with codecs.open('NEXTCLADE_AASUBS', 'w', encoding='utf-8') as outf_aasubs:
-                    with codecs.open('NEXTCLADE_AADELS', 'w', encoding='utf-8') as outf_aadels:
-                        for row in csv.DictReader(inf, delimiter='\t'):
-                            outf_clade.write('\t'.join([row['seqName'], row['clade']])+'\n')
-                            outf_aasubs.write('\t'.join([row['seqName'], row['aaSubstitutions']])+'\n')
-                            outf_aadels.write('\t'.join([row['seqName'], row['aaDeletions']])+'\n')
-                            for k in ('clade','aaSubstitutions','aaDeletions'):
-                                out_maps[k][row['seqName']] = row[k]
+            with codecs.open('IDLIST', 'w', encoding='utf-8') as outf_ids:
+                for row in csv.DictReader(inf, delimiter='\t'):
+                    for k in ('clade','aaSubstitutions','aaDeletions'):
+                        out_maps[k][row['seqName']] = row[k]
+                    outf_ids.write(row['seqName']+'\n')
         with codecs.open('NEXTCLADE_CLADE.json', 'w', encoding='utf-8') as outf:
             json.dump(out_maps['clade'], outf)
         with codecs.open('NEXTCLADE_AASUBS.json', 'w', encoding='utf-8') as outf:
@@ -154,18 +150,16 @@ task nextclade_many_samples {
     >>>
     runtime {
         docker: docker
-        memory: "14 GB"
-        cpu:    16
+        memory: "3 GB"
+        cpu:    4
         disks: "local-disk 100 HDD"
-        dx_instance_type: "mem1_ssd1_v2_x16"
+        dx_instance_type: "mem1_ssd1_v2_x4"
     }
     output {
-        #Map[String,String] nextclade_clade   = read_map("NEXTCLADE_CLADE")
-        #Map[String,String] aa_subs_csv       = read_map("NEXTCLADE_AASUBS")
-        #Map[String,String] aa_dels_csv       = read_map("NEXTCLADE_AADELS")
         Map[String,String] nextclade_clade   = read_json("NEXTCLADE_CLADE.json")
         Map[String,String] aa_subs_csv       = read_json("NEXTCLADE_AASUBS.json")
         Map[String,String] aa_dels_csv       = read_json("NEXTCLADE_AADELS.json")
+        Array[String]      genome_ids        = read_lines("IDLIST")
         String             nextclade_version = read_string("VERSION")
         File               nextalign_msa     = "~{basename}.nextalign.msa.fasta"
         File               nextclade_json    = "~{basename}.nextclade.json"

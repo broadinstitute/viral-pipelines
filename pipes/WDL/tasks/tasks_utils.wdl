@@ -30,6 +30,7 @@ task zcat {
     input {
         Array[File] infiles
         String      output_name
+        Int         cpus = 4
     }
     command <<<
         pip install -q lz4
@@ -115,16 +116,24 @@ task zcat {
                     for line in inf:
                         outf.write(line)
         CODE
+
+        # gather runtime metrics
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg > CPU_LOAD
+        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     >>>
     runtime {
         docker: "python:slim"
         memory: "1 GB"
-        cpu:    2
+        cpu:    cpus
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x2"
     }
     output {
-        File combined = "${output_name}"
+        File    combined     = "${output_name}"
+        Int     max_ram_gb   = ceil(read_float("MEM_BYTES")/1000000000)
+        Int     runtime_sec  = ceil(read_float("UPTIME_SEC"))
+        String  cpu_load     = read_string("CPU_LOAD")
     }
 }
 
