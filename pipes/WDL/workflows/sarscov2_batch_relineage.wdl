@@ -17,16 +17,16 @@ workflow sarscov2_batch_relineage {
         Int         min_genome_bases = 24000
     }
 
-    call utils.zcat {
+    call utils.concatenate {
         input:
             infiles     = genomes_fasta,
             output_name = "all-genomes.fasta",
-            cpus        = 8
+            cpus        = 16
     }
 
     call utils.filter_sequences_by_length {
         input:
-            sequences_fasta = zcat.combined,
+            sequences_fasta = concatenate.combined,
             min_non_N       = min_genome_bases
     }
 
