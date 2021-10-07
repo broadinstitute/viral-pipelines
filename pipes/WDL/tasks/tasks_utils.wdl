@@ -33,9 +33,6 @@ task zcat {
         Int         cpus = 4
     }
     command <<<
-        pip install -q lz4
-        pip install -q zstandard
-
         python3 <<CODE
         import os.path
         import gzip, lzma, bz2
@@ -123,7 +120,7 @@ task zcat {
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     >>>
     runtime {
-        docker: "python:slim"
+        docker: "quay.io/broadinstitute/viral-core:2.1.32"
         memory: "1 GB"
         cpu:    cpus
         disks: "local-disk 375 LOCAL"

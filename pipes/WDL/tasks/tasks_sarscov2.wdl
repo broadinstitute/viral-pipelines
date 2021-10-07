@@ -404,6 +404,11 @@ task crsp_meta_etl {
         if 'matrix_id' not in sample_meta.columns:
             sample_meta['matrix_id'] = np.nan
 
+        # stub test_ordered if it doesn't exist
+        if 'test_ordered' not in sample_meta.columns:
+            sample_meta['test_ordered'] = np.nan
+        sample_meta['test_ordered'].fillna('covid19_diagnostic')
+
         # validation checks
         assert sample_meta.geo_loc_name.isna().sum() == 0, "error: some samples missing geo_loc_name"
         assert sample_meta.collection_date.isna().sum() == 0, "error: some samples missing collection_date"
@@ -467,7 +472,8 @@ task crsp_meta_etl {
             for id in sample_meta['sample_name']]
 
         # prep biosample submission table
-        biosample = sample_meta[['sample_name', 'isolate', 'collected_by', 'collection_date', 'geo_loc_name', 'host_subject_id', 'anatomical_part', 'body_product']]
+        biosample = sample_meta[sample_meta.test_ordered == 'covid19_diagnostic'] ## until we sort with NCBI how to submit pooled BioSamples
+        biosample = biosample[['sample_name', 'isolate', 'collected_by', 'collection_date', 'geo_loc_name', 'host_subject_id', 'anatomical_part', 'body_product']]
         biosample = biosample.assign(
             bioproject_accession = '~{bioproject}',
             attribute_package = 'Pathogen.cl',
