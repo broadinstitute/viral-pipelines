@@ -7,6 +7,7 @@ task concatenate {
     input {
         Array[File] infiles
         String      output_name
+        Int         cpus = 4
     }
     command {
         cat ~{sep=" " infiles} > "~{output_name}"
@@ -14,7 +15,7 @@ task concatenate {
     runtime {
         docker: "ubuntu"
         memory: "1 GB"
-        cpu:    1
+        cpu:    cpus
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x2"
     }
