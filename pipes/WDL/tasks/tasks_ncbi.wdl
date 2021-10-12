@@ -307,7 +307,7 @@ task gisaid_meta_prep {
     # institutional mappings
     address_map = json.loads('~{address_map}')
     authors_map = json.loads('~{authors_map}')
-    assert "~{submitting_lab_name}" in address_map, f"error: institution '{submitting_lab_name}' not found in address_map"
+    assert "~{submitting_lab_name}" in address_map, f"error: institution '~{submitting_lab_name}' not found in address_map"
 
     # lookup table files to dicts
     sample_to_cmt = {}
