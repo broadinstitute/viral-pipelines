@@ -7,7 +7,7 @@ task alignment_metrics {
     File?  primers_bed
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.1.32"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
 
   String out_basename = basename(aligned_bam, ".bam")
@@ -17,11 +17,6 @@ task alignment_metrics {
     MEM_MB=$(free -m | head -2 | tail -1 | awk '{print $4}')
     XMX=$(echo "-Xmx"$MEM_MB"m")
     echo "Requesting $MEM_MB MB of RAM for Java"
-
-    # R fails unless you do this, CollectInsertSizeMetrics needs R
-    if [ ! -f /lib/x86_64-linux-gnu/libreadline.so.6 ]; then
-      ln -s /lib/x86_64-linux-gnu/libreadline.so.7 /lib/x86_64-linux-gnu/libreadline.so.6
-    fi
 
     # requisite Picard fasta indexing
     cp "~{ref_fasta}" reference.fasta
@@ -105,7 +100,7 @@ task plot_coverage {
     String? plotXLimits # of the form "min max" (ints, space between)
     String? plotYLimits # of the form "min max" (ints, space between)
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.1.32"
+    String  docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
   
   command {
@@ -187,7 +182,7 @@ task coverage_report {
     Array[File]  mapped_bam_idx # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name = "coverage_report.txt"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.1.32"
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
 
   command {
@@ -248,7 +243,7 @@ task fastqc {
   input {
     File   reads_bam
 
-    String docker = "quay.io/broadinstitute/viral-core:2.1.32"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
 
   String   reads_basename=basename(reads_bam, ".bam")
@@ -282,7 +277,7 @@ task align_and_count {
     Int    topNHits = 3
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.1.32"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
@@ -328,7 +323,7 @@ task align_and_count_summary {
 
     String       output_prefix = "count_summary"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.1.32"
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
 
   command {
