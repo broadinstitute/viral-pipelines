@@ -121,7 +121,7 @@ task zcat {
         cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
     >>>
     runtime {
-        docker: "quay.io/broadinstitute/viral-core:2.1.32"
+        docker: "quay.io/broadinstitute/viral-core:2.1.33"
         memory: "1 GB"
         cpu:    cpus
         disks: "local-disk 375 LOCAL"
@@ -391,7 +391,7 @@ task tsv_stack {
   input {
     Array[File]+ input_tsvs
     String       out_basename
-    String       docker = "quay.io/broadinstitute/viral-core:2.1.32"
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
 
   command {
@@ -516,7 +516,7 @@ task filter_sequences_by_length {
         File   sequences_fasta
         Int    min_non_N = 1
 
-        String docker = "quay.io/broadinstitute/viral-core:2.1.32"
+        String docker = "quay.io/broadinstitute/viral-core:2.1.33"
     }
     parameter_meta {
         sequences_fasta: {
