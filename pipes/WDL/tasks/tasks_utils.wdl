@@ -311,11 +311,12 @@ task tsv_join {
   }
 
   runtime {
-    memory: "7 GB"
+    memory: "15 GB"
     cpu: 2
     docker: "python:slim"
     disks: "local-disk 100 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
