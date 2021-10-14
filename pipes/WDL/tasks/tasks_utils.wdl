@@ -260,6 +260,7 @@ task tsv_join {
     String         id_col
     String         out_basename = "merged"
     String         out_suffix = ".txt"
+    Int            machine_mem_gb = 7
   }
 
   command <<<
@@ -311,7 +312,7 @@ task tsv_join {
   }
 
   runtime {
-    memory: "7 GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 2
     docker: "python:slim"
     disks: "local-disk 100 HDD"

@@ -528,7 +528,6 @@ task nextstrain_ncov_defaults {
         set -e
         wget -q "https://github.com/nextstrain/ncov/archive/~{nextstrain_ncov_repo_commit}.tar.gz"
         tar -xf "~{nextstrain_ncov_repo_commit}.tar.gz" --strip-components=1
-        cat defaults/clades.tsv defaults/subclades.tsv > clades-with-subclades.tsv
     }
     runtime {
         docker: docker
@@ -538,7 +537,7 @@ task nextstrain_ncov_defaults {
         dx_instance_type: "mem1_ssd1_v2_x2"
     }
     output {
-        File clades_tsv      = "clades-with-subclades.tsv"
+        File clades_tsv      = "defaults/clades.tsv"
         File lat_longs_tsv   = "defaults/lat_longs.tsv"
         File reference_fasta = "defaults/reference_seq.fasta"
         File reference_gb    = "defaults/reference_seq.gb"
