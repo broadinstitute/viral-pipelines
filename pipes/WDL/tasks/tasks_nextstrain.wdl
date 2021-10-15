@@ -452,15 +452,28 @@ task nextstrain_build_subsample {
         cat > my_profiles/config.yaml <<CONFIG
         configfile:
           - ~{default="defaults/parameters.yaml" parameters_yaml}
-          - ~{default="my_profiles/example/builds.yaml" builds_yaml}
-        config:
-          - sequences="~{alignment_msa_fasta}"
-          - metadata="~{sample_metadata_tsv}"
+          - builds.yaml
         printshellcmds: True
         show-failed-logs: True
         reason: True
         stats: stats.json
         CONFIG
+
+        # point to input data in builds.yaml
+        cat > builds.yaml <<INPUTS
+        inputs:
+            - name: dataset
+              sequences: "~{alignment_msa_fasta}"
+              metadata: "~{sample_metadata_tsv}"
+        INPUTS
+        if [ -n "~{default='' builds_yaml}" ]; then
+            # user specifies own builds, merge with pointers to data
+            cat "~{default='' builds_yaml}" >> builds.yaml
+        else
+            # user does not specify their own builds.yaml file, so use example file from ncov repo
+            # strip away default pointers to example data in example builds
+            tail +20 my_profiles/example/builds.yaml >> builds.yaml
+        fi
 
         # hard inclusion list
         KEEP_LIST="~{default='' keep_list}"
