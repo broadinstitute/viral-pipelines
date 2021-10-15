@@ -493,7 +493,11 @@ task nextstrain_build_subsample {
             -j $(nproc) \
             --resources mem_mb=$RAM_MB \
             --profile my_profiles \
-            results/"~{build_name}"/subsampled_sequences.fasta
+            results/"~{build_name}"/"~{build_name}"_subsampled_sequences.fasta.xz
+
+        # decompress xz's for downstream
+        xz -d results/"~{build_name}"/"~{build_name}"_subsampled_sequences.fasta.xz
+        xz -d results/"~{build_name}"/"~{build_name}"_subsampled_metadata.tsv.xz
 
         # grab logs and numbers
         set +o pipefail
@@ -520,7 +524,8 @@ task nextstrain_build_subsample {
         maxRetries: 2
     }
     output {
-        File            subsampled_msa  = "ncov/results/~{build_name}/subsampled_sequences.fasta"
+        File            subsampled_msa  = "ncov/results/~{build_name}/~{build_name}_subsampled_sequences.fasta"
+        File            subsampled_meta = "ncov/results/~{build_name}/~{build_name}_subsampled_metadata.tsv"
         File            subsample_logs  = "augur.filter.logs.txt"
         File            job_stats_json  = "ncov/stats.json"
         Int             sequences_out   = read_int("OUT_COUNT")
