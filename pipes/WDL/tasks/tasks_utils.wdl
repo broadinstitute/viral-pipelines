@@ -39,47 +39,25 @@ task zcat {
         import gzip, lzma, bz2
         import lz4.frame # pypi library: lz4
         import zstandard as zstd # pypi library: zstandard
-
-        # zstd_open() from: https://github.com/broadinstitute/viral-core/blob/master/util/file.py
-        def zstd_open(fname, mode='r', **kwargs):
-            '''Handle both text and byte decompression of the file.'''
-            if 'r' in mode:
-                with open(fname, 'rb') as fh:
-                    dctx = zstd.ZstdDecompressor()
-                    stream_reader = dctx.stream_reader(fh)
-                    if 'b' not in mode:
-                        text_stream = io.TextIOWrapper(stream_reader, encoding='utf-8-sig')
-                        yield text_stream
-                        return
-                    yield stream_reader
-            else:
-                with open(fname, 'wb') as fh:
-                    cctx = zstd.ZstdCompressor(level=kwargs.get('level', 10),
-                                               threads=util.misc.sanitize_thread_count(kwargs.get('threads', None)))
-                    stream_writer = cctx.stream_writer(fh)
-                    if 'b' not in mode:
-                        text_stream = io.TextIOWrapper(stream_reader, encoding='utf-8')
-                        yield text_stream
-                        return
-                    yield stream_writer
+        import util.file # viral-core
 
         # magic bytes from here:
         # https://en.wikipedia.org/wiki/List_of_file_signatures
         magic_bytes_to_compressor = {
             b"\x1f\x8b\x08":             gzip.open,      # .gz
             b"\xfd\x37\x7a\x58\x5a\x00": lzma.open,      # .xz
-            b"\x42\x5a\x68":             bz2.open,       # .bz2 
+            b"\x42\x5a\x68":             bz2.open,       # .bz2
             b"\x04\x22\x4d\x18":         lz4.frame.open, # .lz4
-            b"\x28\xb5\x2f\xfd":         zstd_open       # .zst (open using function above rather than library function)
+            b"\x28\xb5\x2f\xfd":         util.file.zstd_open   # .zst (open using function above rather than library function)
         }
         extension_to_compressor = {
             ".gz":   gzip.open,      # .gz
             ".gzip": gzip.open,      # .gz
             ".xz":   lzma.open,      # .xz
-            ".bz2":  bz2.open,       # .bz2 
+            ".bz2":  bz2.open,       # .bz2
             ".lz4":  lz4.frame.open, # .lz4
-            ".zst":  zstd_open,      # .zst (open using function above rather than library function)
-            ".zstd": zstd_open       # .zst (open using function above rather than library function)
+            ".zst":  util.file.zstd_open,  # .zst (open using function above rather than library function)
+            ".zstd": util.file.zstd_open   # .zst (open using function above rather than library function)
         }
 
         # max number of bytes we need to identify one of the files listed above
@@ -267,13 +245,63 @@ task tsv_join {
     python3<<CODE
     import collections
     import csv
-    import gzip
+    import os.path
+    import gzip, lzma, bz2
+    import lz4.frame # pypi library: lz4
+    import zstandard as zstd # pypi library: zstandard
+    import util.file # viral-core
 
+    # magic bytes from here:
+    # https://en.wikipedia.org/wiki/List_of_file_signatures
+    magic_bytes_to_compressor = {
+        b"\x1f\x8b\x08":             gzip.open,      # .gz
+        b"\xfd\x37\x7a\x58\x5a\x00": lzma.open,      # .xz
+        b"\x42\x5a\x68":             bz2.open,       # .bz2
+        b"\x04\x22\x4d\x18":         lz4.frame.open, # .lz4
+        b"\x28\xb5\x2f\xfd":         util.file.zstd_open   # .zst (open using function above rather than library function)
+    }
+    extension_to_compressor = {
+        ".gz":   gzip.open,      # .gz
+        ".gzip": gzip.open,      # .gz
+        ".xz":   lzma.open,      # .xz
+        ".bz2":  bz2.open,       # .bz2
+        ".lz4":  lz4.frame.open, # .lz4
+        ".zst":  util.file.zstd_open,  # .zst (open using function above rather than library function)
+        ".zstd": util.file.zstd_open   # .zst (open using function above rather than library function)
+    }
+
+    # max number of bytes we need to identify one of the files listed above
+    max_len = max(len(x) for x in magic_bytes_to_compressor.keys())
+
+    def open_or_compressed_open(*args, **kwargs):
+        input_file = args[0]
+
+        # if the file exists, try to guess the (de) compressor based on "magic numbers"
+        # at the very start of the file
+        if os.path.isfile(input_file):
+            with open(input_file, "rb") as f:
+                file_start = f.read(max_len)
+            for magic, compressor_open_fn in magic_bytes_to_compressor.items():
+                if file_start.startswith(magic):
+                    print("opening via {}: {}".format(compressor_open_fn.__module__,input_file))
+                    return compressor_open_fn(*args, **kwargs)
+            # fall back to generic open if compression type could not be determine from magic numbers
+            return open(*args, **kwargs)
+        else:
+            # if this is a new file, try to choose the opener based on file extension
+            for ext,compressor_open_fn in extension_to_compressor.items():
+                if str(input_file).lower().endswith(ext):
+                    print("opening via {}: {}".format(compressor_open_fn.__module__,input_file))
+                    return compressor_open_fn(*args, **kwargs)
+            # fall back to generic open if compression type could not be determine from magic numbers
+            return open(*args, **kwargs)
+
+    # prep input readers
     out_basename = '~{out_basename}'
     join_id = '~{id_col}'
     in_tsvs = '~{sep="*" input_tsvs}'.split('*')
     readers = list(
-      csv.DictReader(gzip.open(fn, 'rt') if fn.endswith('.gz') else open(fn, 'rt'), delimiter='\t')
+      csv.DictReader(open_or_compressed_open(fn, 'rt'), delimiter='\t')
       for fn in in_tsvs)
 
     # prep the output header
@@ -300,7 +328,7 @@ task tsv_join {
     out_ids = list(collections.OrderedDict(((i,0) for i in out_ids)).keys())
 
     # write output
-    with open(out_basename+'~{out_suffix}', 'w', newline='') as outf:
+    with open_or_compressed_open(out_basename+'~{out_suffix}', 'w', newline='') as outf:
         writer = csv.DictWriter(outf, header, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
         writer.writeheader()
         writer.writerows(out_row_by_id[row_id] for row_id in out_ids)
@@ -314,7 +342,7 @@ task tsv_join {
   runtime {
     memory: "~{machine_mem_gb} GB"
     cpu: 2
-    docker: "python:slim"
+    docker: "quay.io/broadinstitute/viral-core:2.1.33"
     disks: "local-disk 100 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
