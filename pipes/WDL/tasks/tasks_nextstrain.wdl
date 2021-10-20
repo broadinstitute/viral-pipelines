@@ -414,8 +414,8 @@ task nextstrain_build_subsample {
         File?  keep_list
 
         Int?   machine_mem_gb
-        String docker = "nextstrain/base:build-20210413T201712Z"
-        String nextstrain_ncov_repo_commit = "0f30b1c801384fbf871f644ca241336a1d8fa04a"
+        String docker = "nextstrain/base:build-20211012T204409Z"
+        String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
     }
     parameter_meta {
         alignment_msa_fasta: {
@@ -452,15 +452,28 @@ task nextstrain_build_subsample {
         cat > my_profiles/config.yaml <<CONFIG
         configfile:
           - ~{default="defaults/parameters.yaml" parameters_yaml}
-          - ~{default="my_profiles/example/builds.yaml" builds_yaml}
-        config:
-          - sequences="~{alignment_msa_fasta}"
-          - metadata="~{sample_metadata_tsv}"
+          - builds.yaml
         printshellcmds: True
         show-failed-logs: True
         reason: True
         stats: stats.json
         CONFIG
+
+        # point to input data in builds.yaml
+        cat > builds.yaml <<INPUTS
+        inputs:
+            - name: dataset
+              sequences: "~{alignment_msa_fasta}"
+              metadata: "~{sample_metadata_tsv}"
+        INPUTS
+        if [ -n "~{default='' builds_yaml}" ]; then
+            # user specifies own builds, merge with pointers to data
+            cat "~{default='' builds_yaml}" >> builds.yaml
+        else
+            # user does not specify their own builds.yaml file, so use example file from ncov repo
+            # strip away default pointers to example data in example builds
+            tail +20 my_profiles/example/builds.yaml >> builds.yaml
+        fi
 
         # hard inclusion list
         KEEP_LIST="~{default='' keep_list}"
@@ -472,7 +485,8 @@ task nextstrain_build_subsample {
         # seed input data (skip some upstream steps in the DAG)
         # strip away anything after a space (esp in fasta headers--they break priorities.py)
         mkdir -p results
-        cut -f 1 -d ' ' "~{alignment_msa_fasta}" > results/aligned.fasta
+        cut -f 1 -d ' ' "~{alignment_msa_fasta}" > results/masked_dataset.fasta
+        xz -2 results/masked_dataset.fasta
 
         # execute snakemake on pre-iqtree target
         RAM_MB=$(cat /proc/meminfo | grep MemTotal | perl -lape 's/MemTotal:\s+(\d+)\d\d\d\s+kB/$1/')
@@ -480,12 +494,16 @@ task nextstrain_build_subsample {
             -j $(nproc) \
             --resources mem_mb=$RAM_MB \
             --profile my_profiles \
-            results/"~{build_name}"/subsampled_sequences.fasta
+            results/"~{build_name}"/"~{build_name}"_subsampled_sequences.fasta.xz
+
+        # decompress xz's for downstream
+        xz -d results/"~{build_name}"/"~{build_name}"_subsampled_sequences.fasta.xz
+        xz -d results/"~{build_name}"/"~{build_name}"_subsampled_metadata.tsv.xz
 
         # grab logs and numbers
         set +o pipefail
         grep . logs/subsample_"~{build_name}"_* > ../augur.filter.logs.txt
-        grep \> "results/~{build_name}/subsampled_sequences.fasta" | wc -l | tee ../OUT_COUNT
+        grep \> "results/~{build_name}/~{build_name}_subsampled_sequences.fasta" | wc -l | tee ../OUT_COUNT
         for i in results/"~{build_name}"/sample-*.fasta; do
           group=$(basename $i .fasta | cut -f 2- -d -)
           n=$(grep \> $i | wc -l)
@@ -507,7 +525,8 @@ task nextstrain_build_subsample {
         maxRetries: 2
     }
     output {
-        File            subsampled_msa  = "ncov/results/~{build_name}/subsampled_sequences.fasta"
+        File            subsampled_msa  = "ncov/results/~{build_name}/~{build_name}_subsampled_sequences.fasta"
+        File            subsampled_meta = "ncov/results/~{build_name}/~{build_name}_subsampled_metadata.tsv"
         File            subsample_logs  = "augur.filter.logs.txt"
         File            job_stats_json  = "ncov/stats.json"
         Int             sequences_out   = read_int("OUT_COUNT")
@@ -521,14 +540,13 @@ task nextstrain_build_subsample {
 
 task nextstrain_ncov_defaults {
     input {
-        String nextstrain_ncov_repo_commit = "5dbca8a45a64e39057c22163f154db981f7ed5c1"
-        String docker                      = "nextstrain/base:build-20210413T201712Z"
+        String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
+        String docker                      = "nextstrain/base:build-20211012T204409Z"
     }
     command {
         set -e
         wget -q "https://github.com/nextstrain/ncov/archive/~{nextstrain_ncov_repo_commit}.tar.gz"
         tar -xf "~{nextstrain_ncov_repo_commit}.tar.gz" --strip-components=1
-        cat defaults/clades.tsv defaults/subclades.tsv > clades-with-subclades.tsv
     }
     runtime {
         docker: docker
@@ -538,7 +556,7 @@ task nextstrain_ncov_defaults {
         dx_instance_type: "mem1_ssd1_v2_x2"
     }
     output {
-        File clades_tsv      = "clades-with-subclades.tsv"
+        File clades_tsv      = "defaults/clades.tsv"
         File lat_longs_tsv   = "defaults/lat_longs.tsv"
         File reference_fasta = "defaults/reference_seq.fasta"
         File reference_gb    = "defaults/reference_seq.gb"
@@ -557,8 +575,8 @@ task nextstrain_deduplicate_sequences {
         File sequences_fasta
         Boolean error_on_seq_diff = false
 
-        String nextstrain_ncov_repo_commit = "99ccfc5c6601e78468e7db193ee453128ba593ff"
-        String docker                      = "nextstrain/base:build-20210413T201712Z"
+        String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
+        String docker                      = "nextstrain/base:build-20211012T204409Z"
     }
 
     parameter_meta {
@@ -608,8 +626,8 @@ task nextstrain_ncov_sanitize_gisaid_data {
 
         String? prefix_to_strip
 
-        String nextstrain_ncov_repo_commit = "183e94fd5ee73be97d66b7b7d90b167146fa0752"
-        String docker                      = "nextstrain/base:build-20210413T201712Z"
+        String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
+        String docker                      = "nextstrain/base:build-20211012T204409Z"
     }
 
     parameter_meta {
@@ -682,7 +700,7 @@ task filter_subsample_sequences {
         Array[String]? exclude_where
         Array[String]? include_where
 
-        String         docker = "nextstrain/base:build-20210413T201712Z"
+        String         docker = "nextstrain/base:build-20211012T204409Z"
     }
     parameter_meta {
         sequences_fasta: {
@@ -765,7 +783,7 @@ task filter_sequences_to_list {
         Array[File]? keep_list
 
         String       out_fname = sub(sub(basename(sequences), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
-        String       docker = "nextstrain/base:build-20210413T201712Z"
+        String       docker = "nextstrain/base:build-20211012T204409Z"
     }
     parameter_meta {
         sequences: {
@@ -1055,7 +1073,7 @@ task augur_mafft_align {
         Boolean fill_gaps = true
         Boolean remove_reference = true
 
-        String  docker = "nextstrain/base:build-20210413T201712Z"
+        String  docker = "nextstrain/base:build-20211012T204409Z"
     }
     command {
         set -e
@@ -1123,7 +1141,7 @@ task augur_mask_sites {
         File   sequences
         File?  mask_bed
 
-        String docker = "nextstrain/base:build-20210413T201712Z"
+        String docker = "nextstrain/base:build-20211012T204409Z"
     }
     parameter_meta {
         sequences: {
@@ -1179,7 +1197,7 @@ task draft_augur_tree {
         String? tree_builder_args
 
         Int?    cpus
-        String  docker = "nextstrain/base:build-20210413T201712Z"
+        String  docker = "nextstrain/base:build-20211012T204409Z"
     }
     parameter_meta {
         msa_or_vcf: {
@@ -1246,7 +1264,7 @@ task refine_augur_tree {
         String?  divergence_units = "mutations"
         File?    vcf_reference
 
-        String   docker = "nextstrain/base:build-20210413T201712Z"
+        String   docker = "nextstrain/base:build-20211012T204409Z"
     }
     parameter_meta {
         msa_or_vcf: {
@@ -1316,7 +1334,7 @@ task ancestral_traits {
         File?         weights
         Float?        sampling_bias_correction
 
-        String        docker = "nextstrain/base:build-20210413T201712Z"
+        String        docker = "nextstrain/base:build-20211012T204409Z"
     }
     String out_basename = basename(tree, '.nwk')
     command {
@@ -1367,7 +1385,7 @@ task ancestral_tree {
         File?    vcf_reference
         File?    output_vcf
 
-        String   docker = "nextstrain/base:build-20210413T201712Z"
+        String   docker = "nextstrain/base:build-20211012T204409Z"
     }
     parameter_meta {
         msa_or_vcf: {
@@ -1426,7 +1444,7 @@ task translate_augur_tree {
         File?  vcf_reference_output
         File?  vcf_reference
 
-        String docker = "nextstrain/base:build-20210413T201712Z"
+        String docker = "nextstrain/base:build-20211012T204409Z"
     }
     String out_basename = basename(tree, '.nwk')
     command {
@@ -1480,7 +1498,7 @@ task tip_frequencies {
         Boolean  censored = false
         Boolean  include_internal_nodes = false
 
-        String   docker = "nextstrain/base:build-20210413T201712Z"
+        String   docker = "nextstrain/base:build-20211012T204409Z"
         String   out_basename = basename(tree, '.nwk')
     }
     command {
@@ -1538,7 +1556,7 @@ task assign_clades_to_nodes {
         File ref_fasta
         File clades_tsv
 
-        String docker = "nextstrain/base:build-20210413T201712Z"
+        String docker = "nextstrain/base:build-20211012T204409Z"
     }
     String out_basename = basename(basename(tree_nwk, ".nwk"), "_timetree")
     command {
@@ -1581,7 +1599,7 @@ task augur_import_beast {
         String? tip_date_delimiter
 
         Int?    machine_mem_gb
-        String  docker = "nextstrain/base:build-20210413T201712Z"
+        String  docker = "nextstrain/base:build-20211012T204409Z"
     }
     String tree_basename = basename(beast_mcc_tree, ".tree")
     command {
@@ -1639,7 +1657,7 @@ task export_auspice_json {
 
         String out_basename = basename(basename(tree, ".nwk"), "_timetree")
 
-        String docker = "nextstrain/base:build-20210413T201712Z"
+        String docker = "nextstrain/base:build-20211012T204409Z"
     }
     
     command {
