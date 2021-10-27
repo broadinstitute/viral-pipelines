@@ -64,6 +64,7 @@ task nextclade_one_sample {
         cpu:    2
         disks: "local-disk 50 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         String nextclade_version = read_string("VERSION")
@@ -154,6 +155,7 @@ task nextclade_many_samples {
         cpu:    4
         disks: "local-disk 100 HDD"
         dx_instance_type: "mem1_ssd1_v2_x4"
+        maxRetries: 2
     }
     output {
         Map[String,String] nextclade_clade   = read_json("NEXTCLADE_CLADE.json")
@@ -239,6 +241,7 @@ task nextmeta_prep {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -350,6 +353,7 @@ task derived_cols {
         cpu:    1
         disks: "local-disk 50 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         File derived_metadata = "~{basename}.derived_cols.txt"
@@ -395,6 +399,7 @@ task filter_segments {
         cpu:    1
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         File assembly_of_segment = stdout()
@@ -554,6 +559,7 @@ task nextstrain_ncov_defaults {
         cpu:   1
         disks:  "local-disk 50 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         File clades_tsv      = "defaults/clades.tsv"
@@ -609,6 +615,7 @@ task nextstrain_deduplicate_sequences {
         cpu:   1
         disks:  "local-disk 375 LOCAL"
         dx_instance_type: "mem2_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         File sequences_deduplicated_fasta = "~{out_filename}"
@@ -670,6 +677,7 @@ task nextstrain_ncov_sanitize_gisaid_data {
         cpu:   1
         disks:  "local-disk 375 LOCAL"
         dx_instance_type: "mem2_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         File sequences_gisaid_sanitized_fasta = "~{out_basename}_sequences_sanitized_for_nextstrain.fasta.gz"
@@ -1126,6 +1134,7 @@ task snp_sites {
         disks:  "local-disk 100 HDD"
         preemptible: 0
         dx_instance_type: "mem3_ssd1_v2_x4"
+        maxRetries: 2
     }
     output {
         File   snps_vcf          = "~{out_basename}.vcf"

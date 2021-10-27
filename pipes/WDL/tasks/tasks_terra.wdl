@@ -26,6 +26,7 @@ task gcs_copy {
     docker: "quay.io/broadinstitute/viral-baseimage:0.1.20"
     memory: "1 GB"
     cpu: 1
+    maxRetries: 1
   }
 }
 
@@ -57,6 +58,7 @@ task upload_entities_tsv {
     docker: docker
     memory: "2 GB"
     cpu: 1
+    maxRetries: 0
   }
   output {
     Array[String] tables = read_lines('TABLES_MODIFIED')
@@ -118,6 +120,7 @@ task download_entities_tsv {
     docker: docker
     memory: "2 GB"
     cpu: 1
+    maxRetries: 2
   }
   output {
     File tsv_file = '~{outname}'

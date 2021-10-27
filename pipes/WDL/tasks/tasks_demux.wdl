@@ -77,6 +77,7 @@ task samplesheet_rename_ids {
     cpu: 1
     disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -119,6 +120,7 @@ task revcomp_i5 {
     cpu:    1
     disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -426,6 +428,7 @@ task map_map_setdefault {
     cpu: 1
     disks: "local-disk 20 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -455,5 +458,6 @@ task merge_maps {
     cpu: 1
     disks: "local-disk 20 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
