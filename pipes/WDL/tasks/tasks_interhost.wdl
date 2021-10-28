@@ -41,6 +41,7 @@ task multi_align_mafft_ref {
     cpu: 8
     disks: "local-disk 200 HDD"
     dx_instance_type: "mem3_ssd1_v2_x8"
+    maxRetries: 2
   }
 }
 
@@ -83,6 +84,7 @@ task multi_align_mafft {
     cpu: 8
     disks: "local-disk 200 HDD"
     dx_instance_type: "mem2_ssd1_v2_x8"
+    maxRetries: 2
   }
 }
 
@@ -124,6 +126,7 @@ task beast {
     memory: "7 GB"
     cpu:    4
     disks: "local-disk 300 HDD"
+    maxRetries: 1
     bootDiskSizeGb: 50
     gpu:                 true                # dxWDL
     dx_timeout:          "40H"               # dxWDL
@@ -166,6 +169,7 @@ task index_ref {
     cpu: 2
     memory: select_first([machine_mem_gb, 4]) + " GB"
     disks: "local-disk 100 HDD"
+    maxRetries: 2
   }
 }
 
@@ -192,6 +196,7 @@ task trimal_clean_msa {
     cpu: 4
     disks: "local-disk 100 HDD"
     dx_instance_type: "mem1_ssd1_v2_x8"
+    maxRetries: 2
   }
 }
 
@@ -248,6 +253,7 @@ task merge_vcfs_bcftools {
     memory: select_first([machine_mem_gb, 3]) + " GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -309,5 +315,6 @@ task merge_vcfs_gatk {
     memory: select_first([machine_mem_gb, 3]) + " GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }

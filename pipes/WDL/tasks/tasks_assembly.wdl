@@ -275,6 +275,7 @@ task ivar_trim_stats {
         cpu: 1
         disks: "local-disk 50 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
 }
 

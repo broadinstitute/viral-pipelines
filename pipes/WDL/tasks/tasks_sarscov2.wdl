@@ -54,6 +54,7 @@ task pangolin_one_sample {
         cpu:    2
         disks: "local-disk 50 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         String     date                   = read_string("DATE")
@@ -138,6 +139,7 @@ task pangolin_many_samples {
         cpu:    16
         disks: "local-disk 100 HDD"
         dx_instance_type: "mem1_ssd1_v2_x16"
+        maxRetries: 2
     }
     output {
         Map[String,String] pango_lineage          = read_json("PANGO_LINEAGE.json")
@@ -197,6 +199,7 @@ task sequencing_report {
         cpu:    2
         disks: "local-disk 50 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         Array[File] reports = glob("*.pdf")
@@ -343,6 +346,7 @@ task sc2_meta_final {
         cpu:    2
         disks: "local-disk 50 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         File meta_tsv = "~{out_basename}.final.tsv"
@@ -510,6 +514,7 @@ task crsp_meta_etl {
         cpu:    2
         disks: "local-disk 50 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         File          biosample_submit_tsv = "biosample_meta_submit-~{out_basename}.tsv"
@@ -545,5 +550,6 @@ task gisaid_uploader {
     memory: "2 GB"
     cpu: 2
     disks: "local-disk 100 HDD"
+    maxRetries: 0
   }
 }
