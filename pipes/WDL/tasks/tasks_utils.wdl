@@ -18,6 +18,7 @@ task concatenate {
         cpu:    cpus
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         File combined = "${output_name}"
@@ -104,6 +105,7 @@ task zcat {
         cpu:    cpus
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         File    combined     = "${output_name}"
@@ -130,6 +132,7 @@ task fasta_to_ids {
         cpu:    1
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         File ids_txt = "~{basename}.txt"
@@ -152,6 +155,7 @@ task md5sum {
     cpu: 1
     disks: "local-disk 100 HDD"
     dx_instance_type: "mem1_ssd2_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -188,6 +192,7 @@ task fetch_row_from_tsv {
     cpu: 1
     disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -225,6 +230,7 @@ task fetch_col_from_tsv {
     cpu: 1
     disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -378,6 +384,7 @@ task tsv_to_csv {
     docker: "python:slim"
     disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -410,6 +417,7 @@ task tsv_drop_cols {
         cpu:    1
         disks: "local-disk 50 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         File out_tsv = "~{out_filename}"
@@ -441,6 +449,7 @@ task tsv_stack {
     docker: "${docker}"
     disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -460,6 +469,7 @@ task make_empty_file {
     docker: "ubuntu"
     disks: "local-disk 10 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -480,6 +490,7 @@ task rename_file {
     docker: "ubuntu"
     disks: "local-disk 100 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -503,6 +514,7 @@ task today {
     docker: "quay.io/broadinstitute/viral-baseimage:0.1.20"
     disks: "local-disk 10 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -535,6 +547,7 @@ task s3_copy {
     memory: "2 GB"
     cpu: 2
     disks: "local-disk 1000 HDD"
+    maxRetries: 2
   }
 }
 
@@ -588,6 +601,7 @@ task filter_sequences_by_length {
         cpu :   1
         disks:  "local-disk 300 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         File filtered_fasta    = out_fname

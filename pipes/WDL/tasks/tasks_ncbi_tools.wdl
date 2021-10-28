@@ -141,6 +141,7 @@ task Fetch_SRA_to_BAM {
         disks:   "local-disk 750 LOCAL"
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
+        maxRetries: 2
     }
 }
 
@@ -200,6 +201,7 @@ task biosample_tsv_filter_preexisting {
         disks:   "local-disk 50 HDD"
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
+        maxRetries: 2
     }
 }
 
@@ -229,6 +231,7 @@ task fetch_biosamples {
         disks:   "local-disk 50 HDD"
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
+        maxRetries: 2
     }
 }
 
@@ -275,6 +278,7 @@ task ncbi_sftp_upload {
         disks:   "local-disk 100 HDD"
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
+        maxRetries: 0
     }
 }
 
@@ -311,6 +315,7 @@ task sra_tsv_to_xml {
         disks:   "local-disk 50 HDD"
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
+        maxRetries: 2
     }
 }
 
@@ -345,6 +350,7 @@ task biosample_submit_tsv_to_xml {
         disks:   "local-disk 50 HDD"
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
+        maxRetries: 2
     }
 }
 
@@ -383,6 +389,7 @@ task biosample_submit_tsv_ftp_upload {
         disks:   "local-disk 100 HDD"
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
+        maxRetries: 0
     }
 }
 
@@ -418,6 +425,7 @@ task biosample_xml_response_to_tsv {
         disks:   "local-disk 100 HDD"
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
+        maxRetries: 2
     }
 }
 
@@ -506,6 +514,7 @@ task group_sra_bams_by_biosample {
     cpu: 1
     disks: "local-disk 100 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 

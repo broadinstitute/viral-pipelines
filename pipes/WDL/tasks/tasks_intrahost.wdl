@@ -109,6 +109,7 @@ task polyphonia_detect_cross_contamination {
     memory: "13 GB"
     disks:  "local-disk 100 HDD"
     dx_instance_type: "mem1_ssd1_v2_x4"
+    maxRetries: 2
   }
 }
 
@@ -144,6 +145,7 @@ task lofreq {
     memory: "3 GB"
     disks:  "local-disk 200 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -183,6 +185,7 @@ task isnvs_per_sample {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 7]) + " GB"
     dx_instance_type: "mem1_ssd1_v2_x8"
+    maxRetries: 2
   }
 }
 
@@ -260,6 +263,7 @@ task isnvs_vcf {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 4]) + " GB"
     dx_instance_type: "mem1_ssd1_v2_x4"
+    maxRetries: 2
   }
 }
 
@@ -351,5 +355,6 @@ task annotate_vcf_snpeff {
     memory: select_first([machine_mem_gb, 4]) + " GB"
     disks:  "local-disk 375 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x4"
+    maxRetries: 2
   }
 }

@@ -20,6 +20,7 @@ task max {
     cpu: 1
     disks: "local-disk 10 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -72,6 +73,7 @@ task group_bams_by_sample {
     cpu: 1
     disks: "local-disk 100 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -122,6 +124,7 @@ task get_sample_meta {
     cpu: 1
     disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -377,5 +380,6 @@ task read_depths {
     memory: "3 GB"
     disks:  "local-disk 200 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
