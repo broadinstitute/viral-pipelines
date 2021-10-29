@@ -195,9 +195,9 @@ task sequencing_report {
     }
     runtime {
         docker: docker
-        memory: "2 GB"
+        memory: "4 GB"
         cpu:    2
-        disks: "local-disk 50 HDD"
+        disks: "local-disk 250 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
