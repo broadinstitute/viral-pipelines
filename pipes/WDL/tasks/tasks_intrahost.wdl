@@ -23,6 +23,7 @@ task polyphonia_detect_cross_contamination {
     Boolean?     compare_full_column        = false
     Boolean?     compare_full_plate         = false
     
+    Boolean?     print_all_isnvs     = true
     Boolean?     print_all           = false
 
     String       out_basename = "potential_cross_contamination"
@@ -52,8 +53,8 @@ task polyphonia_detect_cross_contamination {
     compare_full_column: { description: "Compare samples in the same column (e.g., column 8)" }
     compare_full_plate:  { description: "Compare all samples in the same plate map" }
     
+    print_all_isnvs:     { description: "Include all threshold-passing samples in iSNVs visualizations, including samples without plate neighbors" }
     print_all:           { description: "Output outcomes of all comparisons (all comparisons are marked as potential cross-contamination)" }
-    
   }
 
   command <<<
@@ -94,6 +95,7 @@ task polyphonia_detect_cross_contamination {
       --cores `nproc` \
       --verbose TRUE \
       --overwrite TRUE \
+      --print-all-iSNVs ~{true="TRUE" false="FALSE" print_all_isnvs} \
       --print-all ~{true="TRUE" false="FALSE" print_all}
   >>>
 
