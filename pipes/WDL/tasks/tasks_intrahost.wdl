@@ -53,7 +53,7 @@ task polyphonia_detect_cross_contamination {
     compare_full_column: { description: "Compare samples in the same column (e.g., column 8)" }
     compare_full_plate:  { description: "Compare all samples in the same plate map" }
     
-    print_all_isnvs:     { description: "Include all threshold-passing samples in isnvs visualizations, including samples without plate neighbors" }
+    print_all_isnvs:     { description: "Include all threshold-passing samples in iSNVs visualizations, including samples without plate neighbors" }
     print_all:           { description: "Output outcomes of all comparisons (all comparisons are marked as potential cross-contamination)" }
   }
 
