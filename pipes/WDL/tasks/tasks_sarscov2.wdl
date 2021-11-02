@@ -9,7 +9,7 @@ task pangolin_one_sample {
         Int?    min_length
         Float?  max_ambig
         Boolean inference_usher=true
-        String  docker = "quay.io/staphb/pangolin:3.1.14-pangolearn-2021-10-13"
+        String  docker = "quay.io/staphb/pangolin:3.1.16-pangolearn-2021-10-18"
     }
     String basename = basename(genome_fasta, ".fasta")
     command <<<
@@ -82,7 +82,7 @@ task pangolin_many_samples {
         Float?       max_ambig
         Boolean      inference_usher=true
         String       basename
-        String       docker = "quay.io/staphb/pangolin:3.1.14-pangolearn-2021-10-13"
+        String       docker = "quay.io/staphb/pangolin:3.1.16-pangolearn-2021-10-18"
     }
     command <<<
         date | tee DATE
@@ -195,9 +195,9 @@ task sequencing_report {
     }
     runtime {
         docker: docker
-        memory: "2 GB"
+        memory: "4 GB"
         cpu:    2
-        disks: "local-disk 50 HDD"
+        disks: "local-disk 250 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
