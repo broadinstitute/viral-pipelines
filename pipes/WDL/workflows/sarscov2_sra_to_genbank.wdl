@@ -13,6 +13,7 @@ workflow sarscov2_sra_to_genbank {
         description: "Full SARS-CoV-2 analysis workflow starting from SRA data and metadata and performing assembly, spike-in analysis, qc, lineage assignment, and packaging assemblies for data release."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     parameter_meta {

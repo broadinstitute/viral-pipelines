@@ -10,6 +10,7 @@ workflow sarscov2_data_release {
         description: "Submit data bundles to databases and repositories"
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     input {

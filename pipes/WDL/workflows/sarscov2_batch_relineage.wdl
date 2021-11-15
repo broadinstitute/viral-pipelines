@@ -7,6 +7,7 @@ import "../tasks/tasks_utils.wdl" as utils
 workflow sarscov2_batch_relineage {
     meta {
         description: "Re-call Nextclade and Pangolin lineages on a flowcell's worth of SARS-CoV-2 genomes"
+        allowNestedInputs: true
     }
 
     input {

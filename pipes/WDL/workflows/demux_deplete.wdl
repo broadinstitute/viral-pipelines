@@ -10,6 +10,7 @@ workflow demux_deplete {
         description: "Picard-based demultiplexing and basecalling from a tarball of a raw BCL directory, followed by QC metrics, depletion, and SRA submission prep."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     input {

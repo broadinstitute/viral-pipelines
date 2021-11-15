@@ -9,6 +9,7 @@ workflow sarscov2_nextstrain_aligned_input {
         description: "Take aligned assemblies, build trees, and convert to json representation suitable for Nextstrain visualization. See https://nextstrain.org/docs/getting-started/ and https://nextstrain-augur.readthedocs.io/en/stable/"
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     input {
