@@ -141,13 +141,12 @@ workflow sarscov2_data_release {
                 s3_uri_prefix   = "~{s3_prefix}/",
                 aws_credentials = select_first([cdc_s3_credentials])
         }
-        scatter(reads in cdc_aligned_trimmed_bams) {
-            call utils.s3_copy as s3_cdc_dump_reads {
-                input:
-                    infiles         = [reads],
-                    s3_uri_prefix   = "~{s3_prefix}/rawfiles/",
-                    aws_credentials = select_first([cdc_s3_credentials])
-            }
+        call utils.s3_copy as s3_cdc_dump_reads {
+            input:
+                infiles         = cdc_aligned_trimmed_bams,
+                s3_uri_prefix   = "~{s3_prefix}/rawfiles/",
+                aws_credentials = select_first([cdc_s3_credentials]),
+                disk_gb         = 2000
         }
         call utils.s3_copy as s3_cdc_complete {
             input:

@@ -523,6 +523,7 @@ task s3_copy {
     Array[File] infiles
     String      s3_uri_prefix
     File        aws_credentials
+    Int         disk_gb = 1000
     String?     nop_block # optional ignored input just to allow blocking
   }
   meta {
@@ -546,7 +547,7 @@ task s3_copy {
     docker: "quay.io/broadinstitute/viral-baseimage:0.1.20"
     memory: "2 GB"
     cpu: 2
-    disks: "local-disk 1000 HDD"
+    disks: "local-disk ~{disk_gb} HDD"
     maxRetries: 2
   }
 }
