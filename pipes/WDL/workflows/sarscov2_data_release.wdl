@@ -146,14 +146,15 @@ workflow sarscov2_data_release {
                 infiles         = cdc_aligned_trimmed_bams,
                 s3_uri_prefix   = "~{s3_prefix}/rawfiles/",
                 aws_credentials = select_first([cdc_s3_credentials]),
-                disk_gb         = 2000
+                disk_gb         = 2500,
+                cpus            = 16
         }
         call utils.s3_copy as s3_cdc_complete {
             input:
                 infiles         = [upload_complete.out],
                 s3_uri_prefix   = "~{s3_prefix}/",
                 aws_credentials = select_first([cdc_s3_credentials]),
-                nop_block       = write_lines(flatten([flatten(s3_cdc_dump_reads.out_uris), s3_cdc_dump_meta.out_uris]))
+                nop_block       = write_lines(flatten([s3_cdc_dump_reads.out_uris, s3_cdc_dump_meta.out_uris]))
                 # this step must wait until all of the scattered reads are finished uploading
         }
     }
