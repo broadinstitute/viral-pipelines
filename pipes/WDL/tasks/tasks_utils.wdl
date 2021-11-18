@@ -548,7 +548,7 @@ task s3_copy {
     docker: "quay.io/broadinstitute/viral-baseimage:0.1.20"
     memory: "2 GB"
     cpu: cpus
-    disks: "local-disk ~{disk_gb} HDD"
+    disks: "local-disk ~{disk_gb} SSD"
     maxRetries: 2
   }
 }
