@@ -9,13 +9,18 @@ task pangolin_one_sample {
         Int?    min_length
         Float?  max_ambig
         Boolean inference_usher=true
+        Boolean update_dbs_now=false
         String  docker = "quay.io/staphb/pangolin:3.1.16-pangolearn-2021-11-09"
     }
     String basename = basename(genome_fasta, ".fasta")
     command <<<
+        set -ex
+
+        if [ -n "~{true='UPDATE' false='' update_dbs_now}" ]; then
+            pangolin --update
+        fi
         date | tee DATE
         conda list -n pangolin | grep "usher" | awk -F ' +' '{print$1, $2}' | tee VERSION_PANGO_USHER
-        set -ex
         pangolin -v | tee VERSION_PANGOLIN
         pangolin -pv | tee VERSION_PANGOLEARN
         pangolin --all-versions | tr '\n' ';' | cut -f -5 -d ';' | tee VERSION_PANGOLIN_ALL
@@ -81,13 +86,18 @@ task pangolin_many_samples {
         Int?         min_length
         Float?       max_ambig
         Boolean      inference_usher=true
+        Boolean      update_dbs_now=false
         String       basename
         String       docker = "quay.io/staphb/pangolin:3.1.16-pangolearn-2021-11-09"
     }
     command <<<
+        set -ex
+
+        if [ -n "~{true='UPDATE' false='' update_dbs_now}" ]; then
+            pangolin --update
+        fi
         date | tee DATE
         conda list -n pangolin | grep "usher" | awk -F ' +' '{print$1, $2}' | tee VERSION_PANGO_USHER
-        set -ex
         pangolin -v | tee VERSION_PANGOLIN
         pangolin -pv | tee VERSION_PANGOLEARN
         pangolin --all-versions | tr '\n' ';' | cut -f -5 -d ';' | tee VERSION_PANGOLIN_ALL
