@@ -364,7 +364,7 @@ workflow sarscov2_illumina_full {
 
     # create data tables with assembly_meta_tsv if workspace name and project provided
     if (defined(workspace_name) && defined(terra_project)) {
-      call terra.upload_entities_tsv as data_tables {
+      call terra.upload_reads_assemblies_entities_tsv as data_tables {
         input:
           workspace_name                      = select_first([workspace_name]),
           terra_project                       = select_first([terra_project]),
