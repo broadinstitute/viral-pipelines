@@ -11,7 +11,7 @@ workflow read_depths {
 
     parameter_meta {
         aligned_bams: {
-            description: "reads aligned to a reference sequence.",
+            description: "Reads aligned to a reference sequence.",
             patterns: ["*.bam"]
         }
     }
