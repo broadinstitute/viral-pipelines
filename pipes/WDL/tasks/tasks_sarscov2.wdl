@@ -560,6 +560,6 @@ task gisaid_uploader {
     memory: "2 GB"
     cpu: 2
     disks: "local-disk 100 HDD"
-    maxRetries: 0
+    maxRetries: 1
   }
 }
