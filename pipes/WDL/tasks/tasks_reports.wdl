@@ -339,10 +339,10 @@ task align_and_count_summary {
   }
 
   runtime {
-    memory: "3 GB"
-    cpu: 2
+    memory: "7 GB"
+    cpu: 8
     docker: "${docker}"
-    disks: "local-disk 50 HDD"
+    disks: "local-disk 100 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -485,7 +485,7 @@ task MultiQC {
 
   runtime {
     memory: "8 GB"
-    cpu: 2
+    cpu: 16
     docker: "${docker}"
     disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem2_ssd1_v2_x2"
