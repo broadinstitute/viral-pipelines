@@ -1507,6 +1507,7 @@ task tip_frequencies {
         Boolean  censored = false
         Boolean  include_internal_nodes = false
 
+        Int?     machine_mem_gb
         String   docker = "nextstrain/base:build-20211012T204409Z"
         String   out_basename = basename(tree, '.nwk')
     }
@@ -1538,10 +1539,10 @@ task tip_frequencies {
     }
     runtime {
         docker: docker
-        memory: "15 GB"
-        cpu :   2
+        memory: select_first([machine_mem_gb, 30]) + " GB"
+        cpu :   4
         disks:  "local-disk 100 HDD"
-        dx_instance_type: "mem2_ssd1_v2_x2"
+        dx_instance_type: "mem3_ssd2_x4"
         preemptible: 1
         maxRetries: 2
     }
