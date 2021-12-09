@@ -12,7 +12,7 @@ task nextclade_one_sample {
         File? gene_annotations_json
         File? pcr_primers_csv
         String? dataset_name
-        String docker = "nextstrain/nextclade:1.4.0"
+        String docker = "nextstrain/nextclade:1.7.0"
     }
     String basename = basename(genome_fasta, ".fasta")
     command {
@@ -90,7 +90,7 @@ task nextclade_many_samples {
         File?        pcr_primers_csv
         String?      dataset_name
         String       basename
-        String       docker = "nextstrain/nextclade:1.4.0"
+        String       docker = "nextstrain/nextclade:1.7.0"
     }
     command <<<
         set -e
