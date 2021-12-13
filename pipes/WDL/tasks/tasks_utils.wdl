@@ -244,6 +244,7 @@ task tsv_join {
     String         id_col
     String         out_basename = "merged"
     String         out_suffix = ".txt"
+    Boolean        prefer_first = true
     Int            machine_mem_gb = 7
   }
 
@@ -319,6 +320,7 @@ task tsv_join {
         raise Exception()
 
     # merge everything in-memory
+    prefer_first = ~{true="True" false="False" prefer_first}
     out_ids = []
     out_row_by_id = {}
     for reader in readers:
@@ -326,9 +328,14 @@ task tsv_join {
             row_id = row[join_id]
             row_out = out_row_by_id.get(row_id, {})
             for h in header:
-                # prefer non-empty values from earlier files in in_tsvs, populate from subsequent files only if missing
-                if not row_out.get(h):
-                    row_out[h] = row.get(h, '')
+                if prefer_first:
+                  # prefer non-empty values from earlier files in in_tsvs, populate from subsequent files only if missing
+                  if not row_out.get(h):
+                      row_out[h] = row.get(h, '')
+                else:
+                  # prefer non-empty values from later files in in_tsvs
+                  if row.get(h):
+                      row_out[h] = row[h]
             out_row_by_id[row_id] = row_out
             out_ids.append(row_id)
     out_ids = list(collections.OrderedDict(((i,0) for i in out_ids)).keys())
