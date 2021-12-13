@@ -21,7 +21,8 @@ workflow sarscov2_sequencing_reports {
         input:
             input_tsvs   = assembly_stats_tsvs,
             id_col       = 'sample',
-            out_basename = 'assembly_stats-cumulative-~{report_date}'
+            out_basename = 'assembly_stats-cumulative-~{report_date}',
+            prefer_first = false  # always prefer later sequencing results over earlier ones
     }
 
     call sarscov2.sequencing_report {
