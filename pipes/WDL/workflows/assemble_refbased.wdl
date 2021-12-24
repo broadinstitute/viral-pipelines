@@ -98,22 +98,25 @@ workflow assemble_refbased {
         Array[String] ivar_stats_row = [ivar_stats['file'], ivar_stats['trim_percent'], ivar_stats['trim_count']]
     }
 
-    call read_utils.merge_and_reheader_bams as merge_align_to_ref {
-        input:
-            in_bams      = ivar_trim.aligned_trimmed_bam,
-            sample_name  = sample_name,
-            out_basename = "~{sample_name}.align_to_ref.trimmed"
+    if(length(reads_unmapped_bams)>1) {
+        call read_utils.merge_and_reheader_bams as merge_align_to_ref {
+            input:
+                in_bams      = ivar_trim.aligned_trimmed_bam,
+                sample_name  = sample_name,
+                out_basename = "~{sample_name}.align_to_ref.trimmed"
+        }
     }
+    File aligned_trimmed_bam = select_first([merge_align_to_ref.out_bam, ivar_trim.aligned_trimmed_bam[0]])
 
     call reports.alignment_metrics {
         input:
-            aligned_bam = merge_align_to_ref.out_bam,
+            aligned_bam = aligned_trimmed_bam,
             ref_fasta   = reference_fasta
     }
 
     call assembly.run_discordance {
         input:
-            reads_aligned_bam = merge_align_to_ref.out_bam,
+            reads_aligned_bam = aligned_trimmed_bam,
             reference_fasta   = reference_fasta,
             min_coverage      = min_coverage+1,
             out_basename      = sample_name
@@ -121,14 +124,14 @@ workflow assemble_refbased {
 
     call reports.plot_coverage as plot_ref_coverage {
         input:
-            aligned_reads_bam = merge_align_to_ref.out_bam,
+            aligned_reads_bam = aligned_trimmed_bam,
             sample_name       = sample_name
     }
 
     call assembly.refine_assembly_with_aligned_reads as call_consensus {
         input:
             reference_fasta   = reference_fasta,
-            reads_aligned_bam = merge_align_to_ref.out_bam,
+            reads_aligned_bam = aligned_trimmed_bam,
             min_coverage      = min_coverage,
             sample_name       = sample_name
     }
@@ -145,16 +148,19 @@ workflow assemble_refbased {
         }
     }
 
-    call read_utils.merge_and_reheader_bams as merge_align_to_self {
-        input:
-            in_bams      = align_to_self.aligned_only_reads_bam,
-            sample_name  = sample_name,
-            out_basename = "~{sample_name}.merge_align_to_self"
+    if(length(reads_unmapped_bams)>1) {
+        call read_utils.merge_and_reheader_bams as merge_align_to_self {
+            input:
+                in_bams      = align_to_self.aligned_only_reads_bam,
+                sample_name  = sample_name,
+                out_basename = "~{sample_name}.merge_align_to_self"
+        }
     }
+    File aligned_self_bam = select_first([merge_align_to_self.out_bam, align_to_self.aligned_only_reads_bam[0]])
 
     call reports.plot_coverage as plot_self_coverage {
         input:
-            aligned_reads_bam = merge_align_to_self.out_bam,
+            aligned_reads_bam = aligned_self_bam,
             sample_name       = sample_name
     }
 
@@ -186,7 +192,7 @@ workflow assemble_refbased {
         Array[Int]  align_to_ref_per_input_reads_aligned         = align_to_ref.reads_aligned
         Array[File] align_to_ref_per_input_fastqc                = align_to_ref.aligned_only_reads_fastqc
         
-        File        align_to_ref_merged_aligned_trimmed_only_bam = merge_align_to_ref.out_bam
+        File        align_to_ref_merged_aligned_trimmed_only_bam = aligned_trimmed_bam
         File        align_to_ref_merged_coverage_plot            = plot_ref_coverage.coverage_plot
         File        align_to_ref_merged_coverage_tsv             = plot_ref_coverage.coverage_tsv
         Int         align_to_ref_merged_reads_aligned            = plot_ref_coverage.reads_aligned
@@ -197,7 +203,7 @@ workflow assemble_refbased {
         File        picard_metrics_alignment                     = alignment_metrics.alignment_metrics
         File        picard_metrics_insert_size                   = alignment_metrics.insert_size_metrics
         
-        File        align_to_self_merged_aligned_only_bam        = merge_align_to_self.out_bam
+        File        align_to_self_merged_aligned_only_bam        = aligned_self_bam
         File        align_to_self_merged_coverage_plot           = plot_self_coverage.coverage_plot
         File        align_to_self_merged_coverage_tsv            = plot_self_coverage.coverage_tsv
         Int         align_to_self_merged_reads_aligned           = plot_self_coverage.reads_aligned
