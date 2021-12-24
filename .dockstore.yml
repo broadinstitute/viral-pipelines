@@ -338,6 +338,11 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/multiqc_only.wdl
     testParameterFiles:
       - empty.json
+  - name: read_depths
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/read_depths.wdl
+    testParameterFiles:
+      - empty.json
   - name: sarscov2_batch_relineage
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_batch_relineage.wdl
