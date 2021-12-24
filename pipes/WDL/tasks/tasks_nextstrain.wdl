@@ -12,7 +12,7 @@ task nextclade_one_sample {
         File? gene_annotations_json
         File? pcr_primers_csv
         String? dataset_name
-        String docker = "nextstrain/nextclade:1.4.0"
+        String docker = "nextstrain/nextclade:1.7.0"
     }
     String basename = basename(genome_fasta, ".fasta")
     command {
@@ -90,7 +90,7 @@ task nextclade_many_samples {
         File?        pcr_primers_csv
         String?      dataset_name
         String       basename
-        String       docker = "nextstrain/nextclade:1.4.0"
+        String       docker = "nextstrain/nextclade:1.7.0"
     }
     command <<<
         set -e
@@ -1507,6 +1507,7 @@ task tip_frequencies {
         Boolean  censored = false
         Boolean  include_internal_nodes = false
 
+        Int?     machine_mem_gb
         String   docker = "nextstrain/base:build-20211012T204409Z"
         String   out_basename = basename(tree, '.nwk')
     }
@@ -1538,10 +1539,10 @@ task tip_frequencies {
     }
     runtime {
         docker: docker
-        memory: "15 GB"
-        cpu :   2
+        memory: select_first([machine_mem_gb, 30]) + " GB"
+        cpu :   4
         disks:  "local-disk 100 HDD"
-        dx_instance_type: "mem2_ssd1_v2_x2"
+        dx_instance_type: "mem3_ssd2_x4"
         preemptible: 1
         maxRetries: 2
     }
