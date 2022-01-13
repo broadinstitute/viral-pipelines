@@ -229,7 +229,7 @@ workflow sarscov2_illumina_full {
     call sarscov2_batch_relineage.sarscov2_batch_relineage {
       input:
         flowcell_id = flowcell_id,
-        genomes_fasta = assemble_refbased.assembly_fasta,
+        genomes_fasta = assemble_refbased.assembly_fasta, # TO DO: can this just be [passing_cat_prefilter.combined]?
         metadata_annotated_tsv = assembly_meta_tsv.combined,
         metadata_raw_tsv = assembly_meta_tsv.combined,
         min_genome_bases = min_genome_bases
