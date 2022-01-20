@@ -136,7 +136,7 @@ task beast {
     acceleratorCount:    select_first([accelerator_count, 4])  # GCP PAPIv2
     gpuType:             select_first([gpu_type, "nvidia-tesla-k80"])  # Terra
     gpuCount:            select_first([gpu_count, 4])  # Terra
-    nvidiaDriverVersion: "410.79"
+    nvidiaDriverVersion: "450.119.04"
   }
 }
 
