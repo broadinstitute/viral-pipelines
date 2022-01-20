@@ -104,8 +104,9 @@ task beast {
 
   command {
     set -e
-    beast -beagle_info
+    lscpu
     nvidia-smi
+    beast -beagle_info
     bash -c "sleep 60; nvidia-smi" &
     beast \
       -beagle_multipartition off \
