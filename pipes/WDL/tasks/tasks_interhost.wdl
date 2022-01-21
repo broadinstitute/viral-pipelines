@@ -105,6 +105,7 @@ task beast {
   command {
     set -e
     lscpu
+    cat /proc/cpuinfo
     nvidia-smi
     beast -beagle_info
     bash -c "sleep 60; nvidia-smi" &
