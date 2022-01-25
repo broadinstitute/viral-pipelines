@@ -11,6 +11,7 @@ task nextclade_one_sample {
         File? qc_config_json
         File? gene_annotations_json
         File? pcr_primers_csv
+        File? virus_properties
         String? dataset_name
         String docker = "nextstrain/nextclade:1.10.0"
     }
@@ -42,6 +43,7 @@ task nextclade_one_sample {
             --input-qc-config ~{default="qc.json" qc_config_json} \
             --input-gene-map ~{default="genemap.gff" gene_annotations_json} \
             --input-pcr-primers ~{default="primers.csv" pcr_primers_csv} \
+            --input-virus-properties ~{default="virus_properties.json" virus_properties}  \
             --output-json "~{basename}".nextclade.json \
             --output-tsv  "~{basename}".nextclade.tsv \
             --output-tree "~{basename}".nextclade.auspice.json
@@ -88,6 +90,7 @@ task nextclade_many_samples {
         File?        qc_config_json
         File?        gene_annotations_json
         File?        pcr_primers_csv
+        File?        virus_properties
         String?      dataset_name
         String       basename
         String       docker = "nextstrain/nextclade:1.10.0"
@@ -120,6 +123,7 @@ task nextclade_many_samples {
             --input-qc-config ~{default="qc.json" qc_config_json} \
             --input-gene-map ~{default="genemap.gff" gene_annotations_json} \
             --input-pcr-primers ~{default="primers.csv" pcr_primers_csv} \
+            --input-virus-properties ~{default="virus_properties.json" virus_properties}  \
             --output-json "~{basename}".nextclade.json \
             --output-tsv  "~{basename}".nextclade.tsv \
             --output-tree "~{basename}".nextclade.auspice.json
