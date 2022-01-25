@@ -35,7 +35,7 @@ task nextclade_one_sample {
         CODE1
         fi
 
-        nextclade \
+        nextclade run \
             --input-fasta "~{genome_fasta}" \
             --input-root-seq ~{default="reference.fasta" root_sequence} \
             --input-tree ~{default="tree.json" auspice_reference_tree_json} \
@@ -113,7 +113,7 @@ task nextclade_many_samples {
         fi
 
         cat ~{sep=" " genome_fastas} > genomes.fasta
-        nextclade \
+        nextclade run \
             --input-fasta genomes.fasta \
             --input-root-seq ~{default="reference.fasta" root_sequence} \
             --input-tree ~{default="tree.json" auspice_reference_tree_json} \
