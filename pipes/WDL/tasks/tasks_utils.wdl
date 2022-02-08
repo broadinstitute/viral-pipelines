@@ -245,7 +245,7 @@ task tsv_join {
     String         out_basename = "merged"
     String         out_suffix = ".txt"
     Boolean        prefer_first = true
-    Int            machine_mem_gb = 15
+    Int            machine_mem_gb = 7
   }
 
   command <<<
@@ -354,7 +354,7 @@ task tsv_join {
 
   runtime {
     memory: "~{machine_mem_gb} GB"
-    cpu: 2
+    cpu: 4
     docker: "quay.io/broadinstitute/viral-core:2.1.33"
     disks: "local-disk 100 HDD"
     dx_instance_type: "mem1_ssd1_v2_x4"

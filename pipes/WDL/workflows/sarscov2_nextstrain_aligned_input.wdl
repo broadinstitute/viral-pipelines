@@ -67,7 +67,7 @@ workflow sarscov2_nextstrain_aligned_input {
                 input_tsvs   = sample_metadata_tsvs,
                 id_col       = 'strain',
                 out_basename = "metadata-merged",
-                machine_mem_gb = 16
+                machine_mem_gb = 30
         }
     }
     call nextstrain.derived_cols {
