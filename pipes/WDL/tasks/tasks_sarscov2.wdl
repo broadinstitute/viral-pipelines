@@ -379,6 +379,7 @@ task crsp_meta_etl {
         String        prefix_map = '{"Broad Institute Clinical Research Sequencing Platform": "CRSP_", "Massachusetts General Hospital": "MGH_", "Rhode Island Department of Health": "RIDOH_", "Biobot Analytics": "Biobot_", "Flow Health":"FlowHealth_", "Colorado Mesa University":"CMU_", "Capture Diagnostics Hawaii":"Capture_", "Boston Medical Center":"BMC_", "University of Central Florida":"UCF_"}'
         String        org_name_map = '{"Broad Institute Clinical Research Sequencing Platform": "Broad Institute Clinical Research Sequencing Platform", "Massachusetts General Hospital": "Massachusetts General Hospital", "RIDOH": "Rhode Island Department of Health", "BIOBOT": "Biobot Analytics", "FLOW":"Flow Health", "MESA":"Colorado Mesa University", "CAPTURE":"Capture Diagnostics Hawaii", "BUBMC":"Boston Medical Center", "UCF":"University of Central Florida"}'
         String        allowed_purposes = '["Baseline surveillance (random sampling)", "Targeted surveillance (non-random sampling)", "Screening for Variants of Concern (VOC)", "Longitudinal surveillance (repeat sampling of individuals)", "Vaccine escape surveillance", "Cluster/Outbreak investigation"]'
+        String        sequencing_lab_prefix = 'CDCBI'
 
         String        docker = "quay.io/broadinstitute/py3-bio:0.1.2"
     }
@@ -476,7 +477,7 @@ task crsp_meta_etl {
             for id in hash_input_ids
         ]
         sample_meta['host_subject_id'] = sample_meta.apply(lambda row:
-            'CDCBI-' + prefix_map[row['collected_by']] + row['hl7_hashed']
+            '~{sequencing_lab_prefix}' + '-' + prefix_map[row['collected_by']] + row['hl7_hashed']
             , axis=1)
         sample_meta['sample_name'] = [
             f'{country}/{state}-{id}/{year}'
