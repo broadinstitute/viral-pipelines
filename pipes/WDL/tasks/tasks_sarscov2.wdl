@@ -17,7 +17,10 @@ task pangolin_one_sample {
         set -ex
 
         if [ -n "~{true='UPDATE' false='' update_dbs_now}" ]; then
+            set +e
+            # ignore failure of this step
             pangolin --update
+            set -e
         fi
         date | tee DATE
         conda list -n pangolin | grep "usher" | awk -F ' +' '{print$1, $2}' | tee VERSION_PANGO_USHER
@@ -94,7 +97,10 @@ task pangolin_many_samples {
         set -ex
 
         if [ -n "~{true='UPDATE' false='' update_dbs_now}" ]; then
+            set +e
+            # ignore failure of this step
             pangolin --update
+            set -e
         fi
         date | tee DATE
         conda list -n pangolin | grep "usher" | awk -F ' +' '{print$1, $2}' | tee VERSION_PANGO_USHER
@@ -187,6 +193,7 @@ task sequencing_report {
         String? voc_list
         String? voi_list
 
+        Int     machine_mem_gb = 7
         String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.25"
     }
     command {
@@ -205,7 +212,7 @@ task sequencing_report {
     }
     runtime {
         docker: docker
-        memory: "4 GB"
+        memory: "~{machine_mem_gb} GB"
         cpu:    2
         disks: "local-disk 250 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
