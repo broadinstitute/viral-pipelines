@@ -17,7 +17,10 @@ task pangolin_one_sample {
         set -ex
 
         if [ -n "~{true='UPDATE' false='' update_dbs_now}" ]; then
+            set +e
+            # ignore failure of this step
             pangolin --update
+            set -e
         fi
         date | tee DATE
         conda list -n pangolin | grep "usher" | awk -F ' +' '{print$1, $2}' | tee VERSION_PANGO_USHER
@@ -94,7 +97,10 @@ task pangolin_many_samples {
         set -ex
 
         if [ -n "~{true='UPDATE' false='' update_dbs_now}" ]; then
+            set +e
+            # ignore failure of this step
             pangolin --update
+            set -e
         fi
         date | tee DATE
         conda list -n pangolin | grep "usher" | awk -F ' +' '{print$1, $2}' | tee VERSION_PANGO_USHER
