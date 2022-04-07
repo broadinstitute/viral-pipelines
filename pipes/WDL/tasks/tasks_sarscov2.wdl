@@ -23,7 +23,7 @@ task pangolin_one_sample {
             set -e
         fi
         date | tee DATE
-        conda list -n pangolin | grep "usher" | awk -F ' +' '{print$1, $2}' | tee VERSION_PANGO_USHER
+        micromamba list -n pangolin | grep "usher" | awk -F ' +' '{print$2, $3}' | tee VERSION_PANGO_USHER
         pangolin -v | tee VERSION_PANGOLIN
         pangolin -pv | tee VERSION_PANGOLEARN
         pangolin --all-versions | tr '\n' ';' | cut -f -5 -d ';' | tee VERSION_PANGOLIN_ALL
@@ -103,7 +103,7 @@ task pangolin_many_samples {
             set -e
         fi
         date | tee DATE
-        conda list -n pangolin | grep "usher" | awk -F ' +' '{print$1, $2}' | tee VERSION_PANGO_USHER
+        micromamba list -n pangolin | grep "usher" | awk -F ' +' '{print$2, $3}' | tee VERSION_PANGO_USHER
         pangolin -v | tee VERSION_PANGOLIN
         pangolin -pv | tee VERSION_PANGOLEARN
         pangolin --all-versions | tr '\n' ';' | cut -f -5 -d ';' | tee VERSION_PANGOLIN_ALL
