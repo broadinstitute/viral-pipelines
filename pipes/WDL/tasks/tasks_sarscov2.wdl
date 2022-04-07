@@ -29,7 +29,7 @@ task pangolin_one_sample {
         pangolin --all-versions | tr '\n' ';' | cut -f -5 -d ';' | tee VERSION_PANGOLIN_ALL
 
         pangolin "~{genome_fasta}" \
-            ~{true='--analysis-mode fast' false='--analysis-mode pangolearn' inference_usher} \
+            ~{true='' false='--analysis-mode pangolearn' inference_usher} \
             --outfile "~{basename}.pangolin_report.csv" \
             ~{"--min-length " + min_length} \
             ~{"--max-ambig " + max_ambig} \
@@ -111,7 +111,7 @@ task pangolin_many_samples {
         cat ~{sep=" " genome_fastas} > unaligned.fasta
         pangolin unaligned.fasta \
             --use-assignment-cache \
-            ~{true='--analysis-mode fast' false='--analysis-mode pangolearn' inference_usher} \
+            ~{true='' false='--analysis-mode pangolearn' inference_usher} \
             --outfile "~{basename}.pangolin_report.csv" \
             ~{"--min-length " + min_length} \
             ~{"--max-ambig " + max_ambig} \
