@@ -10,7 +10,7 @@ task pangolin_one_sample {
         Float?  max_ambig
         Boolean inference_usher=true
         Boolean update_dbs_now=false
-        String  docker = "quay.io/staphb/pangolin:3.1.20-pangolearn-2022-02-28"
+        String  docker = "quay.io/staphb/pangolin:4.0.2-pdata-1.2.133"
     }
     String basename = basename(genome_fasta, ".fasta")
     command <<<
@@ -29,7 +29,7 @@ task pangolin_one_sample {
         pangolin --all-versions | tr '\n' ';' | cut -f -5 -d ';' | tee VERSION_PANGOLIN_ALL
 
         pangolin "~{genome_fasta}" \
-            ~{true='--usher' false='' inference_usher} \
+            ~{true='--analysis-mode fast' false='--analysis-mode pangolearn' inference_usher} \
             --outfile "~{basename}.pangolin_report.csv" \
             ~{"--min-length " + min_length} \
             ~{"--max-ambig " + max_ambig} \
@@ -91,7 +91,7 @@ task pangolin_many_samples {
         Boolean      inference_usher=true
         Boolean      update_dbs_now=false
         String       basename
-        String       docker = "quay.io/staphb/pangolin:3.1.20-pangolearn-2022-02-28"
+        String       docker = "quay.io/staphb/pangolin:4.0.2-pdata-1.2.133"
     }
     command <<<
         set -ex
@@ -110,7 +110,8 @@ task pangolin_many_samples {
 
         cat ~{sep=" " genome_fastas} > unaligned.fasta
         pangolin unaligned.fasta \
-            ~{true='--usher' false='' inference_usher} \
+            --use-assignment-cache \
+            ~{true='--analysis-mode fast' false='--analysis-mode pangolearn' inference_usher} \
             --outfile "~{basename}.pangolin_report.csv" \
             ~{"--min-length " + min_length} \
             ~{"--max-ambig " + max_ambig} \
