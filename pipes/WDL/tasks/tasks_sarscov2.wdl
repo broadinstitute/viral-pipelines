@@ -37,7 +37,6 @@ task pangolin_one_sample {
             --threads $(nproc) \
             --verbose
 
-        cp sequences.aln.fasta "~{basename}.pangolin_msa.fasta"
         python3 <<CODE
         import csv
         #grab output values by column header
@@ -119,7 +118,6 @@ task pangolin_many_samples {
             --threads $(nproc) \
             --verbose
 
-        cp sequences.aln.fasta "~{basename}.pangolin_msa.fasta"
         python3 <<CODE
         import csv, json
         #grab output values by column header
