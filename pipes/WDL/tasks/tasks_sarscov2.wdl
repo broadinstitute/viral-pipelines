@@ -8,9 +8,9 @@ task pangolin_one_sample {
         File    genome_fasta
         Int?    min_length
         Float?  max_ambig
-        Boolean inference_usher=true
+        String? analysis_mode
         Boolean update_dbs_now=false
-        String  docker = "quay.io/staphb/pangolin:4.0.2-pdata-1.2.133"
+        String  docker = "quay.io/staphb/pangolin:4.0.3-pdata-1.2.133"
     }
     String basename = basename(genome_fasta, ".fasta")
     command <<<
@@ -23,13 +23,10 @@ task pangolin_one_sample {
             set -e
         fi
         date | tee DATE
-        micromamba list -n pangolin | grep "usher" | awk -F ' +' '{print$2, $3}' | tee VERSION_PANGO_USHER
-        pangolin -v | tee VERSION_PANGOLIN
-        pangolin -pv | tee VERSION_PANGOLEARN
-        pangolin --all-versions | tr '\n' ';' | cut -f -5 -d ';' | tee VERSION_PANGOLIN_ALL
+        { pangolin --all-versions && usher --version; } | tr '\n' ';'  | cut -f -6 -d ';' | tee VERSION_PANGOLIN_ALL
 
         pangolin "~{genome_fasta}" \
-            ~{true='' false='--analysis-mode pangolearn' inference_usher} \
+            ~{'--analysis-mode ' + analysis_mode} \
             --outfile "~{basename}.pangolin_report.csv" \
             ~{"--min-length " + min_length} \
             ~{"--max-ambig " + max_ambig} \
@@ -43,7 +40,7 @@ task pangolin_one_sample {
         #grab output values by column header
         with open("~{basename}.pangolin_report.csv", 'rt') as csv_file:
             for line in csv.DictReader(csv_file):
-                with open("VERSION", 'wt') as outf:
+                with open("PANGO_ASSIGNMENT_VERSION", 'wt') as outf:
                     pangolin_version=line["pangolin_version"]
                     version=line["version"]
                     outf.write(f"pangolin {pangolin_version}; {version}")
@@ -66,15 +63,12 @@ task pangolin_one_sample {
     }
     output {
         String     date                   = read_string("DATE")
-        String     version                = read_string("VERSION")
         String     pango_lineage          = read_string("PANGO_LINEAGE")
         String     pangolin_conflicts     = read_string("PANGOLIN_CONFLICTS")
         String     pangolin_notes         = read_string("PANGOLIN_NOTES")
-        String     pangolin_usher_version = read_string("VERSION_PANGO_USHER")
-        String     pangolin_version       = read_string("VERSION_PANGOLIN")
-        String     pangolearn_version     = read_string("VERSION_PANGOLEARN")
         String     pangolin_docker        = docker
         String     pangolin_versions      = read_string("VERSION_PANGOLIN_ALL")
+        String     pangolin_assignment_version = read_string("PANGO_ASSIGNMENT_VERSION")
         File       pango_lineage_report   = "${basename}.pangolin_report.csv"
         File       msa_fasta              = "~{basename}.pangolin_msa.fasta"
     }
@@ -88,10 +82,10 @@ task pangolin_many_samples {
         Array[File]+ genome_fastas
         Int?         min_length
         Float?       max_ambig
-        Boolean      inference_usher=true
+        String?      analysis_mode
         Boolean      update_dbs_now=false
         String       basename
-        String       docker = "quay.io/staphb/pangolin:4.0.2-pdata-1.2.133"
+        String       docker = "quay.io/staphb/pangolin:4.0.3-pdata-1.2.133"
     }
     command <<<
         set -ex
@@ -103,15 +97,12 @@ task pangolin_many_samples {
             set -e
         fi
         date | tee DATE
-        micromamba list -n pangolin | grep "usher" | awk -F ' +' '{print$2, $3}' | tee VERSION_PANGO_USHER
-        pangolin -v | tee VERSION_PANGOLIN
-        pangolin -pv | tee VERSION_PANGOLEARN
-        pangolin --all-versions | tr '\n' ';' | cut -f -5 -d ';' | tee VERSION_PANGOLIN_ALL
+        { pangolin --all-versions && usher --version; } | tr '\n' ';'  | cut -f -6 -d ';' | tee VERSION_PANGOLIN_ALL
 
         cat ~{sep=" " genome_fastas} > unaligned.fasta
         pangolin unaligned.fasta \
             --use-assignment-cache \
-            ~{true='' false='--analysis-mode pangolearn' inference_usher} \
+            ~{'--analysis-mode ' + analysis_mode} \
             --outfile "~{basename}.pangolin_report.csv" \
             ~{"--min-length " + min_length} \
             ~{"--max-ambig " + max_ambig} \
@@ -125,7 +116,7 @@ task pangolin_many_samples {
         #grab output values by column header
         with open("~{basename}.pangolin_report.csv", 'rt') as csv_file:
             for line in csv.DictReader(csv_file):
-                with open("VERSION", 'wt') as outf:
+                with open("PANGO_ASSIGNMENT_VERSION", 'wt') as outf:
                     pangolin_version=line["pangolin_version"]
                     version=line["version"]
                     outf.write(f"pangolin {pangolin_version}; {version}")
@@ -163,12 +154,9 @@ task pangolin_many_samples {
         Map[String,String] pangolin_notes         = read_json("PANGOLIN_NOTES.json")
         Array[String]      genome_ids             = read_lines("IDLIST")
         String             date                   = read_string("DATE")
-        String             version                = read_string("VERSION")
+        String             pangolin_assignment_version = read_string("PANGO_ASSIGNMENT_VERSION")
         String             pangolin_docker        = docker
         String             pangolin_versions      = read_string("VERSION_PANGOLIN_ALL")
-        String             pangolin_usher_version = read_string("VERSION_PANGO_USHER")
-        String             pangolin_version       = read_string("VERSION_PANGOLIN")
-        String             pangolearn_version     = read_string("VERSION_PANGOLEARN")
         File               pango_lineage_report   = "${basename}.pangolin_report.csv"
         File               msa_fasta              = "~{basename}.pangolin_msa.fasta"
         Int                runtime_sec            = ceil(read_float("UPTIME_SEC"))
