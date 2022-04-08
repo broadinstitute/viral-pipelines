@@ -127,7 +127,7 @@ task pangolin_many_samples {
                     version=line["version"]
                     outf.write(f"pangolin {pangolin_version}; {version}")
                 break
-        out_maps = {'lineage':{}, 'conflict':{}, 'note':{}}
+        out_maps = {'lineage':{}, 'conflict':{}, 'note':{}, 'scorpio_call':{}, 'scorpio_notes':{}}
         with open("~{basename}.pangolin_report.csv", 'rt') as csv_file:
             with open('IDLIST', 'wt') as outf_ids:
                 for row in csv.DictReader(csv_file):
