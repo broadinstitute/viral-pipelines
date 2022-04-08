@@ -10,7 +10,7 @@ task pangolin_one_sample {
         Float?  max_ambig
         String? analysis_mode
         Boolean update_dbs_now=false
-        String  docker = "quay.io/staphb/pangolin:4.0.4-pdata-1.2.133"
+        String  docker = "quay.io/staphb/pangolin:4.0.3-pdata-1.2.133"
     }
     String basename = basename(genome_fasta, ".fasta")
     command <<<
@@ -23,7 +23,7 @@ task pangolin_one_sample {
             set -e
         fi
         date | tee DATE
-        { pangolin --all-versions && usher --version; } | tr '\n' ';'  | cut -f -6 -d ';' | tee VERSION_PANGOLIN_ALL
+        { pangolin --all-versions && usher --version; } | grep -v '\*\*\*\*' | grep -v "Pangolin running in" | tr '\n' ';'  | cut -f -6 -d ';' | tee VERSION_PANGOLIN_ALL
 
         pangolin "~{genome_fasta}" \
             ~{'--analysis-mode ' + analysis_mode} \
@@ -91,7 +91,7 @@ task pangolin_many_samples {
         String?      analysis_mode
         Boolean      update_dbs_now=false
         String       basename
-        String       docker = "quay.io/staphb/pangolin:4.0.4-pdata-1.2.133"
+        String       docker = "quay.io/staphb/pangolin:4.0.3-pdata-1.2.133"
     }
     command <<<
         set -ex
@@ -103,7 +103,7 @@ task pangolin_many_samples {
             set -e
         fi
         date | tee DATE
-        { pangolin --all-versions && usher --version; } | tr '\n' ';'  | cut -f -6 -d ';' | tee VERSION_PANGOLIN_ALL
+        { pangolin --all-versions && usher --version; } | grep -v '\*\*\*\*' | grep -v "Pangolin running in" | tr '\n' ';'  | cut -f -6 -d ';' | tee VERSION_PANGOLIN_ALL
 
         cat ~{sep=" " genome_fastas} > unaligned.fasta
         pangolin unaligned.fasta \
