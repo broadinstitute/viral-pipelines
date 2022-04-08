@@ -53,6 +53,7 @@ workflow sarscov2_batch_relineage {
         Array[String] metadata = [
             sample_sanitized,
             pangolin_many_samples.pango_lineage[sample_sanitized],
+            pangolin_many_samples.scorpio_call[sample_sanitized],
             nextclade_many_samples.nextclade_clade[sample_sanitized],
             nextclade_many_samples.aa_subs_csv[sample_sanitized],
             nextclade_many_samples.aa_dels_csv[sample_sanitized],
@@ -62,7 +63,8 @@ workflow sarscov2_batch_relineage {
     }
     Array[String] meta_header = [
         'sample_sanitized',
-        'pango_lineage', 'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels',
+        'pango_lineage', 'scorpio_call',
+        'nextclade_clade', 'nextclade_aa_subs', 'nextclade_aa_dels',
         'pangolin_version', 'nextclade_version'
     ]
 

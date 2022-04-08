@@ -50,6 +50,10 @@ task pangolin_one_sample {
                     outf.write(line["conflict"])
                 with open("PANGOLIN_NOTES", 'wt') as outf:
                     outf.write(line["note"])
+                with open("SCORPIO_CALL", 'wt') as outf:
+                    outf.write(line["scorpio_call"])
+                with open("SCORPIO_NOTES", 'wt') as outf:
+                    outf.write(line["scorpio_notes"])
                 break
         CODE
     >>>
@@ -66,6 +70,8 @@ task pangolin_one_sample {
         String     pango_lineage          = read_string("PANGO_LINEAGE")
         String     pangolin_conflicts     = read_string("PANGOLIN_CONFLICTS")
         String     pangolin_notes         = read_string("PANGOLIN_NOTES")
+        String     scorpio_call           = read_string("SCORPIO_CALL")
+        String     scorpio_notes          = read_string("SCORPIO_NOTES")
         String     pangolin_docker        = docker
         String     pangolin_versions      = read_string("VERSION_PANGOLIN_ALL")
         String     pangolin_assignment_version = read_string("PANGO_ASSIGNMENT_VERSION")
@@ -125,7 +131,7 @@ task pangolin_many_samples {
         with open("~{basename}.pangolin_report.csv", 'rt') as csv_file:
             with open('IDLIST', 'wt') as outf_ids:
                 for row in csv.DictReader(csv_file):
-                    for k in ('lineage','conflict','note'):
+                    for k in ('lineage','conflict','note','scorpio_call','scorpio_notes'):
                         out_maps[k][row['taxon']] = row[k]
                     outf_ids.write(row['taxon']+'\n')
         with open('PANGO_LINEAGE.json', 'wt') as outf:
@@ -134,6 +140,10 @@ task pangolin_many_samples {
             json.dump(out_maps['conflict'], outf)
         with open('PANGOLIN_NOTES.json', 'wt') as outf:
             json.dump(out_maps['note'], outf)
+        with open('SCORPIO_CALL.json', 'wt') as outf:
+            json.dump(out_maps['scorpio_call'], outf)
+        with open('SCORPIO_NOTES.json', 'wt') as outf:
+            json.dump(out_maps['scorpio_notes'], outf)
         CODE
 
         # gather runtime metrics
@@ -152,6 +162,8 @@ task pangolin_many_samples {
         Map[String,String] pango_lineage          = read_json("PANGO_LINEAGE.json")
         Map[String,String] pangolin_conflicts     = read_json("PANGOLIN_CONFLICTS.json")
         Map[String,String] pangolin_notes         = read_json("PANGOLIN_NOTES.json")
+        Map[String,String] scorpio_call           = read_json("SCORPIO_CALL.json")
+        Map[String,String] scorpio_notes          = read_json("SCORPIO_NOTES.json")
         Array[String]      genome_ids             = read_lines("IDLIST")
         String             date                   = read_string("DATE")
         String             pangolin_assignment_version = read_string("PANGO_ASSIGNMENT_VERSION")
