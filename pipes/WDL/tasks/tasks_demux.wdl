@@ -361,7 +361,8 @@ task illumina_demux {
 
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
-    cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
+    set +o pipefail
+    { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
   >>>
 
   output {
