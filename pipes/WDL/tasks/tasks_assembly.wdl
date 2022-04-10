@@ -304,77 +304,77 @@ task align_reads {
     aligner: { description: "Short read aligner to use: novoalign, minimap2, or bwa. (Default: novoalign)" }
   }
   
-  command {
+  command <<<
     set -ex # do not set pipefail, since grep exits 1 if it can't find the pattern
 
     read_utils.py --version | tee VERSION
 
-    mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
+    mem_in_mb=~(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
 
-    cp ${reference_fasta} assembly.fasta
+    cp ~{reference_fasta} assembly.fasta
     grep -v '^>' assembly.fasta | tr -d '\n' | wc -c | tee assembly_length
 
     if [ "$(cat assembly_length)" != "0" ]; then
 
       # only perform the following if the reference is non-empty
 
-      if [ "${aligner}" == "novoalign" ]; then
+      if [ "~{aligner}" == "novoalign" ]; then
         read_utils.py novoindex \
           assembly.fasta \
-          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
+          ~{"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
           --loglevel=DEBUG
       fi
       read_utils.py index_fasta_picard assembly.fasta --loglevel=DEBUG
       read_utils.py index_fasta_samtools assembly.fasta --loglevel=DEBUG
 
       read_utils.py align_and_fix \
-        ${reads_unmapped_bam} \
+        "~{reads_unmapped_bam}" \
         assembly.fasta \
-        --outBamAll "${sample_name}.all.bam" \
-        --outBamFiltered "${sample_name}.mapped.bam" \
-        --aligner ${aligner} \
-        ${'--aligner_options "' + aligner_options + '"'} \
-        ${true='--skipMarkDupes' false="" skip_mark_dupes} \
-        --JVMmemory "$mem_in_mb"m \
-        ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
+        --outBamAll "~{sample_name}.all.bam" \
+        --outBamFiltered "~{sample_name}.mapped.bam" \
+        --aligner ~{aligner} \
+        ~{'--aligner_options "' + aligner_options + '"'} \
+        ~{true='--skipMarkDupes' false="" skip_mark_dupes} \
+        --JVMmemory "~mem_in_mb"m \
+        ~{"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
         --loglevel=DEBUG
 
     else
       # handle special case of empty reference fasta -- emit empty bams (with original bam headers)
-      samtools view -H -b "${reads_unmapped_bam}" > "${sample_name}.all.bam"
-      samtools view -H -b "${reads_unmapped_bam}" > "${sample_name}.mapped.bam"
+      samtools view -H -b "~{reads_unmapped_bam}" > "~{sample_name}.all.bam"
+      samtools view -H -b "~{reads_unmapped_bam}" > "~{sample_name}.mapped.bam"
 
-      samtools index "${sample_name}.all.bam" "${sample_name}.all.bai"
-      samtools index "${sample_name}.mapped.bam" "${sample_name}.mapped.bai"
+      samtools index "~{sample_name}.all.bam" "~{sample_name}.all.bai"
+      samtools index "~{sample_name}.mapped.bam" "~{sample_name}.mapped.bai"
     fi
 
     cat /proc/loadavg > CPU_LOAD
 
     # collect figures of merit
     grep -v '^>' assembly.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
-    samtools view -c ${reads_unmapped_bam} | tee reads_provided
-    samtools view -c ${sample_name}.mapped.bam | tee reads_aligned
+    samtools view -c ~{reads_unmapped_bam} | tee reads_provided
+    samtools view -c ~{sample_name}.mapped.bam | tee reads_aligned
     # report only primary alignments 260=exclude unaligned reads and secondary mappings
-    samtools view -h -F 260 ${sample_name}.all.bam | samtools flagstat - | tee ${sample_name}.all.bam.flagstat.txt
-    grep properly ${sample_name}.all.bam.flagstat.txt | cut -f 1 -d ' ' | tee read_pairs_aligned
-    samtools view ${sample_name}.mapped.bam | cut -f10 | tr -d '\n' | wc -c | tee bases_aligned
+    samtools view -h -F 260 ~{sample_name}.all.bam | samtools flagstat - | tee ~{sample_name}.all.bam.flagstat.txt
+    grep properly ~{sample_name}.all.bam.flagstat.txt | cut -f 1 -d ' ' | tee read_pairs_aligned
+    samtools view ~{sample_name}.mapped.bam | cut -f10 | tr -d '\n' | wc -c | tee bases_aligned
     python -c "print (float("$(cat bases_aligned)")/"$(cat assembly_length_unambiguous)") if "$(cat assembly_length_unambiguous)">0 else print(0)" > mean_coverage
 
     # fastqc mapped bam
-    reports.py fastqc ${sample_name}.mapped.bam ${sample_name}.mapped_fastqc.html --out_zip ${sample_name}.mapped_fastqc.zip
+    reports.py fastqc ~{sample_name}.mapped.bam ~{sample_name}.mapped_fastqc.html --out_zip ~{sample_name}.mapped_fastqc.zip
 
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
-    cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
-  }
+    { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+  >>>
 
   output {
-    File   aligned_bam                   = "${sample_name}.all.bam"
-    File   aligned_bam_idx               = "${sample_name}.all.bai"
-    File   aligned_bam_flagstat          = "${sample_name}.all.bam.flagstat.txt"
-    File   aligned_only_reads_bam        = "${sample_name}.mapped.bam"
-    File   aligned_only_reads_bam_idx    = "${sample_name}.mapped.bai"
-    File   aligned_only_reads_fastqc     = "${sample_name}.mapped_fastqc.html"
-    File   aligned_only_reads_fastqc_zip = "${sample_name}.mapped_fastqc.zip"
+    File   aligned_bam                   = "~{sample_name}.all.bam"
+    File   aligned_bam_idx               = "~{sample_name}.all.bai"
+    File   aligned_bam_flagstat          = "~{sample_name}.all.bam.flagstat.txt"
+    File   aligned_only_reads_bam        = "~{sample_name}.mapped.bam"
+    File   aligned_only_reads_bam_idx    = "~{sample_name}.mapped.bai"
+    File   aligned_only_reads_fastqc     = "~{sample_name}.mapped_fastqc.html"
+    File   aligned_only_reads_fastqc_zip = "~{sample_name}.mapped_fastqc.zip"
     Int    reads_provided                = read_int("reads_provided")
     Int    reads_aligned                 = read_int("reads_aligned")
     Int    read_pairs_aligned            = read_int("read_pairs_aligned")
@@ -387,7 +387,7 @@ task align_reads {
   }
 
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: select_first([machine_mem_gb, 15]) + " GB"
     cpu: 8
     disks: "local-disk 375 LOCAL"

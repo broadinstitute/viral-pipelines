@@ -35,6 +35,7 @@ task zcat {
         Int         cpus = 4
     }
     command <<<
+        set -e
         python3 <<CODE
         import os.path
         import gzip, lzma, bz2
@@ -97,7 +98,7 @@ task zcat {
         # gather runtime metrics
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
+        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
     >>>
     runtime {
         docker: "quay.io/broadinstitute/viral-core:2.1.33"

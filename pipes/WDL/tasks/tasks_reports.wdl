@@ -502,17 +502,18 @@ task compare_two_genomes {
     String docker = "quay.io/broadinstitute/viral-assemble:2.1.16.1"
   }
 
-  command {
+  command <<<
     set -ex -o pipefail
     assembly.py --version | tee VERSION
-    assembly.py alignment_summary "${genome_one}" "${genome_two}" --outfileName "${out_basename}.txt" --printCounts --loglevel=DEBUG
+    assembly.py alignment_summary "~{genome_one}" "~{genome_two}" --outfileName "~{out_basename}.txt" --printCounts --loglevel=DEBUG
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     cat /proc/loadavg > CPU_LOAD
-    cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
-  }
+    set +o pipefail
+    { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+  >>>
 
   output {
-    File   comparison_table = "${out_basename}.txt"
+    File   comparison_table = "~{out_basename}.txt"
     Int    max_ram_gb       = ceil(read_float("MEM_BYTES")/1000000000)
     Int    runtime_sec      = ceil(read_float("UPTIME_SEC"))
     String cpu_load         = read_string("CPU_LOAD")
@@ -522,7 +523,7 @@ task compare_two_genomes {
   runtime {
     memory: "3 GB"
     cpu: 2
-    docker: "${docker}"
+    docker: docker
     disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 1
