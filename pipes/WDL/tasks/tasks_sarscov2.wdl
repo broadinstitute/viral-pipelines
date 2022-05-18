@@ -19,7 +19,7 @@ task pangolin_one_sample {
         if [ -n "~{true='UPDATE' false='' update_dbs_now}" ]; then
             set +e
             # ignore failure of this step
-            pangolin --update
+            pangolin --update-data
             set -e
         fi
         date | tee DATE
@@ -99,7 +99,7 @@ task pangolin_many_samples {
         if [ -n "~{true='UPDATE' false='' update_dbs_now}" ]; then
             set +e
             # ignore failure of this step
-            pangolin --update
+            pangolin --update-data
             set -e
         fi
         date | tee DATE
