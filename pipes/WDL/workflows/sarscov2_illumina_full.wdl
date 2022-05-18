@@ -117,7 +117,7 @@ workflow sarscov2_illumina_full {
                 aligner             = "minimap2",
                 skip_mark_dupes     = ampseq,
                 trim_coords_bed     = trim_coords_bed,
-                min_coverage        = if ampseq then 20 else 3
+                min_coverage        = if ampseq then 50 else 3
         }
 
         # log controls
