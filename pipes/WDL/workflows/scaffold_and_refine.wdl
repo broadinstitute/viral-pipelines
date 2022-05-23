@@ -7,6 +7,7 @@ workflow scaffold_and_refine {
         description: "Scaffold de novo contigs against a set of possible references and subsequently polish with reads."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     input {

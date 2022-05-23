@@ -6,7 +6,14 @@ import "../tasks/tasks_assembly.wdl" as assembly
 import "../tasks/tasks_intrahost.wdl" as intrahost
 
 workflow assemble_denovo {
-  
+
+  meta {
+      description: "Assisted de novo viral genome assembly from raw reads."
+      author: "Broad Viral Genomics"
+      email:  "viral-ngs@broadinstitute.org"
+      allowNestedInputs: true
+  }
+
   input {
     File         reads_unmapped_bam
 
@@ -24,13 +31,8 @@ workflow assemble_denovo {
     Boolean      call_isnvs=false
 
     String       assembler="spades"
-    Float?       scaffold_min_length_fraction
-    Float?       scaffold_min_unambig
-    Int?         scaffold_replace_length=55
-    Int?         nucmer_max_gap
-    Int?         nucmer_min_match
-    Int?         nucmer_min_cluster
-    Float?       scaffold_min_pct_contig_aligned
+
+    String sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
   }
 
   parameter_meta {
@@ -56,8 +58,6 @@ workflow assemble_denovo {
       patterns: ["*.fasta"]
     }
   }
-
-  String sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
 
   if(length(deplete_bmtaggerDbs) + length(deplete_blastDbs) + length(deplete_bwaDbs) > 0) {
     call taxon_filter.deplete_taxa {
@@ -95,14 +95,7 @@ workflow assemble_denovo {
     input:
       contigs_fasta                   = assemble.contigs_fasta,
       reads_bam                       = select_first([filter_to_taxon.taxfilt_bam, deplete_taxa.cleaned_bam, reads_unmapped_bam]),
-      reference_genome_fasta          = reference_genome_fasta,
-      min_length_fraction             = scaffold_min_length_fraction,
-      min_unambig                     = scaffold_min_unambig,
-      replace_length                  = scaffold_replace_length,
-      nucmer_max_gap                  = nucmer_max_gap,
-      nucmer_min_match                = nucmer_min_match,
-      nucmer_min_cluster              = nucmer_min_cluster,
-      scaffold_min_pct_contig_aligned = scaffold_min_pct_contig_aligned
+      reference_genome_fasta          = reference_genome_fasta
   }
 
   call assembly.refine_2x_and_plot {
