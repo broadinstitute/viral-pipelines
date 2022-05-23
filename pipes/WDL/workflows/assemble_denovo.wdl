@@ -91,7 +91,6 @@ workflow assemble_denovo {
       sample_name        = sample_name
   }
 
-  # TO DO: replace below with call to scaffold_and_refine
   call assembly.scaffold {
     input:
       contigs_fasta                   = assemble.contigs_fasta,
@@ -99,6 +98,7 @@ workflow assemble_denovo {
       reference_genome_fasta          = reference_genome_fasta
   }
 
+  # TO DO: replace below with call to assemble_refbased
   call assembly.refine_2x_and_plot {
     input:
       assembly_fasta     = scaffold.scaffold_fasta,
