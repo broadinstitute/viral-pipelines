@@ -3,7 +3,6 @@ version 1.0
 import "../tasks/tasks_taxon_filter.wdl" as taxon_filter
 import "../tasks/tasks_read_utils.wdl" as read_utils
 import "../tasks/tasks_assembly.wdl" as assembly
-import "../tasks/tasks_intrahost.wdl" as intrahost
 import "assemble_refbased.wdl" as assemble_refbased
 
 workflow assemble_denovo {
@@ -92,7 +91,7 @@ workflow assemble_denovo {
       reference_genome_fasta  = reference_genome_fasta
   }
 
-  call assemble_refbased.assemble_refbased {
+  call assemble_refbased.assemble_refbased as refine {
       input:
           reads_unmapped_bams = [rmdup_ubam.dedup_bam],
           reference_fasta     = scaffold.scaffold_fasta,
@@ -100,13 +99,13 @@ workflow assemble_denovo {
   }
 
   output {
-    File    final_assembly_fasta                  = assemble_refbased.assembly_fasta
-    File    aligned_only_reads_bam                = assemble_refbased.align_to_self_merged_aligned_only_bam
-    File    coverage_plot                         = assemble_refbased.align_to_self_merged_coverage_plot
-    Int     assembly_length                       = assemble_refbased.assembly_length
-    Int     assembly_length_unambiguous           = assemble_refbased.assembly_length_unambiguous
-    Int     reads_aligned                         = assemble_refbased.align_to_self_merged_reads_aligned
-    Float   mean_coverage                         = assemble_refbased.align_to_self_merged_mean_coverage
+    File    final_assembly_fasta                  = refine.assembly_fasta
+    File    aligned_only_reads_bam                = refine.align_to_self_merged_aligned_only_bam
+    File    coverage_plot                         = refine.align_to_self_merged_coverage_plot
+    Int     assembly_length                       = refine.assembly_length
+    Int     assembly_length_unambiguous           = refine.assembly_length_unambiguous
+    Int     reads_aligned                         = refine.align_to_self_merged_reads_aligned
+    Float   mean_coverage                         = refine.align_to_self_merged_mean_coverage
     
     File    cleaned_bam                           = select_first([deplete_taxa.cleaned_bam, reads_unmapped_bam])
     File?   cleaned_fastqc                        = deplete_taxa.cleaned_fastqc
@@ -133,19 +132,25 @@ workflow assemble_denovo {
     String  scaffolding_chosen_ref_name           = scaffold.scaffolding_chosen_ref_name
     File    scaffolding_stats                     = scaffold.scaffolding_stats
     File    scaffolding_alt_contigs               = scaffold.scaffolding_alt_contigs
+
+    Int     replicate_concordant_sites            = refine.replicate_concordant_sites
+    Int     replicate_discordant_snps             = refine.replicate_discordant_snps
+    Int     replicate_discordant_indels           = refine.replicate_discordant_indels
+    Int     num_read_groups                       = refine.num_read_groups
+    Int     num_libraries                         = refine.num_libraries
+    File    replicate_discordant_vcf              = refine.replicate_discordant_vcf
+
+    File    isnvs_vcf                             = refine.align_to_self_isnvs_vcf
     
-    File    isnvsFile                             = assemble_refbased.align_to_self_isnvs_vcf
-    
-    File    aligned_bam                           = assemble_refbased.aligned_bam
-    File    aligned_only_reads_fastqc             = assemble_refbased.align_to_ref_per_input_fastqc[0]
-    File    coverage_tsv                          = assemble_refbased.align_to_self_merged_coverage_tsv
-    Int     read_pairs_aligned                    = assemble_refbased.align_to_self_merged_read_pairs_aligned
-    Float   bases_aligned                         = assemble_refbased.align_to_self_merged_bases_aligned
+    File    aligned_bam                           = refine.align_to_self_merged_aligned_and_unaligned_bam[0]
+    File    aligned_only_reads_fastqc             = refine.align_to_ref_per_input_fastqc[0]
+    File    coverage_tsv                          = refine.align_to_self_merged_coverage_tsv
+    Int     read_pairs_aligned                    = refine.align_to_self_merged_read_pairs_aligned
+    Float   bases_aligned                         = refine.align_to_self_merged_bases_aligned
     
     String? deplete_viral_classify_version        = deplete_taxa.viralngs_version
     String? taxfilt_viral_classify_version        = filter_to_taxon.viralngs_version
     String  assemble_viral_assemble_version       = assemble.viralngs_version
     String  scaffold_viral_assemble_version       = scaffold.viralngs_version
   }
-
 }

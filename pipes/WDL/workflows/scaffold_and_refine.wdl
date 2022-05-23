@@ -1,6 +1,7 @@
 version 1.0
 
 import "../tasks/tasks_assembly.wdl" as assembly
+import "assemble_refbased.wdl" as assemble_refbased
 
 workflow scaffold_and_refine {
     meta {
@@ -19,21 +20,20 @@ workflow scaffold_and_refine {
             reads_bam = reads_unmapped_bam
     }
 
-    # TO DO: replace below with call to assemble_refbased
-    call assembly.refine_2x_and_plot {
+    call assemble_refbased.assemble_refbased as refine {
         input:
-            assembly_fasta = scaffold.scaffold_fasta,
-            reads_unmapped_bam = reads_unmapped_bam
+            reads_unmapped_bams = [reads_unmapped_bam],
+            reference_fasta     = scaffold.scaffold_fasta
     }
 
   output {
-    File   final_assembly_fasta                  = refine_2x_and_plot.final_assembly_fasta
-    File   aligned_only_reads_bam                = refine_2x_and_plot.aligned_only_reads_bam
-    File   coverage_plot                         = refine_2x_and_plot.coverage_plot
-    Int    assembly_length                       = refine_2x_and_plot.assembly_length
-    Int    assembly_length_unambiguous           = refine_2x_and_plot.assembly_length_unambiguous
-    Int    reads_aligned                         = refine_2x_and_plot.reads_aligned
-    Float  mean_coverage                         = refine_2x_and_plot.mean_coverage
+    File   final_assembly_fasta                  = refine.assembly_fasta
+    File   aligned_only_reads_bam                = refine.align_to_self_merged_aligned_only_bam
+    File   coverage_plot                         = refine.align_to_self_merged_coverage_plot
+    Int    assembly_length                       = refine.assembly_length
+    Int    assembly_length_unambiguous           = refine.assembly_length_unambiguous
+    Int    reads_aligned                         = refine.align_to_self_merged_reads_aligned
+    Float  mean_coverage                         = refine.align_to_self_merged_mean_coverage
     
     File   scaffold_fasta                        = scaffold.scaffold_fasta
     File   intermediate_scaffold_fasta           = scaffold.intermediate_scaffold_fasta
@@ -43,15 +43,23 @@ workflow scaffold_and_refine {
     String scaffolding_chosen_ref_name           = scaffold.scaffolding_chosen_ref_name
     File   scaffolding_stats                     = scaffold.scaffolding_stats
     File   scaffolding_alt_contigs               = scaffold.scaffolding_alt_contigs
+
+    Int    replicate_concordant_sites            = refine.replicate_concordant_sites
+    Int    replicate_discordant_snps             = refine.replicate_discordant_snps
+    Int    replicate_discordant_indels           = refine.replicate_discordant_indels
+    Int    num_read_groups                       = refine.num_read_groups
+    Int    num_libraries                         = refine.num_libraries
+    File   replicate_discordant_vcf              = refine.replicate_discordant_vcf
+
+    File   isnvsFile                             = refine.align_to_self_isnvs_vcf
     
-    File   aligned_bam                           = refine_2x_and_plot.aligned_bam
-    File   aligned_only_reads_bam_idx            = refine_2x_and_plot.aligned_only_reads_bam_idx
-    File   aligned_only_reads_fastqc             = refine_2x_and_plot.aligned_only_reads_fastqc
-    File   coverage_tsv                          = refine_2x_and_plot.coverage_tsv
-    Int    read_pairs_aligned                    = refine_2x_and_plot.read_pairs_aligned
-    Float  bases_aligned                         = refine_2x_and_plot.bases_aligned
+    File   aligned_bam                           = refine.align_to_self_merged_aligned_and_unaligned_bam[0]
+    File   aligned_only_reads_fastqc             = refine.align_to_ref_per_input_fastqc[0]
+    File   coverage_tsv                          = refine.align_to_self_merged_coverage_tsv
+    Int    read_pairs_aligned                    = refine.align_to_self_merged_read_pairs_aligned
+    Float  bases_aligned                         = refine.align_to_self_merged_bases_aligned
     
     String scaffold_viral_assemble_version       = scaffold.viralngs_version
-    String refine_viral_assemble_version         = refine_2x_and_plot.viralngs_version
+    String refine_viral_assemble_version         = refine.viral_assemble_version
   }
 }

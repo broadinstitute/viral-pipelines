@@ -216,7 +216,9 @@ workflow assemble_refbased {
         File        picard_metrics_wgs                           = alignment_metrics.wgs_metrics
         File        picard_metrics_alignment                     = alignment_metrics.alignment_metrics
         File        picard_metrics_insert_size                   = alignment_metrics.insert_size_metrics
-        
+
+        Array[File] align_to_self_merged_aligned_and_unaligned_bam = align_to_self.aligned_bam
+
         File        align_to_self_merged_aligned_only_bam        = aligned_self_bam
         File        align_to_self_merged_coverage_plot           = plot_self_coverage.coverage_plot
         File        align_to_self_merged_coverage_tsv            = plot_self_coverage.coverage_tsv
