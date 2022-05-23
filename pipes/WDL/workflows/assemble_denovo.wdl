@@ -4,6 +4,7 @@ import "../tasks/tasks_taxon_filter.wdl" as taxon_filter
 import "../tasks/tasks_read_utils.wdl" as read_utils
 import "../tasks/tasks_assembly.wdl" as assembly
 import "../tasks/tasks_intrahost.wdl" as intrahost
+import "assemble_refbased.wdl" as assemble_refbased
 
 workflow assemble_denovo {
 
@@ -26,13 +27,7 @@ workflow assemble_denovo {
     File?        filter_to_taxon_db
     File         trim_clip_db
 
-    File?        novocraft_license
-
-    Boolean      call_isnvs=false
-
-    String       assembler="spades"
-
-    String sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
+    String       sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
   }
 
   parameter_meta {
@@ -87,42 +82,31 @@ workflow assemble_denovo {
       reads_unmapped_bam = rmdup_ubam.dedup_bam,
       trim_clip_db       = trim_clip_db,
       always_succeed     = true,
-      assembler          = assembler,
       sample_name        = sample_name
   }
 
   call assembly.scaffold {
     input:
-      contigs_fasta                   = assemble.contigs_fasta,
-      reads_bam                       = select_first([filter_to_taxon.taxfilt_bam, deplete_taxa.cleaned_bam, reads_unmapped_bam]),
-      reference_genome_fasta          = reference_genome_fasta
+      contigs_fasta           = assemble.contigs_fasta,
+      reads_bam               = select_first([filter_to_taxon.taxfilt_bam, deplete_taxa.cleaned_bam, reads_unmapped_bam]),
+      reference_genome_fasta  = reference_genome_fasta
   }
 
-  # TO DO: replace below with call to assemble_refbased
-  call assembly.refine_2x_and_plot {
-    input:
-      assembly_fasta     = scaffold.scaffold_fasta,
-      reads_unmapped_bam = select_first([deplete_taxa.cleaned_bam, reads_unmapped_bam]),
-      novocraft_license  = novocraft_license,
-      sample_name        = sample_name
-  }
-
-  if(call_isnvs) {
-    call intrahost.isnvs_per_sample {
-        input:
-            assembly_fasta = refine_2x_and_plot.final_assembly_fasta,
-            mapped_bam     = refine_2x_and_plot.aligned_bam
-    }
+  call assemble_refbased.assemble_refbased {
+      input:
+          reads_unmapped_bams = [rmdup_ubam.dedup_bam],
+          reference_fasta     = scaffold.scaffold_fasta,
+          sample_name         = sample_name
   }
 
   output {
-    File    final_assembly_fasta                  = refine_2x_and_plot.final_assembly_fasta
-    File    aligned_only_reads_bam                = refine_2x_and_plot.aligned_only_reads_bam
-    File    coverage_plot                         = refine_2x_and_plot.coverage_plot
-    Int     assembly_length                       = refine_2x_and_plot.assembly_length
-    Int     assembly_length_unambiguous           = refine_2x_and_plot.assembly_length_unambiguous
-    Int     reads_aligned                         = refine_2x_and_plot.reads_aligned
-    Float   mean_coverage                         = refine_2x_and_plot.mean_coverage
+    File    final_assembly_fasta                  = assemble_refbased.assembly_fasta
+    File    aligned_only_reads_bam                = assemble_refbased.align_to_self_merged_aligned_only_bam
+    File    coverage_plot                         = assemble_refbased.align_to_self_merged_coverage_plot
+    Int     assembly_length                       = assemble_refbased.assembly_length
+    Int     assembly_length_unambiguous           = assemble_refbased.assembly_length_unambiguous
+    Int     reads_aligned                         = assemble_refbased.align_to_self_merged_reads_aligned
+    Float   mean_coverage                         = assemble_refbased.align_to_self_merged_mean_coverage
     
     File    cleaned_bam                           = select_first([deplete_taxa.cleaned_bam, reads_unmapped_bam])
     File?   cleaned_fastqc                        = deplete_taxa.cleaned_fastqc
@@ -150,21 +134,18 @@ workflow assemble_denovo {
     File    scaffolding_stats                     = scaffold.scaffolding_stats
     File    scaffolding_alt_contigs               = scaffold.scaffolding_alt_contigs
     
-    File?   isnvsFile                             = isnvs_per_sample.isnvsFile
+    File    isnvsFile                             = assemble_refbased.align_to_self_isnvs_vcf
     
-    File    aligned_bam                           = refine_2x_and_plot.aligned_bam
-    File    aligned_only_reads_bam_idx            = refine_2x_and_plot.aligned_only_reads_bam_idx
-    File    aligned_only_reads_fastqc             = refine_2x_and_plot.aligned_only_reads_fastqc
-    File    coverage_tsv                          = refine_2x_and_plot.coverage_tsv
-    Int     read_pairs_aligned                    = refine_2x_and_plot.read_pairs_aligned
-    Float   bases_aligned                         = refine_2x_and_plot.bases_aligned
+    File    aligned_bam                           = assemble_refbased.aligned_bam
+    File    aligned_only_reads_fastqc             = assemble_refbased.align_to_ref_per_input_fastqc[0]
+    File    coverage_tsv                          = assemble_refbased.align_to_self_merged_coverage_tsv
+    Int     read_pairs_aligned                    = assemble_refbased.align_to_self_merged_read_pairs_aligned
+    Float   bases_aligned                         = assemble_refbased.align_to_self_merged_bases_aligned
     
     String? deplete_viral_classify_version        = deplete_taxa.viralngs_version
     String? taxfilt_viral_classify_version        = filter_to_taxon.viralngs_version
     String  assemble_viral_assemble_version       = assemble.viralngs_version
     String  scaffold_viral_assemble_version       = scaffold.viralngs_version
-    String  refine_viral_assemble_version         = refine_2x_and_plot.viralngs_version
-    String? isnvs_viral_phylo_version             = isnvs_per_sample.viralngs_version
   }
 
 }

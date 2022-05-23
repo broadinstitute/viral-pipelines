@@ -8,8 +8,8 @@ task assemble {
       Int?     spades_n_reads = 10000000
       Int?     spades_min_contig_len = 0
       
-      String?  assembler = "spades"
-      Boolean? always_succeed = false
+      String   assembler = "spades"
+      Boolean  always_succeed = false
       
       # do this in two steps in case the input doesn't actually have "taxfilt" in the name
       String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
