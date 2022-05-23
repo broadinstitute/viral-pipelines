@@ -91,6 +91,7 @@ workflow assemble_denovo {
       sample_name        = sample_name
   }
 
+  # TO DO: replace below with call to scaffold_and_refine
   call assembly.scaffold {
     input:
       contigs_fasta                   = assemble.contigs_fasta,

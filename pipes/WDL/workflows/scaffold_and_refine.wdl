@@ -19,6 +19,7 @@ workflow scaffold_and_refine {
             reads_bam = reads_unmapped_bam
     }
 
+    # TO DO: replace with calls to align_reads, refine_assembly_with_aligned_reads, plot_coverage, isnvs_per_sample, run_discordance, alignment_metrics (if applciable), etc
     call assembly.refine_2x_and_plot {
         input:
             assembly_fasta = scaffold.scaffold_fasta,
