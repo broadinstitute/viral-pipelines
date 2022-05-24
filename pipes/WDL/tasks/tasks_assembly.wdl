@@ -70,7 +70,7 @@ task scaffold {
       File         reads_bam
       Array[File]+ reference_genome_fasta
 
-      String?      aligner="mummer"
+      String?      aligner="muscle"
       Float?       min_length_fraction
       Float?       min_unambig
       Int?         replace_length=55
