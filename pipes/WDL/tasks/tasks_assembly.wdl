@@ -148,7 +148,7 @@ task scaffold {
 
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 15]) + " GB"
+        memory: select_first([machine_mem_gb, 31]) + " GB"
         cpu: 4
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
