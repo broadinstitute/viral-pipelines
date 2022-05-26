@@ -18,6 +18,11 @@ workflow metagenomic_denovo {
 
   input {
     String        sample_name
+    File          fastq_1
+    File?         fastq_2
+    String        library_name="1"
+    String?       run_date_iso
+    String        sequencing_platform
 
     Array[File]+  reference_genome_fasta
 
@@ -39,6 +44,11 @@ workflow metagenomic_denovo {
   }
 
   parameter_meta {
+    fastq_1: { description: "Unaligned read1 file in fastq format", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }
+    fastq_2: { description: "Unaligned read2 file in fastq format. This should be empty for single-end read conversion and required for paired-end reads. If provided, it must match fastq_1 in length and order.", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }
+    sample_name: { description: "Sample name. This is required and will populate the 'SM' read group value and will be used as the output filename (must be filename-friendly)." }
+    sequencing_platform: { description: "Sequencing platform. This is required and will populate the 'PL' read group value. Must be one of CAPILLARY, DNBSEQ, HELICOS, ILLUMINA, IONTORRENT, LS454, ONT, PACBIO, or SOLID." }
+
     reference_genome_fasta: {
       description: "After denovo assembly, large contigs are scaffolded against a reference genome to determine orientation and to join contigs together, before further polishing by reads. You must supply at least one reference genome (all segments/chromomes in a single fasta file). If more than one reference is provided, contigs will be scaffolded against all of them and the one with the most complete assembly will be chosen for downstream polishing.",
       patterns: ["*.fasta"]
@@ -84,7 +94,12 @@ workflow metagenomic_denovo {
   # bundle 1 or 2 input files along with their metadata
   call read_utils.FastqToUBAM {
     input:
-      sample_name = sample_name
+      fastq_1 = fastq_1,
+      fastq_2 = fastq_2,
+      sample_name = sample_name,
+      library_name = library_name,
+      run_date = run_date_iso,
+      platform_name = sequencing_platform
   }
   File reads_bam = FastqToUBAM.unmapped_bam
 
