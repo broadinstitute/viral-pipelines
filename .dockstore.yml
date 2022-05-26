@@ -234,6 +234,11 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/merge_vcfs.wdl
     testParameterFiles:
       - empty.json
+  - name: metagenomic_denovo
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/metagenomic_denovo.wdl
+    testParameterFiles:
+      - empty.json
   - name: multiqc_only
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/multiqc_only.wdl
