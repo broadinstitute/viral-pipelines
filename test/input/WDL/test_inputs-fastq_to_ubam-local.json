@@ -2,5 +2,6 @@
   "fastq_to_ubam.FastqToUBAM.fastq_1": "test/input/in1.fastq",
   "fastq_to_ubam.FastqToUBAM.fastq_2": "test/input/in2.fastq",
   "fastq_to_ubam.FastqToUBAM.sample_name": "mysample",
-  "fastq_to_ubam.FastqToUBAM.library_name": "mylib"
+  "fastq_to_ubam.FastqToUBAM.library_name": "mylib",
+  "fastq_to_ubam.FastqToUBAM.platform_name": "ILLUMINA"
 }
