@@ -8,8 +8,8 @@ task assemble {
       Int?     spades_n_reads = 10000000
       Int?     spades_min_contig_len = 0
       
-      String?  assembler = "spades"
-      Boolean? always_succeed = false
+      String   assembler = "spades"
+      Boolean  always_succeed = false
       
       # do this in two steps in case the input doesn't actually have "taxfilt" in the name
       String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
@@ -70,7 +70,7 @@ task scaffold {
       File         reads_bam
       Array[File]+ reference_genome_fasta
 
-      String?      aligner
+      String?      aligner="muscle"
       Float?       min_length_fraction
       Float?       min_unambig
       Int?         replace_length=55
@@ -148,7 +148,7 @@ task scaffold {
 
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 15]) + " GB"
+        memory: select_first([machine_mem_gb, 31]) + " GB"
         cpu: 4
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"
@@ -489,70 +489,6 @@ task refine_assembly_with_aligned_reads {
     runtime {
         docker: docker
         memory: select_first([machine_mem_gb, 15]) + " GB"
-        cpu: 8
-        disks: "local-disk 375 LOCAL"
-        dx_instance_type: "mem1_ssd1_v2_x8"
-        maxRetries: 2
-    }
-}
-
-task refine {
-    meta {
-      description: "This step refines/polishes a genome based on unmapped short reads, aligning them (with either novoalign or bwa), and producing a new consensus genome. Uses GATK3 Unified Genotyper to produce new consensus. Produces new genome (fasta), variant calls (VCF), and figures of merit."
-    }
-
-    input {
-      File    assembly_fasta
-      File    reads_unmapped_bam
-
-      File?   novocraft_license
-
-      String? novoalign_options = "-r Random -l 40 -g 40 -x 20 -t 100"
-      Float?  major_cutoff = 0.5
-      Int?    min_coverage = 1
-
-      Int?    machine_mem_gb
-      String  docker = "quay.io/broadinstitute/viral-assemble:2.1.16.1"
-
-      String  assembly_basename=basename(basename(assembly_fasta, ".fasta"), ".scaffold")
-    }
-
-    command {
-        set -ex -o pipefail
-
-        # find 90% memory
-        mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
-
-        assembly.py --version | tee VERSION
-
-        ln -s ${assembly_fasta} assembly.fasta
-        read_utils.py novoindex \
-        assembly.fasta \
-        ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
-        --loglevel=DEBUG
-
-        assembly.py refine_assembly \
-          assembly.fasta \
-          ${reads_unmapped_bam} \
-          ${assembly_basename}.refined.fasta \
-          --outVcf ${assembly_basename}.sites.vcf.gz \
-          --min_coverage ${min_coverage} \
-          --major_cutoff ${major_cutoff} \
-          --novo_params="${novoalign_options}" \
-          --JVMmemory "$mem_in_mb"m \
-          ${"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
-          --loglevel=DEBUG
-    }
-
-    output {
-        File   refined_assembly_fasta = "${assembly_basename}.refined.fasta"
-        File   sites_vcf_gz           = "${assembly_basename}.sites.vcf.gz"
-        String viralngs_version       = read_string("VERSION")
-    }
-
-    runtime {
-        docker: docker
-        memory: select_first([machine_mem_gb, 7]) + " GB"
         cpu: 8
         disks: "local-disk 375 LOCAL"
         dx_instance_type: "mem1_ssd1_v2_x8"

@@ -8,6 +8,7 @@ workflow demux_only {
         description: "Picard-based demultiplexing and basecalling from a tarball of a raw BCL directory."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     input {

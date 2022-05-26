@@ -7,6 +7,7 @@ workflow fetch_sra_to_bam {
         description: "Retrieve reads from the NCBI Short Read Archive in unaligned BAM format with relevant metadata encoded."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     call ncbi_tools.Fetch_SRA_to_BAM

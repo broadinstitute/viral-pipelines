@@ -1,6 +1,7 @@
 version 1.0
 
 import "../tasks/tasks_assembly.wdl" as assembly
+import "../tasks/tasks_intrahost.wdl" as intrahost
 import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_read_utils.wdl" as read_utils
 
@@ -108,6 +109,12 @@ workflow assemble_refbased {
     }
     File aligned_trimmed_bam = select_first([merge_align_to_ref.out_bam, ivar_trim.aligned_trimmed_bam[0]])
 
+    call intrahost.lofreq as isnvs_ref {
+        input:
+            reference_fasta = reference_fasta,
+            aligned_bam     = aligned_trimmed_bam
+    }
+
     call reports.alignment_metrics {
         input:
             aligned_bam = aligned_trimmed_bam,
@@ -158,6 +165,12 @@ workflow assemble_refbased {
     }
     File aligned_self_bam = select_first([merge_align_to_self.out_bam, align_to_self.aligned_only_reads_bam[0]])
 
+    call intrahost.lofreq as isnvs_self {
+        input:
+            reference_fasta = call_consensus.refined_assembly_fasta,
+            aligned_bam     = aligned_self_bam
+    }
+
     call reports.plot_coverage as plot_self_coverage {
         input:
             aligned_reads_bam = aligned_self_bam,
@@ -198,11 +211,14 @@ workflow assemble_refbased {
         Int         align_to_ref_merged_reads_aligned            = plot_ref_coverage.reads_aligned
         Int         align_to_ref_merged_read_pairs_aligned       = plot_ref_coverage.read_pairs_aligned
         Float       align_to_ref_merged_bases_aligned            = plot_ref_coverage.bases_aligned
+        File        align_to_ref_isnvs_vcf                       = isnvs_ref.report_vcf
         
         File        picard_metrics_wgs                           = alignment_metrics.wgs_metrics
         File        picard_metrics_alignment                     = alignment_metrics.alignment_metrics
         File        picard_metrics_insert_size                   = alignment_metrics.insert_size_metrics
-        
+
+        Array[File] align_to_self_merged_aligned_and_unaligned_bam = align_to_self.aligned_bam
+
         File        align_to_self_merged_aligned_only_bam        = aligned_self_bam
         File        align_to_self_merged_coverage_plot           = plot_self_coverage.coverage_plot
         File        align_to_self_merged_coverage_tsv            = plot_self_coverage.coverage_tsv
@@ -210,6 +226,7 @@ workflow assemble_refbased {
         Int         align_to_self_merged_read_pairs_aligned      = plot_self_coverage.read_pairs_aligned
         Float       align_to_self_merged_bases_aligned           = plot_self_coverage.bases_aligned
         Float       align_to_self_merged_mean_coverage           = plot_self_coverage.mean_coverage
+        File        align_to_self_isnvs_vcf                      = isnvs_self.report_vcf
         
         String      align_to_ref_viral_core_version              = align_to_ref.viralngs_version[0]
         String      ivar_version                                 = ivar_trim.ivar_version[0]
