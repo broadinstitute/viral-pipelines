@@ -5,8 +5,8 @@ task assemble {
       File     reads_unmapped_bam
       File     trim_clip_db
       
-      Int?     spades_n_reads = 10000000
-      Int?     spades_min_contig_len = 0
+      Int      spades_n_reads = 10000000
+      Int      spades_min_contig_len = 0
       
       String   assembler = "spades"
       Boolean  always_succeed = false
@@ -70,10 +70,10 @@ task scaffold {
       File         reads_bam
       Array[File]+ reference_genome_fasta
 
-      String?      aligner="muscle"
+      String       aligner="muscle"
       Float?       min_length_fraction
       Float?       min_unambig
-      Int?         replace_length=55
+      Int          replace_length=55
 
       Int?         nucmer_max_gap
       Int?         nucmer_min_match

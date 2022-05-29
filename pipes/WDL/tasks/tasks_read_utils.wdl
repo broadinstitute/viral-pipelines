@@ -313,7 +313,7 @@ task FastqToUBAM {
     String? readgroup_name
     String? platform_unit
     String? run_date
-    String? platform_name
+    String  platform_name
     String? sequencing_center
 
     String  docker = "quay.io/broadinstitute/viral-core:2.1.33"
@@ -323,6 +323,7 @@ task FastqToUBAM {
     fastq_2: { description: "Unaligned read2 file in fastq format. This should be empty for single-end read conversion and required for paired-end reads. If provided, it must match fastq_1 in length and order.", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }
     sample_name: { description: "Sample name. This is required and will populate the 'SM' read group value and will be used as the output filename (must be filename-friendly)." }
     library_name: { description: "Library name. This is required and will populate the 'LB' read group value. SM & LB combinations must be identical for any sequencing reads generated from the same sequencing library, and must be distinct for any reads generated from different libraries." }
+    platform_name: { description: "Sequencing platform. This is required and will populate the 'PL' read group value. Must be one of CAPILLARY, DNBSEQ, HELICOS, ILLUMINA, IONTORRENT, LS454, ONT, PACBIO, or SOLID." }
   }
   command {
       set -ex -o pipefail
