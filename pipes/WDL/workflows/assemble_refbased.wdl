@@ -45,6 +45,9 @@ workflow assemble_refbased {
         min_coverage: {
             description: "Minimum read coverage required to call a position unambiguous."
         }
+        major_cutoff: {
+            description: "If the major allele is present at a frequency higher than this cutoff, we will call an unambiguous base at that position.  If it is equal to or below this cutoff, we will call an ambiguous base representing all possible alleles at that position."
+        }
 
 
         assembly_fasta: { description: "The new assembly / consensus sequence for this sample" }
@@ -61,6 +64,7 @@ workflow assemble_refbased {
         String       aligner="minimap2"
         File?        novocraft_license
         Int          min_coverage=3
+        Float        major_cutoff=0.75
         Boolean      skip_mark_dupes=false
         File?        trim_coords_bed
     }
@@ -140,6 +144,7 @@ workflow assemble_refbased {
             reference_fasta   = reference_fasta,
             reads_aligned_bam = aligned_trimmed_bam,
             min_coverage      = min_coverage,
+            major_cutoff      = major_cutoff,
             sample_name       = sample_name
     }
 
