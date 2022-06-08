@@ -330,7 +330,7 @@ workflow sarscov2_illumina_full {
         sequences = submittable_filter.filtered_fasta,
         keep_list = [biosample_to_genbank.sample_ids]
     }
-    call ncbi.package_sc2_genbank_ftp_submission {
+    call ncbi.package_sc2_genbank_ftp_submission as package_genbank_ftp_submission {
       input:
         sequences_fasta          = submit_genomes.filtered_fasta,
         source_modifier_table    = biosample_to_genbank.genbank_source_modifier_table,
@@ -465,9 +465,9 @@ workflow sarscov2_illumina_full {
         File          assembly_stats_relineage_tsv = sarscov2_batch_relineage.assembly_stats_relineage_tsv
         File          assembly_stats_final_relineage_tsv = sc2_meta_final.meta_tsv
 
-        File          submission_zip               = package_sc2_genbank_ftp_submission.submission_zip
-        File          submission_xml               = package_sc2_genbank_ftp_submission.submission_xml
-        File          submit_ready                 = package_sc2_genbank_ftp_submission.submit_ready
+        File          submission_zip               = package_genbank_ftp_submission.submission_zip
+        File          submission_xml               = package_genbank_ftp_submission.submission_xml
+        File          submit_ready                 = package_genbank_ftp_submission.submit_ready
         Array[File]   vadr_outputs                 = select_all(vadr.outputs_tgz)
         File          genbank_source_table         = biosample_to_genbank.genbank_source_modifier_table
         
