@@ -846,7 +846,7 @@ task prepare_genbank {
   }
 }
 
-task package_genbank_ftp_submission {
+task package_sc2_genbank_ftp_submission {
   meta {
     description: "Prepares a zip and xml file for FTP-based NCBI Genbank submission according to instructions at https://www.ncbi.nlm.nih.gov/viewvc/v1/trunk/submit/public-docs/genbank/SARS-CoV-2/."
   }
