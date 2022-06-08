@@ -128,13 +128,16 @@ task lofreq {
 
     lofreq version | grep version | sed 's/.* \(.*\)/\1/g' | tee LOFREQ_VERSION
 
-    samtools faidx "~{reference_fasta}"
-    samtools index "~{aligned_bam}"
+    # make local copies because CWD is writeable but localization dir isn't always
+    cp "~{reference_fasta}" reference.fasta
+    cp "~{aligned_bam}" aligned.bam
+    samtools faidx reference.fasta
+    samtools index aligned.bam
 
     lofreq call \
-      -f "~{reference_fasta}" \
+      -f reference.fasta \
       -o "~{out_basename}.vcf" \
-      "~{aligned_bam}"
+      aligned.bam
   >>>
 
   output {
