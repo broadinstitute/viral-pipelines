@@ -330,7 +330,7 @@ workflow sarscov2_illumina_full {
         sequences = submittable_filter.filtered_fasta,
         keep_list = [biosample_to_genbank.sample_ids]
     }
-    call ncbi.package_genbank_ftp_submission {
+    call ncbi.package_sc2_genbank_ftp_submission as package_genbank_ftp_submission {
       input:
         sequences_fasta          = submit_genomes.filtered_fasta,
         source_modifier_table    = biosample_to_genbank.genbank_source_modifier_table,
