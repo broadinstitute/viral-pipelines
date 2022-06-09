@@ -131,9 +131,18 @@ task lofreq {
     # make local copies because CWD is writeable but localization dir isn't always
     cp "~{reference_fasta}" reference.fasta
     cp "~{aligned_bam}" aligned.bam
+
+    # samtools faidx fails if fasta is empty
+    if [ $(grep -v '^>' reference.fasta | tr -d '\nNn' | wc -c) == "0" ]; then
+      touch "~{out_basename}.vcf"
+      exit 0
+    fi
+
+    # index for lofreq
     samtools faidx reference.fasta
     samtools index aligned.bam
 
+    # lofreq
     lofreq call \
       -f reference.fasta \
       -o "~{out_basename}.vcf" \
