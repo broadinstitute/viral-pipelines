@@ -188,6 +188,7 @@ workflow metagenomic_denovo {
     input:
       contigs_fasta           = assemble.contigs_fasta,
       reads_bam               = dehosted_bam,
+      sample_name             = sample_name,
       reference_genome_fasta  = reference_genome_fasta
   }
 
