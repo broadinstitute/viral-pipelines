@@ -1363,6 +1363,7 @@ task ancestral_traits {
         File?         weights
         Float?        sampling_bias_correction
 
+        Int?          machine_mem_gb
         String        docker = "nextstrain/base:build-20211012T204409Z"
     }
     String out_basename = basename(tree, '.nwk')
@@ -1383,7 +1384,7 @@ task ancestral_traits {
     >>>
     runtime {
         docker: docker
-        memory: "32 GB"
+        memory: select_first([machine_mem_gb, 32]) + " GB"
         cpu :   4
         disks:  "local-disk 100 HDD"
         dx_instance_type: "mem3_ssd1_v2_x4"
