@@ -107,7 +107,12 @@ workflow sarscov2_illumina_full {
 
         # assemble genome
         if (ampseq) {
-            String trim_coords_bed = amplicon_bed_prefix + demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"] + ".bed"
+            call utils.sed as bed_rename {
+              input:
+                infile = amplicon_bed_prefix + demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"] + ".bed",
+                search = "MN908947.3",
+                replace = "NC_045512.​2"
+            }
         }
         call assemble_refbased.assemble_refbased {
             input:
@@ -116,7 +121,7 @@ workflow sarscov2_illumina_full {
                 sample_name         = name_reads.left,
                 aligner             = "minimap2",
                 skip_mark_dupes     = ampseq,
-                trim_coords_bed     = trim_coords_bed,
+                trim_coords_bed     = bed_rename.outfile,
                 major_cutoff        = 0.75,
                 min_coverage        = if ampseq then 50 else 3
         }
@@ -395,7 +400,7 @@ workflow sarscov2_illumina_full {
     if(defined(gcs_out_metrics)) {
         call terra.gcs_copy as gcs_metrics_dump {
             input:
-              infiles        = flatten([[assembly_meta_tsv.combined, sc2_meta_final.meta_tsv, ivar_trim_stats.trim_stats_tsv, demux_deplete.multiqc_report_raw, demux_deplete.multiqc_report_cleaned, demux_deplete.spikein_counts, picard_wgs_merge.out_tsv, picard_alignment_merge.out_tsv, picard_insertsize_merge.out_tsv, sarscov2_batch_relineage.nextclade_all_json, sarscov2_batch_relineage.nextclade_all_tsv], demux_deplete.demux_metrics]),
+              infiles        = flatten([[assembly_meta_tsv.combined, sc2_meta_final.meta_tsv, ivar_trim_stats.trim_stats_tsv, demux_deplete.multiqc_report_raw, demux_deplete.multiqc_report_cleaned, demux_deplete.spikein_counts, picard_wgs_merge.out_tsv, picard_alignment_merge.out_tsv, picard_insertsize_merge.out_tsv, sarscov2_batch_relineage.nextclade_all_json, sarscov2_batch_relineage.nextclade_all_tsv], demux_deplete.demux_metrics, assemble_refbased.samtools_ampliconstats]),
               gcs_uri_prefix = "~{gcs_out_metrics}/~{flowcell_id}/"
         }
     }

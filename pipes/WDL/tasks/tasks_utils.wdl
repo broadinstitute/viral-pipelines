@@ -116,6 +116,32 @@ task zcat {
     }
 }
 
+task sed {
+    meta {
+        description: "Replace all occurrences of 'search' with 'replace' using sed."
+    }
+    input {
+        File   infile
+        String search
+        String replace
+        String outfilename = "~{infile}-rename.txt"
+    }
+    command {
+        sed 's/~{search}/~{replace}/g' "~{infile}" > "~{outfilename}"
+    }
+    runtime {
+        docker: "ubuntu"
+        memory: "1 GB"
+        cpu:    1
+        disks: "local-disk 375 LOCAL"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
+    }
+    output {
+        File outfile = "~{outfilename}"
+    }
+}
+
 task fasta_to_ids {
     meta {
         description: "Return the headers only from a fasta file"

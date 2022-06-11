@@ -221,6 +221,7 @@ workflow assemble_refbased {
         File        picard_metrics_wgs                           = alignment_metrics.wgs_metrics
         File        picard_metrics_alignment                     = alignment_metrics.alignment_metrics
         File        picard_metrics_insert_size                   = alignment_metrics.insert_size_metrics
+        File        samtools_ampliconstats                       = alignment_metrics.amplicon_stats
 
         Array[File] align_to_self_merged_aligned_and_unaligned_bam = align_to_self.aligned_bam
 
