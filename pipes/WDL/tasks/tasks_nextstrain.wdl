@@ -1688,6 +1688,7 @@ task export_auspice_json {
 
         String out_basename = basename(basename(tree, ".nwk"), "_timetree")
 
+        Int?   machine_mem_gb
         String docker = "nextstrain/base:build-20211012T204409Z"
     }
     
@@ -1735,7 +1736,7 @@ task export_auspice_json {
         echo --auspice-config >> exportargs
         echo "~{auspice_config}" >> exportargs
 
-        (export AUGUR_RECURSION_LIMIT=10000; cat exportargs | grep . | tr '\n' '\0' | xargs -0 -t augur export v2 \
+        (export AUGUR_RECURSION_LIMIT=15000; cat exportargs | grep . | tr '\n' '\0' | xargs -0 -t augur export v2 \
             ~{"--metadata " + sample_metadata} \
             ~{"--lat-longs " + lat_longs_tsv} \
             ~{"--colors " + colors_tsv} \
@@ -1750,10 +1751,10 @@ task export_auspice_json {
     >>>
     runtime {
         docker: docker
-        memory: "32 GB"
+        memory: select_first([machine_mem_gb, 64]) + " GB"
         cpu :   4
         disks:  "local-disk 100 HDD"
-        dx_instance_type: "mem3_ssd1_v2_x4"
+        dx_instance_type: "mem3_ssd1_v2_x8"
         preemptible: 0
         maxRetries: 2
     }
