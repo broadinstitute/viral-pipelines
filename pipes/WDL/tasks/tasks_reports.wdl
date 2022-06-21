@@ -6,6 +6,7 @@ task alignment_metrics {
     File   ref_fasta
     File?  primers_bed
 
+
     Int?   machine_mem_gb
     String docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
@@ -54,12 +55,16 @@ task alignment_metrics {
     echo -e "$SAMPLE\t~{out_basename}" >> prepend.txt
     paste prepend.txt picard_clean.insert_size_metrics.txt > "~{out_basename}".insert_size_metrics.txt
 
-    # actually don't know how to do CollectTargetedPcrMetrics yet
+    touch "~{out_basename}".ampliconstats.txt
     if [ -n "~{primers_bed}" ]; then
-      picard $XMX BedToIntervalList \
-        -I "~{primers_bed}" \
-        -O primers.interval.list \
-        -SD reference.dict
+      ## actually don't know how to do CollectTargetedPcrMetrics yet
+      #picard $XMX BedToIntervalList \
+      #  -I "~{primers_bed}" \
+      #  -O primers.interval.list \
+      #  -SD reference.dict
+
+      # samtools ampliconstats
+      samtools ampliconstats -s -@ $(nproc) -o "~{out_basename}".ampliconstats.txt "~{primers_bed}" "~{aligned_bam}"
     fi
   >>>
 
@@ -67,6 +72,7 @@ task alignment_metrics {
     File wgs_metrics         = "~{out_basename}.raw_wgs_metrics.txt"
     File alignment_metrics   = "~{out_basename}.alignment_metrics.txt"
     File insert_size_metrics = "~{out_basename}.insert_size_metrics.txt"
+    File amplicon_stats      = "~{out_basename}.ampliconstats.txt"
   }
 
   runtime {
