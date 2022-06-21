@@ -50,6 +50,7 @@ workflow sarscov2_illumina_full {
 
         Int           min_genome_bases = 24000
         Int           max_vadr_alerts = 0
+        Int           ntc_max_unambig = 3000
 
         File?         sample_rename_map
 
@@ -242,7 +243,7 @@ workflow sarscov2_illumina_full {
         seqid_list = write_lines(select_all(passing_assembly_ids)),
         demux_meta_by_sample_json = demux_deplete.meta_by_sample_json,
         assembly_meta_tsv = sarscov2_batch_relineage.assembly_stats_relineage_tsv,
-        ntc_min_unambig = 15000
+        ntc_min_unambig = ntc_max_unambig
     }
 
     ### QC metrics
