@@ -421,6 +421,7 @@ task nextstrain_build_subsample {
         File?  builds_yaml
         File?  parameters_yaml
         File?  keep_list
+        File?  drop_list
 
         Int?   machine_mem_gb
         String docker = "nextstrain/base:build-20211012T204409Z"
@@ -485,10 +486,25 @@ task nextstrain_build_subsample {
         fi
 
         # hard inclusion list
+        # This prepares the "defaults/include.txt" file expected by the subsample Snakemake rule 
+        # operating with the default configuration
         KEEP_LIST="~{default='' keep_list}"
         if [ -n "$KEEP_LIST" ]; then
             for i in $(cat defaults/include.txt); do echo $i; done > include-ncov-default-cleannewlines.txt
             cat include-ncov-default-cleannewlines.txt $KEEP_LIST > defaults/include.txt
+        fi
+
+        # hard exclusion list
+        # This prepares the "defaults/exclude.txt" file expected by the subsample Snakemake rule 
+        # operating with the default configuration
+        #
+        # See:
+        #   https://github.com/nextstrain/ncov/blob/7b8e74d80772641fc656310cd2b83d2f11dde76a/workflow/snakemake_rules/main_workflow.smk#L292
+        #   https://github.com/nextstrain/ncov/blob/638470f64b980b60e7bb766866b7faa8b7a7c5aa/defaults/parameters.yaml#L57
+        DROP_LIST="~{default='' drop_list}"
+        if [ -n "$DROP_LIST" ]; then
+            for i in $(cat defaults/exclude.txt); do echo $i; done > exclude-ncov-default-cleannewlines.txt
+            cat exclude-ncov-default-cleannewlines.txt $DROP_LIST > defaults/exclude.txt
         fi
 
         # seed input data (skip some upstream steps in the DAG)
@@ -1672,6 +1688,7 @@ task export_auspice_json {
 
         String out_basename = basename(basename(tree, ".nwk"), "_timetree")
 
+        Int?   machine_mem_gb
         String docker = "nextstrain/base:build-20211012T204409Z"
     }
     
@@ -1719,7 +1736,7 @@ task export_auspice_json {
         echo --auspice-config >> exportargs
         echo "~{auspice_config}" >> exportargs
 
-        (export AUGUR_RECURSION_LIMIT=10000; cat exportargs | grep . | tr '\n' '\0' | xargs -0 -t augur export v2 \
+        (export AUGUR_RECURSION_LIMIT=15000; cat exportargs | grep . | tr '\n' '\0' | xargs -0 -t augur export v2 \
             ~{"--metadata " + sample_metadata} \
             ~{"--lat-longs " + lat_longs_tsv} \
             ~{"--colors " + colors_tsv} \
@@ -1734,10 +1751,10 @@ task export_auspice_json {
     >>>
     runtime {
         docker: docker
-        memory: "32 GB"
+        memory: select_first([machine_mem_gb, 64]) + " GB"
         cpu :   4
         disks:  "local-disk 100 HDD"
-        dx_instance_type: "mem3_ssd1_v2_x4"
+        dx_instance_type: "mem3_ssd1_v2_x8"
         preemptible: 0
         maxRetries: 2
     }
