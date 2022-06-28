@@ -122,7 +122,9 @@ workflow assemble_refbased {
     call reports.alignment_metrics {
         input:
             aligned_bam = aligned_trimmed_bam,
-            ref_fasta   = reference_fasta
+            ref_fasta   = reference_fasta,
+            primers_bed = trim_coords_bed,
+            min_coverage = min_coverage
     }
 
     call assembly.run_discordance {
