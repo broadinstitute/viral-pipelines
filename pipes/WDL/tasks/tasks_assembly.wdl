@@ -407,9 +407,9 @@ task refine_assembly_with_aligned_reads {
       File     reads_aligned_bam
       String   sample_name
 
-      Boolean? mark_duplicates = false
-      Float?   major_cutoff = 0.5
-      Int?     min_coverage = 3
+      Boolean  mark_duplicates = false
+      Float    major_cutoff = 0.5
+      Int      min_coverage = 3
 
       Int?     machine_mem_gb
       String   docker = "quay.io/broadinstitute/viral-assemble:2.1.16.1"
