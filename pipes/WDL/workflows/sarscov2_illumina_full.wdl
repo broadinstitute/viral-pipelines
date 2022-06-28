@@ -414,7 +414,7 @@ workflow sarscov2_illumina_full {
     if(defined(gcs_out_cdc)) {
         call terra.gcs_copy as gcs_cdc_dump {
             input:
-                infiles        = [sc2_meta_final.meta_tsv, passing_cat.filtered_fasta],
+                infiles        = [sc2_meta_final.meta_tsv, passing_cat.filtered_fasta, gisaid_meta_prep.meta_csv, prefix_gisaid.renamed_fasta, package_genbank_ftp_submission.submission_zip, select_first([demux_deplete.sra_metadata])],
                 gcs_uri_prefix = "~{gcs_out_cdc}/~{demux_deplete.run_date}/~{flowcell_id}/"
         }
         call terra.gcs_copy as gcs_cdc_dump_reads {
