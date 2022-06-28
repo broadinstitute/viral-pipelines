@@ -13,7 +13,7 @@ task nextclade_one_sample {
         File? pcr_primers_csv
         File? virus_properties
         String? dataset_name
-        String docker = "nextstrain/nextclade:1.11.0"
+        String docker = "nextstrain/nextclade:2.0.0"
     }
     String basename = basename(genome_fasta, ".fasta")
     command {
@@ -25,8 +25,10 @@ task nextclade_one_sample {
         echo $NEXTCLADE_VERSION > VERSION
 
         # grab named nextclade dataset
+        DATASET_ARG=""
         if [ -n "~{default='' dataset_name}" ]; then
             nextclade dataset get --name="~{default='' dataset_name}" --output-dir=.
+            DATASET_ARG="--input-dataset ."
         python3<<CODE1
         import json, os
         with open('tag.json', 'rt') as inf:
@@ -37,21 +39,23 @@ task nextclade_one_sample {
         fi
 
         nextclade run \
-            --input-fasta "~{genome_fasta}" \
-            --input-root-seq ~{default="reference.fasta" root_sequence} \
-            --input-tree ~{default="tree.json" auspice_reference_tree_json} \
-            --input-qc-config ~{default="qc.json" qc_config_json} \
-            --input-gene-map ~{default="genemap.gff" gene_annotations_json} \
-            --input-pcr-primers ~{default="primers.csv" pcr_primers_csv} \
-            --input-virus-properties ~{default="virus_properties.json" virus_properties}  \
+            $DATASET_ARG \
+            ~{"--input-root-seq " + root_sequence} \
+            ~{"--input-tree " + auspice_reference_tree_json} \
+            ~{"--input-qc-config " + qc_config_json} \
+            ~{"--input-gene-map " + gene_annotations_json} \
+            ~{"--input-pcr-primers " + pcr_primers_csv} \
+            ~{"--input-virus-properties " + virus_properties}  \
+            --output-all=. \
+            --output-basename "~{basename}" \
             --output-json "~{basename}".nextclade.json \
             --output-tsv  "~{basename}".nextclade.tsv \
-            --output-tree "~{basename}".nextclade.auspice.json
-        cp "~{basename}".nextclade.tsv input.tsv
+            --output-tree "~{basename}".nextclade.auspice.json \
+            "~{genome_fasta}"
         python3 <<CODE
         # transpose table
         import codecs
-        with codecs.open('input.tsv', 'r', encoding='utf-8') as inf:
+        with codecs.open('~{basename}.nextclade.tsv', 'r', encoding='utf-8') as inf:
             with codecs.open('transposed.tsv', 'w', encoding='utf-8') as outf:
                 for c in zip(*(l.rstrip().split('\t') for l in inf)):
                     outf.write('\t'.join(c)+'\n')
@@ -93,7 +97,7 @@ task nextclade_many_samples {
         File?        virus_properties
         String?      dataset_name
         String       basename
-        String       docker = "nextstrain/nextclade:1.11.0"
+        String       docker = "nextstrain/nextclade:2.0.0"
     }
     command <<<
         set -e
@@ -104,8 +108,10 @@ task nextclade_many_samples {
         echo $NEXTCLADE_VERSION > VERSION
 
         # grab named nextclade dataset
+        DATASET_ARG=""
         if [ -n "~{default='' dataset_name}" ]; then
             nextclade dataset get --name="~{default='' dataset_name}" --output-dir=.
+            DATASET_ARG="--input-dataset ."
         python3<<CODE1
         import json, os
         with open('tag.json', 'rt') as inf:
@@ -115,20 +121,21 @@ task nextclade_many_samples {
         CODE1
         fi
 
-        cat ~{sep=" " genome_fastas} > genomes.fasta
         nextclade run \
-            --input-fasta genomes.fasta \
-            --input-root-seq ~{default="reference.fasta" root_sequence} \
-            --input-tree ~{default="tree.json" auspice_reference_tree_json} \
-            --input-qc-config ~{default="qc.json" qc_config_json} \
-            --input-gene-map ~{default="genemap.gff" gene_annotations_json} \
-            --input-pcr-primers ~{default="primers.csv" pcr_primers_csv} \
-            --input-virus-properties ~{default="virus_properties.json" virus_properties}  \
+            $DATASET_ARG \
+            ~{"--input-root-seq " + root_sequence} \
+            ~{"--input-tree " + auspice_reference_tree_json} \
+            ~{"--input-qc-config " + qc_config_json} \
+            ~{"--input-gene-map " + gene_annotations_json} \
+            ~{"--input-pcr-primers " + pcr_primers_csv} \
+            ~{"--input-virus-properties " + virus_properties}  \
+            --output-all=. \
+            --output-basename "~{basename}" \
             --output-json "~{basename}".nextclade.json \
             --output-tsv  "~{basename}".nextclade.tsv \
-            --output-tree "~{basename}".nextclade.auspice.json
-
-        cp genomes.aligned.fasta "~{basename}".nextalign.msa.fasta
+            --output-tree "~{basename}".nextclade.auspice.json \
+            --output-fasta "~{basename}".nextalign.msa.fasta \
+            ~{sep=" " genome_fastas}
 
         python3 <<CODE
         # transpose table
