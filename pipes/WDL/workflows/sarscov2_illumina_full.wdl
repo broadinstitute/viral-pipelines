@@ -280,6 +280,12 @@ workflow sarscov2_illumina_full {
         id_col       = 'sample_sanitized',
         out_basename = "picard_metrics_insertsize-~{flowcell_id}"
     }
+    call utils.tsv_join as samtools_ampliconstats_merge {
+      input:
+        input_tsvs   = assemble_refbased.samtools_ampliconstats_parsed,
+        id_col       = 'sample_sanitized',
+        out_basename = "samtools_ampliconstats-~{flowcell_id}"
+    }
 
     ### filter and concatenate final sets for delivery ("passing" and "submittable")
     call sarscov2.sc2_meta_final {
@@ -401,7 +407,7 @@ workflow sarscov2_illumina_full {
     if(defined(gcs_out_metrics)) {
         call terra.gcs_copy as gcs_metrics_dump {
             input:
-              infiles        = flatten([[assembly_meta_tsv.combined, sc2_meta_final.meta_tsv, ivar_trim_stats.trim_stats_tsv, demux_deplete.multiqc_report_raw, demux_deplete.multiqc_report_cleaned, demux_deplete.spikein_counts, picard_wgs_merge.out_tsv, picard_alignment_merge.out_tsv, picard_insertsize_merge.out_tsv, sarscov2_batch_relineage.nextclade_all_json, sarscov2_batch_relineage.nextclade_all_tsv], demux_deplete.demux_metrics, assemble_refbased.samtools_ampliconstats]),
+              infiles        = flatten([[assembly_meta_tsv.combined, sc2_meta_final.meta_tsv, ivar_trim_stats.trim_stats_tsv, demux_deplete.multiqc_report_raw, demux_deplete.multiqc_report_cleaned, demux_deplete.spikein_counts, picard_wgs_merge.out_tsv, picard_alignment_merge.out_tsv, picard_insertsize_merge.out_tsv, samtools_ampliconstats_merge.out_tsv, sarscov2_batch_relineage.nextclade_all_json, sarscov2_batch_relineage.nextclade_all_tsv], demux_deplete.demux_metrics]),
               gcs_uri_prefix = "~{gcs_out_metrics}/~{flowcell_id}/"
         }
     }
