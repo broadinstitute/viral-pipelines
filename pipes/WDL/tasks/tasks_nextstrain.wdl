@@ -27,7 +27,7 @@ task nextclade_one_sample {
         # grab named nextclade dataset
         DATASET_ARG=""
         if [ -n "~{default='' dataset_name}" ]; then
-            nextclade dataset get --name="~{default='' dataset_name}" --output-all=.
+            nextclade dataset get --name="~{default='' dataset_name}" --output-dir=.
             DATASET_ARG="--input-dataset ."
         python3<<CODE1
         import json, os
@@ -110,7 +110,7 @@ task nextclade_many_samples {
         # grab named nextclade dataset
         DATASET_ARG=""
         if [ -n "~{default='' dataset_name}" ]; then
-            nextclade dataset get --name="~{default='' dataset_name}" --output-all=.
+            nextclade dataset get --name="~{default='' dataset_name}" --output-dir=.
             DATASET_ARG="--input-dataset ."
         python3<<CODE1
         import json, os
