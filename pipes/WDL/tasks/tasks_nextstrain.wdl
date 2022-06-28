@@ -27,7 +27,7 @@ task nextclade_one_sample {
         # grab named nextclade dataset
         DATASET_ARG=""
         if [ -n "~{default='' dataset_name}" ]; then
-            nextclade dataset get --name="~{default='' dataset_name}" --output-dir=.
+            nextclade dataset get --name="~{default='' dataset_name}" --output-all=.
             DATASET_ARG="--input-dataset ."
         python3<<CODE1
         import json, os
@@ -46,6 +46,7 @@ task nextclade_one_sample {
             ~{"--input-gene-map " + gene_annotations_json} \
             ~{"--input-pcr-primers " + pcr_primers_csv} \
             ~{"--input-virus-properties " + virus_properties}  \
+            --output-all=. \
             --output-basename "~{basename}" \
             --output-json "~{basename}".nextclade.json \
             --output-tsv  "~{basename}".nextclade.tsv \
@@ -109,7 +110,7 @@ task nextclade_many_samples {
         # grab named nextclade dataset
         DATASET_ARG=""
         if [ -n "~{default='' dataset_name}" ]; then
-            nextclade dataset get --name="~{default='' dataset_name}" --output-dir=.
+            nextclade dataset get --name="~{default='' dataset_name}" --output-all=.
             DATASET_ARG="--input-dataset ."
         python3<<CODE1
         import json, os
@@ -128,6 +129,7 @@ task nextclade_many_samples {
             ~{"--input-gene-map " + gene_annotations_json} \
             ~{"--input-pcr-primers " + pcr_primers_csv} \
             ~{"--input-virus-properties " + virus_properties}  \
+            --output-all=. \
             --output-basename "~{basename}" \
             --output-json "~{basename}".nextclade.json \
             --output-tsv  "~{basename}".nextclade.tsv \
