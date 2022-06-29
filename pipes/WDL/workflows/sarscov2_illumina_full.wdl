@@ -112,7 +112,7 @@ workflow sarscov2_illumina_full {
               input:
                 infile = amplicon_bed_prefix + demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"] + ".bed",
                 search = "MN908947.3",
-                replace = "NC_045512.​2"
+                replace = "NC_045512.2"
             }
         }
         call assemble_refbased.assemble_refbased {
