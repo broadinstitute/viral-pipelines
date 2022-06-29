@@ -124,7 +124,7 @@ task sed {
         File   infile
         String search
         String replace
-        String outfilename = "~{infile}-rename.txt"
+        String outfilename = "~{basename(infile)}-rename.txt"
     }
     command {
         sed 's/~{search}/~{replace}/g' "~{infile}" > "~{outfilename}"
