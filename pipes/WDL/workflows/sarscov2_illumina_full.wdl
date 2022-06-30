@@ -281,10 +281,10 @@ workflow sarscov2_illumina_full {
         id_col       = 'sample_sanitized',
         out_basename = "picard_metrics_insertsize-~{flowcell_id}"
     }
-    call utils.tsv_stack as samtools_ampliconstats_merge {
+    call utils.cat_except_headers as samtools_ampliconstats_merge {
       input:
-        input_tsvs   = assemble_refbased.samtools_ampliconstats_parsed,
-        out_basename = "samtools_ampliconstats-~{flowcell_id}"
+        infiles   = assemble_refbased.samtools_ampliconstats_parsed,
+        out_filename = "samtools_ampliconstats-~{flowcell_id}.txt"
     }
 
     ### filter and concatenate final sets for delivery ("passing" and "submittable")

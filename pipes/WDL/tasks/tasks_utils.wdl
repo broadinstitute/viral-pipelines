@@ -487,6 +487,31 @@ task tsv_stack {
   }
 }
 
+task cat_except_headers {
+  input {
+    Array[File]+ infiles
+    String       out_filename
+  }
+
+  command {
+    awk 'FNR>1 || NR==1' \
+      ${sep=' ' infiles} \
+      > ${out_filename}
+  }
+
+  output {
+    File out_tsv = "${out_basename}"
+  }
+
+  runtime {
+    memory: "1 GB"
+    cpu: 1
+    docker: "ubuntu"
+    disks: "local-disk 50 HDD"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
 task make_empty_file {
   input {
     String out_filename
