@@ -70,13 +70,14 @@ task alignment_metrics {
       else
         AMPLICON_SET=$(basename "~{primers_bed}" .bed)
       fi
-      echo -e "$SAMPLE\t~{out_basename}\t$AMPLICON_SET" > prepend.txt
       grep ^AMPLICON "~{out_basename}".ampliconstats.txt | cut -f 2- > AMPLICON
       grep ^FREADS "~{out_basename}".ampliconstats.txt | cut -f 3- | tr '\t' '\n' > FREADS; echo "" >> FREADS
       grep ^FDEPTH "~{out_basename}".ampliconstats.txt | cut -f 3- | tr '\t' '\n' > FDEPTH; echo "" >> FDEPTH
       grep ^FPCOV  "~{out_basename}".ampliconstats.txt | cut -f 3- | tr '\t' '\n' > FPCOV;  echo "" >> FPCOV
       grep ^FAMP   "~{out_basename}".ampliconstats.txt | cut -f 4 | tail +2 > FAMP
-      paste prepend.txt AMPLICON FREADS FDEPTH FPCOV FAMP >> "~{out_basename}.ampliconstats_parsed.txt"
+      for i in $(cut -f 1 AMPLICON); do echo -e "$SAMPLE\t~{out_basename}\t$AMPLICON_SET"; done > prepend.txt
+      wc -l prepend.txt AMPLICON FREADS FDEPTH FPCOV FAMP
+      paste prepend.txt AMPLICON FREADS FDEPTH FPCOV FAMP | grep . >> "~{out_basename}.ampliconstats_parsed.txt"
     fi
   >>>
 
