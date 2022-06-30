@@ -111,6 +111,7 @@ workflow sarscov2_illumina_full {
             call utils.sed as bed_rename {
               input:
                 infile = amplicon_bed_prefix + demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"] + ".bed",
+                outfilename = demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"] + ".bed",
                 search = "MN908947.3",
                 replace = "NC_045512.2"
             }
@@ -280,10 +281,9 @@ workflow sarscov2_illumina_full {
         id_col       = 'sample_sanitized',
         out_basename = "picard_metrics_insertsize-~{flowcell_id}"
     }
-    call utils.tsv_join as samtools_ampliconstats_merge {
+    call utils.tsv_stack as samtools_ampliconstats_merge {
       input:
         input_tsvs   = assemble_refbased.samtools_ampliconstats_parsed,
-        id_col       = 'sample_sanitized',
         out_basename = "samtools_ampliconstats-~{flowcell_id}"
     }
 
