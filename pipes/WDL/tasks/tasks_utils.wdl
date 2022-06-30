@@ -493,14 +493,14 @@ task cat_except_headers {
     String       out_filename
   }
 
-  command {
+  command <<<
     awk 'FNR>1 || NR==1' \
-      ${sep=' ' infiles} \
-      > ${out_filename}
-  }
+      ~{sep=' ' infiles} \
+      > ~{out_filename}
+  >>>
 
   output {
-    File out_tsv = "${out_basename}"
+    File out_tsv = out_filename
   }
 
   runtime {
