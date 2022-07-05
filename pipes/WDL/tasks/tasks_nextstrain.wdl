@@ -97,6 +97,7 @@ task nextclade_many_samples {
         File?        virus_properties
         String?      dataset_name
         String       basename
+        File?        genome_ids_setdefault_blank
         String       docker = "nextstrain/nextclade:2.0.0"
     }
     command <<<
@@ -141,12 +142,22 @@ task nextclade_many_samples {
         # transpose table
         import codecs, csv, json
         out_maps = {'clade':{}, 'aaSubstitutions':{}, 'aaDeletions':{}}
-        with codecs.open('~{basename}.nextclade.tsv', 'r', encoding='utf-8') as inf:
-            with codecs.open('IDLIST', 'w', encoding='utf-8') as outf_ids:
+        with codecs.open('IDLIST', 'w', encoding='utf-8') as outf_ids:
+            # parse entries from output tsv into jsons
+            with codecs.open('~{basename}.nextclade.tsv', 'r', encoding='utf-8') as inf:
                 for row in csv.DictReader(inf, delimiter='\t'):
-                    for k in ('clade','aaSubstitutions','aaDeletions'):
+                    for k in out_maps.keys():
                         out_maps[k][row['seqName']] = row[k]
                     outf_ids.write(row['seqName']+'\n')
+            # fill empty values for anything not mentioned by output tsv
+            with codecs.open("~{default='/dev/null' genome_ids_setdefault_blank}", 'r', encoding='utf-8') as inf:
+                for line in inf:
+                    seqName = line.strip()
+                    if seqName and (seqName not in out_maps['clade']):
+                        for k in out_maps.keys():
+                            out_maps[k][seqName] = ''
+                        outf_ids.write(seqName+'\n')
+
         with codecs.open('NEXTCLADE_CLADE.json', 'w', encoding='utf-8') as outf:
             json.dump(out_maps['clade'], outf)
         with codecs.open('NEXTCLADE_AASUBS.json', 'w', encoding='utf-8') as outf:

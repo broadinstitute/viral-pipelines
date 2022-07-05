@@ -38,9 +38,10 @@ workflow sarscov2_batch_relineage {
 
     call nextstrain.nextclade_many_samples {
         input:
-            genome_fastas = [filter_sequences_by_length.filtered_fasta],
-            basename      = "nextclade-~{flowcell_id}",
-            dataset_name  = "sars-cov-2"
+            genome_fastas               = [filter_sequences_by_length.filtered_fasta],
+            genome_ids_setdefault_blank = fasta_to_ids.ids_txt,
+            basename                    = "nextclade-~{flowcell_id}",
+            dataset_name                = "sars-cov-2"
     }
 
     call sarscov2.pangolin_many_samples {
