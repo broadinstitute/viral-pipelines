@@ -10,7 +10,7 @@ task pangolin_one_sample {
         Float?  max_ambig
         String? analysis_mode
         Boolean update_dbs_now=false
-        String  docker = "quay.io/staphb/pangolin:4.0.6-pdata-1.9"
+        String  docker = "quay.io/staphb/pangolin:4.1.1-pdata-1.11"
     }
     String basename = basename(genome_fasta, ".fasta")
     command <<<
@@ -91,7 +91,7 @@ task pangolin_many_samples {
         String?      analysis_mode
         Boolean      update_dbs_now=false
         String       basename
-        String       docker = "quay.io/staphb/pangolin:4.0.6-pdata-1.9"
+        String       docker = "quay.io/staphb/pangolin:4.1.1-pdata-1.11"
     }
     command <<<
         set -ex
