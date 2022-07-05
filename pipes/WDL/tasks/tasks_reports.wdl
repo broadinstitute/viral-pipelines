@@ -77,7 +77,7 @@ task alignment_metrics {
       grep ^FAMP   "~{out_basename}".ampliconstats.txt | cut -f 4 | tail +2 > FAMP
       for i in $(cut -f 1 AMPLICON); do echo -e "$SAMPLE\t~{out_basename}\t$AMPLICON_SET"; done > prepend.txt
       wc -l prepend.txt AMPLICON FREADS FDEPTH FPCOV FAMP
-      paste prepend.txt AMPLICON FREADS FDEPTH FPCOV FAMP | grep . >> "~{out_basename}.ampliconstats_parsed.txt"
+      paste prepend.txt AMPLICON FREADS FDEPTH FPCOV FAMP | grep '\S' >> "~{out_basename}.ampliconstats_parsed.txt"
     fi
   >>>
 
