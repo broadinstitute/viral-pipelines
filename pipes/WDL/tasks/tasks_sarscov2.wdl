@@ -243,6 +243,9 @@ task sc2_meta_final {
         Int           min_unambig=24000
         Boolean       drop_file_cols=false
 
+        String        address_map = '{}'
+        String        authors_map = '{}'
+
         File?         filter_to_ids
 
         String        docker = "quay.io/broadinstitute/py3-bio:0.1.2"
@@ -274,6 +277,8 @@ task sc2_meta_final {
             genome_status = json.load(inf)
         else:
           genome_status = {}
+        address_map = json.loads('~{address_map}')
+        authors_map = json.loads('~{authors_map}')
 
         # read input files
         df_assemblies = pd.read_csv(assemblies_tsv, sep='\t').dropna(how='all')
@@ -351,6 +356,10 @@ task sc2_meta_final {
 
         # join column: collaborator_id
         df_assemblies = df_assemblies.merge(collab_ids, on='sample', how='left', validate='one_to_one')
+
+        # derived columns: authors, orig_lab_addr
+        df_assemblies.loc[:,'authors']       = list(authors_map.get(cby) if not pd.isna(cby) else cby for cby in df_assemblies.loc[:,'collected_by'])
+        df_assemblies.loc[:,'orig_lab_addr'] = list(address_map.get(cby) if not pd.isna(cby) else cby for cby in df_assemblies.loc[:,'collected_by'])
 
         # write final output
         df_assemblies.to_csv("~{out_basename}.final.tsv", sep='\t', index=False)
