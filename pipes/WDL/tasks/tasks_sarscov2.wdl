@@ -184,8 +184,8 @@ task sequencing_report {
         File    assembly_stats_tsv
         File?   collab_ids_tsv
 
-        String? sequencing_lab = "Broad Institute"
-        String? intro_blurb = "The Broad Institute Viral Genomics group, in partnership with the Genomics Platform and Data Sciences Platform, has been engaged in viral sequencing of COVID-19 patients since March 2020."
+        String  sequencing_lab = "Broad Institute"
+        String  intro_blurb = "The Broad Institute Viral Genomics group, in partnership with the Genomics Platform and Data Sciences Platform, has been engaged in viral sequencing of COVID-19 patients since March 2020."
         String? max_date
         String? min_date
         Int?    min_unambig
@@ -240,8 +240,11 @@ task sc2_meta_final {
 
         String?       max_date
         String?       min_date
-        Int?          min_unambig=24000
+        Int           min_unambig=24000
         Boolean       drop_file_cols=false
+
+        String        address_map = '{}'
+        String        authors_map = '{}'
 
         File?         filter_to_ids
 
@@ -274,6 +277,8 @@ task sc2_meta_final {
             genome_status = json.load(inf)
         else:
           genome_status = {}
+        address_map = json.loads('~{address_map}')
+        authors_map = json.loads('~{authors_map}')
 
         # read input files
         df_assemblies = pd.read_csv(assemblies_tsv, sep='\t').dropna(how='all')
@@ -351,6 +356,10 @@ task sc2_meta_final {
 
         # join column: collaborator_id
         df_assemblies = df_assemblies.merge(collab_ids, on='sample', how='left', validate='one_to_one')
+
+        # derived columns: authors, orig_lab_addr
+        df_assemblies.loc[:,'authors']       = list(authors_map.get(cby) if not pd.isna(cby) else cby for cby in df_assemblies.loc[:,'collected_by'])
+        df_assemblies.loc[:,'orig_lab_addr'] = list(address_map.get(cby) if not pd.isna(cby) else cby for cby in df_assemblies.loc[:,'collected_by'])
 
         # write final output
         df_assemblies.to_csv("~{out_basename}.final.tsv", sep='\t', index=False)
@@ -547,15 +556,19 @@ task gisaid_uploader {
     File    gisaid_sequences_fasta
     File    gisaid_meta_csv
     File    cli_auth_token
+    String  database="EpiCoV"
+    String  frameshift="catch_novel"
   }
   command {
     set -e
-    cp "~{cli_auth_token}" gisaid_uploader.authtoken
-    gisaid_uploader CoV upload \
+    cli3 upload \
+        --database "~{database}" \
+        --token "~{cli_auth_token}" \
         --fasta "~{gisaid_sequences_fasta}" \
-        --csv "~{gisaid_meta_csv}" \
-        --failedout failed_metadata.csv \
-        | tee logs.txt
+        --metadata "~{gisaid_meta_csv}" \
+        --failed failed_metadata.csv \
+        --frameshift "~{frameshift}" \
+        --log logs.txt
     # the following grep statement will exit 1 if anything failed
     grep "submissions failed: 0" logs.txt > /dev/null
   }
@@ -563,7 +576,7 @@ task gisaid_uploader {
     File  failed_metadata = "failed_metadata.csv"
   }
   runtime {
-    docker: "quay.io/broadinstitute/gisaid-cli:1.0"
+    docker: "quay.io/broadinstitute/gisaid-cli:3.0"
     memory: "2 GB"
     cpu: 2
     disks: "local-disk 100 HDD"

@@ -5,6 +5,8 @@ task alignment_metrics {
     File   aligned_bam
     File   ref_fasta
     File?  primers_bed
+    String? amplicon_set
+    Int?   min_coverage
 
     Int?   machine_mem_gb
     String docker = "quay.io/broadinstitute/viral-core:2.1.33"
@@ -54,12 +56,28 @@ task alignment_metrics {
     echo -e "$SAMPLE\t~{out_basename}" >> prepend.txt
     paste prepend.txt picard_clean.insert_size_metrics.txt > "~{out_basename}".insert_size_metrics.txt
 
-    # actually don't know how to do CollectTargetedPcrMetrics yet
+    touch "~{out_basename}".ampliconstats.txt "~{out_basename}".ampliconstats_parsed.txt
+    echo -e "sample_sanitized\tbam\tamplicon_set\tamplicon_idx\tamplicon_left\tamplicon_right\tFREADS\tFDEPTH\tFPCOV\tFAMP" > "~{out_basename}.ampliconstats_parsed.txt"
     if [ -n "~{primers_bed}" ]; then
-      picard $XMX BedToIntervalList \
-        -I "~{primers_bed}" \
-        -O primers.interval.list \
-        -SD reference.dict
+      # samtools ampliconstats
+      samtools ampliconstats -s -@ $(nproc) \
+        ~{'-d ' + min_coverage} \
+        -o "~{out_basename}".ampliconstats.txt "~{primers_bed}" "~{aligned_bam}"
+
+      # parse into our own tsv to facilitate tsv joining later
+      if [ -n "~{default='' amplicon_set}" ]; then
+        AMPLICON_SET="~{default='' amplicon_set}"
+      else
+        AMPLICON_SET=$(basename "~{primers_bed}" .bed)
+      fi
+      grep ^AMPLICON "~{out_basename}".ampliconstats.txt | cut -f 2- > AMPLICON
+      grep ^FREADS "~{out_basename}".ampliconstats.txt | cut -f 3- | tr '\t' '\n' > FREADS; echo "" >> FREADS
+      grep ^FDEPTH "~{out_basename}".ampliconstats.txt | cut -f 3- | tr '\t' '\n' > FDEPTH; echo "" >> FDEPTH
+      grep ^FPCOV  "~{out_basename}".ampliconstats.txt | cut -f 3- | tr '\t' '\n' > FPCOV;  echo "" >> FPCOV
+      grep ^FAMP   "~{out_basename}".ampliconstats.txt | cut -f 4 | tail +2 > FAMP
+      for i in $(cut -f 1 AMPLICON); do echo -e "$SAMPLE\t~{out_basename}\t$AMPLICON_SET"; done > prepend.txt
+      wc -l prepend.txt AMPLICON FREADS FDEPTH FPCOV FAMP
+      paste prepend.txt AMPLICON FREADS FDEPTH FPCOV FAMP | grep '\S' >> "~{out_basename}.ampliconstats_parsed.txt"
     fi
   >>>
 
@@ -67,6 +85,8 @@ task alignment_metrics {
     File wgs_metrics         = "~{out_basename}.raw_wgs_metrics.txt"
     File alignment_metrics   = "~{out_basename}.alignment_metrics.txt"
     File insert_size_metrics = "~{out_basename}.insert_size_metrics.txt"
+    File amplicon_stats      = "~{out_basename}.ampliconstats.txt"
+    File amplicon_stats_parsed = "~{out_basename}.ampliconstats_parsed.txt"
   }
 
   runtime {

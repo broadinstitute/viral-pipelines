@@ -50,6 +50,7 @@ workflow sarscov2_illumina_full {
 
         Int           min_genome_bases = 24000
         Int           max_vadr_alerts = 0
+        Int           ntc_max_unambig = 3000
 
         File?         sample_rename_map
 
@@ -107,7 +108,13 @@ workflow sarscov2_illumina_full {
 
         # assemble genome
         if (ampseq) {
-            String trim_coords_bed = amplicon_bed_prefix + demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"] + ".bed"
+            call utils.sed as bed_rename {
+              input:
+                infile = amplicon_bed_prefix + demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"] + ".bed",
+                outfilename = demux_deplete.meta_by_sample[name_reads.left]["amplicon_set"] + ".bed",
+                search = "MN908947.3",
+                replace = "NC_045512.2"
+            }
         }
         call assemble_refbased.assemble_refbased {
             input:
@@ -116,7 +123,7 @@ workflow sarscov2_illumina_full {
                 sample_name         = name_reads.left,
                 aligner             = "minimap2",
                 skip_mark_dupes     = ampseq,
-                trim_coords_bed     = trim_coords_bed,
+                trim_coords_bed     = bed_rename.outfile,
                 major_cutoff        = 0.75,
                 min_coverage        = if ampseq then 50 else 3
         }
@@ -242,7 +249,7 @@ workflow sarscov2_illumina_full {
         seqid_list = write_lines(select_all(passing_assembly_ids)),
         demux_meta_by_sample_json = demux_deplete.meta_by_sample_json,
         assembly_meta_tsv = sarscov2_batch_relineage.assembly_stats_relineage_tsv,
-        ntc_min_unambig = 15000
+        ntc_min_unambig = ntc_max_unambig
     }
 
     ### QC metrics
@@ -273,6 +280,11 @@ workflow sarscov2_illumina_full {
         input_tsvs   = assemble_refbased.picard_metrics_insert_size,
         id_col       = 'sample_sanitized',
         out_basename = "picard_metrics_insertsize-~{flowcell_id}"
+    }
+    call utils.cat_except_headers as samtools_ampliconstats_merge {
+      input:
+        infiles   = assemble_refbased.samtools_ampliconstats_parsed,
+        out_filename = "samtools_ampliconstats-~{flowcell_id}.txt"
     }
 
     ### filter and concatenate final sets for delivery ("passing" and "submittable")
@@ -395,14 +407,14 @@ workflow sarscov2_illumina_full {
     if(defined(gcs_out_metrics)) {
         call terra.gcs_copy as gcs_metrics_dump {
             input:
-              infiles        = flatten([[assembly_meta_tsv.combined, sc2_meta_final.meta_tsv, ivar_trim_stats.trim_stats_tsv, demux_deplete.multiqc_report_raw, demux_deplete.multiqc_report_cleaned, demux_deplete.spikein_counts, picard_wgs_merge.out_tsv, picard_alignment_merge.out_tsv, picard_insertsize_merge.out_tsv, sarscov2_batch_relineage.nextclade_all_json, sarscov2_batch_relineage.nextclade_all_tsv], demux_deplete.demux_metrics]),
+              infiles        = flatten([[assembly_meta_tsv.combined, sc2_meta_final.meta_tsv, ivar_trim_stats.trim_stats_tsv, demux_deplete.multiqc_report_raw, demux_deplete.multiqc_report_cleaned, demux_deplete.spikein_counts, picard_wgs_merge.out_tsv, picard_alignment_merge.out_tsv, picard_insertsize_merge.out_tsv, samtools_ampliconstats_merge.out_tsv, sarscov2_batch_relineage.nextclade_all_json, sarscov2_batch_relineage.nextclade_all_tsv], demux_deplete.demux_metrics]),
               gcs_uri_prefix = "~{gcs_out_metrics}/~{flowcell_id}/"
         }
     }
     if(defined(gcs_out_cdc)) {
         call terra.gcs_copy as gcs_cdc_dump {
             input:
-                infiles        = [sc2_meta_final.meta_tsv, passing_cat.filtered_fasta],
+                infiles        = [sc2_meta_final.meta_tsv, passing_cat.filtered_fasta, gisaid_meta_prep.meta_csv, prefix_gisaid.renamed_fasta, package_genbank_ftp_submission.submission_zip, select_first([demux_deplete.sra_metadata])],
                 gcs_uri_prefix = "~{gcs_out_cdc}/~{demux_deplete.run_date}/~{flowcell_id}/"
         }
         call terra.gcs_copy as gcs_cdc_dump_reads {
