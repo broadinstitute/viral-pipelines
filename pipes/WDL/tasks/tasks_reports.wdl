@@ -7,6 +7,8 @@ task alignment_metrics {
     File?  primers_bed
     String? amplicon_set
     Int?   min_coverage
+    Int?   max_amp_len
+    Int?   max_amplicons
 
     Int?   machine_mem_gb
     String docker = "quay.io/broadinstitute/viral-core:2.1.33"
@@ -62,6 +64,8 @@ task alignment_metrics {
       # samtools ampliconstats
       samtools ampliconstats -s -@ $(nproc) \
         ~{'-d ' + min_coverage} \
+        ~{'-l ' + max_amp_len} \
+        ~{'-a ' + max_amplicons} \
         -o "~{out_basename}".ampliconstats.txt "~{primers_bed}" "~{aligned_bam}"
 
       # parse into our own tsv to facilitate tsv joining later
