@@ -13,7 +13,7 @@ task nextclade_one_sample {
         File? pcr_primers_csv
         File? virus_properties
         String? dataset_name
-        String docker = "nextstrain/nextclade:2.0.0"
+        String docker = "nextstrain/nextclade:2.3.0"
     }
     String basename = basename(genome_fasta, ".fasta")
     command {
@@ -98,7 +98,7 @@ task nextclade_many_samples {
         String?      dataset_name
         String       basename
         File?        genome_ids_setdefault_blank
-        String       docker = "nextstrain/nextclade:2.0.0"
+        String       docker = "nextstrain/nextclade:2.3.0"
     }
     command <<<
         set -e
