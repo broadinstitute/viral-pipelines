@@ -46,3 +46,7 @@ Slxn: #Make sure you are saving your file -- basically the computer is saying th
 2. Your branch is ahead of 'origin/main' by 1 commit.
   (use "git push" to publish your local commits)
 >> Its because no changes have been made to your file. 
+###
+3. fatal: not a git repository (or any of the parent directories): .git
+    You are not in a git repo (local on your computer)-- you must be in one to connect to a remote repository.
+    
