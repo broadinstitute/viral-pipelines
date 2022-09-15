@@ -36,6 +36,16 @@ Terminal $PATH: /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
     It will ask you where you want to put this repository and you can just make a new folder and put it there 
     Make sure to add it to your workspace dont just delete it 
     
+##How to pull branches using GitHub 
+    git pull origin other-branch
+##How to see all branches availablle on GitHub 
+    git branch -v -a 
+##Switch to a new Git Branch (-C if you wanna make it , remove if jsut wanna switch)
+    git switch -c fnegrete_test
+##How to see what branch you are in 
+    git branch -a 
+~~break terminal: ctrl + z
+
 #errors you may get: 
 1. our branch is up to date with 'origin/notes'.
 Slxn: #Make sure you are saving your file -- basically the computer is saying there are no changes to the file ... so there is nothing to update 
@@ -46,7 +56,7 @@ Slxn: #Make sure you are saving your file -- basically the computer is saying th
 2. Your branch is ahead of 'origin/main' by 1 commit.
   (use "git push" to publish your local commits)
 >> Its because no changes have been made to your file. 
-###
+####
 3. fatal: not a git repository (or any of the parent directories): .git
     You are not in a git repo (local on your computer)-- you must be in one to connect to a remote repository.
-    
+Make changes 12
