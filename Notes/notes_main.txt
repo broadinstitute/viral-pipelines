@@ -1,0 +1,48 @@
+Terminal Notes 
+
+########
+
+Terminal $PATH: /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+
+########
+09.09.22
+>> Git uploaded to Terminal 
+    >> check using 
+        it version
+>>Installing Git onto VS 
+##
+>>Confirm Git to Terminal 
+    git config --global user.name "golu099" 
+    git config --global user.email "flavianegrete@gmail.com"
+>>Adding a repository to Git 
+    git remote add origin https://github.com/user/repo.git
+    git remote -v
+>>change the directory/github repo ur in 
+    git remote set-url origin git@github.com:username/projectname.git 
+>>To set branch (once youve made repo) in Git
+    git push --set-upstream origin notes
+    ##sometimes it will not be notes since this is a branch and not the 'main' ---this is just basically to specify your branch  
+
+>>Normal log with any file to push from VS>> GitHub
+    #make sure you are in the CORRECT local file where the file is actually made 
+    git add file
+    git commit -m
+    git push --set-upstream origin notes 
+#To backtrack or restore a file 
+    git restore \[tab]
+#How to pull files from GitHub >> VS 
+    Ctrl+Shift+P  (or alternatively you can just add '>' on the top part of the saerch bar) 
+    Search Git:Clone (or like some combination of Git and Clone) 
+    It will ask you where you want to put this repository and you can just make a new folder and put it there 
+    Make sure to add it to your workspace dont just delete it 
+    
+#errors you may get: 
+1. our branch is up to date with 'origin/notes'.
+Slxn: #Make sure you are saving your file -- basically the computer is saying there are no changes to the file ... so there is nothing to update 
+>> git add -u \file 
+>> git commit -m \file 
+>> git push --set-upstream origin notes 
+##
+2. Your branch is ahead of 'origin/main' by 1 commit.
+  (use "git push" to publish your local commits)
+>> Its because no changes have been made to your file. 
