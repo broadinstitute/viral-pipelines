@@ -1,6 +1,6 @@
 version 1.0
 
-import "https://raw.githubusercontent.com/vsmalladi/viral-pipelines/WDL/workflows/tasks/tasks_ncbi_tools.wdl" as ncbi_tools
+import "https://raw.githubusercontent.com/vsmalladi/viral-pipelines/master/pipes/WDL/tasks/tasks_ncbi_tools.wdl" as ncbi_tools
 
 workflow fetch_sra_to_bam {
     meta {
