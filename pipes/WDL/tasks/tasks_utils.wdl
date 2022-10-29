@@ -660,7 +660,7 @@ task filter_sequences_by_length {
         docker: docker
         memory: "1 GB"
         cpu :   1
-        disks:  "local-disk 300 HDD"
+        disks:  "local-disk 700 HDD"
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
