@@ -60,9 +60,9 @@ task nextclade_one_sample {
                 for c in zip(*(l.rstrip().split('\t') for l in inf)):
                     outf.write('\t'.join(c)+'\n')
         CODE
-        grep ^clade transposed.tsv | cut -f 2 | grep -v clade > NEXTCLADE_CLADE
-        grep ^aaSubstitutions transposed.tsv | cut -f 2 | grep -v aaSubstitutions > NEXTCLADE_AASUBS
-        grep ^aaDeletions transposed.tsv | cut -f 2 | grep -v aaDeletions > NEXTCLADE_AADELS
+        grep ^clade\\W transposed.tsv | cut -f 2 | grep -v clade > NEXTCLADE_CLADE
+        grep ^aaSubstitutions\\W transposed.tsv | cut -f 2 | grep -v aaSubstitutions > NEXTCLADE_AASUBS
+        grep ^aaDeletions\\W transposed.tsv | cut -f 2 | grep -v aaDeletions > NEXTCLADE_AADELS
     }
     runtime {
         docker: docker
