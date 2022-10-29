@@ -278,11 +278,6 @@ workflows:
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_lineages.wdl
     testParameterFiles:
-  - name: isnvs_merge_to_vcf
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/isnvs_merge_to_vcf.wdl
-    testParameterFiles:
-      - empty.json
   - name: isnvs_one_sample
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/isnvs_one_sample.wdl
