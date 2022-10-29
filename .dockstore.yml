@@ -278,89 +278,10 @@ workflows:
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_lineages.wdl
     testParameterFiles:
-  - name: kraken2_build
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/kraken2_build.wdl
-    testParameterFiles:
-      - empty.json
-  - name: mafft_and_snp
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/mafft_and_snp.wdl
-    testParameterFiles:
-      - empty.json
-  - name: mafft_and_snp_annotated
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/mafft_and_snp_annotated.wdl
-    testParameterFiles:
-      - empty.json
-  - name: mafft_and_trim
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/mafft_and_trim.wdl
-    testParameterFiles:
-      - empty.json
-  - name: mafft
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/mafft.wdl
-    testParameterFiles:
-      - empty.json
-  - name: merge_bams
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/merge_bams.wdl
-    testParameterFiles:
-      - empty.json
-  - name: merge_metagenomics
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/merge_metagenomics.wdl
-    testParameterFiles:
-      - empty.json
-  - name: merge_tar_chunks
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/merge_tar_chunks.wdl
-    testParameterFiles:
-      - empty.json
-  - name: merge_vcfs_and_annotate
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/merge_vcfs_and_annotate.wdl
-    testParameterFiles:
-      - empty.json
-  - name: merge_vcfs
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/merge_vcfs.wdl
-    testParameterFiles:
-      - empty.json
-  - name: multiqc_only
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/multiqc_only.wdl
-    testParameterFiles:
-      - empty.json
+    - /test/input/WDL/test_inputs-sarscov2_lineages-local.json
   - name: read_depths
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/read_depths.wdl
-    testParameterFiles:
-      - empty.json
-  - name: sarscov2_batch_relineage
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_batch_relineage.wdl
-    testParameterFiles:
-      - empty.json
-  - name: sarscov2_biosample_load
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_biosample_load.wdl
-    testParameterFiles:
-      - empty.json
-  - name: sarscov2_data_release
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_data_release.wdl
-    testParameterFiles:
-      - empty.json
-  - name: sarscov2_genbank
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_genbank.wdl
-    testParameterFiles:
-      - empty.json
-  - name: sarscov2_genbank_ingest
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_genbank_ingest.wdl
     testParameterFiles:
       - empty.json
   - name: sarscov2_gisaid_ingest
@@ -368,16 +289,6 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_gisaid_ingest.wdl
     testParameterFiles:
       - empty.json
-  - name: sarscov2_illumina_full
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_illumina_full.wdl
-    testParameterFiles:
-      - empty.json
-  - name: sarscov2_lineages
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_lineages.wdl
-    testParameterFiles:
-    - /test/input/WDL/test_inputs-sarscov2_lineages-local.json
   - name: sarscov2_nextclade_multi
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_nextclade_multi.wdl
