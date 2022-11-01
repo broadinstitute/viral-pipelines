@@ -34,6 +34,7 @@ task deplete_taxa {
   }
 
   String       bam_basename = basename(raw_reads_unmapped_bam, ".bam")
+  Int disk_size = 375
 
   command {
     set -ex -o pipefail
@@ -93,7 +94,8 @@ task deplete_taxa {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 15]) + " GB"
     cpu: "${cpu}"
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: 1
     maxRetries: 2
@@ -116,6 +118,7 @@ task filter_to_taxon {
 
   # do this in two steps in case the input doesn't actually have "cleaned" in the name
   String   bam_basename = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
+  Int disk_size = 375
 
   command {
     set -ex -o pipefail
@@ -157,7 +160,8 @@ task filter_to_taxon {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 15]) + " GB"
     cpu: 16
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     maxRetries: 2
   }
@@ -172,6 +176,7 @@ task build_lastal_db {
   }
 
   String db_name = basename(sequences_fasta, ".fasta")
+  Int disk_size = 375
 
   command {
     set -ex -o pipefail
@@ -192,7 +197,8 @@ task build_lastal_db {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 7]) + " GB"
     cpu: 2
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
   }
@@ -207,6 +213,8 @@ task merge_one_per_sample {
     Int?         machine_mem_gb
     String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
+
+  Int disk_size = 750
 
   command {
     set -ex -o pipefail
@@ -241,7 +249,8 @@ task merge_one_per_sample {
     memory: select_first([machine_mem_gb, 7]) + " GB"
     cpu: 4
     docker: "${docker}"
-    disks: "local-disk 750 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x4"
     maxRetries: 2
   }

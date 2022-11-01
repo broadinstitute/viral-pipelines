@@ -18,6 +18,8 @@ task assemble {
       String   docker = "quay.io/broadinstitute/viral-assemble:2.1.16.1"
     }
 
+    Int disk_size = 375
+
     command {
         set -ex -o pipefail
 
@@ -57,7 +59,8 @@ task assemble {
         docker: docker
         memory: select_first([machine_mem_gb, 15]) + " GB"
         cpu: 4
-        disks: "local-disk 375 LOCAL"
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
         maxRetries: 2
     }
@@ -86,6 +89,8 @@ task scaffold {
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
     }
+
+    Int disk_size = 375
 
     command {
         set -ex -o pipefail
@@ -150,7 +155,8 @@ task scaffold {
         docker: docker
         memory: select_first([machine_mem_gb, 31]) + " GB"
         cpu: 4
-        disks: "local-disk 375 LOCAL"
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
         maxRetries: 2
     }
@@ -174,6 +180,7 @@ task ivar_trim {
     }
 
     String  bam_basename=basename(aligned_bam, ".bam")
+    Int disk_size = 375
 
     parameter_meta {
       aligned_bam:     { description: "aligned reads in BAM format", patterns: ["*.bam"] }
@@ -215,7 +222,8 @@ task ivar_trim {
         docker: docker
         memory: select_first([machine_mem_gb, 7]) + " GB"
         cpu: 4
-        disks: "local-disk 375 LOCAL"
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x4"
         maxRetries: 2
     }
@@ -230,6 +238,8 @@ task ivar_trim_stats {
 
       String docker = "quay.io/broadinstitute/py3-bio:0.1.2"
     }
+
+    Int disk_size = 50
 
     command <<<
       set -e
@@ -273,7 +283,8 @@ task ivar_trim_stats {
         docker: docker
         memory: "1 GB"
         cpu: 1
-        disks: "local-disk 50 HDD"
+        disks:   "local-disk " + disk_size + " HDD"
+        disk:    disk_size + " GB"
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -299,6 +310,8 @@ task align_reads {
 
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
   }
+
+  Int disk_size = 375
 
   parameter_meta {
     aligner: { description: "Short read aligner to use: novoalign, minimap2, or bwa. (Default: novoalign)" }
@@ -390,7 +403,8 @@ task align_reads {
     docker: docker
     memory: select_first([machine_mem_gb, 15]) + " GB"
     cpu: 8
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: 1
     maxRetries: 2
@@ -414,6 +428,8 @@ task refine_assembly_with_aligned_reads {
       Int?     machine_mem_gb
       String   docker = "quay.io/broadinstitute/viral-assemble:2.1.16.1"
     }
+
+    Int disk_size = 375
 
     parameter_meta {
       major_cutoff: {
@@ -490,7 +506,8 @@ task refine_assembly_with_aligned_reads {
         docker: docker
         memory: select_first([machine_mem_gb, 15]) + " GB"
         cpu: 8
-        disks: "local-disk 375 LOCAL"
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
         maxRetries: 2
     }
@@ -524,6 +541,8 @@ task refine_2x_and_plot {
       # do this in two steps in case the input doesn't actually have "cleaned" in the name
       String  sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
     }
+
+    Int disk_size = 375
 
     command {
         set -ex -o pipefail
@@ -635,7 +654,8 @@ task refine_2x_and_plot {
         docker: docker
         memory: select_first([machine_mem_gb, 7]) + " GB"
         cpu: 8
-        disks: "local-disk 375 LOCAL"
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
         maxRetries: 2
     }
@@ -654,6 +674,8 @@ task run_discordance {
 
       String docker = "quay.io/broadinstitute/viral-core:2.1.33"
     }
+
+    Int disk_size = 100
 
     command {
         set -ex -o pipefail
@@ -710,7 +732,8 @@ task run_discordance {
         docker: docker
         memory: "3 GB"
         cpu: 2
-        disks: "local-disk 100 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 1
         maxRetries: 2
@@ -729,6 +752,7 @@ task filter_bad_ntc_batches {
         Int         ntc_min_unambig
         File?       genome_status_json
     }
+    Int disk_size = 50
     command <<<
         set -e
         python3<<CODE
@@ -807,7 +831,8 @@ task filter_bad_ntc_batches {
         docker: "python:slim"
         memory: "2 GB"
         cpu:    1
-        disks: "local-disk 50 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }

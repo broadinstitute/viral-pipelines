@@ -13,6 +13,7 @@ task multi_align_mafft_ref {
   }
 
   String         fasta_basename = basename(reference_fasta, '.fasta')
+  Int disk_size = 200
 
   command {
     interhost.py --version | tee VERSION
@@ -39,7 +40,8 @@ task multi_align_mafft_ref {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 60]) + " GB"
     cpu: 8
-    disks: "local-disk 200 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x8"
     maxRetries: 2
   }
@@ -56,6 +58,8 @@ task multi_align_mafft {
     Int?         machine_mem_gb
     String       docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
   }
+
+  Int disk_size = 200
 
   command {
     interhost.py --version | tee VERSION
@@ -82,7 +86,8 @@ task multi_align_mafft {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 30]) + " GB"
     cpu: 8
-    disks: "local-disk 200 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x8"
     maxRetries: 2
   }
@@ -96,9 +101,14 @@ task beast {
     Int?    accelerator_count
     String? gpu_type
     Int?    gpu_count
+    String? vm_size
 
     String  docker = "quay.io/broadinstitute/beast-beagle-cuda:1.10.5pre"
   }
+
+  Int disk_size = 300
+  Int boot_disk = 50
+  Int disk_size_az = disk_size + boot_disk
 
   # TO DO: parameterize gpuType and gpuCount
 
@@ -125,9 +135,11 @@ task beast {
     docker: "${docker}"
     memory: "7 GB"
     cpu:    4
-    disks: "local-disk 300 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size_az + " GB"
+    vm_size: select_first([accelerator_type, "Standard_NC6"])  # TES Azure
     maxRetries: 1
-    bootDiskSizeGb: 50
+    bootDiskSizeGb: boot_disk
     gpu:                 true                # dxWDL
     dx_timeout:          "40H"               # dxWDL
     dx_instance_type:    "mem1_ssd1_gpu2_x8" # dxWDL
@@ -147,6 +159,8 @@ task index_ref {
     Int?   machine_mem_gb
     String docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
+
+  Int disk_size = 100
 
   command {
     read_utils.py --version | tee VERSION
@@ -168,7 +182,9 @@ task index_ref {
     docker: "${docker}"
     cpu: 2
     memory: select_first([machine_mem_gb, 4]) + " GB"
-    disks: "local-disk 100 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
+
     maxRetries: 2
   }
 }
@@ -183,6 +199,8 @@ task trimal_clean_msa {
     String input_basename = basename(basename(in_aligned_fasta, ".fasta"), ".fa")
   }
 
+  Int disk_size = 100
+
   command {
     trimal -fasta -automated1 -in "${in_aligned_fasta}" -out "${input_basename}_trimal_cleaned.fasta"
   }
@@ -194,7 +212,8 @@ task trimal_clean_msa {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 7]) + " GB"
     cpu: 4
-    disks: "local-disk 100 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     maxRetries: 2
   }

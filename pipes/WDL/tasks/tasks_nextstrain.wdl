@@ -16,6 +16,7 @@ task nextclade_one_sample {
         String docker = "nextstrain/nextclade:2.5.0"
     }
     String basename = basename(genome_fasta, ".fasta")
+    Int disk_size = 50
     command {
         set -e
         apt-get update
@@ -68,7 +69,8 @@ task nextclade_one_sample {
         docker: docker
         memory: "3 GB"
         cpu:    2
-        disks: "local-disk 50 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -100,6 +102,7 @@ task nextclade_many_samples {
         File?        genome_ids_setdefault_blank
         String       docker = "nextstrain/nextclade:2.5.0"
     }
+    Int disk_size = 100
     command <<<
         set -e
         apt-get update
@@ -175,7 +178,8 @@ task nextclade_many_samples {
         docker: docker
         memory: "3 GB"
         cpu:    4
-        disks: "local-disk 100 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x4"
         maxRetries: 2
     }
@@ -278,6 +282,7 @@ task derived_cols {
 
         String        docker = "quay.io/broadinstitute/viral-core:2.1.33"
     }
+    Int disk_size = 50
     parameter_meta {
         lab_highlight_loc: {
           description: "This option copies the 'originating_lab' and 'submitting_lab' columns to new ones including a prefix, but only if they match certain criteria. The value of this string must be of the form prefix;col_header=value:col_header=value. For example, 'MA;country=USA:division=Massachusetts' will copy the originating_lab and submitting_lab columns to MA_originating_lab and MA_submitting_lab, but only for those rows where country=USA and division=Massachusetts."
@@ -373,7 +378,8 @@ task derived_cols {
         docker: docker
         memory: "1 GB"
         cpu:    1
-        disks: "local-disk 50 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -390,6 +396,7 @@ task filter_segments {
 
         Int?  machine_mem_gb
     }
+    Int disk_size = 375
     command <<<
     python3 <<CODE
 
@@ -419,7 +426,8 @@ task filter_segments {
         docker: "python:slim"
         memory: select_first([machine_mem_gb, 3]) + " GB"
         cpu:    1
-        disks: "local-disk 375 LOCAL"
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -466,6 +474,7 @@ task nextstrain_build_subsample {
             patterns: ["*.yaml"]
         }
     }
+    Int disk_size = 375
     command <<<
         set -e -o pipefail
         augur version > VERSION
@@ -563,7 +572,8 @@ task nextstrain_build_subsample {
         docker: docker
         memory: select_first([machine_mem_gb, 50]) + " GB"
         cpu :   4
-        disks:  "local-disk 375 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem3_ssd1_v2_x8"
         maxRetries: 2
     }
@@ -586,6 +596,7 @@ task nextstrain_ncov_defaults {
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
         String docker                      = "nextstrain/base:build-20211012T204409Z"
     }
+    Int disk_size = 50
     command {
         set -e
         wget -q "https://github.com/nextstrain/ncov/archive/~{nextstrain_ncov_repo_commit}.tar.gz"
@@ -595,7 +606,8 @@ task nextstrain_ncov_defaults {
         docker: docker
         memory: "1 GB"
         cpu:   1
-        disks:  "local-disk 50 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -622,6 +634,8 @@ task nextstrain_deduplicate_sequences {
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
         String docker                      = "nextstrain/base:build-20211012T204409Z"
     }
+
+    Int disk_size = 375
 
     parameter_meta {
         sequences_fasta: {
@@ -651,7 +665,8 @@ task nextstrain_deduplicate_sequences {
         docker: docker
         memory: "7 GB"
         cpu:   1
-        disks:  "local-disk 375 LOCAL"
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -674,6 +689,8 @@ task nextstrain_ncov_sanitize_gisaid_data {
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
         String docker                      = "nextstrain/base:build-20211012T204409Z"
     }
+
+    Int disk_size = 375
 
     parameter_meta {
         sequences_gisaid_fasta: {
@@ -713,7 +730,8 @@ task nextstrain_ncov_sanitize_gisaid_data {
         docker: docker
         memory: "7 GB"
         cpu:   1
-        disks:  "local-disk 375 LOCAL"
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -748,6 +766,7 @@ task filter_subsample_sequences {
 
         String         docker = "nextstrain/base:build-20211012T204409Z"
     }
+    Int disk_size = 100
     parameter_meta {
         sequences_fasta: {
           description: "Set of sequences (unaligned fasta or aligned fasta -- one sequence per genome) or variants (vcf format) to subsample using augur filter.",
@@ -804,7 +823,8 @@ task filter_subsample_sequences {
         docker: docker
         memory: "15 GB"
         cpu :   4
-        disks:  "local-disk 100 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x4"
         preemptible: 1
         maxRetries: 2
@@ -831,6 +851,7 @@ task filter_sequences_to_list {
         String       out_fname = sub(sub(basename(sequences), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
         String       docker = "nextstrain/base:build-20211012T204409Z"
     }
+    Int disk_size = 200
     parameter_meta {
         sequences: {
           description: "Set of sequences (unaligned fasta or aligned fasta -- one sequence per genome) or variants (vcf format) to subsample using augur filter.",
@@ -898,7 +919,8 @@ task filter_sequences_to_list {
         docker: docker
         memory: "7 GB"
         cpu :   2
-        disks:  "local-disk 200 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x4"
         preemptible: 1
         maxRetries: 2
@@ -931,6 +953,7 @@ task mafft_one_chr {
         Int      mem_size = 500
         Int      cpus = 64
     }
+    Int disk_size = 750
     command <<<
         set -e
 
@@ -987,7 +1010,8 @@ task mafft_one_chr {
         docker: docker
         memory: mem_size + " GB"
         cpu :   cpus
-        disks:  "local-disk 750 LOCAL"
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
         preemptible: 0
         dx_instance_type: "mem3_ssd1_v2_x36"
         maxRetries: 2
@@ -1017,6 +1041,7 @@ task mafft_one_chr_chunked {
         Int      mem_size = 32
         Int      cpus = 96
     }
+    Int disk_size = 750
     command <<<
         set -e
 
@@ -1093,7 +1118,8 @@ task mafft_one_chr_chunked {
         docker: docker
         memory: mem_size + " GB"
         cpu :   cpus
-        disks:  "local-disk 750 LOCAL"
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
         preemptible: 0
         dx_instance_type: "mem3_ssd1_v2_x36"
         maxRetries: 2
@@ -1121,6 +1147,7 @@ task augur_mafft_align {
 
         String  docker = "nextstrain/base:build-20211012T204409Z"
     }
+    Int disk_size = 750
     command <<<
         set -e
         augur version > VERSION
@@ -1140,7 +1167,8 @@ task augur_mafft_align {
         docker: docker
         memory: "180 GB"
         cpu :   64
-        disks:  "local-disk 750 LOCAL"
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
         preemptible: 0
         dx_instance_type: "mem3_ssd2_v2_x32"
         maxRetries: 2
@@ -1161,6 +1189,7 @@ task snp_sites {
         String  docker = "quay.io/biocontainers/snp-sites:2.5.1--hed695b0_0"
     }
     String out_basename = basename(msa_fasta, ".fasta")
+    Int disk_size = 100
     command {
         snp-sites -V > VERSION
         snp-sites -v ~{true="" false="-c" allow_wildcard_bases} -o "~{out_basename}.vcf" "~{msa_fasta}"
@@ -1169,7 +1198,8 @@ task snp_sites {
         docker: docker
         memory: "31 GB"
         cpu :   2
-        disks:  "local-disk 100 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         preemptible: 0
         dx_instance_type: "mem3_ssd1_v2_x4"
         maxRetries: 2
@@ -1190,6 +1220,7 @@ task augur_mask_sites {
 
         String docker = "nextstrain/base:build-20211012T204409Z"
     }
+    Int disk_size = 100
     parameter_meta {
         sequences: {
           description: "Set of alignments (fasta format) or variants (vcf format) to mask.",
@@ -1216,7 +1247,8 @@ task augur_mask_sites {
         docker: docker
         memory: "3 GB"
         cpu :   4
-        disks:  "local-disk 100 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         preemptible: 1
         dx_instance_type: "mem1_ssd1_v2_x4"
         maxRetries: 2
@@ -1246,6 +1278,7 @@ task draft_augur_tree {
         Int?    cpus
         String  docker = "nextstrain/base:build-20211012T204409Z"
     }
+    Int disk_size = 750
     parameter_meta {
         msa_or_vcf: {
           description: "Set of alignments (fasta format) or variants (vcf format) to construct a tree from using augur tree (iqTree).",
@@ -1272,7 +1305,8 @@ task draft_augur_tree {
         docker: docker
         memory: "32 GB"
         cpu:    select_first([cpus, 64])
-        disks:  "local-disk 750 LOCAL"
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x36"
         preemptible: 0
         maxRetries: 2
@@ -1313,6 +1347,7 @@ task refine_augur_tree {
 
         String   docker = "nextstrain/base:build-20211012T204409Z"
     }
+    Int disk_size = 100
     parameter_meta {
         msa_or_vcf: {
           description: "Set of alignments (fasta format) or variants (vcf format) to use to guide Treetime.",
@@ -1353,7 +1388,8 @@ task refine_augur_tree {
         docker: docker
         memory: "50 GB"
         cpu :   2
-        disks:  "local-disk 100 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem3_ssd1_v2_x8"
         preemptible: 0
         maxRetries: 2
@@ -1385,6 +1421,7 @@ task ancestral_traits {
         String        docker = "nextstrain/base:build-20211012T204409Z"
     }
     String out_basename = basename(tree, '.nwk')
+    Int disk_size = 100
     command <<<
         set -e
         augur version > VERSION
@@ -1404,7 +1441,8 @@ task ancestral_traits {
         docker: docker
         memory: select_first([machine_mem_gb, 32]) + " GB"
         cpu :   4
-        disks:  "local-disk 100 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem3_ssd1_v2_x4"
         preemptible: 1
         maxRetries: 2
@@ -1435,6 +1473,7 @@ task ancestral_tree {
 
         String   docker = "nextstrain/base:build-20211012T204409Z"
     }
+    Int disk_size = 50
     parameter_meta {
         msa_or_vcf: {
           description: "Set of alignments (fasta format) or variants (vcf format) to use to guide Treetime.",
@@ -1464,7 +1503,8 @@ task ancestral_tree {
         docker: docker
         memory: "50 GB"
         cpu :   4
-        disks:  "local-disk 50 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem3_ssd1_v2_x8"
         preemptible: 0
         maxRetries: 2
@@ -1495,6 +1535,7 @@ task translate_augur_tree {
         String docker = "nextstrain/base:build-20211012T204409Z"
     }
     String out_basename = basename(tree, '.nwk')
+    Int disk_size = 50
     command <<<
         set -e
         augur version > VERSION
@@ -1511,7 +1552,8 @@ task translate_augur_tree {
         docker: docker
         memory: "2 GB"
         cpu :   1
-        disks:  "local-disk 50 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 1
         maxRetries: 2
@@ -1550,6 +1592,7 @@ task tip_frequencies {
         String   docker = "nextstrain/base:build-20211012T204409Z"
         String   out_basename = basename(tree, '.nwk')
     }
+    Int disk_size = 100
     command <<<
         set -e
         augur version > VERSION
@@ -1580,7 +1623,8 @@ task tip_frequencies {
         docker: docker
         memory: select_first([machine_mem_gb, 30]) + " GB"
         cpu :   4
-        disks:  "local-disk 100 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem3_ssd2_x4"
         preemptible: 1
         maxRetries: 2
@@ -1608,6 +1652,7 @@ task assign_clades_to_nodes {
         String docker = "nextstrain/base:build-20211012T204409Z"
     }
     String out_basename = basename(basename(tree_nwk, ".nwk"), "_timetree")
+    Int disk_size = 50
     command <<<
         set -e
         augur version > VERSION
@@ -1623,7 +1668,8 @@ task assign_clades_to_nodes {
         docker: docker
         memory: "2 GB"
         cpu :   1
-        disks:  "local-disk 50 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 1
         maxRetries: 2
@@ -1651,6 +1697,7 @@ task augur_import_beast {
         String  docker = "nextstrain/base:build-20211012T204409Z"
     }
     String tree_basename = basename(beast_mcc_tree, ".tree")
+    Int disk_size = 50
     command <<<
         set -e
         augur version > VERSION
@@ -1670,7 +1717,8 @@ task augur_import_beast {
         docker: docker
         memory: select_first([machine_mem_gb, 3]) + " GB"
         cpu :   2
-        disks:  "local-disk 50 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 1
         maxRetries: 2
@@ -1709,6 +1757,8 @@ task export_auspice_json {
         Int?   machine_mem_gb
         String docker = "nextstrain/base:build-20211012T204409Z"
     }
+
+    Int disk_size = 100
     
     command <<<
         set -e -o pipefail
@@ -1771,7 +1821,8 @@ task export_auspice_json {
         docker: docker
         memory: select_first([machine_mem_gb, 64]) + " GB"
         cpu :   4
-        disks:  "local-disk 100 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem3_ssd1_v2_x8"
         preemptible: 0
         maxRetries: 2

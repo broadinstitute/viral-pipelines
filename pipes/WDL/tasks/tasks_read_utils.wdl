@@ -5,6 +5,7 @@ task max {
     Array[Int] list
     Int        default_empty = 0
   }
+  Int disk_size = 10
   command <<<
     python3 << CODE
     inlist = '~{sep="*" list}'.split('*')
@@ -18,7 +19,8 @@ task max {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
-    disks: "local-disk 10 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -28,6 +30,7 @@ task group_bams_by_sample {
   input {
     Array[File] bam_filepaths
   }
+  Int disk_size = 100
   parameter_meta {
     bam_filepaths: {
       description: "all bam files",
@@ -71,7 +74,8 @@ task group_bams_by_sample {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
-    disks: "local-disk 100 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -83,6 +87,7 @@ task get_sample_meta {
 
     String      docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
+  Int disk_size = 50
   command <<<
     python3 << CODE
     import os.path
@@ -122,7 +127,8 @@ task get_sample_meta {
     docker: docker
     memory: "1 GB"
     cpu: 1
-    disks: "local-disk 50 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -142,6 +148,8 @@ task merge_and_reheader_bams {
 
       String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
     }
+    
+    Int disk_size = 750
 
     command {
         set -ex -o pipefail
@@ -184,7 +192,8 @@ task merge_and_reheader_bams {
         docker: "${docker}"
         memory: "3 GB"
         cpu: 2
-        disks: "local-disk 750 LOCAL"
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd2_v2_x4"
         preemptible: 0
         maxRetries: 2
@@ -203,6 +212,8 @@ task rmdup_ubam {
     Int?    machine_mem_gb
     String? docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
+
+  Int disk_size = 375
 
   parameter_meta {
     reads_unmapped_bam: { description: "unaligned reads in BAM format", patterns: ["*.bam"] }
@@ -238,7 +249,8 @@ task rmdup_ubam {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 7]) + " GB"
     cpu:    2
-    disks:  "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -258,6 +270,8 @@ task downsample_bams {
     Int?         machine_mem_gb
     String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
+
+  Int disk_size = 750
 
   command {
     set -ex -o pipefail
@@ -295,7 +309,8 @@ task downsample_bams {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 3]) + " GB"
     cpu:    4
-    disks:  "local-disk 750 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
   }
@@ -318,6 +333,7 @@ task FastqToUBAM {
 
     String  docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
+  Int disk_size = 375
   parameter_meta {
     fastq_1: { description: "Unaligned read1 file in fastq format", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }
     fastq_2: { description: "Unaligned read2 file in fastq format. This should be empty for single-end read conversion and required for paired-end reads. If provided, it must match fastq_1 in length and order.", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }
@@ -350,7 +366,8 @@ task FastqToUBAM {
     docker: docker
     cpu: 2
     memory: "3 GB"
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -366,6 +383,7 @@ task read_depths {
     String    out_basename = basename(aligned_bam, '.bam')
     String    docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
+  Int disk_size = 200
   command <<<
     set -e -o pipefail
 
@@ -379,7 +397,8 @@ task read_depths {
     docker: docker
     cpu:    2
     memory: "3 GB"
-    disks:  "local-disk 200 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
