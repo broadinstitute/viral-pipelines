@@ -14,6 +14,8 @@ task krakenuniq {
     String      docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
 
+  Int disk_size = 750
+
   parameter_meta {
     reads_unmapped_bam: {
       description: "Reads to classify. May be unmapped or mapped or both, paired-end or single-end.",
@@ -117,7 +119,8 @@ task krakenuniq {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 320]) + " GB"
     cpu: 32
-    disks: "local-disk 750 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x48"
     preemptible: 0
     maxRetries: 2
@@ -139,6 +142,8 @@ task build_krakenuniq_db {
     Int?     machine_mem_gb
     String   docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
+
+  Int disk_size = 750
 
   command {
     set -ex -o pipefail
@@ -183,7 +188,8 @@ task build_krakenuniq_db {
   runtime {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 240]) + " GB"
-    disks: "local-disk 750 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     cpu: 32
     dx_instance_type: "mem3_ssd1_v2_x32"
     preemptible: 0
@@ -229,6 +235,7 @@ task kraken2 {
   }
 
   String out_basename = basename(basename(reads_bam, '.bam'), '.fasta')
+  Int disk_size = 750
 
   command {
     set -ex -o pipefail
@@ -308,7 +315,8 @@ task kraken2 {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 52]) + " GB"
     cpu: 8
-    disks: "local-disk 750 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TESs
     dx_instance_type: "mem3_ssd1_v2_x8"
     preemptible: 2
     maxRetries: 2
@@ -339,6 +347,8 @@ task build_kraken2_db {
     Int?          machine_mem_gb
     String        docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
+
+  Int disk_size = 750
 
   parameter_meta {
     db_basename: { description: "A descriptive string used in output filenames. Outputs will be called kraken2-<db_basename>.tar.zst, krona-<db_basename>.tar.zst, and taxdump-<db_basename>.tar.gz" }
@@ -457,7 +467,8 @@ task build_kraken2_db {
   runtime {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 100]) + " GB"
-    disks: "local-disk 750 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     cpu: 16
     dx_instance_type: "mem3_ssd1_v2_x16"
     preemptible: 0
@@ -494,6 +505,7 @@ task blastx {
   }
 
   String out_basename=basename(contigs_fasta, '.fasta')
+  Int disk_size = 375
 
   command {
     set -ex -o pipefail
@@ -544,7 +556,8 @@ task blastx {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 8]) + " GB"
     cpu: 32
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x36"
     preemptible: 1
     maxRetries: 2
@@ -566,6 +579,8 @@ task krona {
     Int?         machine_mem_gb
     String       docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
+
+  Int disk_size = 50
 
   command {
     set -ex -o pipefail
@@ -616,7 +631,8 @@ task krona {
     docker: "${docker}"
     memory: "3 GB"
     cpu: 1
-    disks: "local-disk 50 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
     maxRetries: 2
   }
@@ -630,6 +646,8 @@ task krona_merge {
     Int?        machine_mem_gb
     String      docker = "biocontainers/krona:v2.7.1_cv1"
   }
+
+  Int disk_size = 50
 
   command {
     set -ex -o pipefail
@@ -646,7 +664,8 @@ task krona_merge {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 3]) + " GB"
     cpu: 1
-    disks: "local-disk 50 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
     maxRetries: 2
   }
@@ -669,6 +688,7 @@ task filter_bam_to_taxa {
   }
 
   String out_basename = basename(classified_bam, ".bam") + "." + out_filename_suffix
+  Int disk_size = 375
 
   command {
     set -ex -o pipefail
@@ -735,7 +755,8 @@ task filter_bam_to_taxa {
   runtime {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 26]) + " GB"
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     cpu: 4
     dx_instance_type: "mem3_ssd1_v2_x4"
     maxRetries: 2
@@ -754,6 +775,7 @@ task kaiju {
   }
 
   String   input_basename = basename(reads_unmapped_bam, ".bam")
+  Int disk_size = 375
 
   command {
     set -ex -o pipefail
@@ -810,7 +832,8 @@ task kaiju {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 100]) + " GB"
     cpu: 16
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x16"
     maxRetries: 2
   }

@@ -19,6 +19,7 @@ task alignment_metrics {
   }
 
   String out_basename = basename(aligned_bam, ".bam")
+  Int disk_size = 150
 
   command <<<
     set -e
@@ -101,7 +102,8 @@ task alignment_metrics {
     docker: "~{docker}"
     memory: select_first([machine_mem_gb, 13]) + " GB"
     cpu: 2
-    disks: "local-disk 150 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -130,6 +132,8 @@ task plot_coverage {
 
     String  docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
+
+  Int disk_size = 375
   
   command {
     set -ex -o pipefail
@@ -197,7 +201,8 @@ task plot_coverage {
     docker: "${docker}"
     memory: "7 GB"
     cpu: 2
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     preemptible: 1
     maxRetries: 2
@@ -212,6 +217,8 @@ task coverage_report {
 
     String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
+
+  Int disk_size = 375
 
   command {
     reports.py --version | tee VERSION
@@ -230,7 +237,8 @@ task coverage_report {
     docker: "${docker}"
     memory: "2 GB"
     cpu: 2
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x4"
     maxRetries: 2
   }
@@ -245,6 +253,8 @@ task assembly_bases {
       File   fasta
       String docker ="ubuntu"
     }
+
+    Int disk_size = 50
 
     command {
         set -e
@@ -261,7 +271,8 @@ task assembly_bases {
         docker: "${docker}"
         memory: "1 GB"
         cpu: 1
-        disks: "local-disk 50 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -275,6 +286,7 @@ task fastqc {
   }
 
   String   reads_basename=basename(reads_bam, ".bam")
+  Int disk_size = 375
 
   command {
     set -ex -o pipefail
@@ -292,7 +304,8 @@ task fastqc {
     memory: "2 GB"
     cpu: 1
     docker: "${docker}"
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -310,6 +323,7 @@ task align_and_count {
 
   String  reads_basename=basename(reads_bam, ".bam")
   String  ref_basename=basename(ref_db, ".fasta")
+  Int disk_size = 375
 
   command {
     set -ex -o pipefail
@@ -339,7 +353,8 @@ task align_and_count {
     memory: select_first([machine_mem_gb, 15]) + " GB"
     cpu: 4
     docker: "${docker}"
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
   }
@@ -353,6 +368,8 @@ task align_and_count_summary {
 
     String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
+
+  Int disk_size = 100
 
   command {
     set -ex -o pipefail
@@ -370,7 +387,8 @@ task align_and_count_summary {
     memory: "7 GB"
     cpu: 8
     docker: "${docker}"
-    disks: "local-disk 100 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -393,6 +411,7 @@ task aggregate_metagenomics_reports {
   }
 
   String       aggregate_taxon_heading = sub(aggregate_taxon_heading_space_separated, " ", "_") # replace spaces with underscores for use in filename
+  Int disk_size = 50
 
   command {
     set -ex -o pipefail
@@ -417,7 +436,8 @@ task aggregate_metagenomics_reports {
     docker: "${docker}"
     memory: "3 GB"
     cpu: 1
-    disks: "local-disk 50 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
     preemptible: 0
     maxRetries: 2
@@ -463,6 +483,7 @@ task MultiQC {
 
   # get the basename in all wdl use the filename specified (sans ".html" extension, if specified)
   String report_filename = if (defined(file_name)) then basename(select_first([file_name]), ".html") else "multiqc"
+  Int disk_size = 375
 
   command {
       set -ex -o pipefail
@@ -515,7 +536,8 @@ task MultiQC {
     memory: "8 GB"
     cpu: 16
     docker: "${docker}"
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -529,6 +551,8 @@ task compare_two_genomes {
 
     String docker = "quay.io/broadinstitute/viral-assemble:2.1.16.1"
   }
+
+  Int disk_size = 50
 
   command <<<
     set -ex -o pipefail
@@ -552,7 +576,8 @@ task compare_two_genomes {
     memory: "3 GB"
     cpu: 2
     docker: docker
-    disks: "local-disk 50 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 1
     maxRetries: 2

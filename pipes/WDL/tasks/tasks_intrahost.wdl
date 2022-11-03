@@ -31,6 +31,8 @@ task polyphonia_detect_cross_contamination {
     String       docker = "quay.io/broadinstitute/polyphonia:latest"
   }
 
+  Int disk_size = 100
+
   parameter_meta {
     lofreq_vcfs:         { description: "VCF file(s) output by LoFreq or GATK; must use reference provided by reference_fasta" }
     genome_fastas:       { description: "Unaligned consensus genome or genomes" }
@@ -109,7 +111,8 @@ task polyphonia_detect_cross_contamination {
     docker: docker
     cpu:    4
     memory: "13 GB"
-    disks:  "local-disk 100 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
   }
@@ -123,6 +126,7 @@ task lofreq {
     String    out_basename = basename(aligned_bam, '.bam')
     String    docker = "quay.io/biocontainers/lofreq:2.1.5--py38h588ecb2_4"
   }
+  Int disk_size = 200
   command <<<
     set -e -o pipefail
 
@@ -157,7 +161,8 @@ task lofreq {
     docker: docker
     cpu:    2
     memory: "3 GB"
-    disks:  "local-disk 200 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -178,6 +183,7 @@ task isnvs_per_sample {
 
     String  sample_name = basename(basename(basename(mapped_bam, ".bam"), ".all"), ".mapped")
   }
+  
 
   command {
     intrahost.py --version | tee VERSION
@@ -295,6 +301,9 @@ task annotate_vcf_snpeff {
     String         output_basename = basename(basename(in_vcf, ".gz"), ".vcf")
   }
 
+  Int disk_size = 375
+
+
   parameter_meta {
     in_vcf:             { description: "input VCF to annotate with snpEff", patterns: ["*.vcf","*.vcf.gz"]}
     ref_fasta:          { description: "The sequence containing the accession to use for annotation; only used if snpEffRef is not provided.", patterns: ["*.fasta","*.fa"] }
@@ -367,7 +376,8 @@ task annotate_vcf_snpeff {
   runtime {
     docker: docker
     memory: select_first([machine_mem_gb, 4]) + " GB"
-    disks:  "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
   }

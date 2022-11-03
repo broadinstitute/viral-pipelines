@@ -8,12 +8,11 @@ task Fetch_SRA_to_BAM {
         Int?    machine_mem_gb
         String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     }
-
+    Int disk_size = 750
     meta {
         description: "This searches NCBI SRA for accessions using the Entrez interface, collects associated metadata, and returns read sets as unaligned BAM files with metadata loaded in. Useful metadata from BioSample is also output from this task directly. This has been tested with both SRA and ENA accessions. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input."
         volatile: true
     }
-
     command <<<
         set -e
         # fetch SRA metadata on this record
@@ -138,7 +137,8 @@ task Fetch_SRA_to_BAM {
     runtime {
         cpu:     2
         memory:  select_first([machine_mem_gb, 6]) + " GB"
-        disks:   "local-disk 750 LOCAL"
+        disks:   "local-disk " + disk_size + " LOCAL"
+        disk:    disk_size + " GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
         maxRetries: 2
@@ -152,10 +152,11 @@ task biosample_tsv_filter_preexisting {
         String         out_basename = "biosample_attributes"
         String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     }
+    Int disk_size = 50
     meta {
         description: "This task takes a metadata TSV for submission to NCBI BioSample and filters out entries that have already been submitted to NCBI. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input."
         volatile: true
-    }
+    }    
     command <<<
         set -e
 
@@ -198,7 +199,8 @@ task biosample_tsv_filter_preexisting {
     runtime {
         cpu:     2
         memory:  "3 GB"
-        disks:   "local-disk 50 HDD"
+        disks:   "local-disk " + disk_size + " HDD"
+        disk:    disk_size + " GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
         maxRetries: 2
@@ -212,6 +214,7 @@ task fetch_biosamples {
         String         out_basename = "biosample_attributes"
         String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     }
+    Int disk_size = 50
     meta {
         description: "This searches NCBI BioSample for accessions or keywords using the Entrez interface and returns any hits in the form of a BioSample attributes TSV. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input."
         volatile: true
@@ -228,7 +231,8 @@ task fetch_biosamples {
     runtime {
         cpu:     2
         memory:  "3 GB"
-        disks:   "local-disk 50 HDD"
+        disks:   "local-disk " + disk_size + " HDD"
+        disk:   disk_size + " GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
         maxRetries: 2
@@ -246,7 +250,7 @@ task ncbi_sftp_upload {
 
         String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     }
-
+    Int disk_size = 100
     command <<<
         set -e
         cd /opt/converter
@@ -275,7 +279,8 @@ task ncbi_sftp_upload {
     runtime {
         cpu:     2
         memory:  "2 GB"
-        disks:   "local-disk 100 HDD"
+        disks:   "local-disk " + disk_size + " HDD"
+        disk:    disk_size + " GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
         maxRetries: 0
@@ -291,6 +296,7 @@ task sra_tsv_to_xml {
 
         String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     }
+    Int disk_size = 50
     command <<<
         set -e
         cd /opt/converter
@@ -312,7 +318,8 @@ task sra_tsv_to_xml {
     runtime {
         cpu:     1
         memory:  "2 GB"
-        disks:   "local-disk 50 HDD"
+        disks:   "local-disk " + disk_size + " HDD"
+        disk:    disk_size + " GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
         maxRetries: 2
@@ -326,6 +333,7 @@ task biosample_submit_tsv_to_xml {
 
         String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     }
+    Int disk_size = 50
     meta {
         description: "This converts a web portal submission TSV for NCBI BioSample into an ftp-appropriate XML submission for NCBI BioSample. It does not connect to NCBI, and does not submit or fetch any data."
     }
@@ -347,7 +355,8 @@ task biosample_submit_tsv_to_xml {
     runtime {
         cpu:     1
         memory:  "2 GB"
-        disks:   "local-disk 50 HDD"
+        disks:   "local-disk " + disk_size + " HDD"
+        disk:    disk_size + " GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
         maxRetries: 2
@@ -363,6 +372,7 @@ task biosample_submit_tsv_ftp_upload {
         String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     }
     String base=basename(meta_submit_tsv, '.tsv')
+    Int disk_size = 100    
     meta {
         description: "This registers a table of metadata with NCBI BioSample. It accepts a TSV similar to the web UI input at submit.ncbi.nlm.nih.gov, but converts to an XML, submits via their FTP/XML API, awaits a response, and retrieves a resulting attributes table and returns that as a TSV. This task registers live data with the production NCBI database."
     }
@@ -386,7 +396,8 @@ task biosample_submit_tsv_ftp_upload {
     runtime {
         cpu:     2
         memory:  "2 GB"
-        disks:   "local-disk 100 HDD"
+        disks:   "local-disk " + disk_size + " HDD"
+        disk:    disk_size + " GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
         maxRetries: 0
@@ -401,6 +412,7 @@ task biosample_xml_response_to_tsv {
         String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     }
     String out_name = "~{basename(meta_submit_tsv, '.tsv')}-attributes.tsv"
+    Int disk_size = 100
     meta {
         description: "This converts an FTP-based XML response from BioSample into a web-portal-style attributes.tsv file with metadata and accessions. This task does not communicate with NCBI, it only parses pre-retrieved responses."
     }
@@ -422,7 +434,8 @@ task biosample_xml_response_to_tsv {
     runtime {
         cpu:     2
         memory:  "2 GB"
-        disks:   "local-disk 100 HDD"
+        disks:   "local-disk " + disk_size + " HDD"
+        disk:    disk_size + " GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
         maxRetries: 2
@@ -438,6 +451,7 @@ task group_sra_bams_by_biosample {
     Array[String] library_strategies
     Array[String] seq_platforms
   }
+  Int disk_size = 100
   parameter_meta {
     bam_filepaths: {
       description: "all bam files",
@@ -512,7 +526,8 @@ task group_sra_bams_by_biosample {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
-    disks: "local-disk 100 HDD"
+    disks:   "local-disk " + disk_size + " HDD"
+    disk:    disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }

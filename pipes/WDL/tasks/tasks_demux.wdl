@@ -9,6 +9,8 @@ task merge_tarballs {
     String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
 
+  Int disk_size = 2625
+
   command {
     set -ex -o pipefail
 
@@ -32,7 +34,8 @@ task merge_tarballs {
     docker: docker
     memory: select_first([machine_mem_gb, 7]) + " GB"
     cpu: 16
-    disks: "local-disk 2625 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x16"
     maxRetries: 2
     preemptible: 0
@@ -47,6 +50,7 @@ task samplesheet_rename_ids {
     String new_id_col = 'external_id'
   }
   String new_base = basename(old_sheet, '.txt')
+  Int disk_size = 50
   command <<<
     python3 << CODE
     import csv
@@ -75,7 +79,8 @@ task samplesheet_rename_ids {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
-    disks: "local-disk 50 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -88,6 +93,7 @@ task revcomp_i5 {
     String  docker = "quay.io/broadinstitute/py3-bio:0.1.2"
   }
   String new_base = basename(basename(old_sheet, '.txt'), '.tsv')
+  Int disk_size = 50
   command <<<
     python3 << CODE
     import csv
@@ -118,7 +124,8 @@ task revcomp_i5 {
     docker: docker
     memory: "1 GB"
     cpu:    1
-    disks: "local-disk 50 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -147,6 +154,7 @@ task illumina_demux {
     Int?    machine_mem_gb
     String  docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
+  Int disk_size = 2625
   parameter_meta {
       flowcell_tgz: {
           description: "Illumina BCL directory compressed as tarball. Must contain RunInfo.xml (unless overridden by runinfo), SampleSheet.csv (unless overridden by samplesheet), RTAComplete.txt, and Data/Intensities/BaseCalls/*",
@@ -394,7 +402,8 @@ task illumina_demux {
     docker: docker
     memory: select_first([machine_mem_gb, 200]) + " GB"
     cpu: 32
-    disks: "local-disk 2625 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem3_ssd2_v2_x32"
     dx_timeout: "20H"
     maxRetries: 2
@@ -407,6 +416,7 @@ task map_map_setdefault {
     File          map_map_json
     Array[String] sub_keys
   }
+  Int disk_size = 20
   command <<<
     python3 << CODE
     import json
@@ -427,7 +437,8 @@ task map_map_setdefault {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
-    disks: "local-disk 20 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -437,6 +448,7 @@ task merge_maps {
   input {
     Array[File] maps_jsons
   }
+  Int disk_size = 20
   command <<<
     python3 << CODE
     import json
@@ -457,7 +469,8 @@ task merge_maps {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
-    disks: "local-disk 20 HDD"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
