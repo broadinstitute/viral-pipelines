@@ -1,0 +1,1 @@
+pushd /data/WDL && miniwdl run --task qiime_import_from_bam qiime_task.wdl bam_file=test_ATCC_high.bam samplename=test; popd

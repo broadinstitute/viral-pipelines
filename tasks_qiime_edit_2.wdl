@@ -5,7 +5,8 @@ version 1.0
 #1.samtools (universal)
 #2. cutadapt 
 #3. vsearch 
-#4. deblur 
+#4. deblur
+#5. 
 
 #Part 1A | Step 1: BAM -> QZA
 #qiime import bam-(fastq)-> qza 
@@ -261,7 +262,7 @@ task train_classifier {
         ~{"--p-min-length" + min_length}\
         ~{"--p-max-length" + max_length}\
         --o-reads "~{otu_basename}_v1-2-ref-seqs.qza"
-
+#might have to be broken down into two tasks
         qiime feature-classifier fit-classifier-naive-bayes\ 
         --i-reference-reads "~{otu_basename}_v1-2-ref-seqs.qza"\ 
         --i-reference-taxonomy "~{otu_basename}_tax.qza"\ 
@@ -276,3 +277,44 @@ task train_classifier {
     }
 
 }
+train tax_analysis {
+    meta {
+        description: "Protocol describes performing a taxonomic classification with a naive bayes classifier that has been trained on the V1-2 regions amplified by our primers."
+    }
+    input {
+        File trained_classifier
+        File rep-seqs_outfile
+        File rep-table_outfile 
+        String  basename  =   basename(trained_classifier, '.qza')
+        String  docker = "quay.io/qiime2/core:2022.8"
+    }
+    command <<<
+    set -ex -o pipefail
+        CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
+        conda activate ${CONDA_ENV_NAME}
+        ##activated conda environments 
+        
+        qiime feature-classifier classify-sklearn \
+        --i-classifier ~{trained_classifier}\
+        --i-reads ~{rep-seqs_outfile}\
+        --o-classifcation "~{basename}_tax.qza"
+        
+        qiime feature-table tabulate-seqs \
+        --i-date ~{rep-seqs_outfile}\
+        --o-visualization "~{basename}_rep_seqs.qzv"
+
+        qiime taxa barplot\
+        --i-table ~{rep-table_outfile}\
+        --i-taxonomy "~{basename}_tax.qza"\
+        --o-visualization "~{basename}-bar-plots.qzv"
+    output {
+        File rep-seq_list = "~{basename}_rep_seqs.qzv" \
+        File tax-classification_graph = "~{basename}-bar-plots.qzv"
+    }
+    runtime {
+        docker: "~{docker}"
+        memory: "10 GB"
+        cpu: 1
+    }
+}
+# One caviat is that you need to visualize the bar plot using qiime2.org 

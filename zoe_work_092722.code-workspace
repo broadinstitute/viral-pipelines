@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../Github/broadinstitute/viral-pipelines"
+		},
+		{
+			"path": "../py"
+		}
+	],
+	"settings": {}
+}
