@@ -205,7 +205,7 @@ task gen_feature_table {
             qiime deblur visualize-stats \
             --i-deblur-stats "~{reads_basename}_deblur_stats.qza" \
             --o-visualization "~{reads_basename}_deblur_stats.qzv"
-            >>>
+        >>>
     output {
         #how many output files do i need
         File rep-seqs_outfile = "~{reads_basename}_rep-seqs.qza"
@@ -267,6 +267,7 @@ task train_classifier {
         --i-reference-reads "~{otu_basename}_v1-2-ref-seqs.qza"\ 
         --i-reference-taxonomy "~{otu_basename}_tax.qza"\ 
         --o-classifier "~{otu_basename}_v1-2-classifier.qza"
+    >>>
     output {
         File    trained_classifier = "~{otu_basename}_v1-2-classifier.qza"
     }
@@ -307,6 +308,7 @@ train tax_analysis {
         --i-table ~{rep-table_outfile}\
         --i-taxonomy "~{basename}_tax.qza"\
         --o-visualization "~{basename}-bar-plots.qzv"
+    >>>
     output {
         File rep-seq_list = "~{basename}_rep_seqs.qzv" \
         File tax-classification_graph = "~{basename}-bar-plots.qzv"

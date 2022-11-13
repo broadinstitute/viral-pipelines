@@ -60,3 +60,26 @@ Slxn: #Make sure you are saving your file -- basically the computer is saying th
 3. fatal: not a git repository (or any of the parent directories): .git
     You are not in a git repo (local on your computer)-- you must be in one to connect to a remote repository.
 Make changes 12
+
+
+11.13.22
+negrete@wm1f4-dfc WDL % git pull 
+Already up to date.
+negrete@wm1f4-dfc WDL % git add .
+negrete@wm1f4-dfc WDL % git commit -m .
+[fnegrete_test fca086c5] .
+ 2 files changed, 39 deletions(-)
+ delete mode 100644 fnegrete_testing_wdl/ssh_key
+ delete mode 100644 fnegrete_testing_wdl/ssh_key.pub
+negrete@wm1f4-dfc WDL % git push --set-upstream origin fnegrete_test
+Enumerating objects: 5, done.
+Counting objects: 100% (5/5), done.
+Delta compression using up to 10 threads
+Compressing objects: 100% (3/3), done.
+Writing objects: 100% (3/3), 281 bytes | 93.00 KiB/s, done.
+Total 3 (delta 2), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
+To https://github.com/broadinstitute/viral-pipelines.git
+   ad024f2c..fca086c5  fnegrete_test -> fnegrete_test
+branch 'fnegrete_test' set up to track 'origin/fnegrete_test'.
+negrete@wm1f4-dfc WDL % 
