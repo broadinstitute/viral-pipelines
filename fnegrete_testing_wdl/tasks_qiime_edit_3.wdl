@@ -305,10 +305,10 @@ task tax_analysis {
         qiime feature-classifier classify-sklearn \
         --i-classifier ~{trained_classifier} \
         --i-reads ~{rep_seqs_outfile} \
-        --o-classifcation "~{basename}_tax.qza"
+        --o-classification "~{basename}_tax.qza"
         
         qiime feature-table tabulate-seqs \
-        --i-date ~{rep_seqs_outfile} \
+        --i-data ~{rep_seqs_outfile} \
         --o-visualization "~{basename}_rep_seqs.qzv"
 
         qiime taxa barplot\
