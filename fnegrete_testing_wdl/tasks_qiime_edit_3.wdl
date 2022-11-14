@@ -311,7 +311,7 @@ task tax_analysis {
         --i-data ~{rep_seqs_outfile} \
         --o-visualization "~{basename}_rep_seqs.qzv"
 
-        qiime taxa barplot\
+        qiime taxa barplot \
         --i-table ~{rep_table_outfile} \
         --i-taxonomy "~{basename}_tax.qza" \
         --o-visualization "~{basename}_bar_plots.qzv"
