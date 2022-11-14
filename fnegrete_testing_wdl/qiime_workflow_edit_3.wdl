@@ -1,4 +1,3 @@
-version 1.0
 ##Test 
 ##09.19.22
 
@@ -35,7 +34,7 @@ workflow qiime_wfl {
     #__________________________________________
     call qiime.merge_paired_ends {
         input: 
-            trimmed_reads_qza = trim_reads.trimmed_reads_qza
+            reads_qza = trim_reads.trimmed_reads_qza
     }
     #_________________________________________
     call qiime.gen_feature_table {
@@ -47,6 +46,6 @@ workflow qiime_wfl {
         input:
             trained_classifier = trained_classifier,
             rep_seqs_outfile = gen_feature_table.rep_seqs_outfile,
-            rep_table_outfile = gen_feature_table.rep_table_outfile,
+            rep_table_outfile = gen_feature_table.rep_table_outfile
     }
 }
