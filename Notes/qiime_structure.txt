@@ -1,0 +1,9 @@
+#call qiime.task
+#input 
+    #input_task_file = #last_task.outfile
+
+#call qiime.task
+#input 
+    #input_task_file = input_task file (if not file prev exist or first insert)
+
+# ToDo: change relative import based on evential location of tasks file

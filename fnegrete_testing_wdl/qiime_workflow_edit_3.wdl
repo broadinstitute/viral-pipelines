@@ -1,3 +1,4 @@
+version 1.0
 ##Test 
 ##09.19.22
 
@@ -44,7 +45,7 @@ workflow qiime_wfl {
     #_________________________________________
     call qiime.tax_analysis {
         input:
-            trained_classifier = train_classifier.trained_classifier,
+            trained_classifier = trained_classifier,
             rep_seqs_outfile = gen_feature_table.rep_seqs_outfile,
             rep_table_outfile = gen_feature_table.rep_table_outfile,
     }
