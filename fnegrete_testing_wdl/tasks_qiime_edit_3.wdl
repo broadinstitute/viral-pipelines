@@ -180,7 +180,7 @@ task gen_feature_table {
     input {
         File    joined_end_outfile
         String  joined_end_basename = basename(joined_end_outfile, '.qza')
-        Int    trim_length_var = 300     
+        Int trim_length_var = 300     
         String  docker = "quay.io/qiime2/core:2022.8"
     }
     command <<< 
@@ -192,11 +192,12 @@ task gen_feature_table {
         #   https://github.com/chanzuckerberg/miniwdl/issues/603
         conda activate ${CONDA_ENV_NAME}
             qiime deblur denoise-16S \
-            --i-demultiplexed-seqs "~{joined_end_basename}_demux_joined.qza" \ 
-            ~{"--p-trim-length" + trim_length_var} \ 
+            --i-demultiplexed-seqs ~{joined_end_outfile} \
+            ~{"--p-trim-length " + trim_length_var} \
             --p-sample-stats \
             --o-representative-sequences "~{joined_end_basename}_rep_seqs.qza" \
-            --o-table "~{joined_end_basename}_table.qza"
+            --o-table "~{joined_end_basename}_table.qza" \
+            --o-stats "~{joined_end_basename}_stats.qza"
             
             #Generate feature table- give you the number of features per sample 
             qiime feature-table summarize \
@@ -204,15 +205,15 @@ task gen_feature_table {
             --o-visualization   "~{joined_end_basename}_table.qzv"
             #Generate visualization of deblur stats
             qiime deblur visualize-stats \
-            --i-deblur-stats "~{joined_end_basename}_deblur_stats.qza" \
-            --o-visualization "~{joined_end_basename}_deblur_stats.qzv"
+            --i-deblur-stats "~{joined_end_basename}_stats.qza" \
+            --o-visualization "~{joined_end_basename}_stats.qzv"
         >>>
     output {
         #how many output files do i need
         File rep_seqs_outfile = "~{joined_end_basename}_rep_seqs.qza"
         File rep_table_outfile = "~{joined_end_basename}_table.qza"
         File feature_table = "~{joined_end_basename}_table.qzv"
-        File visualize_stats = "~{joined_end_basename}_deblur_stats.qzv"
+        File visualize_stats = "~{joined_end_basename}_stats.qzv"
 
     }
     runtime {
@@ -302,17 +303,17 @@ task tax_analysis {
         conda activate ${CONDA_ENV_NAME}
         
         qiime feature-classifier classify-sklearn \
-        --i-classifier ~{trained_classifier}\
-        --i-reads ~{rep_seqs_outfile}\
+        --i-classifier ~{trained_classifier} \
+        --i-reads ~{rep_seqs_outfile} \
         --o-classifcation "~{basename}_tax.qza"
         
         qiime feature-table tabulate-seqs \
-        --i-date ~{rep_seqs_outfile}\
+        --i-date ~{rep_seqs_outfile} \
         --o-visualization "~{basename}_rep_seqs.qzv"
 
         qiime taxa barplot\
-        --i-table ~{rep_table_outfile}\
-        --i-taxonomy "~{basename}_tax.qza"\
+        --i-table ~{rep_table_outfile} \
+        --i-taxonomy "~{basename}_tax.qza" \
         --o-visualization "~{basename}_bar_plots.qzv"
     >>>
     output {
