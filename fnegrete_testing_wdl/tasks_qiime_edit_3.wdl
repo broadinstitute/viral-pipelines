@@ -326,4 +326,4 @@ task tax_analysis {
         cpu: 1
     }
 }
-# One caviat is that you need to visualize the bar plot using qiime2.org 
+# END 11.15.22 
