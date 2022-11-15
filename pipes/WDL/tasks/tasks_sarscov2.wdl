@@ -13,6 +13,7 @@ task pangolin_one_sample {
         String  docker = "quay.io/staphb/pangolin:4.1.2-pdata-1.14"
     }
     String basename = basename(genome_fasta, ".fasta")
+    Int disk_size = 50
     command <<<
         set -ex
 
@@ -61,7 +62,8 @@ task pangolin_one_sample {
         docker: docker
         memory: "3 GB"
         cpu:    2
-        disks: "local-disk 50 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -93,6 +95,7 @@ task pangolin_many_samples {
         String       basename
         String       docker = "quay.io/staphb/pangolin:4.1.2-pdata-1.14"
     }
+    Int disk_size = 100
     command <<<
         set -ex
 
@@ -154,7 +157,8 @@ task pangolin_many_samples {
         docker: docker
         memory: "14 GB"
         cpu:    16
-        disks: "local-disk 100 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x16"
         maxRetries: 2
     }
@@ -195,6 +199,7 @@ task sequencing_report {
         Int     machine_mem_gb = 7
         String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.25"
     }
+    Int disk_size = 250
     command {
         set -e
         /docker/reports.py \
@@ -213,7 +218,8 @@ task sequencing_report {
         docker: docker
         memory: "~{machine_mem_gb} GB"
         cpu:    2
-        disks: "local-disk 250 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -251,6 +257,7 @@ task sc2_meta_final {
         String        docker = "quay.io/broadinstitute/py3-bio:0.1.2"
     }
     String out_basename = basename(basename(assembly_stats_tsv, '.txt'), '.tsv')
+    Int disk_size = 50
     command <<<
         set -e
         python3<<CODE
@@ -369,7 +376,8 @@ task sc2_meta_final {
         docker: docker
         memory: "2 GB"
         cpu:    2
-        disks: "local-disk 50 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -399,6 +407,7 @@ task crsp_meta_etl {
         String        docker = "quay.io/broadinstitute/py3-bio:0.1.2"
     }
     String out_basename = basename(basename(basename(sample_meta_crsp, '.txt'), '.tsv'), '.metadata')
+    Int disk_size = 50
     command <<<
         set -e
         python3<<CODE
@@ -538,7 +547,8 @@ task crsp_meta_etl {
         docker: docker
         memory: "2 GB"
         cpu:    2
-        disks: "local-disk 50 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -559,6 +569,7 @@ task gisaid_uploader {
     String  database="EpiCoV"
     String  frameshift="catch_novel"
   }
+  Int disk_size = 100
   command {
     set -e
     cli3 upload \
@@ -579,7 +590,8 @@ task gisaid_uploader {
     docker: "quay.io/broadinstitute/gisaid-cli:3.0"
     memory: "2 GB"
     cpu: 2
-    disks: "local-disk 100 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     maxRetries: 1
   }
 }

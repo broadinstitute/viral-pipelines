@@ -437,6 +437,7 @@ task sra_meta_prep {
     String      out_name = "sra_metadata.tsv"
     String      docker="quay.io/broadinstitute/viral-core:2.1.33"
   }
+  Int disk_size = 100
   parameter_meta {
     cleaned_bam_filepaths: {
       description: "Unaligned bam files containing cleaned (submittable) reads.",
@@ -544,7 +545,8 @@ task sra_meta_prep {
     docker: docker
     memory: "1 GB"
     cpu: 1
-    disks: "local-disk 100 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }

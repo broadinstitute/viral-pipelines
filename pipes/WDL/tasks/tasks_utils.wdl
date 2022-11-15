@@ -9,6 +9,7 @@ task concatenate {
         String      output_name
         Int         cpus = 4
     }
+    Int disk_size = 375
     command {
         cat ~{sep=" " infiles} > "~{output_name}"
     }
@@ -16,7 +17,8 @@ task concatenate {
         docker: "ubuntu"
         memory: "1 GB"
         cpu:    cpus
-        disks: "local-disk 375 LOCAL"
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -34,6 +36,7 @@ task zcat {
         String      output_name
         Int         cpus = 4
     }
+    Int disk_size = 375
     command <<<
         set -e
         python3 <<CODE
@@ -104,7 +107,8 @@ task zcat {
         docker: "quay.io/broadinstitute/viral-core:2.1.33"
         memory: "1 GB"
         cpu:    cpus
-        disks: "local-disk 375 LOCAL"
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -126,6 +130,7 @@ task sed {
         String replace
         String outfilename = "~{basename(infile)}-rename.txt"
     }
+    Int disk_size = 375
     command {
         sed 's/~{search}/~{replace}/g' "~{infile}" > "~{outfilename}"
     }
@@ -133,7 +138,8 @@ task sed {
         docker: "ubuntu"
         memory: "1 GB"
         cpu:    1
-        disks: "local-disk 375 LOCAL"
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -149,6 +155,7 @@ task fasta_to_ids {
     input {
         File sequences_fasta
     }
+    Int disk_size = 375
     String basename = basename(sequences_fasta, ".fasta")
     command {
         cat "~{sequences_fasta}" | grep \> | cut -c 2- > "~{basename}.txt"
@@ -157,7 +164,8 @@ task fasta_to_ids {
         docker: "ubuntu"
         memory: "1 GB"
         cpu:    1
-        disks: "local-disk 375 LOCAL"
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -170,6 +178,7 @@ task md5sum {
   input {
     File in_file
   }
+  Int disk_size = 100
   command {
     md5sum ~{in_file} | cut -f 1 -d ' ' | tee MD5
   }
@@ -180,7 +189,8 @@ task md5sum {
     docker: "ubuntu"
     memory: "1 GB"
     cpu: 1
-    disks: "local-disk 100 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
     maxRetries: 2
   }
@@ -193,6 +203,7 @@ task fetch_row_from_tsv {
     String        idx_val
     Array[String] set_default_keys = []
   }
+  Int disk_size = 50
   command <<<
     python3 << CODE
     import csv, gzip, json
@@ -217,6 +228,8 @@ task fetch_row_from_tsv {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
+      disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
@@ -231,6 +244,7 @@ task fetch_col_from_tsv {
     Boolean       drop_header = true
     String        out_name = "~{basename(basename(tsv, '.txt'), '.tsv')}-~{col}.txt"
   }
+  Int disk_size = 50
   command <<<
     python3 << CODE
     import csv, gzip
@@ -255,7 +269,8 @@ task fetch_col_from_tsv {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
-    disks: "local-disk 50 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -274,6 +289,8 @@ task tsv_join {
     Boolean        prefer_first = true
     Int            machine_mem_gb = 7
   }
+
+  Int disk_size = 50
 
   command <<<
     python3<<CODE
@@ -383,7 +400,8 @@ task tsv_join {
     memory: "~{machine_mem_gb} GB"
     cpu: 4
     docker: "quay.io/broadinstitute/viral-core:2.1.33"
-    disks: "local-disk 100 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
   }
@@ -394,6 +412,8 @@ task tsv_to_csv {
     File   tsv
     String out_basename = basename(basename(tsv, '.tsv'), '.txt')
   }
+
+  Int disk_size = 50
 
   command <<<
     python3<<CODE
@@ -416,7 +436,8 @@ task tsv_to_csv {
     memory: "2 GB"
     cpu: 1
     docker: "python:slim"
-    disks: "local-disk 50 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -433,6 +454,7 @@ task tsv_drop_cols {
         String        out_filename = basename(in_tsv, '.tsv') + ".drop.tsv"
         String        docker = "quay.io/broadinstitute/py3-bio:0.1.2"
     }
+    Int disk_size = 50
     command <<<
         set -e
         python3<<CODE
@@ -449,7 +471,8 @@ task tsv_drop_cols {
         docker: docker
         memory: "2 GB"
         cpu:    1
-        disks: "local-disk 50 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -466,6 +489,8 @@ task tsv_stack {
     String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
 
+  Int disk_size = 50
+
   command {
     csvstack -t --filenames \
       ${sep=' ' input_tsvs} \
@@ -481,7 +506,8 @@ task tsv_stack {
     memory: "1 GB"
     cpu: 1
     docker: "${docker}"
-    disks: "local-disk 50 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -492,6 +518,8 @@ task cat_except_headers {
     Array[File]+ infiles
     String       out_filename
   }
+
+  Int disk_size = 50
 
   command <<<
     awk 'FNR>1 || NR==1' \
@@ -507,7 +535,8 @@ task cat_except_headers {
     memory: "1 GB"
     cpu: 1
     docker: "ubuntu"
-    disks: "local-disk 50 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -516,6 +545,7 @@ task make_empty_file {
   input {
     String out_filename
   }
+  Int disk_size = 10
   command {
     touch "~{out_filename}"
   }
@@ -526,7 +556,8 @@ task make_empty_file {
     memory: "1 GB"
     cpu: 1
     docker: "ubuntu"
-    disks: "local-disk 10 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -537,6 +568,7 @@ task rename_file {
     File   infile
     String out_filename
   }
+  Int disk_size = 100
   command {
     ln -s "~{infile}" "~{out_filename}"
   }
@@ -547,7 +579,8 @@ task rename_file {
     memory: "1 GB"
     cpu: 1
     docker: "ubuntu"
-    disks: "local-disk 100 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -557,6 +590,7 @@ task today {
   input {
     String? timezone
   }
+  Int disk_size = 10
   meta {
     volatile: true
   }
@@ -571,7 +605,8 @@ task today {
     memory: "1 GB"
     cpu: 1
     docker: "quay.io/broadinstitute/viral-baseimage:0.1.20"
-    disks: "local-disk 10 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -608,6 +643,7 @@ task s3_copy {
     memory: "2 GB"
     cpu: cpus
     disks: "local-disk ~{disk_gb} SSD"
+    disk: "~{disk_gb} GB" # TES
     maxRetries: 2
   }
 }
@@ -622,6 +658,7 @@ task filter_sequences_by_length {
 
         String docker = "quay.io/broadinstitute/viral-core:2.1.33"
     }
+    Int disk_size = 300
     parameter_meta {
         sequences_fasta: {
           description: "Set of sequences in fasta format",
@@ -660,7 +697,8 @@ task filter_sequences_by_length {
         docker: docker
         memory: "1 GB"
         cpu :   1
-        disks:  "local-disk 300 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
