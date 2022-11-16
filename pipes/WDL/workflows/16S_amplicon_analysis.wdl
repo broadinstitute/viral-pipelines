@@ -1,7 +1,5 @@
 ##Test 
-##09.19.22
-
-
+##11.16.22
 import "../tasks/tasks_16S_amplicon.wdl" as qiime 
 
 #Part 1:Importing and utilizing Part 1 (Samtools)
@@ -34,7 +32,7 @@ workflow qiime_wfl {
     #__________________________________________
     call qiime.merge_paired_ends {
         input: 
-            reads_qza = trim_reads.trimmed_reads_qza
+            trimmed_reads_qza = trim_reads.trimmed_reads_qza
     }
     #_________________________________________
     call qiime.gen_feature_table {
