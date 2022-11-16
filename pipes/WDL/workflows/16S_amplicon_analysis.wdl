@@ -15,7 +15,7 @@ import "./tasks_16S_amplicon.wdl" as qiime
 #Part 1:Importing and utilizing Part 1 (Samtools)
 workflow qiime_wfl {
     meta {
-        description: "Convert BAM files to QZA QIIME workflow."
+        description: "Convert BAM files and import it into a QIIME workflow."
         author: "fnegrete"
         email:  "viral-ngs@broadinstitute.org"
         allowNestedInputs: true 

@@ -301,6 +301,7 @@ train tax_analysis {
         --i-table ~{rep-table_outfile}\
         --i-taxonomy "~{basename}_tax.qza"\
         --o-visualization "~{basename}-bar-plots.qzv"
+        >>>
     output {
         File rep-seq_list = "~{basename}_rep_seqs.qzv" \
         File tax-classification_graph = "~{basename}-bar-plots.qzv"
