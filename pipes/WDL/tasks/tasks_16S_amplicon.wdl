@@ -78,7 +78,6 @@ task trim_reads {
         File    reads_qza
         
         String  qza_basename = basename(reads_qza, '.qza')
-        #Boolean not-default = false
         String  forward_adapter         = "CTGCTGCCTCCCGTAGGAGT"
         String  reverse_adapter         = "AGAGTTTGATCCTGGCTCAG"
         Int    min_length              = 1
@@ -103,7 +102,6 @@ task trim_reads {
         ~{"--p-minimum-length " + min_length} \
         ~{true='--p-no-discard-untrimmed' false='--p-discard-untrimmed' keep_untrimmed_reads} \
         --o-trimmed-sequences "~{qza_basename}_trimmed.qza"
-
         #trim-visual 
         qiime demux summarize \
         --i-data "~{qza_basename}_trimmed.qza" \
@@ -149,8 +147,6 @@ task merge_paired_ends {
         --i-demultiplexed-seqs "~{reads_qza}" \
         --o-joined-sequences "~{reads_basename}_joined.qza"
 
-        #Visualize 
-        # may want "~{reads_qza}" as input, depending
         qiime demux summarize \
         --i-data "~{reads_basename}_joined.qza" \
         --o-visualization "~{reads_basename}_visualization.qzv"
@@ -203,7 +199,6 @@ task gen_feature_table {
             --o-visualization "~{joined_end_basename}_stats.qzv"
         >>>
     output {
-        #how many output files do i need
         File rep_seqs_outfile = "~{joined_end_basename}_rep_seqs.qza"
         File rep_table_outfile = "~{joined_end_basename}_table.qza"
         File feature_table = "~{joined_end_basename}_table.qzv"
@@ -238,15 +233,12 @@ task train_classifier {
         # seemingly necessary because of:
         #   https://github.com/chanzuckerberg/miniwdl/issues/603
         conda activate ${CONDA_ENV_NAME}
-        
-        #is this otu different than the one above? or is it the rep-seqs outifle?
-        #is this how you specify a path?
+
         qiime tools import \
         --type 'FeatureData[Sequence]' \
         --input-path ~{otu_ref} \
         --output-path "~{otu_basename}_seqs.qza"
 
-        #is this db different than the one above?
         qiime tools import \
         --type 'FeatureData[Taxonomy]'
         --input-format HeaderlessTSVTaxonomyFormat \
@@ -260,7 +252,7 @@ task train_classifier {
         ~{"--p-min_length" + min_length}\
         ~{"--p-max_length" + max_length}\
         --o-reads "~{otu_basename}_v1_2_ref_seqs.qza"
-#might have to be broken down into two tasks
+
         qiime feature-classifier fit-classifier-naive-bayes\ 
         --i-reference-reads "~{otu_basename}_v1_2_ref_seqs.qza"\ 
         --i-reference-taxonomy "~{otu_basename}_tax.qza"\ 
@@ -320,4 +312,3 @@ task tax_analysis {
         cpu: 1
     }
 }
-# One caviat is that you need to visualize the bar plot using qiime2.org 
