@@ -1,12 +1,6 @@
 version 1.0 
 ##FN 
 #qiime2022.8 version
-#QIIME WORKLOW PART 1.A
-#1.samtools (universal)
-#2. cutadapt 
-#3. vsearch 
-#4. deblur
-#5. 
 
 #Part 1A | Step 1: BAM -> QZA
 #qiime import bam-(fastq)-> qza 
@@ -317,4 +311,3 @@ train tax_analysis {
         cpu: 1
     }
 }
-# One caviat is that you need to visualize the bar plot using qiime2.org 
