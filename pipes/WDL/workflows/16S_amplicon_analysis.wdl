@@ -3,7 +3,7 @@
 import "../tasks/tasks_16S_amplicon.wdl" as qiime 
 
 #Part 1:Importing and utilizing Part 1 (Samtools)
-workflow qiime_wfl {
+workflow 16S_amplicon_analysis {
     meta {
         description: "Convert BAM files to QZA QIIME workflow."
         author: "fnegrete"
