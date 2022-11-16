@@ -125,8 +125,7 @@ task trim_reads {
 #Part 1 | Step 3:VSEARCH: Merge sequences 
 task merge_paired_ends { 
     meta {
-        description: "Join paired-end sequence reads using vseach's merge_pairs function. Perform sequence quality control for Illumina data using the Deblur
-  workflow with a 16S reference as a positive filter."
+        description: "Join paired-end sequence reads using vseach's merge_pairs function. Perform sequence quality control for Illumina data using the Deblur workflow with a 16S reference as a positive filter."
     }
     input {
         #Input File: Merge paired reads
@@ -170,8 +169,7 @@ task merge_paired_ends {
 task gen_feature_table {
 
     meta {
-        description: "Perform sequence quality control for Illumina data using the Deblur
-  workflow with a 16S reference as a positive filter."
+        description: "Perform sequence quality control for Illumina data using the Deblur workflow with a 16S reference as a positive filter."
     }
     input {
         File    joined_end_outfile
@@ -261,6 +259,7 @@ task train_classifier {
         --i-reference-reads "~{otu_basename}_v1-2-ref-seqs.qza"\ 
         --i-reference-taxonomy "~{otu_basename}_tax.qza"\ 
         --o-classifier "~{otu_basename}_v1-2-classifier.qza"
+        >>>
     output {
         File    trained_classifier = "~{otu_basename}_v1-2-classifier.qza"
     }
