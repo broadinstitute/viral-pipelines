@@ -344,8 +344,8 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/trimal.wdl
     testParameterFiles:
       - empty.json
-  - name: 16S_amplicon_analysis
+  - name: amplicon16S_analysis
     subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/16S_amplicon_analysis.wdl
+    primaryDescriptorPath: /pipes/WDL/workflows/amplicon16S_analysis.wdl
     testParameterFiles:
       - empty.json
