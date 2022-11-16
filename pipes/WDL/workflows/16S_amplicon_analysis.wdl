@@ -10,7 +10,6 @@ workflow qiime_wfl {
         email:  "viral_ngs@broadinstitute.org"
         allowNestedInputs: true 
     }
-
     input {
         File    reads_bam
         File    trained_classifier
