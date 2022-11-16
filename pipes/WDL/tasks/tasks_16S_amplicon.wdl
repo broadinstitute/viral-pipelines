@@ -149,7 +149,7 @@ task merge_paired_ends {
         CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
         # activate the qiime conda environment
         # seemingly necessary because of:
-        #   https://github.com/chanzuckerberg/miniwdl/issues/603
+        # https://github.com/chanzuckerberg/miniwdl/issues/603
         conda activate ${CONDA_ENV_NAME}
 
         qiime vsearch join-pairs \
@@ -193,7 +193,7 @@ task gen_feature_table {
         CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
         # activate the qiime conda environment
         # seemingly necessary because of:
-        #   https://github.com/chanzuckerberg/miniwdl/issues/603
+        # https://github.com/chanzuckerberg/miniwdl/issues/603
         conda activate ${CONDA_ENV_NAME}
             qiime deblur denoise-16S \
             --i-demultiplexed-seqs ~{joined_end_outfile} \
@@ -213,7 +213,6 @@ task gen_feature_table {
             --o-visualization "~{joined_end_basename}_stats.qzv"
         >>>
     output {
-        #how many output files do i need
         File rep_seqs_outfile = "~{joined_end_basename}_rep_seqs.qza"
         File rep_table_outfile = "~{joined_end_basename}_table.qza"
         File feature_table = "~{joined_end_basename}_table.qzv"
@@ -248,16 +247,12 @@ task train_classifier {
      set -ex -o pipefail
         CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
         conda activate ${CONDA_ENV_NAME}
-        ##activated conda environments 
-        
-        #is this otu different than the one above? or is it the rep-seqs outifle?
-        #is this how you specify a path?
+
         qiime tools import \
         --type 'FeatureData[Sequence]' \
         --input-path ~{otu_ref} \
         --output-path "~{otu_basename}_seqs.qza"
 
-        #is this db different than the one above?
         qiime tools import \
         --type 'FeatureData[Taxonomy]'
         --input-format HeaderlessTSVTaxonomyFormat \
@@ -271,7 +266,7 @@ task train_classifier {
         ~{"--p-min-length" + min_length} \
         ~{"--p-max-length" + max_length} \
         --o-reads "~{otu_basename}_v1-2-ref-seqs.qza"
-#might have to be broken down into two tasks
+
         qiime feature-classifier fit-classifier-naive-bayes \ 
         --i-reference-reads "~{otu_basename}_v1-2-ref-seqs.qza" \ 
         --i-reference-taxonomy "~{otu_basename}_tax.qza" \ 
@@ -286,7 +281,6 @@ task train_classifier {
         cpu: cpu
         disks: "local-disk ${disk_size_gb} SSD"
     }
-
 }
 task tax_analysis {
     meta {
