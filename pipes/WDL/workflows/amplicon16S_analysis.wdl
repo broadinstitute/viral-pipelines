@@ -2,9 +2,9 @@
 ##11.16.22
 import "../tasks/tasks_16S_amplicon.wdl" as qiime 
 
-workflow 16S_amplicon_analysis {
+workflow amplicon16S_analysis {
     meta {
-        description: "Convert BAM files to QZA QIIME workflow."
+        description: "Running 16S amplicon (from BAM format) sequencing analysis with qiime."
         author: "fnegrete"
         email:  "viral_ngs@broadinstitute.org"
         allowNestedInputs: true 

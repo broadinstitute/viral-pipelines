@@ -1,5 +1,4 @@
 version 1.0 
-##FN 
 #qiime2022.8 version
 #11.16.22
 
@@ -7,8 +6,8 @@ version 1.0
 #qiime import bam-(fastq)-> qza 
 task qiime_import_from_bam {
 
-    meta{
-        description: "Alignments in the SAM format, including sorting, merging, indexing and generating alignments in a per-position format."
+    meta {
+        description: "Parsing demultiplexed fastq BAM files into qiime readable files."
     }
 
     input { 
@@ -66,7 +65,6 @@ task qiime_import_from_bam {
     }
 }
 
-#--------------------------------------------
 #Part 1 | Step 2:cutadapt: Trim sequences 
 #trimreads_trim
 #trim = default 
