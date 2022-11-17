@@ -1,3 +1,4 @@
+version 1.0
 ##Test 
 ##11.16.22
 import "../tasks/tasks_16S_amplicon.wdl" as qiime 
