@@ -1,5 +1,4 @@
 version 1.0 
-##FN 
 #qiime2022.8 version
 #11.16.22
 
