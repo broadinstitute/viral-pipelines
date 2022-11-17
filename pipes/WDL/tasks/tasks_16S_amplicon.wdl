@@ -6,7 +6,7 @@ version 1.0
 #qiime import bam-(fastq)-> qza 
 task qiime_import_from_bam {
 
-    meta{
+    meta {
         description: "Alignments in the SAM format, including sorting, merging, indexing and generating alignments in a per-position format."
     }
 
