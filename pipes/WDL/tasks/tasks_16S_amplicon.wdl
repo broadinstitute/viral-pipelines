@@ -29,7 +29,7 @@ task qiime_import_from_bam {
         CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
         # activate the qiime conda environment
         # seemingly necessary because of:
-        #   https://github.com/chanzuckerberg/miniwdl/issues/603
+        #https://github.com/chanzuckerberg/miniwdl/issues/603
         conda activate ${CONDA_ENV_NAME}
 
         #Part 1A | BAM -> FASTQ [Simple samtools command]
@@ -95,7 +95,7 @@ task trim_reads {
         CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
         # activate the qiime conda environment
         # seemingly necessary because of:
-        #   https://github.com/chanzuckerberg/miniwdl/issues/603
+        # https://github.com/chanzuckerberg/miniwdl/issues/603
         conda activate ${CONDA_ENV_NAME}
 
         qiime cutadapt trim-paired \
@@ -129,7 +129,7 @@ task trim_reads {
 #Part 1 | Step 3:VSEARCH: Merge sequences 
 task merge_paired_ends { 
     meta {
-        description: "Join paired-end sequence reads using vseach's merge_pairs function. Perform sequence quality control for Illumina data using the Deblur workflow with a 16S reference as a positive filter."
+        description: "Join paired-end sequence reads using vseach's merge_pairs function."
     }
     input {
         #Input File: Merge paired reads
