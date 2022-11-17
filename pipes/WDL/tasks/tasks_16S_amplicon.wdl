@@ -285,9 +285,9 @@ task tax_analysis {
         description: "Protocol describes performing a taxonomic classification with a naive bayes classifier that has been trained on the V1-2 regions amplified by our primers."
     }
     input {
-        File trained_classifier
-        File rep_seqs_outfile
-        File rep_table_outfile 
+        File    trained_classifier
+        File    rep_seqs_outfile
+        File    rep_table_outfile 
         String  basename  =   basename(trained_classifier, '.qza')
         Int     memory_mb = 2000
         Int     cpu = 1
