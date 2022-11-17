@@ -7,11 +7,7 @@ version 1.0
 task qiime_import_from_bam {
 
     meta {
-<<<<<<< HEAD
         description: "Parsing demultiplexed fastq BAM files into qiime readable files."
-=======
-        description: "Alignments in the SAM format, including sorting, merging, indexing and generating alignments in a per-position format."
->>>>>>> 43424989b25987300b2f3ff3f8fbc767ae274104
     }
 
     input { 
