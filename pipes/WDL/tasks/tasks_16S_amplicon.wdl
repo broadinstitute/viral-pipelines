@@ -169,7 +169,7 @@ task merge_paired_ends {
 #Final output: trimmed (or untrimmed depending on user) + merged ends in qza format.
 }
 
-task gen_feature_table {
+task deblur {
 
     meta {
         description: "Perform sequence quality control for Illumina data using the Deblur workflow with a 16S reference as a positive filter."
