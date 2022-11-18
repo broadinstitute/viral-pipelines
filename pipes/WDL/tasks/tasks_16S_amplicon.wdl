@@ -259,8 +259,8 @@ task train_classifier {
         --i-sequeunces "~{otu_basename}_seqs.qza"\
         --p-f-primer "~{forward_adapter}" \
         --p-r-primer "~{reverse_adapter}" \
-        ~{"--p-min-length" + min_length} \
-        ~{"--p-max-length" + max_length} \
+        ~{"--p-min-length " + min_length} \
+        ~{"--p-max-length " + max_length} \
         --o-reads "~{otu_basename}_v1-2-ref-seqs.qza"
 
         qiime feature-classifier fit-classifier-naive-bayes \ 
