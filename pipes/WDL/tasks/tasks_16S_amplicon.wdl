@@ -1,6 +1,4 @@
 version 1.0 
-#qiime2022.8 version
-#11.16.22
 
 #Part 1A | Step 1: BAM -> QZA
 #qiime import bam-(fastq)-> qza 
