@@ -1,9 +1,5 @@
 version 1.0 
-#qiime2022.8 version
-#11.16.22
 
-#Part 1A | Step 1: BAM -> QZA
-#qiime import bam-(fastq)-> qza 
 task qiime_import_from_bam {
 
     meta {
@@ -61,7 +57,8 @@ task qiime_import_from_bam {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disks: "local-disk ${disk_size_gb} SSD"
+        disk: disk_size_gb + "GB"
+        disks: "local-disk" + disk_size_gb + "HDD"
     }
 }
 
@@ -122,7 +119,8 @@ task trim_reads {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disks: "local-disk ${disk_size_gb} SSD"
+        disk: disk_size_gb + "GB"
+        disks: "local-disk" + disk_size_gb + "HDD"
     }
 }
 
@@ -166,12 +164,13 @@ task merge_paired_ends {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disks: "local-disk ${disk_size_gb} SSD"
+        disk: disk_size_gb + "GB"
+        disks: "local-disk" + disk_size_gb + "HDD"
     }
 #Final output: trimmed (or untrimmed depending on user) + merged ends in qza format.
 }
 
-task gen_feature_table {
+task deblur {
 
     meta {
         description: "Perform sequence quality control for Illumina data using the Deblur workflow with a 16S reference as a positive filter."
@@ -211,8 +210,8 @@ task gen_feature_table {
             --o-visualization "~{joined_end_basename}_stats.qzv"
         >>>
     output {
-        File rep_seqs_outfile = "~{joined_end_basename}_rep_seqs.qza"
-        File rep_table_outfile = "~{joined_end_basename}_table.qza"
+        File representative_seqs_qza = "~{joined_end_basename}_rep_seqs.qza"
+        File representative_table_qza = "~{joined_end_basename}_table.qza"
         File feature_table = "~{joined_end_basename}_table.qzv"
         File visualize_stats = "~{joined_end_basename}_stats.qzv"
 
@@ -221,7 +220,8 @@ task gen_feature_table {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disks: "local-disk ${disk_size_gb} SSD"
+        disk: disk_size_gb + "GB"
+        disks: "local-disk" + disk_size_gb + "HDD"
     }
 }
 task train_classifier {
@@ -277,7 +277,8 @@ task train_classifier {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disks: "local-disk ${disk_size_gb} SSD"
+        disk: disk_size_gb + "GB"
+        disks: "local-disk" + disk_size_gb + "HDD"
     }
 }
 task tax_analysis {
@@ -286,8 +287,8 @@ task tax_analysis {
     }
     input {
         File    trained_classifier
-        File    rep_seqs_outfile
-        File    rep_table_outfile 
+        File    representative_seqs_qza
+        File    representative_table_qza 
         String  basename  =   basename(trained_classifier, '.qza')
         Int     memory_mb = 2000
         Int     cpu = 1
@@ -305,15 +306,15 @@ task tax_analysis {
         
         qiime feature-classifier classify-sklearn \
         --i-classifier ~{trained_classifier} \
-        --i-reads ~{rep_seqs_outfile} \
+        --i-reads ~{representative_seqs_qza} \
         --o-classification "~{basename}_tax.qza"
         
         qiime feature-table tabulate-seqs \
-        --i-data ~{rep_seqs_outfile} \
+        --i-data ~{representative_seqs_qza} \
         --o-visualization "~{basename}_rep_seqs.qzv"
 
         qiime taxa barplot \
-        --i-table ~{rep_table_outfile} \
+        --i-table ~{representative_table_qza} \
         --i-taxonomy "~{basename}_tax.qza" \
         --o-visualization "~{basename}_bar_plots.qzv"
     >>>
@@ -325,6 +326,7 @@ task tax_analysis {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disks: "local-disk ${disk_size_gb} SSD"
+        disk: disk_size_gb + "GB"
+        disks: "local-disk" + disk_size_gb + "HDD"
     }
 }

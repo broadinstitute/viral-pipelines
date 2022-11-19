@@ -1,6 +1,5 @@
 version 1.0
-##Test 
-##11.16.22
+
 import "../tasks/tasks_16S_amplicon.wdl" as qiime 
 
 workflow amplicon16S_analysis {
@@ -34,7 +33,7 @@ workflow amplicon16S_analysis {
             trimmed_reads_qza = trim_reads.trimmed_reads_qza
     }
     #_________________________________________
-    call qiime.gen_feature_table {
+    call qiime.deblur {
         input: 
             joined_end_outfile = merge_paired_ends.joined_end_outfile
     }
@@ -42,7 +41,7 @@ workflow amplicon16S_analysis {
     call qiime.tax_analysis {
         input:
             trained_classifier = trained_classifier,
-            rep_seqs_outfile = gen_feature_table.rep_seqs_outfile,
-            rep_table_outfile = gen_feature_table.rep_table_outfile
+            representative_seqs_qza = deblur.representative_seqs_qza,
+            representative_table_qza = deblur.representative_table_qza
     }
 }
