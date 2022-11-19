@@ -284,8 +284,8 @@ task tax_analysis {
     }
     input {
         File    trained_classifier
-        File    rep_seqs_outfile
-        File    rep_table_outfile 
+        File    representative_seqs_qza
+        File    representative_table_qza
         String  basename  =   basename(trained_classifier, '.qza')
         Int     memory_mb = 2000
         Int     cpu = 1
