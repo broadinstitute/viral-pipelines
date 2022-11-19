@@ -286,7 +286,7 @@ task tax_analysis {
         File    trained_classifier
         File    representative_seqs_qza
         File    representative_table_qza
-        String  basename  =   basename(trained_classifier, '.qza')
+        String  classifier_basename  =   basename(trained_classifier, '.qza')
         Int     memory_mb = 2000
         Int     cpu = 1
         Int     disk_size_gb = ceil(2*size(trained_classifier, "GiB")) + 5
