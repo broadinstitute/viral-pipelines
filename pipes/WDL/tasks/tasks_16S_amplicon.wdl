@@ -170,7 +170,7 @@ task merge_paired_ends {
 #Final output: trimmed (or untrimmed depending on user) + merged ends in qza format.
 }
 
-task deblur {
+task gen_feature_table {
 
     meta {
         description: "Perform sequence quality control for Illumina data using the Deblur workflow with a 16S reference as a positive filter."
@@ -261,8 +261,8 @@ task train_classifier {
         --i-sequeunces "~{otu_basename}_seqs.qza"\
         --p-f-primer "~{forward_adapter}" \
         --p-r-primer "~{reverse_adapter}" \
-        ~{"--p-min-length" + min_length} \
-        ~{"--p-max-length" + max_length} \
+        ~{"--p-min-length " + min_length} \
+        ~{"--p-max-length " + max_length} \
         --o-reads "~{otu_basename}_v1-2-ref-seqs.qza"
 
         qiime feature-classifier fit-classifier-naive-bayes \ 
@@ -287,8 +287,8 @@ task tax_analysis {
     }
     input {
         File    trained_classifier
-        File    representative_seqs_qza
-        File    representative_table_qza 
+        File    rep_seqs_outfile
+        File    rep_table_outfile 
         String  basename  =   basename(trained_classifier, '.qza')
         Int     memory_mb = 2000
         Int     cpu = 1
