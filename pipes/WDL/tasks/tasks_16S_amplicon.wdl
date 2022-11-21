@@ -1,11 +1,9 @@
 version 1.0 
 
 task qiime_import_from_bam {
-
     meta {
         description: "Parsing demultiplexed fastq BAM files into qiime readable files."
     }
-
     input { 
         File    reads_bam
         String  sample_name = basename(reads_bam, '.bam')
@@ -14,14 +12,13 @@ task qiime_import_from_bam {
         Int     disk_size_gb = ceil(2*size(reads_bam, "GiB")) + 5
         String  docker     = "quay.io/qiime2/core:2022.8" 
     }
-
     parameter_meta {
         reads_bam: {description: "Input BAM file"}
     }
 
     command <<<
         set -ex -o pipefail
-        # obtain the name of the qiime conda environment in the container; flexible about version
+        # obtain the name of the qiime conda environment in the container flexible about version
         CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
         # activate the qiime conda environment
         # seemingly necessary because of:
@@ -34,7 +31,7 @@ task qiime_import_from_bam {
         NEWSAMPLENAME=$(echo "~{sample_name}" | perl -lape 's/[_]/-/g')
         #All names added to one giant file 
         echo ${NEWSAMPLENAME} > NEWSAMPLENAME.txt
-        #Make a manifest.txt that contains [1.sample-id 2.R1_fastq 3.R2.fastq]
+        #Make a manifest.txt that contains [1.sampleid 2.R1_fastq 3.R2.fastq]
         #> =overwrite or writes new file 
         echo -e "sample-id\tforward-absolute-filepath\treverse-absolute-filepath" > manifest.tsv
         #>>= appends 
@@ -167,10 +164,9 @@ task merge_paired_ends {
         disk: disk_size_gb + "GB"
         disks: "local-disk" + disk_size_gb + "HDD"
     }
-#Final output: trimmed (or untrimmed depending on user) + merged ends in qza format.
 }
 
-task gen_feature_table {
+task deblur {
 
     meta {
         description: "Perform sequence quality control for Illumina data using the Deblur workflow with a 16S reference as a positive filter."
