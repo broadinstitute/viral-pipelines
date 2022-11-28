@@ -20,6 +20,8 @@ workflow augur_from_assemblies {
 
         File?          clades_tsv
         Array[String]? ancestral_traits_to_infer
+
+        Boolean        make_snps_vcf = false
     }
 
     parameter_meta {
@@ -66,9 +68,11 @@ workflow augur_from_assemblies {
             ref_fasta = ref_fasta,
             basename  = "all_samples_aligned.fasta"
     }
-    call nextstrain.snp_sites {
-        input:
-            msa_fasta = mafft.aligned_sequences
+    if(make_snps_vcf) {
+        call nextstrain.snp_sites {
+            input:
+                msa_fasta = mafft.aligned_sequences
+        }
     }
 
 
@@ -165,7 +169,7 @@ workflow augur_from_assemblies {
     output {
       File        combined_assemblies  = filter_sequences_by_length.filtered_fasta
       File        multiple_alignment   = mafft.aligned_sequences
-      File        unmasked_snps        = snp_sites.snps_vcf
+      File?       unmasked_snps        = snp_sites.snps_vcf
       
       File        metadata_merged      = derived_cols.derived_metadata
       File        keep_list            = fasta_to_ids.ids_txt
