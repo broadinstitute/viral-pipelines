@@ -54,8 +54,8 @@ task qiime_import_from_bam {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disk: disk_size_gb + "GB"
-        disks: "local-disk" + disk_size_gb + "HDD"
+        disk: disk_size_gb + " GB"
+        disks: "local-disk " + disk_size_gb + " HDD"
     }
 }
 
@@ -116,13 +116,13 @@ task trim_reads {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disk: disk_size_gb + "GB"
-        disks: "local-disk" + disk_size_gb + "HDD"
+        disk: disk_size_gb + " GB"
+        disks: "local-disk " + disk_size_gb + " HDD"
     }
 }
 
 #Part 1 | Step 3:VSEARCH: Merge sequences 
-task merge_paired_ends { 
+task join_paired_ends { 
     meta {
         description: "Join paired-end sequence reads using vseach's merge_pairs function."
     }
@@ -154,15 +154,15 @@ task merge_paired_ends {
         --o-visualization "~{reads_basename}_visualization.qzv"
     >>>
     output {
-        File joined_end_outfile       = "~{reads_basename}_joined.qza"
+        File joined_end_reads_qza       = "~{reads_basename}_joined.qza"
         File joined_end_visualization = "~{reads_basename}_visualization.qzv"
     }
     runtime {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disk: disk_size_gb + "GB"
-        disks: "local-disk" + disk_size_gb + "HDD"
+        disk: disk_size_gb + " GB"
+        disks: "local-disk " + disk_size_gb + " HDD"
     }
 }
 
@@ -172,12 +172,12 @@ task deblur {
         description: "Perform sequence quality control for Illumina data using the Deblur workflow with a 16S reference as a positive filter."
         }
     input {
-        File    joined_end_outfile
-        String  joined_end_basename = basename(joined_end_outfile, '.qza')
+        File    joined_end_reads_qza
+        String  joined_end_basename = basename(joined_end_reads_qza, '.qza')
         Int     trim_length_var = 300
         Int     memory_mb = 2000
         Int     cpu = 1
-        Int     disk_size_gb = ceil(2*size(joined_end_outfile, "GiB")) + 5
+        Int     disk_size_gb = ceil(2*size(joined_end_reads_qza, "GiB")) + 5
         String  docker = "quay.io/qiime2/core:2022.8"
     }
         command <<< 
@@ -189,7 +189,7 @@ task deblur {
         # https://github.com/chanzuckerberg/miniwdl/issues/603
         conda activate ${CONDA_ENV_NAME}
             qiime deblur denoise-16S \
-            --i-demultiplexed-seqs ~{joined_end_outfile} \
+            --i-demultiplexed-seqs ~{joined_end_reads_qza} \
             ~{"--p-trim-length " + trim_length_var} \
             --p-sample-stats \
             --o-representative-sequences "~{joined_end_basename}_rep_seqs.qza" \
@@ -216,8 +216,8 @@ task deblur {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disk: disk_size_gb + "GB"
-        disks: "local-disk" + disk_size_gb + "HDD"
+        disk: disk_size_gb + " GB"
+        disks: "local-disk " + disk_size_gb + " HDD"
     }
 }
 task train_classifier {
@@ -273,8 +273,8 @@ task train_classifier {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disk: disk_size_gb + "GB"
-        disks: "local-disk" + disk_size_gb + "HDD"
+        disk: disk_size_gb + " GB"
+        disks: "local-disk " + disk_size_gb + " HDD"
     }
 }
 task tax_analysis {
@@ -322,7 +322,7 @@ task tax_analysis {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disk: disk_size_gb + "GB"
-        disks: "local-disk" + disk_size_gb + "HDD"
+        disk: disk_size_gb + " GB"
+        disks: "local-disk " + disk_size_gb + " HDD"
     }
 }
