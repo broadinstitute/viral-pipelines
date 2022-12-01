@@ -7,6 +7,7 @@ task assemble {
       
       Int      spades_n_reads = 10000000
       Int      spades_min_contig_len = 0
+      String?  spades_options
       
       String   assembler = "spades"
       Boolean  always_succeed = false
@@ -37,6 +38,7 @@ task assemble {
             ~{'--nReads=' + spades_n_reads} \
             ~{true="--alwaysSucceed" false="" always_succeed} \
             ~{'--minContigLen=' + spades_min_contig_len} \
+            ~{'--spadesOpts="' + spades_options + '"'} \
             --memLimitGb $mem_in_gb \
             --outReads=~{sample_name}.subsamp.bam \
             --loglevel=DEBUG
