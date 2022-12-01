@@ -1,9 +1,9 @@
 version 1.0
-##Test 
-##11.16.22
+
 import "../tasks/tasks_16S_amplicon.wdl" as qiime 
 
 workflow amplicon16S_analysis {
+    
     meta {
         description: "Running 16S amplicon (from BAM format) sequencing analysis with qiime."
         author: "fnegrete"
@@ -29,20 +29,20 @@ workflow amplicon16S_analysis {
            keep_untrimmed_reads = keep_untrimmed_reads
     }
     #__________________________________________
-    call qiime.merge_paired_ends {
+    call qiime.join_paired_ends {
         input: 
             trimmed_reads_qza = trim_reads.trimmed_reads_qza
     }
     #_________________________________________
-    call qiime.gen_feature_table {
+    call qiime.deblur {
         input: 
-            joined_end_outfile = merge_paired_ends.joined_end_outfile
+            joined_end_reads_qza = join_paired_ends.joined_end_reads_qza
     }
     #_________________________________________
     call qiime.tax_analysis {
         input:
             trained_classifier = trained_classifier,
-            rep_seqs_outfile = gen_feature_table.rep_seqs_outfile,
-            rep_table_outfile = gen_feature_table.rep_table_outfile
+            representative_seqs_qza = deblur.representative_seqs_qza,
+            representative_table_qza = deblur.representative_table_qza
     }
 }

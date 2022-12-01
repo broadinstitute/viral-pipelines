@@ -1,15 +1,9 @@
 version 1.0 
-#qiime2022.8 version
-#11.16.22
 
-#Part 1A | Step 1: BAM -> QZA
-#qiime import bam-(fastq)-> qza 
 task qiime_import_from_bam {
-
     meta {
         description: "Parsing demultiplexed fastq BAM files into qiime readable files."
     }
-
     input { 
         File    reads_bam
         String  sample_name
@@ -18,14 +12,13 @@ task qiime_import_from_bam {
         Int     disk_size_gb = ceil(2*size(reads_bam, "GiB")) + 5
         String  docker     = "quay.io/qiime2/core:2022.8" 
     }
-
     parameter_meta {
         reads_bam: {description: "Input BAM file"}
     }
 
     command <<<
         set -ex -o pipefail
-        # obtain the name of the qiime conda environment in the container; flexible about version
+        # obtain the name of the qiime conda environment in the container flexible about version
         CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
         # activate the qiime conda environment
         # seemingly necessary because of:
@@ -38,7 +31,7 @@ task qiime_import_from_bam {
         NEWSAMPLENAME=$(echo "~{sample_name}" | perl -lape 's/[_]/-/g')
         #All names added to one giant file 
         echo ${NEWSAMPLENAME} > NEWSAMPLENAME.txt
-        #Make a manifest.txt that contains [1.sample-id 2.R1_fastq 3.R2.fastq]
+        #Make a manifest.txt that contains [1.sampleid 2.R1_fastq 3.R2.fastq]
         #> =overwrite or writes new file 
         echo -e "sample-id\tforward-absolute-filepath\treverse-absolute-filepath" > manifest.tsv
         #>>= appends 
@@ -61,7 +54,8 @@ task qiime_import_from_bam {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disks: "local-disk ${disk_size_gb} SSD"
+        disk: disk_size_gb + " GB"
+        disks: "local-disk " + disk_size_gb + " HDD"
     }
 }
 
@@ -122,12 +116,13 @@ task trim_reads {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disks: "local-disk ${disk_size_gb} SSD"
+        disk: disk_size_gb + " GB"
+        disks: "local-disk " + disk_size_gb + " HDD"
     }
 }
 
 #Part 1 | Step 3:VSEARCH: Merge sequences 
-task merge_paired_ends { 
+task join_paired_ends { 
     meta {
         description: "Join paired-end sequence reads using vseach's merge_pairs function."
     }
@@ -159,30 +154,30 @@ task merge_paired_ends {
         --o-visualization "~{reads_basename}_visualization.qzv"
     >>>
     output {
-        File joined_end_outfile       = "~{reads_basename}_joined.qza"
+        File joined_end_reads_qza       = "~{reads_basename}_joined.qza"
         File joined_end_visualization = "~{reads_basename}_visualization.qzv"
     }
     runtime {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disks: "local-disk ${disk_size_gb} SSD"
+        disk: disk_size_gb + " GB"
+        disks: "local-disk " + disk_size_gb + " HDD"
     }
-#Final output: trimmed (or untrimmed depending on user) + merged ends in qza format.
 }
 
-task gen_feature_table {
+task deblur {
 
     meta {
         description: "Perform sequence quality control for Illumina data using the Deblur workflow with a 16S reference as a positive filter."
         }
     input {
-        File    joined_end_outfile
-        String  joined_end_basename = basename(joined_end_outfile, '.qza')
+        File    joined_end_reads_qza
+        String  joined_end_basename = basename(joined_end_reads_qza, '.qza')
         Int     trim_length_var = 300
         Int     memory_mb = 2000
         Int     cpu = 1
-        Int     disk_size_gb = ceil(2*size(joined_end_outfile, "GiB")) + 5
+        Int     disk_size_gb = ceil(2*size(joined_end_reads_qza, "GiB")) + 5
         String  docker = "quay.io/qiime2/core:2022.8"
     }
         command <<< 
@@ -194,7 +189,7 @@ task gen_feature_table {
         # https://github.com/chanzuckerberg/miniwdl/issues/603
         conda activate ${CONDA_ENV_NAME}
             qiime deblur denoise-16S \
-            --i-demultiplexed-seqs ~{joined_end_outfile} \
+            --i-demultiplexed-seqs ~{joined_end_reads_qza} \
             ~{"--p-trim-length " + trim_length_var} \
             --p-sample-stats \
             --o-representative-sequences "~{joined_end_basename}_rep_seqs.qza" \
@@ -211,8 +206,8 @@ task gen_feature_table {
             --o-visualization "~{joined_end_basename}_stats.qzv"
         >>>
     output {
-        File rep_seqs_outfile = "~{joined_end_basename}_rep_seqs.qza"
-        File rep_table_outfile = "~{joined_end_basename}_table.qza"
+        File representative_seqs_qza = "~{joined_end_basename}_rep_seqs.qza"
+        File representative_table_qza = "~{joined_end_basename}_table.qza"
         File feature_table = "~{joined_end_basename}_table.qzv"
         File visualize_stats = "~{joined_end_basename}_stats.qzv"
 
@@ -221,7 +216,8 @@ task gen_feature_table {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disks: "local-disk ${disk_size_gb} SSD"
+        disk: disk_size_gb + " GB"
+        disks: "local-disk " + disk_size_gb + " HDD"
     }
 }
 task train_classifier {
@@ -261,8 +257,8 @@ task train_classifier {
         --i-sequeunces "~{otu_basename}_seqs.qza"\
         --p-f-primer "~{forward_adapter}" \
         --p-r-primer "~{reverse_adapter}" \
-        ~{"--p-min-length" + min_length} \
-        ~{"--p-max-length" + max_length} \
+        ~{"--p-min-length " + min_length} \
+        ~{"--p-max-length " + max_length} \
         --o-reads "~{otu_basename}_v1-2-ref-seqs.qza"
 
         qiime feature-classifier fit-classifier-naive-bayes \ 
@@ -277,7 +273,8 @@ task train_classifier {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disks: "local-disk ${disk_size_gb} SSD"
+        disk: disk_size_gb + " GB"
+        disks: "local-disk " + disk_size_gb + " HDD"
     }
 }
 task tax_analysis {
@@ -286,8 +283,8 @@ task tax_analysis {
     }
     input {
         File    trained_classifier
-        File    rep_seqs_outfile
-        File    rep_table_outfile 
+        File    representative_seqs_qza
+        File    representative_table_qza 
         String  basename  =   basename(trained_classifier, '.qza')
         Int     memory_mb = 2000
         Int     cpu = 1
@@ -305,15 +302,15 @@ task tax_analysis {
         
         qiime feature-classifier classify-sklearn \
         --i-classifier ~{trained_classifier} \
-        --i-reads ~{rep_seqs_outfile} \
+        --i-reads ~{representative_seqs_qza} \
         --o-classification "~{basename}_tax.qza"
         
         qiime feature-table tabulate-seqs \
-        --i-data ~{rep_seqs_outfile} \
+        --i-data ~{representative_seqs_qza} \
         --o-visualization "~{basename}_rep_seqs.qzv"
 
         qiime taxa barplot \
-        --i-table ~{rep_table_outfile} \
+        --i-table ~{representative_table_qza} \
         --i-taxonomy "~{basename}_tax.qza" \
         --o-visualization "~{basename}_bar_plots.qzv"
     >>>
@@ -325,6 +322,7 @@ task tax_analysis {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disks: "local-disk ${disk_size_gb} SSD"
+        disk: disk_size_gb + " GB"
+        disks: "local-disk " + disk_size_gb + " HDD"
     }
 }
