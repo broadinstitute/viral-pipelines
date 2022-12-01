@@ -12,7 +12,7 @@ task qiime_import_from_bam {
 
     input { 
         File    reads_bam
-        String  sample_name = basename(reads_bam, '.bam')
+        String  sample_name
         Int     memory_mb = 2000
         Int     cpu = 1
         Int     disk_size_gb = ceil(2*size(reads_bam, "GiB")) + 5
