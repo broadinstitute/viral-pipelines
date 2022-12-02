@@ -14,7 +14,7 @@ task deplete_taxa {
 
     Int?         cpu=8
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.1.20.0"
   }
 
   parameter_meta {
@@ -113,7 +113,7 @@ task filter_to_taxon {
     String?  neg_control_prefixes_space_separated = "neg water NTC"
 
     Int?     machine_mem_gb
-    String   docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
+    String   docker = "quay.io/broadinstitute/viral-classify:2.1.20.0"
   }
 
   # do this in two steps in case the input doesn't actually have "cleaned" in the name
@@ -172,7 +172,7 @@ task build_lastal_db {
     File   sequences_fasta
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
+    String docker = "quay.io/broadinstitute/viral-classify:2.1.20.0"
   }
 
   String db_name = basename(sequences_fasta, ".fasta")

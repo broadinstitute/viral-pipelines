@@ -949,7 +949,7 @@ task mafft_one_chr {
         Boolean  large = false
         Boolean  memsavetree = false
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
+        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.20.0"
         Int      mem_size = 500
         Int      cpus = 64
     }
@@ -1037,7 +1037,7 @@ task mafft_one_chr_chunked {
         Int      batch_chunk_size = 2000
         Int      threads_per_job = 2
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
+        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.20.0"
         Int      mem_size = 32
         Int      cpus = 96
     }
