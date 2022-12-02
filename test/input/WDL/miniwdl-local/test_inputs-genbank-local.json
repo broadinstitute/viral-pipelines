@@ -1,13 +1,8 @@
 {
   "genbank.molType": "cRNA",
+  "genbank.reference_accessions": ["KM821997.1", "KM821998.1"],
   "genbank.coverage_table": "test/input/genbank/coverage_report-RUN1-workflow.txt",
-  "genbank.reference_feature_tables": [
-    "test/input/genbank/KM821997.1.tbl",
-    "test/input/genbank/KM821998.1.tbl"
-  ],
-  "genbank.organism": "Lassa mammarenavirus",
   "genbank.sequencingTech": "Illumina MiSeq",
-  "genbank.taxid": 11620,
   "genbank.biosample_attributes": "test/input/genbank/biosample-attributes-lasv.txt",
   "genbank.prep_genbank.assembly_method": "placeholder assembly software",
   "genbank.prep_genbank.assembly_method_version": "5.4.3.2.1",
@@ -20,9 +15,6 @@
     "test/input/LASV_NGA_2018_0097.fasta",
     "test/input/LASV_NGA_2018_0541.fasta"
   ],
-  "genbank.reference_fastas": [
-    "test/input/genbank/KM821997.1.fasta",
-    "test/input/genbank/KM821998.1.fasta"
-  ]
+  "genbank.email_address": "viral-ngs@broadinstitute.org"
 }
 
