@@ -1,7 +1,8 @@
 version 1.0
 
-import "../tasks/tasks_interhost.wdl" as interhost
 import "../tasks/tasks_ncbi.wdl" as ncbi
+import "../tasks/tasks_ncbi_tools.wdl" as ncbi_tools
+import "../tasks/tasks_reports.wdl" as reports
 
 workflow genbank {
 
@@ -13,20 +14,18 @@ workflow genbank {
     }
 
     input {
-        Array[File]+  reference_fastas
-        Array[File]+  reference_feature_tables
-        Array[File]+  assemblies_fasta
+        Array[File]+   assemblies_fasta
+        Array[File]+   alignments_bams
+        Array[String]+ reference_accessions
 
-        String?       author_list # of the form "Lastname,A.B., Lastname,C.,"; optional alternative to names in author_sbt_defaults_yaml
+        String        email_address # required for fetching data from NCBI APIs
+        String        author_list # of the form "Lastname,A.B., Lastname,C.,"; optional alternative to names in author_sbt_defaults_yaml
         File          author_sbt_defaults_yaml # defaults to fill in for author_sbt file (including both author and non-author fields)
         File          author_sbt_j2_template
         File          biosample_attributes
-        Int           taxid
-        File?         coverage_table
-        String?       sequencingTech
+        String        sequencingTech
         String?       comment
-        String?       organism
-        String?       molType='cRNA'
+        String        molType='cRNA'
     }
 
     parameter_meta {
@@ -34,13 +33,9 @@ workflow genbank {
           description: "Genomes to prepare for Genbank submission. One file per genome: all segments/chromosomes included in one file. All fasta files must contain exactly the same number of sequences as reference_fasta (which must equal the number of files in reference_annot_tbl).",
           patterns: ["*.fasta"]
         }
-        reference_fastas: {
-          description: "Reference genome, each segment/chromosome in a separate fasta file, in the exact same count and order as the segments/chromosomes described in genome_fasta. Headers must be Genbank accessions.",
+        reference_accessions: {
+          description: "Reference genome Genbank accessions, each segment/chromosome in the exact same count and order as the segments/chromosomes described in genome_fasta.",
           patterns: ["*.fasta"]
-        }
-        reference_feature_tables: {
-          description: "NCBI Genbank feature table, each segment/chromosome in a separate TBL file, in the exact same count and order as the segments/chromosomes described in genome_fasta and reference_fastas. Accession numbers in the TBL files must correspond exactly to those in reference_fasta.",
-          patterns: ["*.tbl"]
         }
         author_list: {
           description: "A string containing a space-delimited list with of author surnames separated by first name and (optional) middle initial. Ex. 'Lastname,Firstname, Last-hypenated,First,M., Last,F.'"
@@ -56,9 +51,6 @@ workflow genbank {
           description: "A post-submission attributes file from NCBI BioSample, which is available at https://submit.ncbi.nlm.nih.gov/subs/ and clicking on 'Download attributes file with BioSample accessions'.",
           patterns: ["*.txt", "*.tsv"]
         }
-        taxid: {
-          description: "The NCBI taxonomy ID for the species being submitted in this batch (all sequences in this batch must belong to the same taxid). https://www.ncbi.nlm.nih.gov/taxonomy/"
-        }
         coverage_table: {
           description: "A two column tab text file mapping sample IDs (first column) to average sequencing coverage (second column, floating point number).",
           patterns: ["*.txt", "*.tsv"],
@@ -66,10 +58,6 @@ workflow genbank {
         }
         sequencingTech: {
           description: "The type of sequencer used to generate reads. NCBI has a controlled vocabulary for this value which can be found here: https://submit.ncbi.nlm.nih.gov/structcomment/nongenomes/",
-          category: "common"
-        }
-        organism: {
-          description: "The scientific name for the organism being submitted. This is typically the species name and should match the name given by the NCBI Taxonomy database. For more info, see: https://www.ncbi.nlm.nih.gov/Sequin/sequin.hlp.html#Organism",
           category: "common"
         }
         molType: {
@@ -82,19 +70,39 @@ workflow genbank {
 
     }
 
+    scatter(segment_acc in reference_accessions) {
+      call ncbi_tools.fetch_genbank_metadata {
+        input:
+          genbank_accession = segment_acc
+      }
+      call ncbi.download_annotations {
+        input:
+          accessions = [segment_acc],
+          emailAddress = email_address,
+          combined_out_prefix = segment_acc
+      }
+    }
+
+    call reports.coverage_report {
+      input:
+        mapped_bams = alignments_bams,
+        mapped_bam_idx = []
+    }
+
     call ncbi.biosample_to_genbank {
         input:
             biosample_attributes = biosample_attributes,
-            num_segments         = length(reference_fastas),
-            taxid                = taxid
+            num_segments         = length(reference_accessions),
+            taxid                = fetch_genbank_metadata.taxid[0],
+            s_dropout_note       = false
     }
 
     scatter(assembly in assemblies_fasta) {
         call ncbi.align_and_annot_transfer_single as annot {
             input:
                 genome_fasta             = assembly,
-                reference_fastas         = reference_fastas,
-                reference_feature_tables = reference_feature_tables
+                reference_fastas         = flatten(download_annotations.genomes_fasta),
+                reference_feature_tables = flatten(download_annotations.features_tbl)
         }
     }
 
@@ -112,10 +120,10 @@ workflow genbank {
             authors_sbt        = generate_author_sbt.sbt_file,
             biosampleMap       = biosample_to_genbank.biosample_map,
             genbankSourceTable = biosample_to_genbank.genbank_source_modifier_table,
-            coverage_table     = coverage_table,
+            coverage_table     = coverage_report.coverage_report,
             sequencingTech     = sequencingTech,
             comment            = comment,
-            organism           = organism,
+            organism           = fetch_genbank_metadata.organism[0],
             molType            = molType
     }
 

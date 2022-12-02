@@ -145,6 +145,35 @@ task Fetch_SRA_to_BAM {
     }
 }
 
+task fetch_genbank_metadata {
+    input {
+        String  genbank_accession
+        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+    }
+    Int disk_size = 50
+    command <<<
+        set -e
+        esearch -db nuccore -q "~{genbank_accession}" | efetch -db nuccore -format gb -mode xml -json  > gb.json
+        jq -r '[.GBSet.GBSeq."GBSeq_feature-table".GBFeature[0].GBFeature_quals.GBQualifier|.[]| {(.GBQualifier_name): .GBQualifier_value}]|add ' gb.json > metadata.json
+        jq -r '.db_xref' meta.json | grep ^taxon: | cut -f 2 -d : > taxid.txt
+        jq -r '.organism' meta.json > organism.txt
+    >>>
+    output {
+        Map[String,String] metadata = read_json("metadata.json")
+        String taxid = read_string("taxid.txt")
+        String organism = read_string("organism.txt")
+    }
+    runtime {
+        cpu:     1
+        memory:  "1 GB"
+        disks:   "local-disk " + disk_size + " LOCAL"
+        disk:    disk_size + " GB" # TES
+        dx_instance_type: "mem1_ssd1_v2_x2"
+        docker:  docker
+        maxRetries: 2
+    }
+}
+
 task biosample_tsv_filter_preexisting {
     input {
         File           meta_submit_tsv
