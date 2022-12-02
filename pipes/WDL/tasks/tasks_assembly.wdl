@@ -9,7 +9,6 @@ task assemble {
       Int      spades_min_contig_len = 0
       String?  spades_options
       
-      String   assembler = "spades"
       Boolean  always_succeed = false
       
       # do this in two steps in case the input doesn't actually have "taxfilt" in the name
@@ -30,28 +29,23 @@ task assemble {
 
         assembly.py --version | tee VERSION
 
-        if [[ "~{assembler}" == "spades" ]]; then
-          assembly.py assemble_spades \
-            ~{reads_unmapped_bam} \
-            ~{trim_clip_db} \
-            ~{sample_name}.assembly1-~{assembler}.fasta \
-            ~{'--nReads=' + spades_n_reads} \
-            ~{true="--alwaysSucceed" false="" always_succeed} \
-            ~{'--minContigLen=' + spades_min_contig_len} \
-            ~{'--spadesOpts="' + spades_options + '"'} \
-            --memLimitGb $mem_in_gb \
-            --outReads=~{sample_name}.subsamp.bam \
-            --loglevel=DEBUG
-        else
-          echo "unrecognized assembler ~{assembler}" >&2
-          exit 1
-        fi
+        assembly.py assemble_spades \
+          ~{reads_unmapped_bam} \
+          ~{trim_clip_db} \
+          ~{sample_name}.assembly1-spades.fasta \
+          ~{'--nReads=' + spades_n_reads} \
+          ~{true="--alwaysSucceed" false="" always_succeed} \
+          ~{'--minContigLen=' + spades_min_contig_len} \
+          ~{'--spadesOpts="' + spades_options + '"'} \
+          --memLimitGb $mem_in_gb \
+          --outReads=~{sample_name}.subsamp.bam \
+          --loglevel=DEBUG
 
         samtools view -c ~{sample_name}.subsamp.bam | tee subsample_read_count >&2
     }
 
     output {
-        File   contigs_fasta        = "~{sample_name}.assembly1-~{assembler}.fasta"
+        File   contigs_fasta        = "~{sample_name}.assembly1-spades.fasta"
         File   subsampBam           = "~{sample_name}.subsamp.bam"
         Int    subsample_read_count = read_int("subsample_read_count")
         String viralngs_version     = read_string("VERSION")
