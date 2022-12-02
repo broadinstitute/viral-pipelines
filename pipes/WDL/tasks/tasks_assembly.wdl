@@ -6,7 +6,7 @@ task assemble {
       File     trim_clip_db
       
       Int      spades_n_reads = 10000000
-      Int      spades_min_contig_len = 0
+      Int?     spades_min_contig_len
       String?  spades_options
       
       Boolean  always_succeed = false
@@ -77,6 +77,7 @@ task scaffold {
       Int?         nucmer_max_gap
       Int?         nucmer_min_match
       Int?         nucmer_min_cluster
+      Int?         scaffold_min_contig_len
       Float?       scaffold_min_pct_contig_aligned
 
       Int?         machine_mem_gb
@@ -100,6 +101,7 @@ task scaffold {
           ~{contigs_fasta} \
           ~{sep=' ' reference_genome_fasta} \
           ~{sample_name}.intermediate_scaffold.fasta \
+          ~{'--min_contig_len=' + scaffold_min_contig_len} \
           ~{'--maxgap=' + nucmer_max_gap} \
           ~{'--minmatch=' + nucmer_min_match} \
           ~{'--mincluster=' + nucmer_min_cluster} \
