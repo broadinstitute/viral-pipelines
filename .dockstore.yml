@@ -279,9 +279,9 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_lineages.wdl
     testParameterFiles:
     - /test/input/WDL/test_inputs-sarscov2_lineages-local.json
-  - name: read_depths
+  - name: calc_bam_read_depths
     subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/read_depths.wdl
+    primaryDescriptorPath: /pipes/WDL/workflows/calc_bam_read_depths.wdl
     testParameterFiles:
       - empty.json
   - name: sarscov2_gisaid_ingest
