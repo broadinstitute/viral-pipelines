@@ -2,6 +2,7 @@
   "genbank.molType": "cRNA",
   "genbank.reference_accessions": ["KM821997.1", "KM821998.1"],
   "genbank.coverage_table": "test/input/genbank/coverage_report-RUN1-workflow.txt",
+  "genbank.alignments_bams": [],
   "genbank.sequencingTech": "Illumina MiSeq",
   "genbank.biosample_attributes": "test/input/genbank/biosample-attributes-lasv.txt",
   "genbank.prep_genbank.assembly_method": "placeholder assembly software",
