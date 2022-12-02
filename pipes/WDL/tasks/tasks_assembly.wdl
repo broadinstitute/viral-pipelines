@@ -7,6 +7,7 @@ task assemble {
       
       Int      spades_n_reads = 10000000
       Int      spades_min_contig_len = 0
+      String?  spades_options
       
       String   assembler = "spades"
       Boolean  always_succeed = false
@@ -15,7 +16,7 @@ task assemble {
       String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
       
       Int?     machine_mem_gb
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.1.16.1"
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.1.20.2"
     }
 
     Int disk_size = 375
@@ -37,6 +38,7 @@ task assemble {
             ~{'--nReads=' + spades_n_reads} \
             ~{true="--alwaysSucceed" false="" always_succeed} \
             ~{'--minContigLen=' + spades_min_contig_len} \
+            ~{'--spadesOpts="' + spades_options + '"'} \
             --memLimitGb $mem_in_gb \
             --outReads=~{sample_name}.subsamp.bam \
             --loglevel=DEBUG
@@ -84,7 +86,7 @@ task scaffold {
       Float?       scaffold_min_pct_contig_aligned
 
       Int?         machine_mem_gb
-      String       docker="quay.io/broadinstitute/viral-assemble:2.1.16.1"
+      String       docker="quay.io/broadinstitute/viral-assemble:2.1.20.2"
 
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
@@ -426,7 +428,7 @@ task refine_assembly_with_aligned_reads {
       Int      min_coverage = 3
 
       Int?     machine_mem_gb
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.1.16.1"
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.1.20.2"
     }
 
     Int disk_size = 375
@@ -536,7 +538,7 @@ task refine_2x_and_plot {
       String? plot_coverage_novoalign_options = "-r Random -l 40 -g 40 -x 20 -t 100 -k"
 
       Int?    machine_mem_gb
-      String  docker = "quay.io/broadinstitute/viral-assemble:2.1.16.1"
+      String  docker = "quay.io/broadinstitute/viral-assemble:2.1.20.2"
 
       # do this in two steps in case the input doesn't actually have "cleaned" in the name
       String  sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
