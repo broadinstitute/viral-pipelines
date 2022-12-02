@@ -235,7 +235,7 @@ workflow metagenomic_denovo {
     File    intermediate_gapfill_fasta            = scaffold.intermediate_gapfill_fasta
     Int     assembly_preimpute_length             = scaffold.assembly_preimpute_length
     Int     assembly_preimpute_length_unambiguous = scaffold.assembly_preimpute_length_unambiguous
-    String  scaffolding_chosen_ref_name           = scaffold.scaffolding_chosen_ref_name
+    Array[String]  scaffolding_chosen_ref_names   = scaffold.scaffolding_chosen_ref_names
     File    scaffolding_stats                     = scaffold.scaffolding_stats
     File    scaffolding_alt_contigs               = scaffold.scaffolding_alt_contigs
 

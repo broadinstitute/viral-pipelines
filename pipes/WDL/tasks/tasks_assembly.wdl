@@ -111,7 +111,7 @@ task scaffold {
           --outAlternateContigs ~{sample_name}.scaffolding_alt_contigs.fasta \
           --loglevel=DEBUG
 
-        grep '^>' ~{sample_name}.scaffolding_chosen_ref.fasta | cut -c 2- | tr '\n' '\t' > ~{sample_name}.scaffolding_chosen_ref.txt
+        grep '^>' ~{sample_name}.scaffolding_chosen_ref.fasta | cut -c 2- | cut -f 1 -d ' ' > ~{sample_name}.scaffolding_chosen_refs.txt
 
         assembly.py gapfill_gap2seq \
           ~{sample_name}.intermediate_scaffold.fasta \
@@ -142,7 +142,7 @@ task scaffold {
         File   intermediate_gapfill_fasta            = "~{sample_name}.intermediate_gapfill.fasta"
         Int    assembly_preimpute_length             = read_int("assembly_preimpute_length")
         Int    assembly_preimpute_length_unambiguous = read_int("assembly_preimpute_length_unambiguous")
-        String scaffolding_chosen_ref_name           = read_string("~{sample_name}.scaffolding_chosen_ref.txt")
+        Array[String] scaffolding_chosen_ref_names   = read_lines("~{sample_name}.scaffolding_chosen_refs.txt")
         File   scaffolding_chosen_ref                = "~{sample_name}.scaffolding_chosen_ref.fasta"
         File   scaffolding_stats                     = "~{sample_name}.scaffolding_stats.txt"
         File   scaffolding_alt_contigs               = "~{sample_name}.scaffolding_alt_contigs.fasta"
