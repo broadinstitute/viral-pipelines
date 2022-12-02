@@ -15,8 +15,10 @@ workflow genbank {
 
     input {
         Array[File]+   assemblies_fasta
-        Array[File]+   alignments_bams
         Array[String]+ reference_accessions
+
+        Array[File]   alignments_bams
+        File?         coverage_table
 
         String        email_address # required for fetching data from NCBI APIs
         String        author_list # of the form "Lastname,A.B., Lastname,C.,"; optional alternative to names in author_sbt_defaults_yaml
@@ -83,10 +85,12 @@ workflow genbank {
       }
     }
 
-    call reports.coverage_report {
-      input:
-        mapped_bams = alignments_bams,
-        mapped_bam_idx = []
+    if(length(alignments_bams)>0) {
+      call reports.coverage_report {
+        input:
+          mapped_bams = alignments_bams,
+          mapped_bam_idx = []
+      }
     }
 
     call ncbi.biosample_to_genbank {
@@ -120,7 +124,7 @@ workflow genbank {
             authors_sbt        = generate_author_sbt.sbt_file,
             biosampleMap       = biosample_to_genbank.biosample_map,
             genbankSourceTable = biosample_to_genbank.genbank_source_modifier_table,
-            coverage_table     = coverage_report.coverage_report,
+            coverage_table     = select_first([coverage_report.coverage_report, coverage_table]),
             sequencingTech     = sequencingTech,
             comment            = comment,
             organism           = fetch_genbank_metadata.organism[0],
