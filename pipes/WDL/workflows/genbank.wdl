@@ -105,7 +105,7 @@ workflow genbank {
         call ncbi.align_and_annot_transfer_single as annot {
             input:
                 genome_fasta             = assembly,
-                reference_fastas         = flatten(download_annotations.genomes_fasta),
+                reference_fastas         = download_annotations.combined_fasta,
                 reference_feature_tables = flatten(download_annotations.features_tbl)
         }
     }
