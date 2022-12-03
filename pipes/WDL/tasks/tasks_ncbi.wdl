@@ -54,6 +54,7 @@ task download_annotations {
         ./ \
         ${sep=' ' accessions} \
         --combinedFilePrefix "${combined_out_prefix}" \
+        --forceOverwrite \
         --loglevel DEBUG
   }
 

@@ -154,12 +154,12 @@ task fetch_genbank_metadata {
     command <<<
         set -e
         esearch -db nuccore -q "~{genbank_accession}" | efetch -db nuccore -format gb -mode xml -json  > gb.json
-        jq -r '[.GBSet.GBSeq."GBSeq_feature-table".GBFeature[0].GBFeature_quals.GBQualifier|.[]| {(.GBQualifier_name): .GBQualifier_value}]|add ' gb.json > metadata.json
-        jq -r '.db_xref' meta.json | grep ^taxon: | cut -f 2 -d : > taxid.txt
-        jq -r '.organism' meta.json > organism.txt
+        jq -r '[.GBSet.GBSeq."GBSeq_feature-table".GBFeature[0].GBFeature_quals.GBQualifier|.[]|{(.GBQualifier_name): .GBQualifier_value}]|add ' gb.json > "~{genbank_accession}".metadata.json
+        jq -r '.db_xref' "~{genbank_accession}".metadata.json | grep ^taxon: | cut -f 2 -d : > taxid.txt
+        jq -r '.organism' "~{genbank_accession}".metadata.json > organism.txt
     >>>
     output {
-        Map[String,String] metadata = read_json("metadata.json")
+        Map[String,String] metadata = read_json("~{genbank_accession}.metadata.json")
         String taxid = read_string("taxid.txt")
         String organism = read_string("organism.txt")
     }
