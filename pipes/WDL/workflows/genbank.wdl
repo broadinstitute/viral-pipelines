@@ -73,6 +73,7 @@ workflow genbank {
     }
 
     scatter(segment_acc in reference_accessions) {
+      # scatter these calls in order to preserve original order
       call ncbi_tools.fetch_genbank_metadata {
         input:
           genbank_accession = segment_acc
@@ -105,7 +106,7 @@ workflow genbank {
         call ncbi.align_and_annot_transfer_single as annot {
             input:
                 genome_fasta             = assembly,
-                reference_fastas         = download_annotations.combined_fasta,
+                reference_fastas         = flatten(download_annotations.genomes_fasta),
                 reference_feature_tables = flatten(download_annotations.features_tbl)
         }
     }

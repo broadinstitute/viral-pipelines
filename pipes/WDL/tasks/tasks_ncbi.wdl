@@ -41,25 +41,26 @@ task download_annotations {
     String         docker = "quay.io/broadinstitute/viral-phylo:2.1.20.0"
   }
 
-  command {
+  command <<<
     set -ex -o pipefail
     ncbi.py --version | tee VERSION
     ncbi.py fetch_feature_tables \
-        ${emailAddress} \
+        ~{emailAddress} \
         ./ \
-        ${sep=' ' accessions} \
+        ~{sep=' ' accessions} \
         --loglevel DEBUG
+    mkdir -p combined
     ncbi.py fetch_fastas \
-        ${emailAddress} \
+        ~{emailAddress} \
         ./ \
-        ${sep=' ' accessions} \
-        --combinedFilePrefix "${combined_out_prefix}" \
+        ~{sep=' ' accessions} \
+        --combinedFilePrefix "combined/~{combined_out_prefix}" \
         --forceOverwrite \
         --loglevel DEBUG
-  }
+  >>>
 
   output {
-    File        combined_fasta   = "${combined_out_prefix}.fasta"
+    File        combined_fasta   = "~{combined_out_prefix}.fasta"
     Array[File] genomes_fasta    = glob("*.fasta")
     Array[File] features_tbl     = glob("*.tbl")
     String      viralngs_version = read_string("VERSION")
