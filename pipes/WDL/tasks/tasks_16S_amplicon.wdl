@@ -18,11 +18,14 @@ task qiime_import_from_bam {
 
     command <<<
         set -ex -o pipefail
+        #testing to see if source is correct
         # obtain the name of the qiime conda environment in the container flexible about version
         CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
         # activate the qiime conda environment
         # seemingly necessary because of:
         #https://github.com/chanzuckerberg/miniwdl/issues/603
+        #manual activation of bash per suggestion: https://github.com/conda/conda/issues/7980
+        source /opt/conda/condabin/conda.sh && hash -r
         conda activate ${CONDA_ENV_NAME}
 
         #Part 1A | BAM -> FASTQ [Simple samtools command]
