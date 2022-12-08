@@ -25,6 +25,7 @@ task qiime_import_from_bam {
         # seemingly necessary because of:
         #https://github.com/chanzuckerberg/miniwdl/issues/603
         #manual activation of bash per suggestion: https://github.com/conda/conda/issues/7980
+        export PATH="/opt/conda/conda/bin:${PATH}"; hash -r
         source /opt/conda/conda/bin/conda.sh && hash -r
         conda init bash -v 
         conda activate ${CONDA_ENV_NAME}
