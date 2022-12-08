@@ -25,7 +25,8 @@ task qiime_import_from_bam {
         # seemingly necessary because of:
         #https://github.com/chanzuckerberg/miniwdl/issues/603
         #manual activation of bash per suggestion: https://github.com/conda/conda/issues/7980
-        source /opt/conda/condabin/conda.sh && hash -r
+        source /opt/conda/conda/bin/conda.sh && hash -r
+        conda init bash
         conda activate ${CONDA_ENV_NAME}
 
         #Part 1A | BAM -> FASTQ [Simple samtools command]
