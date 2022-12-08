@@ -153,7 +153,7 @@ task fetch_genbank_metadata {
     Int disk_size = 50
     command <<<
         set -e
-        activate $CONDA_DEFAULT_ENV # for miniwdl / non-login docker runners
+        source /opt/miniconda/bin/activate $CONDA_DEFAULT_ENV # for miniwdl / non-login docker runners
         esearch -db nuccore -q "~{genbank_accession}" | efetch -db nuccore -format gb -mode xml -json  > gb.json
         jq -r '[.GBSet.GBSeq."GBSeq_feature-table".GBFeature[0].GBFeature_quals.GBQualifier|.[]|{(.GBQualifier_name): .GBQualifier_value}]|add ' gb.json > "~{genbank_accession}".metadata.json
         jq -r '.db_xref' "~{genbank_accession}".metadata.json | grep ^taxon: | cut -f 2 -d : > taxid.txt
