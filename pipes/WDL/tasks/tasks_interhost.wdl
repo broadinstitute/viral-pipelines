@@ -149,7 +149,7 @@ task beast {
     # if beagle_order is not specified by the user, 
     # create an appropriate string based on the gpu count
 
-    default_beagle_order="$(echo $(echo {1..~{gpu_count_used}} | tr ' ' ','))"
+    default_beagle_order="$(seq -s, ~{gpu_count_used})"
     beagle_order=~{default="$default_beagle_order" beagle_order}
     echo "beagle_order: $beagle_order"
 
