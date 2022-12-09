@@ -139,7 +139,7 @@ task beast {
   Int disk_size_az = disk_size + boot_disk
 
   # platform-agnostic number of GPUs we're actually using
-  Int gpu_count_used = ${default=${default=1 accelerator_count} gpu_count}
+  Int gpu_count_used = select_first([accelerator_count, gpu_count, 1])
 
   command {
     set -e
