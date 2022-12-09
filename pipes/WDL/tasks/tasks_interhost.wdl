@@ -96,6 +96,7 @@ task multi_align_mafft {
 task beast {
   input {
     File    beauti_xml
+    String  beagle_order="1,2,3,4"
     
     String? accelerator_type
     Int?    accelerator_count
@@ -104,6 +105,21 @@ task beast {
     String? vm_size
 
     String  docker = "quay.io/broadinstitute/beast-beagle-cuda:1.10.5pre"
+  }
+
+  meta {
+    description: "Execute GPU-accelerated BEAST. For tips on performance, see https://beast.community/performance#gpu"
+  }
+  parameter_meta {
+    beagle_order: {
+      description: "The order of CPU(0) and GPU(1+) resources used to process partitioned data."
+    }
+    accelerator_type: {
+      description: "The model of GPU to use. For availability and pricing on GCP, see https://cloud.google.com/compute/gpus-pricing#gpus"
+    }
+    accelerator_count: {
+      description: "The number of GPUs of the specified type to use."
+    }
   }
 
   Int disk_size = 300
@@ -119,10 +135,13 @@ task beast {
     bash -c "sleep 60; nvidia-smi" &
     beast \
       -beagle_multipartition off \
-      -beagle_GPU -beagle_cuda -beagle_SSE \
-      -beagle_double -beagle_scaling always \
-      -beagle_order 1,2,3,4 \
-      ${beauti_xml}
+      -beagle_GPU \
+      -beagle_cuda \
+      -beagle_SSE \
+      -beagle_double \
+      -beagle_scaling always \
+      ~{'-beagle_order ' + beagle_order} \
+      ~{beauti_xml}
   }
 
   output {
@@ -143,9 +162,9 @@ task beast {
     gpu:                 true                # dxWDL
     dx_timeout:          "40H"               # dxWDL
     dx_instance_type:    "mem1_ssd1_gpu2_x8" # dxWDL
-    acceleratorType:     select_first([accelerator_type, "nvidia-tesla-k80"])  # GCP PAPIv2
+    acceleratorType:     select_first([accelerator_type, "nvidia-tesla-p4"])  # GCP PAPIv2
     acceleratorCount:    select_first([accelerator_count, 4])  # GCP PAPIv2
-    gpuType:             select_first([gpu_type, "nvidia-tesla-k80"])  # Terra
+    gpuType:             select_first([gpu_type, "nvidia-tesla-p4"])  # Terra
     gpuCount:            select_first([gpu_count, 4])  # Terra
     nvidiaDriverVersion: "410.79"
   }
