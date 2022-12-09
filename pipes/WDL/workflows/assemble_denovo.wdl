@@ -15,7 +15,7 @@ workflow assemble_denovo {
   }
 
   input {
-    File         reads_unmapped_bam
+    Array[File]+ reads_unmapped_bams
 
     Array[File]+ reference_genome_fasta
 
@@ -26,11 +26,11 @@ workflow assemble_denovo {
     File?        filter_to_taxon_db
     File         trim_clip_db
 
-    String       sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
+    String       sample_name = basename(basename(reads_unmapped_bams[0], ".bam"), ".cleaned")
   }
 
   parameter_meta {
-    raw_reads_unmapped_bam: { description: "unaligned reads in BAM format", patterns: ["*.bam"] }
+    raw_reads_unmapped_bams: { description: "unaligned reads in BAM format", patterns: ["*.bam"] }
     deplete_bmtaggerDbs: {
        description: "Optional list of databases to use for bmtagger-based depletion. Sequences in fasta format will be indexed on the fly, pre-bmtagger-indexed databases may be provided as tarballs.",
        patterns: ["*.fasta", "*.fasta.gz", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
@@ -52,6 +52,15 @@ workflow assemble_denovo {
       patterns: ["*.fasta"]
     }
   }
+
+  if(length(reads_unmapped_bams)>1) {
+      call read_utils.merge_and_reheader_bams as merge_reads {
+          input:
+              in_bams      = reads_unmapped_bams,
+              out_basename = sample_name
+      }
+  }
+  File reads_unmapped_bam = select_first([merge_reads.out_bam, reads_unmapped_bams[0]])
 
   if(length(deplete_bmtaggerDbs) + length(deplete_blastDbs) + length(deplete_bwaDbs) > 0) {
     call taxon_filter.deplete_taxa {
