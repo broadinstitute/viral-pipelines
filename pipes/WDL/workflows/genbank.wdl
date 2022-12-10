@@ -3,6 +3,7 @@ version 1.0
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_ncbi_tools.wdl" as ncbi_tools
 import "../tasks/tasks_reports.wdl" as reports
+import "../tasks/tasks_utils.wdl" as utils
 
 workflow genbank {
 
@@ -14,8 +15,8 @@ workflow genbank {
     }
 
     input {
-        Array[File]+   assemblies_fasta
-        Array[String]+ reference_accessions
+        Array[File]+          assemblies_fasta
+        Array[Array[String]]+ reference_accessions_list
 
         Array[File]   alignments_bams
         File?         coverage_table
@@ -35,8 +36,8 @@ workflow genbank {
           description: "Genomes to prepare for Genbank submission. One file per genome: all segments/chromosomes included in one file. All fasta files must contain exactly the same number of sequences as reference_fasta (which must equal the number of files in reference_annot_tbl).",
           patterns: ["*.fasta"]
         }
-        reference_accessions: {
-          description: "Reference genome Genbank accessions, each segment/chromosome in the exact same count and order as the segments/chromosomes described in genome_fasta.",
+        reference_accessions_list: {
+          description: "Reference genome Genbank accessions, each segment/chromosome in the exact same count and order as the segments/chromosomes described in assemblies_fasta. This is allowed to be an Array of such accession lists, but if so, all Array[String]s must be identical to each other or an error will be raised.",
           patterns: ["*.fasta"]
         }
         author_list: {
@@ -72,6 +73,20 @@ workflow genbank {
 
     }
 
+    # take a array-array-string of scaffolding_chosen_refs output -> uniqified list of reference_accessions -- fail if not exactly one unique array-string across all array-array-strings
+    call utils.unique_arrays as unique_references {
+      input:
+        string_arrays = reference_accessions_list
+    }
+    if((length(unique_references.sorted_unique) != 1)
+      || length(unique_references.sorted_unique[0]) < 1) {
+      call utils.raise {
+        input:
+          message = "all Array[String] reference accession lists in reference_accessions_list must be identical!"
+      }
+    }
+    Array[String] reference_accessions = unique_references.sorted_unique[0]
+
     scatter(segment_acc in reference_accessions) {
       # scatter these calls in order to preserve original order
       call ncbi_tools.fetch_genbank_metadata {
@@ -94,6 +109,7 @@ workflow genbank {
       }
     }
 
+    # TO DO dpark: if ! defined biosample_attributes, call ncbi_tools.fetch_biosamples on external ids (where do we get external ids?)
     call ncbi.biosample_to_genbank {
         input:
             biosample_attributes = biosample_attributes,

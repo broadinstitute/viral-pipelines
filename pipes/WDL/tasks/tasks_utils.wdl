@@ -586,6 +586,26 @@ task rename_file {
   }
 }
 
+task raise {
+  input {
+    String message = "error!"
+  }
+  command {
+    set -e
+    echo "$message"
+    exit 1
+  }
+  runtime {
+    memory: "1 GB"
+    cpu: 1
+    docker: "ubuntu"
+    disks:  "local-disk 30 HDD"
+    disk: "30 GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
 task unique_strings {
   input {
     Array[String]  strings
