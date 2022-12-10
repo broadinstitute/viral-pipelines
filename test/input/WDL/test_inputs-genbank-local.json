@@ -1,6 +1,6 @@
 {
   "genbank.molType": "cRNA",
-  "genbank.reference_accessions_list": [["KM821997.1", "KM821998.1"]],
+  "genbank.reference_accessions": ["KM821997.1", "KM821998.1"],
   "genbank.coverage_table": "test/input/genbank/coverage_report-RUN1-workflow.txt",
   "genbank.alignments_bams": [],
   "genbank.sequencingTech": "Illumina MiSeq",
