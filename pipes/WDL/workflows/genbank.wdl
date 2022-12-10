@@ -3,7 +3,7 @@ version 1.0
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_ncbi_tools.wdl" as ncbi_tools
 import "../tasks/tasks_reports.wdl" as reports
-#import "../tasks/tasks_utils.wdl" as utils
+import "../tasks/tasks_utils.wdl" as utils
 
 workflow genbank {
 
@@ -93,6 +93,11 @@ workflow genbank {
           mapped_bams = alignments_bams,
           mapped_bam_idx = []
       }
+      call utils.tsv_drop_cols as coverage_two_col {
+        input:
+          in_tsv = coverage_report.coverage_report,
+          drop_cols = ["aln2self_cov_median", "aln2self_cov_mean_non0", "aln2self_cov_1X", "aln2self_cov_5X", "aln2self_cov_20X", "aln2self_cov_100X"]
+      }
     }
 
     # TO DO dpark: if ! defined biosample_attributes, call ncbi_tools.fetch_biosamples on external ids (where do we get external ids?)
@@ -127,7 +132,7 @@ workflow genbank {
             authors_sbt        = generate_author_sbt.sbt_file,
             biosampleMap       = biosample_to_genbank.biosample_map,
             genbankSourceTable = biosample_to_genbank.genbank_source_modifier_table,
-            coverage_table     = select_first([coverage_report.coverage_report, coverage_table]),
+            coverage_table     = select_first([coverage_two_col.out_tsv, coverage_table]),
             sequencingTech     = sequencingTech,
             comment            = comment,
             organism           = fetch_genbank_metadata.organism[0],
