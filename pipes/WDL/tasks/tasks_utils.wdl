@@ -586,6 +586,50 @@ task rename_file {
   }
 }
 
+task unique_strings {
+  input {
+    Array[String]  strings
+  }
+  Int disk_size = 50
+  command {
+    cat ~{write_lines(strings)} | sort | uniq > UNIQUE_OUT
+  }
+  output {
+    Array[String]  sorted_unique = read_lines("UNIQUE_OUT")
+  }
+  runtime {
+    memory: "1 GB"
+    cpu: 1
+    docker: "ubuntu"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
+task unique_arrays {
+  input {
+    Array[Array[String]]  string_arrays
+  }
+  Int disk_size = 50
+  command {
+    cat ~{write_tsv(string_arrays)} | sort | uniq > UNIQUE_OUT
+  }
+  output {
+    Array[Array[String]]  sorted_unique = read_tsv("UNIQUE_OUT")
+  }
+  runtime {
+    memory: "1 GB"
+    cpu: 1
+    docker: "ubuntu"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
 task today {
   input {
     String? timezone
