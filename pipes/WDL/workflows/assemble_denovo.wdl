@@ -157,6 +157,7 @@ workflow assemble_denovo {
     Int     read_pairs_aligned                    = refine.align_to_self_merged_read_pairs_aligned
     Float   bases_aligned                         = refine.align_to_self_merged_bases_aligned
     
+    String  assembly_method = "viral-ngs/assemble_denovo"
     String? deplete_viral_classify_version        = deplete_taxa.viralngs_version
     String? taxfilt_viral_classify_version        = filter_to_taxon.viralngs_version
     String  assemble_viral_assemble_version       = assemble.viralngs_version

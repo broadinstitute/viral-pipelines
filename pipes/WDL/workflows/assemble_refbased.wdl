@@ -237,6 +237,7 @@ workflow assemble_refbased {
         Float       align_to_self_merged_mean_coverage           = plot_self_coverage.mean_coverage
         File        align_to_self_isnvs_vcf                      = isnvs_self.report_vcf
         
+        String      assembly_method = "viral-ngs/assemble_refbased"
         String      align_to_ref_viral_core_version              = align_to_ref.viralngs_version[0]
         String      ivar_version                                 = ivar_trim.ivar_version[0]
         String      viral_assemble_version                       = call_consensus.viralngs_version
