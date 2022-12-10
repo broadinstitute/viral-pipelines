@@ -2,7 +2,7 @@
   "genbank.molType": "cRNA",
   "genbank.coverage_table": "test/input/genbank/coverage-ma_mgh.txt",
   "genbank.alignments_bams": [],
-  "genbank.reference_accessions": ["MN908947.3"],
+  "genbank.reference_accessions_list": [["MN908947.3"],["MN908947.3"],["MN908947.3"]],
   "genbank.sequencingTech": "Illumina NovaSeq",
   "genbank.biosample_attributes": "test/input/genbank/sars-cov-2_attributes_updated.txt",
   "genbank.prep_genbank.assembly_method": "placeholder assembly software",
