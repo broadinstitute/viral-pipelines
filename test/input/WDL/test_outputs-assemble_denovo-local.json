@@ -8,6 +8,5 @@
     "assemble_denovo.assembly_length_unambiguous": 18843,
     "assemble_denovo.assembly_length": 18843,
     "assemble_denovo.filter_read_count_post": 18710,
-    "assemble_denovo.depletion_read_count_post": 18710,
-    "assemble_denovo.depletion_read_count_pre": 18710
+    "assemble_denovo.depletion_read_count_post": 18710
 }

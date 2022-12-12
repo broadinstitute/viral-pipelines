@@ -27,7 +27,7 @@ workflow assemble_denovo {
     File?        filter_to_taxon_db
     File         trim_clip_db
 
-    String       sample_name = basename(basename(reads_unmapped_bams[0], ".bam"), ".cleaned")
+    String       out_basename = basename(basename(reads_unmapped_bams[0], ".bam"), ".cleaned")
     String?      sample_original_name
   }
 
@@ -53,61 +53,91 @@ workflow assemble_denovo {
       description: "After denovo assembly, large contigs are scaffolded against a reference genome to determine orientation and to join contigs together, before further polishing by reads. You must supply at least one reference genome (all segments/chromomes in a single fasta file). If more than one reference is provided, contigs will be scaffolded against all of them and the one with the most complete assembly will be chosen for downstream polishing.",
       patterns: ["*.fasta"]
     }
+    out_basename: { description: "a filename-friendly basename for output files" }
+    sample_original_name: { description: "a (possibly filename-unfriendly) sample name for fasta and bam headers" }
   }
 
-  if(length(reads_unmapped_bams)>1 || defined(sample_original_name)) {
-      call read_utils.merge_and_reheader_bams as merge_reads {
+  # parallelize across provided input read files
+  scatter(reads_unmapped_bam in reads_unmapped_bams) {
+
+    # rename SM value in bam header if requested
+    if(defined(sample_original_name)) {
+      call read_utils.merge_and_reheader_bams as renamed_reads {
           input:
-              in_bams      = reads_unmapped_bams,
+              in_bams      = [reads_unmapped_bam],
               sample_name  = sample_original_name,
-              out_basename = sample_name
+              out_basename = out_basename
       }
-  }
-  File reads_unmapped_bam = select_first([merge_reads.out_bam, reads_unmapped_bams[0]])
+    }
+    File reads_unmapped_renamed_bams = select_first([renamed_reads.out_bam, reads_unmapped_bam])
 
-  if(length(deplete_bmtaggerDbs) + length(deplete_blastDbs) + length(deplete_bwaDbs) > 0) {
-    call taxon_filter.deplete_taxa {
+    # deplete host if requested
+    if(length(deplete_bmtaggerDbs) + length(deplete_blastDbs) + length(deplete_bwaDbs) > 0) {
+      call taxon_filter.deplete_taxa {
+        input:
+          raw_reads_unmapped_bam = reads_unmapped_renamed_bams,
+          bmtaggerDbs            = deplete_bmtaggerDbs,
+          blastDbs               = deplete_blastDbs,
+          bwaDbs                 = deplete_bwaDbs
+      }
+    }
+    File reads_depleted_bams = select_first([deplete_taxa.cleaned_bam, reads_unmapped_bam])
+
+    # select reads if requested
+    if(defined(filter_to_taxon_db)) {
+      call taxon_filter.filter_to_taxon {
+        input:
+          reads_unmapped_bam = reads_depleted_bams,
+          lastal_db_fasta    = select_first([filter_to_taxon_db])
+      }
+    }
+    File reads_taxfilt_bams = select_first([filter_to_taxon.taxfilt_bam, reads_depleted_bams])
+
+    # alignment-free PCR duplicate removal
+    call read_utils.rmdup_ubam {
       input:
-        raw_reads_unmapped_bam = reads_unmapped_bam,
-        bmtaggerDbs            = deplete_bmtaggerDbs,
-        blastDbs               = deplete_blastDbs,
-        bwaDbs                 = deplete_bwaDbs
+        reads_unmapped_bam = reads_taxfilt_bams
     }
   }
 
-  if(defined(filter_to_taxon_db)) {
-    call taxon_filter.filter_to_taxon {
+  # merge all reads into single file
+  call read_utils.merge_and_reheader_bams as merge_dedup_reads {
       input:
-        reads_unmapped_bam = select_first([deplete_taxa.cleaned_bam, reads_unmapped_bam]),
-        lastal_db_fasta    = select_first([filter_to_taxon_db])
-    }
+          in_bams      = rmdup_ubam.dedup_bam,
+          out_basename = out_basename
+  }
+  call read_utils.merge_and_reheader_bams as merge_cleaned_reads {
+      input:
+          in_bams      = reads_depleted_bams,
+          out_basename = out_basename
+  }
+  call read_utils.merge_and_reheader_bams as merge_taxfilt_reads {
+      input:
+          in_bams      = reads_taxfilt_bams,
+          out_basename = out_basename
   }
 
-  call read_utils.rmdup_ubam {
-    input:
-      reads_unmapped_bam = select_first([filter_to_taxon.taxfilt_bam, deplete_taxa.cleaned_bam, reads_unmapped_bam])
-  }
-
+  # denovo assembly pipeline below
   call assembly.assemble {
     input:
-      reads_unmapped_bam = rmdup_ubam.dedup_bam,
+      reads_unmapped_bam = merge_dedup_reads.out_bam,
       trim_clip_db       = trim_clip_db,
       always_succeed     = true,
-      sample_name        = sample_name
+      sample_name        = out_basename
   }
 
   call assembly.scaffold {
     input:
       contigs_fasta           = assemble.contigs_fasta,
-      reads_bam               = select_first([filter_to_taxon.taxfilt_bam, deplete_taxa.cleaned_bam, reads_unmapped_bam]),
+      reads_bam               = merge_dedup_reads.out_bam,
       reference_genome_fasta  = reference_genome_fasta
   }
 
   call assemble_refbased.assemble_refbased as refine {
       input:
-          reads_unmapped_bams = [rmdup_ubam.dedup_bam],
+          reads_unmapped_bams = reads_depleted_bams, # assemble_refbased will scatter on individual bams
           reference_fasta     = scaffold.scaffold_fasta,
-          sample_name         = sample_name
+          sample_name         = out_basename
   }
 
   if (defined(sample_original_name)) {
@@ -127,18 +157,17 @@ workflow assemble_denovo {
     Int     reads_aligned                         = refine.align_to_self_merged_reads_aligned
     Float   mean_coverage                         = refine.align_to_self_merged_mean_coverage
     
-    File    cleaned_bam                           = select_first([deplete_taxa.cleaned_bam, reads_unmapped_bam])
-    File?   cleaned_fastqc                        = deplete_taxa.cleaned_fastqc
-    Int?    depletion_read_count_pre              = deplete_taxa.depletion_read_count_pre
-    Int?    depletion_read_count_post             = deplete_taxa.depletion_read_count_post
+    File    cleaned_bam                           = merge_cleaned_reads.out_bam
+    File    cleaned_fastqc                        = merge_cleaned_reads.fastqc
+    Int     depletion_read_count_post             = merge_cleaned_reads.read_count
     
-    File?   taxfilt_bam                           = filter_to_taxon.taxfilt_bam
-    File?   taxfilt_fastqc                        = filter_to_taxon.taxfilt_fastqc
-    Int?    filter_read_count_post                = filter_to_taxon.filter_read_count_post
+    File    taxfilt_bam                           = merge_taxfilt_reads.out_bam
+    File    taxfilt_fastqc                        = merge_taxfilt_reads.fastqc
+    Int     filter_read_count_post                = merge_taxfilt_reads.read_count
     
-    File    dedup_bam                             = rmdup_ubam.dedup_bam
-    File    dedup_fastqc                          = rmdup_ubam.dedup_fastqc
-    Int     dedup_read_count_post                 = rmdup_ubam.dedup_read_count_post
+    File    dedup_bam                             = merge_dedup_reads.out_bam
+    File    dedup_fastqc                          = merge_dedup_reads.fastqc
+    Int     dedup_read_count_post                 = merge_dedup_reads.read_count
     
     File    contigs_fasta                         = assemble.contigs_fasta
     File    subsampBam                            = assemble.subsampBam
@@ -162,15 +191,13 @@ workflow assemble_denovo {
 
     File    isnvs_vcf                             = refine.align_to_self_isnvs_vcf
     
-    File    aligned_bam                           = refine.align_to_self_merged_aligned_and_unaligned_bam[0]
-    File    aligned_only_reads_fastqc             = refine.align_to_ref_per_input_fastqc[0]
+    File    aligned_bam                           = refine.align_to_self_merged_aligned_only_bam
+    File    aligned_only_reads_fastqc             = refine.align_to_ref_fastqc
     File    coverage_tsv                          = refine.align_to_self_merged_coverage_tsv
     Int     read_pairs_aligned                    = refine.align_to_self_merged_read_pairs_aligned
     Float   bases_aligned                         = refine.align_to_self_merged_bases_aligned
     
     String  assembly_method = "viral-ngs/assemble_denovo"
-    String? deplete_viral_classify_version        = deplete_taxa.viralngs_version
-    String? taxfilt_viral_classify_version        = filter_to_taxon.viralngs_version
     String  assemble_viral_assemble_version       = assemble.viralngs_version
     String  scaffold_viral_assemble_version       = scaffold.viralngs_version
   }

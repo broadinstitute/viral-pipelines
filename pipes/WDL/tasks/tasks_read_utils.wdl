@@ -151,45 +151,53 @@ task merge_and_reheader_bams {
     
     Int disk_size = 750
 
-    command {
+    command <<<
         set -ex -o pipefail
 
         read_utils.py --version | tee VERSION
         mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
 
-        if [ ${length(in_bams)} -gt 1 ]; then
-            read_utils.py merge_bams ${sep=' ' in_bams} merged.bam --JVMmemory="$mem_in_mb"m --loglevel DEBUG
+        if [ ~{length(in_bams)} -gt 1 ]; then
+            read_utils.py merge_bams ~{sep=' ' in_bams} merged.bam --JVMmemory="$mem_in_mb"m --loglevel DEBUG
         else
             echo "Skipping merge, only one input file"
-            cp ${sep=' ' in_bams} merged.bam
+            cp ~{sep=' ' in_bams} merged.bam
         fi    
 
         # remap all SM values to user specified value
-        if [ -n "${sample_name}" ]; then
+        if [ -n "~{sample_name}" ]; then
           # create sample name remapping table based on existing sample names
-          samtools view -H merged.bam | perl -n -e'/SM:(\S+)/ && print "SM\t$1\t'"${sample_name}"'\n"' | sort | uniq >> reheader_table.txt
+          samtools view -H merged.bam | perl -n -e'/SM:(\S+)/ && print "SM\t$1\t'"~{sample_name}"'\n"' | sort | uniq >> reheader_table.txt
         fi
 
         # remap arbitrary headers using user specified table
-        if [[ -f "${reheader_table}" ]]; then
-          cat "${reheader_table}" >> reheader_table.txt
+        if [[ -f "~{reheader_table}" ]]; then
+          cat "~{reheader_table}" >> reheader_table.txt
         fi
 
         # reheader bam file if requested
         if [ -s reheader_table.txt ]; then
-          read_utils.py reheader_bam merged.bam reheader_table.txt "${out_basename}.bam" --loglevel DEBUG
+          read_utils.py reheader_bam merged.bam reheader_table.txt "~{out_basename}.bam" --loglevel DEBUG
         else
-          mv merged.bam "${out_basename}.bam"
+          mv merged.bam "~{out_basename}.bam"
         fi
-    }
+
+        # summary stats on merged output
+        samtools view -c "~{out_basename}.bam" | tee read_count_merged
+        samtools flagstat "~{out_basename}.bam" | tee "~{out_basename}.bam.flagstat.txt"
+        reports.py fastqc "~{out_basename}.bam" "~{out_basename}.fastqc.html"
+    >>>
 
     output {
-        File   out_bam          = "${out_basename}.bam"
+        File   out_bam          = "~{out_basename}.bam"
+        Int    read_count       = read_int("read_count_merged")
+        File   flagstat         = "~{out_basename}.bam.flagstat.txt"
+        File   fastqc           = "~{out_basename}.fastqc.html"
         String viralngs_version = read_string("VERSION")
     }
 
     runtime {
-        docker: "${docker}"
+        docker: docker
         memory: "3 GB"
         cpu: 2
         disks:  "local-disk " + disk_size + " LOCAL"
@@ -210,7 +218,7 @@ task rmdup_ubam {
     String  method = "mvicuna"
 
     Int?    machine_mem_gb
-    String? docker = "quay.io/broadinstitute/viral-core:2.1.33"
+    String  docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
 
   Int disk_size = 375
@@ -246,7 +254,7 @@ task rmdup_ubam {
   }
 
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: select_first([machine_mem_gb, 7]) + " GB"
     cpu:    2
     disks:  "local-disk " + disk_size + " LOCAL"
@@ -306,7 +314,7 @@ task downsample_bams {
   }
 
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: select_first([machine_mem_gb, 3]) + " GB"
     cpu:    4
     disks:  "local-disk " + disk_size + " LOCAL"

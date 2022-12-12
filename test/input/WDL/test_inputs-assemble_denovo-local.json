@@ -5,5 +5,6 @@
   ],
   "assemble_denovo.filter_to_taxon_db": "test/input/ebov-makona.fasta",
   "assemble_denovo.trim_clip_db": "test/input/clipDb.fasta",
-  "assemble_denovo.reference_genome_fasta": ["test/input/ebov-makona.fasta"]
+  "assemble_denovo.reference_genome_fasta": ["test/input/ebov-makona.fasta"],
+  "assemble_denovo.sample_original_name": "USA/ this ? is an un-friendly sample_name! / 1999"
 }
