@@ -20,57 +20,12 @@ task qiime_import_from_bam {
         set -ex -o pipefail
         #testing to see if source is correct
         # obtain the name of the qiime conda environment in the container flexible about version
-        #https://github.com/chanzuckerberg/miniwdl/issues/603
-
-        # DEBUGGING: print the name of the current shell (bash, sh, zsh, csh, etc.)
-        CURRENT_SHELL_NAME="$(ps -hp $$ | grep -v 'PID' | awk '{print $4}' | sed 's/\-//g')"
-        echo ${CURRENT_SHELL_NAME}
-
-        # DEBUGGING: print whether the current shell is an interactive (i.e. login) session 
-        [ -z "$PS1" ] && echo "This shell is not interactive" || echo "This shell is interactive"
-
-        # DEBUGGING: print environment variables
-        env
-
-        # DEBUGGING: print the name of the current user
-        whoami
-
-        # add the (base) miniconda bin directory to the system PATH list and re-index executables
-        export PATH="/opt/conda/conda/bin:${PATH}"; hash -r
-
-        # call conda init to ensure conda startup calls are in the user's shell rc dotfile
-        # 
-        conda init ${CURRENT_SHELL_NAME} -v
-
-        # start a new [login] shell (to re-load shell rc dotfile)
-        exec "$CURRENT_SHELL_NAME" -l
-
-        # DEBUGGING: === now in a new shell ===
-
-        # DEBUGGING: print the name of the current shell (bash, sh, zsh, csh, etc.)
-        ps -hp $$ | grep -v 'PID' | awk '{print $4}' | sed ('s/\-//g')
-        
-        # DEBUGGING: print whether the current shell is an interactive (i.e. login) session 
-        [ -z "$PS1" ] && echo "This shell is not interactive" || echo "This shell is interactive"
-
-        # DEBUGGING: print environment variables
-        env
-
-        # add the (base) miniconda bin directory to the system PATH list and re-index executables
-        # needed a second time since this is a new shell after the call 'exec "$CURRENT_SHELL_NAME" -l'
-        export PATH="/opt/conda/conda/bin:${PATH}"; hash -r
-
-        # determine name of the qiime conda environment available in this container (variable with version)
-        QIIME_CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
-
-        # print the qiime conda environment name
-        echo "${QIIME_CONDA_ENV_NAME}"
-
+        CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
         # activate the qiime conda environment
-        conda activate ${QIIME_CONDA_ENV_NAME}
-
-        # DEBUGGING: print environment variables
-        env
+        # seemingly necessary because of:
+        #https://github.com/chanzuckerberg/miniwdl/issues/603
+        #manual activation of bash per suggestion: https://github.com/conda/conda/issues/7980
+        conda activate ${CONDA_ENV_NAME}
 
         #Part 1A | BAM -> FASTQ [Simple samtools command]
         samtools fastq -1 $(pwd)/R1.fastq.gz -2 $(pwd)/R2.fastq.gz -0 /dev/null ~{reads_bam}
