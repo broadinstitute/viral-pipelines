@@ -3,6 +3,7 @@ version 1.0
 import "../tasks/tasks_taxon_filter.wdl" as taxon_filter
 import "../tasks/tasks_read_utils.wdl" as read_utils
 import "../tasks/tasks_assembly.wdl" as assembly
+import "../tasks/tasks_ncbi.wdl" as ncbi
 import "assemble_refbased.wdl" as assemble_refbased
 
 workflow assemble_denovo {
@@ -27,6 +28,7 @@ workflow assemble_denovo {
     File         trim_clip_db
 
     String       sample_name = basename(basename(reads_unmapped_bams[0], ".bam"), ".cleaned")
+    String?      sample_original_name
   }
 
   parameter_meta {
@@ -53,10 +55,11 @@ workflow assemble_denovo {
     }
   }
 
-  if(length(reads_unmapped_bams)>1) {
+  if(length(reads_unmapped_bams)>1 || defined(sample_original_name)) {
       call read_utils.merge_and_reheader_bams as merge_reads {
           input:
               in_bams      = reads_unmapped_bams,
+              sample_name  = sample_original_name,
               out_basename = sample_name
       }
   }
@@ -107,8 +110,16 @@ workflow assemble_denovo {
           sample_name         = sample_name
   }
 
+  if (defined(sample_original_name)) {
+    call ncbi.rename_fasta_header {
+      input:
+        genome_fasta = refine.assembly_fasta,
+        new_name     = select_first([sample_original_name])
+    }
+  }
+
   output {
-    File    final_assembly_fasta                  = refine.assembly_fasta
+    File    final_assembly_fasta                  = select_first([rename_fasta_header.renamed_fasta, refine.assembly_fasta])
     File    aligned_only_reads_bam                = refine.align_to_self_merged_aligned_only_bam
     File    coverage_plot                         = refine.align_to_self_merged_coverage_plot
     Int     assembly_length                       = refine.assembly_length
