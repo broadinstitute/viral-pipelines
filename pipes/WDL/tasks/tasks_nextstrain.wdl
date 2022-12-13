@@ -13,7 +13,7 @@ task nextclade_one_sample {
         File? pcr_primers_csv
         File? virus_properties
         String? dataset_name
-        String docker = "nextstrain/nextclade:2.5.0"
+        String docker = "nextstrain/nextclade:2.9.1"
     }
     String basename = basename(genome_fasta, ".fasta")
     Int disk_size = 50
@@ -100,7 +100,7 @@ task nextclade_many_samples {
         String?      dataset_name
         String       basename
         File?        genome_ids_setdefault_blank
-        String       docker = "nextstrain/nextclade:2.5.0"
+        String       docker = "nextstrain/nextclade:2.9.1"
     }
     Int disk_size = 100
     command <<<
@@ -949,7 +949,7 @@ task mafft_one_chr {
         Boolean  large = false
         Boolean  memsavetree = false
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.20.0"
+        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
         Int      mem_size = 500
         Int      cpus = 64
     }
@@ -1037,7 +1037,7 @@ task mafft_one_chr_chunked {
         Int      batch_chunk_size = 2000
         Int      threads_per_job = 2
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.20.0"
+        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
         Int      mem_size = 32
         Int      cpus = 96
     }

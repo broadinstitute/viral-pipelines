@@ -1,12 +1,9 @@
 {
   "genbank.molType": "cRNA",
   "genbank.coverage_table": "test/input/genbank/coverage-ma_mgh.txt",
-  "genbank.reference_feature_tables": [
-    "test/input/genbank/MN908947.3.tbl"
-  ],
-  "genbank.organism": "Severe acute respiratory syndrome coronavirus 2",
+  "genbank.alignments_bams": [],
+  "genbank.reference_accessions": ["MN908947.3"],
   "genbank.sequencingTech": "Illumina NovaSeq",
-  "genbank.taxid": 2697049,
   "genbank.biosample_attributes": "test/input/genbank/sars-cov-2_attributes_updated.txt",
   "genbank.prep_genbank.assembly_method": "placeholder assembly software",
   "genbank.prep_genbank.assembly_method_version": "5.4.3.2.1",
@@ -19,8 +16,6 @@
     "test/input/MA_MGH_00004.fasta",
     "test/input/MA_MGH_00005.fasta"
   ],
-  "genbank.reference_fastas": [
-    "test/input/genbank/MN908947.3.fasta"
-  ]
+  "genbank.email_address": "viral-ngs@broadinstitute.org"
 }
 
