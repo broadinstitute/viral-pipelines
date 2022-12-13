@@ -31,7 +31,6 @@ workflow contigs {
 
     call assembly.assemble as spades {
         input:
-            assembler          = "spades",
             reads_unmapped_bam = rmdup_ubam.dedup_bam
     }
 

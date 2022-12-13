@@ -1,9 +1,10 @@
 {
-  "assemble_denovo.reads_unmapped_bam": "test/input/G5012.3.testreads.bam",
+  "assemble_denovo.reads_unmapped_bams": ["test/input/G5012.3.testreads.bam"],
   "assemble_denovo.deplete_blastDbs": [
     "test/input/5kb_human_from_chr6.fasta"
   ],
   "assemble_denovo.filter_to_taxon_db": "test/input/ebov-makona.fasta",
   "assemble_denovo.trim_clip_db": "test/input/clipDb.fasta",
-  "assemble_denovo.reference_genome_fasta": ["test/input/ebov-makona.fasta"]
+  "assemble_denovo.reference_genome_fasta": ["test/input/ebov-makona.fasta"],
+  "assemble_denovo.sample_original_name": "USA/ this ? is an un-friendly sample_name! / 1999"
 }
