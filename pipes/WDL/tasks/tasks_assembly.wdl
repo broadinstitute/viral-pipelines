@@ -6,17 +6,16 @@ task assemble {
       File     trim_clip_db
       
       Int      spades_n_reads = 10000000
-      Int      spades_min_contig_len = 0
+      Int?     spades_min_contig_len
       String?  spades_options
       
-      String   assembler = "spades"
       Boolean  always_succeed = false
       
       # do this in two steps in case the input doesn't actually have "taxfilt" in the name
       String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
       
       Int?     machine_mem_gb
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.1.20.2"
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.1.33.0"
     }
 
     Int disk_size = 375
@@ -30,28 +29,23 @@ task assemble {
 
         assembly.py --version | tee VERSION
 
-        if [[ "~{assembler}" == "spades" ]]; then
-          assembly.py assemble_spades \
-            ~{reads_unmapped_bam} \
-            ~{trim_clip_db} \
-            ~{sample_name}.assembly1-~{assembler}.fasta \
-            ~{'--nReads=' + spades_n_reads} \
-            ~{true="--alwaysSucceed" false="" always_succeed} \
-            ~{'--minContigLen=' + spades_min_contig_len} \
-            ~{'--spadesOpts="' + spades_options + '"'} \
-            --memLimitGb $mem_in_gb \
-            --outReads=~{sample_name}.subsamp.bam \
-            --loglevel=DEBUG
-        else
-          echo "unrecognized assembler ~{assembler}" >&2
-          exit 1
-        fi
+        assembly.py assemble_spades \
+          ~{reads_unmapped_bam} \
+          ~{trim_clip_db} \
+          ~{sample_name}.assembly1-spades.fasta \
+          ~{'--nReads=' + spades_n_reads} \
+          ~{true="--alwaysSucceed" false="" always_succeed} \
+          ~{'--minContigLen=' + spades_min_contig_len} \
+          ~{'--spadesOpts="' + spades_options + '"'} \
+          --memLimitGb $mem_in_gb \
+          --outReads=~{sample_name}.subsamp.bam \
+          --loglevel=DEBUG
 
         samtools view -c ~{sample_name}.subsamp.bam | tee subsample_read_count >&2
     }
 
     output {
-        File   contigs_fasta        = "~{sample_name}.assembly1-~{assembler}.fasta"
+        File   contigs_fasta        = "~{sample_name}.assembly1-spades.fasta"
         File   subsampBam           = "~{sample_name}.subsamp.bam"
         Int    subsample_read_count = read_int("subsample_read_count")
         String viralngs_version     = read_string("VERSION")
@@ -83,10 +77,11 @@ task scaffold {
       Int?         nucmer_max_gap
       Int?         nucmer_min_match
       Int?         nucmer_min_cluster
+      Int?         scaffold_min_contig_len
       Float?       scaffold_min_pct_contig_aligned
 
       Int?         machine_mem_gb
-      String       docker="quay.io/broadinstitute/viral-assemble:2.1.20.2"
+      String       docker="quay.io/broadinstitute/viral-assemble:2.1.33.0"
 
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
@@ -106,6 +101,7 @@ task scaffold {
           ~{contigs_fasta} \
           ~{sep=' ' reference_genome_fasta} \
           ~{sample_name}.intermediate_scaffold.fasta \
+          ~{'--min_contig_len=' + scaffold_min_contig_len} \
           ~{'--maxgap=' + nucmer_max_gap} \
           ~{'--minmatch=' + nucmer_min_match} \
           ~{'--mincluster=' + nucmer_min_cluster} \
@@ -115,7 +111,7 @@ task scaffold {
           --outAlternateContigs ~{sample_name}.scaffolding_alt_contigs.fasta \
           --loglevel=DEBUG
 
-        grep '^>' ~{sample_name}.scaffolding_chosen_ref.fasta | cut -c 2- | tr '\n' '\t' > ~{sample_name}.scaffolding_chosen_ref.txt
+        grep '^>' ~{sample_name}.scaffolding_chosen_ref.fasta | cut -c 2- | cut -f 1 -d ' ' > ~{sample_name}.scaffolding_chosen_refs.txt
 
         assembly.py gapfill_gap2seq \
           ~{sample_name}.intermediate_scaffold.fasta \
@@ -146,7 +142,7 @@ task scaffold {
         File   intermediate_gapfill_fasta            = "~{sample_name}.intermediate_gapfill.fasta"
         Int    assembly_preimpute_length             = read_int("assembly_preimpute_length")
         Int    assembly_preimpute_length_unambiguous = read_int("assembly_preimpute_length_unambiguous")
-        String scaffolding_chosen_ref_name           = read_string("~{sample_name}.scaffolding_chosen_ref.txt")
+        Array[String] scaffolding_chosen_ref_names   = read_lines("~{sample_name}.scaffolding_chosen_refs.txt")
         File   scaffolding_chosen_ref                = "~{sample_name}.scaffolding_chosen_ref.fasta"
         File   scaffolding_stats                     = "~{sample_name}.scaffolding_stats.txt"
         File   scaffolding_alt_contigs               = "~{sample_name}.scaffolding_alt_contigs.fasta"
@@ -428,7 +424,7 @@ task refine_assembly_with_aligned_reads {
       Int      min_coverage = 3
 
       Int?     machine_mem_gb
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.1.20.2"
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.1.33.0"
     }
 
     Int disk_size = 375
@@ -538,7 +534,7 @@ task refine_2x_and_plot {
       String? plot_coverage_novoalign_options = "-r Random -l 40 -g 40 -x 20 -t 100 -k"
 
       Int?    machine_mem_gb
-      String  docker = "quay.io/broadinstitute/viral-assemble:2.1.20.2"
+      String  docker = "quay.io/broadinstitute/viral-assemble:2.1.33.0"
 
       # do this in two steps in case the input doesn't actually have "cleaned" in the name
       String  sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
