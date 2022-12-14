@@ -1,6 +1,6 @@
 version 1.0
 
-import "../tasks/tasks_qiime_import_bam.wdl" as import
+import "../tasks/tasks_qiime_import_bam.wdl" as infile
 
 workflow qiime_import_bam {
     
@@ -15,7 +15,7 @@ input {
     File    sample_name
 }
 
-call import.qiime_import_bam {
+call infile.qiime_import_bam {
     input: 
             reads_bam  = reads_bam,
             sample_name = sample_name
