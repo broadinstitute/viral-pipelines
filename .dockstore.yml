@@ -354,3 +354,8 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/amplicon16S_analysis.wdl
     testParameterFiles:
       - empty.json
+  - name: qiime_import_bam
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/qiime_import_bam.wdl
+    testParameterFiles:
+      - empty.json
