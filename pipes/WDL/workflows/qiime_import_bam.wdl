@@ -15,7 +15,7 @@ input {
     File    sample_name
 }
 
-call infile.qiime_import_bam {
+call infile.bam_import {
     input: 
             reads_bam  = reads_bam,
             sample_name = sample_name

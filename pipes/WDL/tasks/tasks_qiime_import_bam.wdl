@@ -1,6 +1,6 @@
 version 1.0
 
-task qiime_import_bam {
+task bam_import {
     meta {
         description: "Parsing demultiplexed fastq BAM files into qiime readable files."
     }
