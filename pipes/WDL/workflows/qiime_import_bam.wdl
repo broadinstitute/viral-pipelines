@@ -12,7 +12,7 @@ meta{
 }
 input {
     File    reads_bam
-    File    sample_name
+    String    sample_name
 }
 
 call infile.bam_import {
