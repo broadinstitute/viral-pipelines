@@ -18,15 +18,6 @@ task qiime_import_from_bam {
 
     command <<<
         set -ex -o pipefail
-        #testing to see if source is correct
-        # obtain the name of the qiime conda environment in the container flexible about version
-        CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
-        # activate the qiime conda environment
-        # seemingly necessary because of:
-        #https://github.com/chanzuckerberg/miniwdl/issues/603
-        #manual activation of bash per suggestion: https://github.com/conda/conda/issues/7980
-        conda activate ${CONDA_ENV_NAME}
-
         #Part 1A | BAM -> FASTQ [Simple samtools command]
         samtools fastq -1 $(pwd)/R1.fastq.gz -2 $(pwd)/R2.fastq.gz -0 /dev/null ~{reads_bam}
         #making new bash variable | regex: (_) -> (-)
@@ -87,13 +78,6 @@ task trim_reads {
 
     command <<<
         set -ex -o pipefail
-        # obtain the name of the qiime conda environment in the container; flexible about version
-        CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
-        # activate the qiime conda environment
-        # seemingly necessary because of:
-        # https://github.com/chanzuckerberg/miniwdl/issues/603
-        conda activate ${CONDA_ENV_NAME}
-
         qiime cutadapt trim-paired \
         --i-demultiplexed-sequences "~{reads_qza}" \
         --p-front-f "~{forward_adapter}" \
@@ -140,13 +124,6 @@ task join_paired_ends {
 
     command <<< 
         set -ex -o pipefail
-        # obtain the name of the qiime conda environment in the container; flexible about version
-        CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
-        # activate the qiime conda environment
-        # seemingly necessary because of:
-        # https://github.com/chanzuckerberg/miniwdl/issues/603
-        conda activate ${CONDA_ENV_NAME}
-
         qiime vsearch join-pairs \
         --i-demultiplexed-seqs ~{trimmed_reads_qza} \
         --o-joined-sequences "~{reads_basename}_joined.qza"
@@ -184,12 +161,7 @@ task deblur {
     }
         command <<< 
         set -ex -o pipefail
-        # obtain the name of the qiime conda environment in the container; flexible about version
-        CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
-        # activate the qiime conda environment
-        # seemingly necessary because of:
-        # https://github.com/chanzuckerberg/miniwdl/issues/603
-        conda activate ${CONDA_ENV_NAME}
+
             qiime deblur denoise-16S \
             --i-demultiplexed-seqs ~{joined_end_reads_qza} \
             ~{"--p-trim-length " + trim_length_var} \
@@ -295,13 +267,6 @@ task tax_analysis {
     }
     command <<<
         set -ex -o pipefail
-        # obtain the name of the qiime conda environment in the container; flexible about version
-        CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
-        # activate the qiime conda environment
-        # seemingly necessary because of:
-        #   https://github.com/chanzuckerberg/miniwdl/issues/603
-        conda activate ${CONDA_ENV_NAME}
-        
         qiime feature-classifier classify-sklearn \
         --i-classifier ~{trained_classifier} \
         --i-reads ~{representative_seqs_qza} \
