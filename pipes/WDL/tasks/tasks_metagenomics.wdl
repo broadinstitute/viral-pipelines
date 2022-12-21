@@ -209,7 +209,7 @@ task kraken2 {
     Float? confidence_threshold
     Int?   min_base_qual
 
-    Int?   machine_mem_gb
+    Int    machine_mem_gb = 72
     String docker = "quay.io/broadinstitute/viral-classify:2.1.33.0"
   }
 
@@ -237,7 +237,7 @@ task kraken2 {
   String out_basename = basename(basename(reads_bam, '.bam'), '.fasta')
   Int disk_size = 750
 
-  command {
+  command <<<
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
@@ -248,72 +248,72 @@ task kraken2 {
 
     # decompress DB to $DB_DIR
     read_utils.py extract_tarball \
-      ${kraken2_db_tgz} $DB_DIR/kraken2 \
+      "~{kraken2_db_tgz}" $DB_DIR/kraken2 \
       --loglevel=DEBUG
     du -hs $DB_DIR/kraken2
 
     # unpack krona taxonomy.tab
-    if [[ ${krona_taxonomy_db_tgz} == *.tar.* ]]; then
+    if [[ "~{krona_taxonomy_db_tgz}" == *.tar.* ]]; then
       read_utils.py extract_tarball \
-        ${krona_taxonomy_db_tgz} $DB_DIR/krona \
+        "~{krona_taxonomy_db_tgz}" $DB_DIR/krona \
         --loglevel=DEBUG &  # we don't need this until later
     else
-      if [[ "${krona_taxonomy_db_tgz}" == *.zst ]]; then
-        cat "${krona_taxonomy_db_tgz}" | zstd -d > $DB_DIR/krona/taxonomy.tab &
-      elif [[ "${krona_taxonomy_db_tgz}" == *.gz ]]; then
-        cat "${krona_taxonomy_db_tgz}" | pigz -dc > $DB_DIR/krona/taxonomy.tab &
-      elif [[ "${krona_taxonomy_db_tgz}" == *.bz2 ]]; then
-        cat "${krona_taxonomy_db_tgz}" | bzip -dc > $DB_DIR/krona/taxonomy.tab &
+      if [[ "~{krona_taxonomy_db_tgz}" == *.zst ]]; then
+        cat "~{krona_taxonomy_db_tgz}" | zstd -d > $DB_DIR/krona/taxonomy.tab &
+      elif [[ "~{krona_taxonomy_db_tgz}" == *.gz ]]; then
+        cat "~{krona_taxonomy_db_tgz}" | pigz -dc > $DB_DIR/krona/taxonomy.tab &
+      elif [[ "~{krona_taxonomy_db_tgz}" == *.bz2 ]]; then
+        cat "~{krona_taxonomy_db_tgz}" | bzip -dc > $DB_DIR/krona/taxonomy.tab &
       else
-        cp "${krona_taxonomy_db_tgz}" $DB_DIR/krona/taxonomy.tab &
+        cp "~{krona_taxonomy_db_tgz}" $DB_DIR/krona/taxonomy.tab &
       fi
     fi
 
     metagenomics.py --version | tee VERSION
 
-    if [[ ${reads_bam} == *.bam ]]; then
+    if [[ "~{reads_bam}" == *.bam ]]; then
         metagenomics.py kraken2 \
           $DB_DIR/kraken2 \
-          ${reads_bam} \
-          --outReads   "${out_basename}".kraken2.reads.txt \
-          --outReports "${out_basename}".kraken2.report.txt \
-          ${"--confidence " + confidence_threshold} \
-          ${"--min_base_qual " + min_base_qual} \
+          "~{reads_bam}" \
+          --outReads   "~{out_basename}".kraken2.reads.txt \
+          --outReports "~{out_basename}".kraken2.report.txt \
+          ~{"--confidence " + confidence_threshold} \
+          ~{"--min_base_qual " + min_base_qual} \
           --loglevel=DEBUG
     else # fasta input file: call kraken2 directly
         kraken2 \
           --db $DB_DIR/kraken2 \
-          ${reads_bam} \
-          --output "${out_basename}".kraken2.reads.txt \
-          --report "${out_basename}".kraken2.report.txt \
-          ${"--confidence " + confidence_threshold} \
-          ${"--min_base_qual " + min_base_qual}
+          "~{reads_bam}" \
+          --output "~{out_basename}".kraken2.reads.txt \
+          --report "~{out_basename}".kraken2.report.txt \
+          ~{"--confidence " + confidence_threshold} \
+          ~{"--min_base_qual " + min_base_qual}
     fi
 
     wait # for krona_taxonomy_db_tgz to download and extract
-    pigz "${out_basename}".kraken2.reads.txt &
+    pigz "~{out_basename}".kraken2.reads.txt &
 
     metagenomics.py krona \
-      "${out_basename}".kraken2.report.txt \
+      "~{out_basename}".kraken2.report.txt \
       $DB_DIR/krona \
-      "${out_basename}".kraken2.krona.html \
-      --sample_name "${out_basename}" \
+      "~{out_basename}".kraken2.krona.html \
+      --sample_name "~{out_basename}" \
       --noRank --noHits --inputType kraken2 \
       --loglevel=DEBUG
 
     wait # pigz reads.txt
-  }
+  >>>
 
   output {
-    File   kraken2_reads_report   = "${out_basename}.kraken2.reads.txt.gz"
-    File   kraken2_summary_report = "${out_basename}.kraken2.report.txt"
-    File   krona_report_html      = "${out_basename}.kraken2.krona.html"
+    File   kraken2_reads_report   = "~{out_basename}.kraken2.reads.txt.gz"
+    File   kraken2_summary_report = "~{out_basename}.kraken2.report.txt"
+    File   krona_report_html      = "~{out_basename}.kraken2.krona.html"
     String viralngs_version       = read_string("VERSION")
   }
 
   runtime {
-    docker: "${docker}"
-    memory: select_first([machine_mem_gb, 52]) + " GB"
+    docker: docker
+    memory: machine_mem_gb + " GB"
     cpu: 8
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TESs
