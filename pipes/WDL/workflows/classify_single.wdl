@@ -14,7 +14,7 @@ workflow classify_single {
     }
 
     input {
-        File reads_bam
+        Array[File]+ reads_bams
 
         File ncbi_taxdump_tgz
 
@@ -26,8 +26,8 @@ workflow classify_single {
     }
 
     parameter_meta {
-        reads_bam: {
-          description: "Reads to classify. May be unmapped or mapped or both, paired-end or single-end.",
+        reads_bams: {
+          description: "Reads to classify. May be unmapped or mapped or both, paired-end or single-end. Multiple input files will be merged first.",
           patterns: ["*.bam"]
         }
         spikein_db: {
@@ -52,9 +52,12 @@ workflow classify_single {
         }
     }
 
-    call reports.fastqc as fastqc_raw {
-        input: reads_bam = reads_bam
+    call read_utils.merge_and_reheader_bams as merge_raw_reads {
+        input:
+            in_bams      = reads_bams
     }
+    File reads_bam = merge_raw_reads.out_bam
+
     call reports.align_and_count as spikein {
         input:
             reads_bam = reads_bam,
@@ -110,6 +113,10 @@ workflow classify_single {
         
         File   kraken2_summary_report          = kraken2.kraken2_summary_report
         File   kraken2_krona_plot              = kraken2.krona_report_html
+        File   raw_fastqc                      = merge_raw_reads.fastqc
+        File   cleaned_fastqc                  = fastqc_cleaned.fastqc_html
+        File   spikein_report                  = spikein.report
+        String spikein_tophit                  = spikein.top_hit_id
         
         String kraken2_viral_classify_version  = kraken2.viralngs_version
         String deplete_viral_classify_version  = deplete.viralngs_version
