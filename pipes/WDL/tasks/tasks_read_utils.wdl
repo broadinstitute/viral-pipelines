@@ -144,7 +144,7 @@ task merge_and_reheader_bams {
       Array[File]+ in_bams
       String?      sample_name
       File?        reheader_table
-      String       out_basename
+      String       out_basename = basename(in_bams[0], ".bam")
 
       String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
     }
