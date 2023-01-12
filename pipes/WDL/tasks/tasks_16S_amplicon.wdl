@@ -151,7 +151,7 @@ task deblur {
         description: "Perform sequence quality control for Illumina data using the Deblur workflow with a 16S reference as a positive filter."
         }
     input {
-        Array[File]    joined_end_reads_qza
+        Array[File]+    joined_end_reads_qza
         Int     trim_length_var = 300
         Int     memory_mb = 2000
         Int     cpu = 1
@@ -290,4 +290,4 @@ task tax_analysis {
         disk: disk_size_gb + " GB"
         disks: "local-disk " + disk_size_gb + " HDD"
     }
-}
+} 
