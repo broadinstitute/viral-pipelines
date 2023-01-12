@@ -151,8 +151,7 @@ task deblur {
         description: "Perform sequence quality control for Illumina data using the Deblur workflow with a 16S reference as a positive filter."
         }
     input {
-        File    joined_end_reads_qza
-        String  joined_end_basename = basename(joined_end_reads_qza, '.qza')
+        Array[File]    joined_end_reads_qza
         Int     trim_length_var = 300
         Int     memory_mb = 2000
         Int     cpu = 1
@@ -163,27 +162,27 @@ task deblur {
         set -ex -o pipefail
 
             qiime deblur denoise-16S \
-            --i-demultiplexed-seqs ~{joined_end_reads_qza} \
+            --i-demultiplexed-seqs ~{sep=' ' joined_end_reads_qza} \
             ~{"--p-trim-length " + trim_length_var} \
             --p-sample-stats \
-            --o-representative-sequences "~{joined_end_basename}_rep_seqs.qza" \
-            --o-table "~{joined_end_basename}_table.qza" \
-            --o-stats "~{joined_end_basename}_stats.qza"
+            --o-representative-sequences "rep_seqs.qza" \
+            --o-table "table.qza" \
+            --o-stats "stats.qza"
             
             #Generate feature table- give you the number of features per sample 
             qiime feature-table summarize \
-            --i-table  "~{joined_end_basename}_table.qza" \
-            --o-visualization   "~{joined_end_basename}_table.qzv"
+            --i-table  "table.qza" \
+            --o-visualization   "table.qzv"
             #Generate visualization of deblur stats
             qiime deblur visualize-stats \
-            --i-deblur-stats "~{joined_end_basename}_stats.qza" \
-            --o-visualization "~{joined_end_basename}_stats.qzv"
+            --i-deblur-stats "stats.qza" \
+            --o-visualization "stats.qzv"
         >>>
     output {
-        File representative_seqs_qza = "~{joined_end_basename}_rep_seqs.qza"
-        File representative_table_qza = "~{joined_end_basename}_table.qza"
-        File feature_table = "~{joined_end_basename}_table.qzv"
-        File visualize_stats = "~{joined_end_basename}_stats.qzv"
+        File representative_seqs_qza = "rep_seqs.qza"
+        File representative_table_qza = "table.qza"
+        File feature_table = "table.qzv"
+        File visualize_stats = "stats.qzv"
 
     }
     runtime {
@@ -259,7 +258,6 @@ task tax_analysis {
         File    trained_classifier
         File    representative_seqs_qza
         File    representative_table_qza 
-        String  basename  =   basename(trained_classifier, '.qza')
         Int     memory_mb = 5
         Int     cpu = 1
         Int     disk_size_gb = 375
@@ -270,24 +268,24 @@ task tax_analysis {
         qiime feature-classifier classify-sklearn \
         --i-classifier ~{trained_classifier} \
         --i-reads ~{representative_seqs_qza} \
-        --o-classification "~{basename}_tax.qza"
+        --o-classification "taxonomy.qza"
         
         qiime feature-table tabulate-seqs \
         --i-data ~{representative_seqs_qza} \
-        --o-visualization "~{basename}_rep_seqs.qzv"
+        --o-visualization "list_rep_seqs.qzv"
 
         qiime taxa barplot \
         --i-table ~{representative_table_qza} \
-        --i-taxonomy "~{basename}_tax.qza" \
-        --o-visualization "~{basename}_bar_plots.qzv"
+        --i-taxonomy "taxonomy.qza" \
+        --o-visualization "taxa_bar_plots.qzv"
     >>>
     output {
-        File rep_seq_list = "~{basename}_rep_seqs.qzv" 
-        File tax_classification_graph = "~{basename}_bar_plots.qzv"
+        File rep_seq_list = "list_rep_seqs.qzv" 
+        File tax_classification_graph = "taxa_bar_plots.qzv"
 }
     runtime {
         docker: docker
-        memory: "7 GB"
+        memory: "10 GB"
         cpu: cpu
         disk: disk_size_gb + " GB"
         disks: "local-disk " + disk_size_gb + " HDD"
