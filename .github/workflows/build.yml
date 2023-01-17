@@ -283,7 +283,7 @@ jobs:
       - validate_wdl_miniwdl
     runs-on: ubuntu-20.04
     env:
-      # DX_API_TOKEN (for DNAnexus builds) -- token #3, expires 12/31/2024
+      # DX_API_TOKEN (for DNAnexus builds) -- GitHub Actions token #1, expires 2025-01-17
       # stored here: https://github.com/broadinstitute/viral-pipelines/settings/secrets/actions
       DX_API_TOKEN: ${{ secrets.DX_API_TOKEN }}
       DX_PROJECT: project-F8PQ6380xf5bK0Qk0YPjB17P
