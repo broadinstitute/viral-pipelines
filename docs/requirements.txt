@@ -1,4 +1,4 @@
-jinja2<3.1.0
+jinja2<3.1.0 # https://github.com/readthedocs/readthedocs.org/issues/9037#issuecomment-1077818554
 Sphinx>1.8.6 #override sphinx pinning done by RTD: https://docs.readthedocs.io/en/stable/build-default-versions.html#external-dependencies
 sphinx-argparse
 sphinx-rtd-theme==1.2.0rc2
