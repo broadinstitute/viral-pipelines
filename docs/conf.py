@@ -15,7 +15,7 @@
 import sys
 import os
 import subprocess
-#import wdl_aid
+import wdl_aid
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -47,8 +47,15 @@ def _make_wdl_markdowns():
             fname_base = os.path.basename(wf)
             if fname_base.endswith('.wdl'):
                 fname_base = fname_base[:-4]
-                subprocess.check_call(['wdl-aid', '-o', fname_base+'.md', os.path.join(wf_dir, wf)])
-                outf.write("   {}\n".format(fname_base))
+                try:
+                    subprocess.run(['wdl-aid', '-o', fname_base+'.md', os.path.join(wf_dir, wf)], 
+                                    check=True, 
+                                    stdout=subprocess.PIPE, 
+                                    stderr=subprocess.STDOUT)
+                    outf.write("   {}\n".format(fname_base))
+                except subprocess.CalledProcessError as e:
+                    print ( f"Error({e.returncode}):\n{e.output.decode('utf-8')}" )
+                    raise
         outf.write("\n")
 _make_wdl_markdowns()
 
