@@ -48,10 +48,16 @@ def _make_wdl_markdowns():
             if fname_base.endswith('.wdl'):
                 fname_base = fname_base[:-4]
                 try:
-                    subprocess.run(['wdl-aid', '-o', fname_base+'.md', os.path.join(wf_dir, wf)], 
+                    # generate markdown file for specific wdl
+                    subprocess.run([
+                                        'wdl-aid', 
+                                        '-o', fname_base+'.md', 
+                                        os.path.join(wf_dir, wf)
+                                    ], 
                                     check=True, 
                                     stdout=subprocess.PIPE, 
                                     stderr=subprocess.STDOUT)
+                    # add entry for the wdl to the main markdown file
                     outf.write("   {}\n".format(fname_base))
                 except subprocess.CalledProcessError as e:
                     print ( f"Error({e.returncode}):\n{e.output.decode('utf-8')}" )

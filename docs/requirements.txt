@@ -1,8 +1,9 @@
-jinja2<3.1.0 # https://github.com/readthedocs/readthedocs.org/issues/9037#issuecomment-1077818554
-Sphinx>1.8.6 #override sphinx pinning done by RTD: https://docs.readthedocs.io/en/stable/build-default-versions.html#external-dependencies
+jinja2==3.1.2 # https://github.com/readthedocs/readthedocs.org/issues/9037#issuecomment-1077818554
+Sphinx==5.3.0 #override sphinx pinning done by RTD: https://docs.readthedocs.io/en/stable/build-default-versions.html#external-dependencies
 sphinx-argparse
-sphinx-rtd-theme==1.2.0rc2
-PyYAML
-mock
+sphinx-rtd-theme==1.1.1
+PyYAML==6.0
+mock==5.0.1
 recommonmark
-wdl-aid
+miniwdl==1.8.0
+wdl-aid==1.0.0
