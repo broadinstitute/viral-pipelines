@@ -7,7 +7,7 @@ pushd docs
 make html
 
 build_exit_code=$?
-if [ $build_exit_code -eq 1 ]; then
+if [ $build_exit_code -eq 0 ]; then
     echo "Docs built successfully"
 else
     echo "Docs did NOT build successfully"
