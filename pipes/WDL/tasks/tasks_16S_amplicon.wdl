@@ -13,8 +13,7 @@ task qiime_import_from_bam {
     }
     parameter_meta {
         reads_bam: {
-            description: "Input BAM files"
-            patterns:["*.bam"]}
+            description: "Input BAM files"}
     }
 
     command <<<
