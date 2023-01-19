@@ -5,31 +5,31 @@ task qiime_import_from_bam {
         description: "Parsing demultiplexed fastq BAM files into qiime readable files."
     }
     input { 
-        Array[File]    reads_bam
+        Array[File] reads_bam
         Int     memory_mb = 2000
         Int     cpu = 3
         Int     disk_size_gb = ceil(2*size(reads_bam, "GiB")) + 5
         String  docker     = "quay.io/broadinstitute/qiime2:conda" 
     }
     parameter_meta {
-        reads_bam: {
-            description: "Input BAM files"}
+        reads_bam: {description: "Input BAM files"}
     }
 
     command <<<
         set -ex -o pipefail
         #Part 1A | BAM -> FASTQ [Simple samtools command]
         echo -e "sample-id\tforward-absolute-filepath\treverse-absolute-filepath" > manifest.tsv
-        for bam in ${sep=' ' reads_bam}; do
-            samtools fastq $bam -1 $(pwd)/R1.fastq.gz -2 $(pwd)/R2.fastq.gz -0 /dev/null 
+        for bam in ~{sep=' ' reads_bam}; do
             #making new bash variable | regex: (_) -> (-)
             NEWSAMPLENAME=$(echo "(basename $bam .bam)" | perl -lape 's/[_]/-/g')
+            samtools fastq $bam -1 $NEWSAMPLENAME.R1.fastq.gz -2 $NEWSAMPLENAME.R2.fastq.gz -0 /dev/null 
             #All names added to one giant file 
-            echo ${NEWSAMPLENAME} >> NEWSAMPLENAME.txt
+            echo $NEWSAMPLENAME >> NEWSAMPLENAME.txt
+            #>=replaces
             #>>= appends 
             #\t= tabs next value 
-            echo -e "$NEWSAMPLENAME\t$(pwd)/R1.fastq.gz\t$(pwd)/R2.fastq.gz" >> manifest.tsv
-         done
+            echo -e "$NEWSAMPLENAME\t$(pwd)/$NEWSAMPLENAME.R1.fastq.gz\t$(pwd)/$NEWSAMPLENAME.R2.fastq.gz" >> manifest.tsv
+        done
         #fastq -> bam (provided by qiime tools import fxn)
         qiime tools import \
             --type 'SampleData[PairedEndSequencesWithQuality]' \
@@ -45,7 +45,7 @@ task qiime_import_from_bam {
     }
     runtime {
         docker: docker
-        memory: "${memory_mb} MiB"
+        memory: "~{memory_mb} MiB"
         cpu: cpu
         disk: disk_size_gb + " GB"
         disks: "local-disk " + disk_size_gb + " HDD"
