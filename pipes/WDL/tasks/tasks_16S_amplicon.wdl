@@ -5,8 +5,7 @@ task qiime_import_from_bam {
         description: "Parsing demultiplexed fastq BAM files into qiime readable files."
     }
     input { 
-        File    reads_bam
-        String  sample_name
+        Array[File]    reads_bam
         Int     memory_mb = 2000
         Int     cpu = 1
         Int     disk_size_gb = ceil(2*size(reads_bam, "GiB")) + 5
@@ -19,11 +18,13 @@ task qiime_import_from_bam {
     command <<<
         set -ex -o pipefail
         #Part 1A | BAM -> FASTQ [Simple samtools command]
-        samtools fastq -1 $(pwd)/R1.fastq.gz -2 $(pwd)/R2.fastq.gz -0 /dev/null ~{reads_bam}
-        #making new bash variable | regex: (_) -> (-)
-        NEWSAMPLENAME=$(echo "~{sample_name}" | perl -lape 's/[_]/-/g')
-        #All names added to one giant file 
-        echo ${NEWSAMPLENAME} > NEWSAMPLENAME.txt
+        for bam in ${sep=' ' reads_bam}; do
+            samtools fastq -1 $(pwd)/R1.fastq.gz -2 $(pwd)/R2.fastq.gz -0 /dev/null
+            #making new bash variable | regex: (_) -> (-)
+            NEWSAMPLENAME=$(echo "(basename $bam .bam)" | perl -lape 's/[_]/-/g')
+            #All names added to one giant file 
+            echo ${NEWSAMPLENAME} > NEWSAMPLENAME.txt
+        done
         #Make a manifest.txt that contains [1.sampleid 2.R1_fastq 3.R2.fastq]
         #> =overwrite or writes new file 
         echo -e "sample-id\tforward-absolute-filepath\treverse-absolute-filepath" > manifest.tsv
@@ -36,7 +37,8 @@ task qiime_import_from_bam {
             --type 'SampleData[PairedEndSequencesWithQuality]' \
             --input-path manifest.tsv \
             --input-format PairedEndFastqManifestPhred33V2 \
-            --output-path "~{sample_name}.qza"
+            #this should be the batch name since multiple FASTA files are going into one .qza file 
+            --output-path "batch.qza"
     >>>
 
     output {
@@ -151,7 +153,7 @@ task deblur {
         description: "Perform sequence quality control for Illumina data using the Deblur workflow with a 16S reference as a positive filter."
         }
     input {
-        Array[File]+    joined_end_reads_qza
+        File   joined_end_reads_qza
         Int     trim_length_var = 300
         Int     memory_mb = 2000
         Int     cpu = 1
@@ -162,7 +164,7 @@ task deblur {
         set -ex -o pipefail
 
             qiime deblur denoise-16S \
-            --i-demultiplexed-seqs ~{sep=' ' joined_end_reads_qza} \
+            --i-demultiplexed-seqs ~{joined_end_reads_qza}\
             ~{"--p-trim-length " + trim_length_var} \
             --p-sample-stats \
             --o-representative-sequences "rep_seqs.qza" \
