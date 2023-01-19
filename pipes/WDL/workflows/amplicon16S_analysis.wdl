@@ -11,7 +11,7 @@ workflow amplicon16S_analysis {
         allowNestedInputs: true 
     }
     input {
-        File    reads_bam
+        Array[File]    reads_bam
         File    trained_classifier
         Boolean keep_untrimmed_reads 
     }
