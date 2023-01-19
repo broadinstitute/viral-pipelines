@@ -42,7 +42,7 @@ task qiime_import_from_bam {
     >>>
 
     output {
-        File   reads_qza               = "~{sample_name}.qza"
+        File   reads_qza               = "batch.qza"
         String samplename_master_sheet = read_string("NEWSAMPLENAME.txt")
     }
     runtime {
