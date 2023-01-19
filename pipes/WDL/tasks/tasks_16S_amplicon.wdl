@@ -7,31 +7,30 @@ task qiime_import_from_bam {
     input { 
         Array[File]    reads_bam
         Int     memory_mb = 2000
-        Int     cpu = 1
+        Int     cpu = 3
         Int     disk_size_gb = ceil(2*size(reads_bam, "GiB")) + 5
         String  docker     = "quay.io/broadinstitute/qiime2:conda" 
     }
     parameter_meta {
-        reads_bam: {description: "Input BAM file"}
+        reads_bam: {
+            description: "Input BAM files"
+            patterns:["*.bam"]}
     }
 
     command <<<
         set -ex -o pipefail
         #Part 1A | BAM -> FASTQ [Simple samtools command]
+        echo -e "sample-id\tforward-absolute-filepath\treverse-absolute-filepath" > manifest.tsv
         for bam in ${sep=' ' reads_bam}; do
-            samtools fastq -1 $(pwd)/R1.fastq.gz -2 $(pwd)/R2.fastq.gz -0 /dev/null
+            samtools fastq $bam -1 $(pwd)/R1.fastq.gz -2 $(pwd)/R2.fastq.gz -0 /dev/null 
             #making new bash variable | regex: (_) -> (-)
             NEWSAMPLENAME=$(echo "(basename $bam .bam)" | perl -lape 's/[_]/-/g')
             #All names added to one giant file 
-            echo ${NEWSAMPLENAME} > NEWSAMPLENAME.txt
-        done
-        #Make a manifest.txt that contains [1.sampleid 2.R1_fastq 3.R2.fastq]
-        #> =overwrite or writes new file 
-        echo -e "sample-id\tforward-absolute-filepath\treverse-absolute-filepath" > manifest.tsv
-        #>>= appends 
-        #\t= tabs next value 
-        echo -e "$NEWSAMPLENAME\t$(pwd)/R1.fastq.gz\t$(pwd)/R2.fastq.gz" >> manifest.tsv
-        
+            echo ${NEWSAMPLENAME} >> NEWSAMPLENAME.txt
+            #>>= appends 
+            #\t= tabs next value 
+            echo -e "$NEWSAMPLENAME\t$(pwd)/R1.fastq.gz\t$(pwd)/R2.fastq.gz" >> manifest.tsv
+         done
         #fastq -> bam (provided by qiime tools import fxn)
         qiime tools import \
             --type 'SampleData[PairedEndSequencesWithQuality]' \
@@ -65,15 +64,13 @@ task trim_reads {
 
     input {
         File    reads_qza
-        
-        String  qza_basename = basename(reads_qza, '.qza')
         #Boolean not_default = false
         String  forward_adapter         = "CTGCTGCCTCCCGTAGGAGT"
         String  reverse_adapter         = "AGAGTTTGATCCTGGCTCAG"
         Int    min_length              = 1
         Boolean keep_untrimmed_reads   = false
         Int     memory_mb = 2000
-        Int     cpu = 1
+        Int     cpu = 3
         Int     disk_size_gb = ceil(2*size(reads_qza, "GiB")) + 5
         String  docker          = "quay.io/broadinstitute/qiime2:conda" 
     }
@@ -86,18 +83,18 @@ task trim_reads {
         --p-front-r "~{reverse_adapter}" \
         ~{"--p-minimum-length " + min_length} \
         ~{true='--p-no-discard-untrimmed' false='--p-discard-untrimmed' keep_untrimmed_reads} \
-        --o-trimmed-sequences "~{qza_basename}_trimmed.qza"
+        --o-trimmed-sequences "trimmed.qza"
 
         #trim_visual 
         qiime demux summarize \
-        --i-data "~{qza_basename}_trimmed.qza" \
-        --o-visualization "~{qza_basename}_trim_summary.qzv"
+        --i-data "trimmed.qza" \
+        --o-visualization "~trim_summary.qzv"
     >>>
 
     output {
         #trimmed_sequences = paired ends for vsearch
-        File trimmed_reads_qza     = "~{qza_basename}_trimmed.qza"
-        File trimmed_visualization = "~{qza_basename}_trim_summary.qzv" 
+        File trimmed_reads_qza     = "trimmed.qza"
+        File trimmed_visualization = "trim_summary.qzv" 
     }
 
     runtime {
@@ -117,7 +114,6 @@ task join_paired_ends {
     input {
         #Input File: Merge paired reads
         File    trimmed_reads_qza
-        String  reads_basename = basename(trimmed_reads_qza, '.qza')
         Int     memory_mb = 2000
         Int     cpu = 1
         Int     disk_size_gb = ceil(2*size(trimmed_reads_qza, "GiB")) + 5
@@ -128,15 +124,15 @@ task join_paired_ends {
         set -ex -o pipefail
         qiime vsearch join-pairs \
         --i-demultiplexed-seqs ~{trimmed_reads_qza} \
-        --o-joined-sequences "~{reads_basename}_joined.qza"
+        --o-joined-sequences "joined.qza"
 
         qiime demux summarize \
-        --i-data "~{reads_basename}_joined.qza" \
-        --o-visualization "~{reads_basename}_visualization.qzv"
+        --i-data "joined.qza" \
+        --o-visualization "visualization.qzv"
     >>>
     output {
-        File joined_end_reads_qza       = "~{reads_basename}_joined.qza"
-        File joined_end_visualization = "~{reads_basename}_visualization.qzv"
+        File joined_end_reads_qza       = "joined.qza"
+        File joined_end_visualization = "visualization.qzv"
     }
     runtime {
         docker: docker
@@ -153,7 +149,7 @@ task deblur {
         description: "Perform sequence quality control for Illumina data using the Deblur workflow with a 16S reference as a positive filter."
         }
     input {
-        File   joined_end_reads_qza
+        File    joined_end_reads_qza
         Int     trim_length_var = 300
         Int     memory_mb = 2000
         Int     cpu = 1

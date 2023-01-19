@@ -13,7 +13,7 @@ workflow amplicon16S_analysis {
     input {
         Array[File]    reads_bam
         File    trained_classifier
-        Boolean keep_untrimmed_reads 
+        Boolean keep_untrimmed_reads
     }
 
     call qiime.qiime_import_from_bam {
