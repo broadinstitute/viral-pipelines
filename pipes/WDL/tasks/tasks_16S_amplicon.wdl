@@ -22,7 +22,7 @@ task qiime_import_from_bam {
         for bam in ~{sep=' ' reads_bam}; do
             #making new bash variable | regex: (_) -> (-)
             NEWSAMPLENAME=$(echo "(basename $bam .bam)" | perl -lape 's/[_]/-/g')
-            samtools fastq $bam -1 $NEWSAMPLENAME.R1.fastq.gz -2 $NEWSAMPLENAME.R2.fastq.gz -0 /dev/null 
+            samtools fastq -1 $NEWSAMPLENAME.R1.fastq.gz -2 $NEWSAMPLENAME.R2.fastq.gz -0 /dev/null $bam
             #All names added to one giant file 
             echo $NEWSAMPLENAME >> NEWSAMPLENAME.txt
             #>=replaces
