@@ -28,7 +28,7 @@ task qiime_import_from_bam {
             #>=replaces
             #>>= appends 
             #\t= tabs next value 
-            echo -e "$NEWSAMPLENAME\t$(pwd)/$NEWSAMPLENAME.R1.fastq.gz\t$(pwd)/$NEWSAMPLENAME.R2.fastq.gz" >> manifest.tsv
+            echo -e "$NEWSAMPLENAME\t/$NEWSAMPLENAME.R1.fastq.gz\t/$NEWSAMPLENAME.R2.fastq.gz" >> manifest.tsv
         done
         #fastq -> bam (provided by qiime tools import fxn)
         qiime tools import \
