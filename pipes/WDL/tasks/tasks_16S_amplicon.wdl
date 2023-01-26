@@ -25,7 +25,7 @@ task qiime_import_from_bam {
             #making new bash variable | regex: (_) -> (-)
             NEWSAMPLENAME=$(basename $bam .bam  | perl -lape 's/[_]/-/g')
             echo $NEWSAMPLENAME
-            samtools fastq -1 $bam.R1.fastq.gz -2 $bam.R2.fastq.gz -0 /dev/null $bam
+            samtools fastq -1 $NEWSAMPLENAME.R1.fastq.gz -2 $NEWSAMPLENAME.R2.fastq.gz -0 /dev/null $bam
             #All names added to one giant file 
             #up to here works...not reading the manifest tsv for some reason
             echo $NEWSAMPLENAME >> NEWSAMPLENAME.txt
