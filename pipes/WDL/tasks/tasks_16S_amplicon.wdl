@@ -29,7 +29,7 @@ task qiime_import_from_bam {
         echo -e "sample-id\tforward-absolute-filepath\treverse-absolute-filepath" > manifest.tsv
         for bam in ~{sep=' ' reads_bam}; do
             #making new bash variable | regex: (_) -> (-)
-            NEWSAMPLENAME=$(echo "$bam"  | perl -lape 's/[_]/-/g')
+            NEWSAMPLENAME=$(echo "basename $bam .bam"  | perl -lape 's/[_]/-/g')
             samtools fastq -1 $bam.R1.fastq.gz -2 $bam.R2.fastq.gz -0 /dev/null $bam
             #All names added to one giant file 
             #up to here works...not reading the manifest tsv for some reason
@@ -37,7 +37,8 @@ task qiime_import_from_bam {
             #>=replaces
             #>>= appends 
             #\t= tabs next value 
-            echo -e "$NEWSAMPLENAME\t/$NEWSAMPLENAME.R1.fastq.gz\t/$NEWSAMPLENAME.R2.fastq.gz" >> manifest.tsv
+            echo -e "${NEWSAMPLENAME}\t/${NEWSAMPLENAME}.R1.fastq.gz\t/${NEWSAMPLENAME}.R2.fastq.gz"
+            echo -e "${NEWSAMPLENAME}\t/${NEWSAMPLENAME}.R1.fastq.gz\t/${NEWSAMPLENAME}.R2.fastq.gz" >> manifest.tsv
         done
         #fastq -> bam (provided by qiime tools import fxn)
         qiime tools import \
