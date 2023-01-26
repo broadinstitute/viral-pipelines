@@ -17,8 +17,15 @@ task qiime_import_from_bam {
 
     command <<<
         set -ex -o pipefail
+        #testing to see if source is correct
+        # obtain the name of the qiime conda environment in the container flexible about version
+        CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
+        # activate the qiime conda environment
+        # seemingly necessary because of:
+        #https://github.com/chanzuckerberg/miniwdl/issues/603
+        #manual activation of bash per suggestion: https://github.com/conda/conda/issues/7980
+        conda activate ${CONDA_ENV_NAME}
         #Part 1A | BAM -> FASTQ [Simple samtools command]
-        touch "batch.qza"
         echo -e "sample-id\tforward-absolute-filepath\treverse-absolute-filepath" > manifest.tsv
         for bam in ~{sep=' ' reads_bam}; do
             #making new bash variable | regex: (_) -> (-)
@@ -36,9 +43,7 @@ task qiime_import_from_bam {
         qiime tools import \
             --type 'SampleData[PairedEndSequencesWithQuality]' \
             --input-path manifest.tsv \
-            --input-format PairedEndFastqManifestPhred33V2 \
-            #this should be the batch name since multiple FASTA files are going into one .qza file 
-            --output-path "batch.qza"
+            --input-format PairedEndFastqManifestPhred33V2 --output-path "batch.qza"
     >>>
 
     output {
