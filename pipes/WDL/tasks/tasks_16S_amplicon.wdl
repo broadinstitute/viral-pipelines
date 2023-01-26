@@ -21,7 +21,7 @@ task qiime_import_from_bam {
         echo -e "sample-id\tforward-absolute-filepath\treverse-absolute-filepath" > manifest.tsv
         for bam in ~{sep=' ' reads_bam}; do
             #making new bash variable | regex: (_) -> (-)
-            NEWSAMPLENAME=$(echo "($bam)" | perl -lape 's/[_]/-/g')
+            NEWSAMPLENAME=$(echo "$bam"  | perl -lape 's/[_]/-/g')
             samtools fastq -1 $bam.R1.fastq.gz -2 $bam.R2.fastq.gz -0 /dev/null $bam
             #All names added to one giant file 
             echo $NEWSAMPLENAME >> NEWSAMPLENAME.txt
