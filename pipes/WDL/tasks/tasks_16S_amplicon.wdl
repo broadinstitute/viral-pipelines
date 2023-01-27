@@ -93,7 +93,7 @@ task trim_reads {
         #trim_visual 
         qiime demux summarize \
         --i-data "trimmed.qza" \
-        --o-visualization "~trim_summary.qzv"
+        --o-visualization "trim_summary.qzv"
     >>>
 
     output {
