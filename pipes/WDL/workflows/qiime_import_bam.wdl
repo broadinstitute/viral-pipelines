@@ -16,6 +16,6 @@ input {
 
 call infile.qiime_import_from_bam {
     input: 
-            reads_bam  = reads_bam,
+            reads_bam  = reads_bam
     }
 } 
