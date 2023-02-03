@@ -12,12 +12,10 @@ meta{
 }
 input {
     File    reads_bam
-    String  sample_name
 }
 
 call infile.qiime_import_from_bam {
     input: 
             reads_bam  = reads_bam,
-            sample_name = sample_name
     }
 } 
