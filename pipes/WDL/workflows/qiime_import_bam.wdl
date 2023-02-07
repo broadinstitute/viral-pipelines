@@ -11,7 +11,7 @@ meta{
     allowNestedInputs: true 
 }
 input {
-    File    reads_bam
+    Array[File]    reads_bam
 }
 
 call infile.qiime_import_from_bam {
