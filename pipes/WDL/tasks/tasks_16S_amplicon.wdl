@@ -6,9 +6,9 @@ task qiime_import_from_bam {
     }
     input { 
         Array[File] reads_bam
-        Int     memory_mb = 2000
-        Int     cpu = 3
-        Int     disk_size_gb = ceil(2*3) + 5
+        Int     memory_mb = 7000
+        Int     cpu = 5
+        Int     disk_size_gb = ceil(2*20) + 5
         String  docker     = "quay.io/broadinstitute/qiime2:conda" 
     }
     parameter_meta {
