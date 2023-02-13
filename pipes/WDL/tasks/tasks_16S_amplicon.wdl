@@ -10,7 +10,7 @@ task qiime_import_from_bam {
         Int     memory_mb = 2000
         Int     cpu = 1
         Int     disk_size_gb = ceil(2*size(reads_bam, "GiB")) + 5
-        String  docker     = "quay.io/broadinstitute/qiime2:conda" 
+        String  docker     = "http://quay.io/broadinstitute/qiime2:fnegrete_opt_docker_pull-runtime" 
     }
     parameter_meta {
         reads_bam: {description: "Input BAM file"}
@@ -73,7 +73,7 @@ task trim_reads {
         Int     memory_mb = 2000
         Int     cpu = 1
         Int     disk_size_gb = ceil(2*size(reads_qza, "GiB")) + 5
-        String  docker          = "quay.io/broadinstitute/qiime2:conda" 
+        String  docker          = "http://quay.io/broadinstitute/qiime2:fnegrete_opt_docker_pull-runtime" 
     }
 
     command <<<
@@ -119,7 +119,7 @@ task join_paired_ends {
         Int     memory_mb = 2000
         Int     cpu = 1
         Int     disk_size_gb = ceil(2*size(trimmed_reads_qza, "GiB")) + 5
-        String  docker = "quay.io/broadinstitute/qiime2:conda"
+        String  docker = "http://quay.io/broadinstitute/qiime2:fnegrete_opt_docker_pull-runtime"
     }
 
     command <<< 
@@ -157,7 +157,7 @@ task deblur {
         Int     memory_mb = 2000
         Int     cpu = 1
         Int     disk_size_gb = ceil(2*size(joined_end_reads_qza, "GiB")) + 5
-        String  docker = "quay.io/broadinstitute/qiime2:conda"
+        String  docker = "http://quay.io/broadinstitute/qiime2:fnegrete_opt_docker_pull-runtime"
     }
         command <<< 
         set -ex -o pipefail
@@ -209,7 +209,7 @@ task train_classifier {
         Int     memory_mb = 2000
         Int     cpu = 1
         Int     disk_size_gb = ceil(2*size(otu_ref, "GiB")) + 5
-        String  docker = "quay.io/broadinstitute/qiime2:conda"
+        String  docker = "http://quay.io/broadinstitute/qiime2:fnegrete_opt_docker_pull-runtime"
     }
     command <<<
      set -ex -o pipefail
@@ -263,7 +263,7 @@ task tax_analysis {
         Int     memory_mb = 5
         Int     cpu = 1
         Int     disk_size_gb = 375
-        String  docker = "quay.io/broadinstitute/qiime2:conda"
+        String  docker = "http://quay.io/broadinstitute/qiime2:fnegrete_opt_docker_pull-runtime"
     }
     command <<<
         set -ex -o pipefail
