@@ -27,7 +27,6 @@ task qiime_import_from_bam {
             echo $NEWSAMPLENAME
             samtools fastq -1 $NEWSAMPLENAME.R1.fastq.gz -2 $NEWSAMPLENAME.R2.fastq.gz -0 /dev/null $bam
             #All names added to one giant file 
-            #up to here works...not reading the manifest tsv for some reason
             echo $NEWSAMPLENAME >> NEWSAMPLENAME.txt
             #>=replaces
             #>>= appends 
