@@ -6,21 +6,19 @@ workflow amplicon16S_analysis {
     
     meta {
         description: "Running 16S amplicon (from BAM format) sequencing analysis with qiime."
-        author: "fnegrete"
+        author: "Broad Viral Genomics"
         email:  "viral_ngs@broadinstitute.org"
         allowNestedInputs: true 
     }
     input {
-        File    reads_bam
+        Array[File]    reads_bam
         File    trained_classifier
-        String  sample_name
-        Boolean keep_untrimmed_reads 
+        Boolean keep_untrimmed_reads
     }
 
     call qiime.qiime_import_from_bam {
         input:
-            reads_bam  = reads_bam,
-            sample_name = sample_name
+            reads_bam  = reads_bam
     }
     #__________________________________________
     call qiime.trim_reads {
