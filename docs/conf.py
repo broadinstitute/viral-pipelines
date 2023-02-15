@@ -12,7 +12,6 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
-
 import sys
 import os
 import subprocess
@@ -48,8 +47,21 @@ def _make_wdl_markdowns():
             fname_base = os.path.basename(wf)
             if fname_base.endswith('.wdl'):
                 fname_base = fname_base[:-4]
-                subprocess.check_call(['wdl-aid', '-o', fname_base+'.md', os.path.join(wf_dir, wf)])
-                outf.write("   {}\n".format(fname_base))
+                try:
+                    # generate markdown file for specific wdl
+                    subprocess.run([
+                                        'wdl-aid', 
+                                        '-o', fname_base+'.md', 
+                                        os.path.join(wf_dir, wf)
+                                    ], 
+                                    check=True, 
+                                    stdout=subprocess.PIPE, 
+                                    stderr=subprocess.STDOUT)
+                    # add entry for the wdl to the main markdown file
+                    outf.write("   {}\n".format(fname_base))
+                except subprocess.CalledProcessError as e:
+                    print ( f"Error({e.returncode}):\n{e.output.decode('utf-8')}" )
+                    raise
         outf.write("\n")
 _make_wdl_markdowns()
 
@@ -77,7 +89,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'viral-ngs'
-copyright = '2014, Broad Institute Viral Genomics'
+copyright = '2023, Broad Institute Viral Genomics'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

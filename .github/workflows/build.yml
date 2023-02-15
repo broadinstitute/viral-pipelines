@@ -131,8 +131,8 @@ jobs:
           github_actions_ci/validate-wdl-womtool.sh
 
   ## note: this test_docs job does not actually produce the output on readthedocs
-  ## readthedocs does its own build trigger. this travis job exists simply to alert us
-  ## of build failures of the docs because otherwise we would never know.
+  ## readthedocs does its own build trigger. this job exists simply to 
+  ## attempt a build and alert us of documentation build failures because otherwise we would never know.
   test_docs:
     runs-on: ubuntu-20.04
     steps:
