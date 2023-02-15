@@ -12,7 +12,8 @@ task qiime_import_from_bam {
         String  docker     = "quay.io/broadinstitute/qiime2" 
     }
     parameter_meta {
-        reads_bam: {description: "Unaligned reads parsed into FASTQ format and then through a .qza format for QIIME requirements."}
+        reads_bam: {description: "Unaligned reads in BAM format, one sample per BAM file."}
+        reads_qza: {description: "All unaligned reads in a single QZA (QIIME) file"}
     }
 
     command <<<
