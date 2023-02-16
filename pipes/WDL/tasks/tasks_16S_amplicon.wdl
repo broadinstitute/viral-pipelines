@@ -5,47 +5,53 @@ task qiime_import_from_bam {
         description: "Parsing demultiplexed fastq BAM files into qiime readable files."
     }
     input { 
-        File    reads_bam
-        String  sample_name
-        Int     memory_mb = 2000
-        Int     cpu = 1
-        Int     disk_size_gb = ceil(2*size(reads_bam, "GiB")) + 5
-        String  docker     = "quay.io/broadinstitute/qiime2:conda" 
+        Array[File] reads_bam
+        Int     memory_mb = 7000
+        Int     cpu = 5
+        Int     disk_size_gb = ceil(2*20) + 5
+        String  docker     = "quay.io/broadinstitute/qiime2" 
     }
     parameter_meta {
-        reads_bam: {description: "Input BAM file"}
+        reads_bam: {description: "Unaligned reads in BAM format, one sample per BAM file."}
+        reads_qza: {description: "All unaligned reads in a single QZA (QIIME) file"}
     }
 
     command <<<
         set -ex -o pipefail
+
         #Part 1A | BAM -> FASTQ [Simple samtools command]
-        samtools fastq -1 $(pwd)/R1.fastq.gz -2 $(pwd)/R2.fastq.gz -0 /dev/null ~{reads_bam}
-        #making new bash variable | regex: (_) -> (-)
-        NEWSAMPLENAME=$(echo "~{sample_name}" | perl -lape 's/[_]/-/g')
-        #All names added to one giant file 
-        echo ${NEWSAMPLENAME} > NEWSAMPLENAME.txt
-        #Make a manifest.txt that contains [1.sampleid 2.R1_fastq 3.R2.fastq]
-        #> =overwrite or writes new file 
+        manifest_TSV=manifest.tsv
         echo -e "sample-id\tforward-absolute-filepath\treverse-absolute-filepath" > manifest.tsv
-        #>>= appends 
-        #\t= tabs next value 
-        echo -e "$NEWSAMPLENAME\t$(pwd)/R1.fastq.gz\t$(pwd)/R2.fastq.gz" >> manifest.tsv
-        
+        for bam in ~{sep=' ' reads_bam}; do
+            #making new bash variable | regex: (_) -> (-)
+            NEWSAMPLENAME=$(basename $bam .bam  | perl -lape 's/[_]/-/g')
+            echo $NEWSAMPLENAME
+            samtools fastq -1 $NEWSAMPLENAME.R1.fastq.gz -2 $NEWSAMPLENAME.R2.fastq.gz -0 /dev/null $bam
+            #All names added to one giant file 
+            echo $NEWSAMPLENAME >> NEWSAMPLENAME.txt
+            #>=replaces
+            #>>= appends 
+            #\t= tabs next value 
+            echo -e "$NEWSAMPLENAME\t$(pwd)/$NEWSAMPLENAME.R1.fastq.gz\t$(pwd)/$NEWSAMPLENAME.R2.fastq.gz"
+            echo -e "$NEWSAMPLENAME\t$(pwd)/$NEWSAMPLENAME.R1.fastq.gz\t$(pwd)/$NEWSAMPLENAME.R2.fastq.gz" >> manifest.tsv
+        done
+        # debug
+        cat manifest.tsv
         #fastq -> bam (provided by qiime tools import fxn)
         qiime tools import \
             --type 'SampleData[PairedEndSequencesWithQuality]' \
             --input-path manifest.tsv \
             --input-format PairedEndFastqManifestPhred33V2 \
-            --output-path "~{sample_name}.qza"
+            --output-path "batch.qza"
     >>>
 
     output {
-        File   reads_qza               = "~{sample_name}.qza"
+        File   reads_qza               = "batch.qza"
         String samplename_master_sheet = read_string("NEWSAMPLENAME.txt")
     }
     runtime {
         docker: docker
-        memory: "${memory_mb} MiB"
+        memory: "~{memory_mb} MiB"
         cpu: cpu
         disk: disk_size_gb + " GB"
         disks: "local-disk " + disk_size_gb + " HDD"
@@ -63,17 +69,15 @@ task trim_reads {
 
     input {
         File    reads_qza
-        
-        String  qza_basename = basename(reads_qza, '.qza')
         #Boolean not_default = false
         String  forward_adapter         = "CTGCTGCCTCCCGTAGGAGT"
         String  reverse_adapter         = "AGAGTTTGATCCTGGCTCAG"
         Int    min_length              = 1
         Boolean keep_untrimmed_reads   = false
         Int     memory_mb = 2000
-        Int     cpu = 1
+        Int     cpu = 4
         Int     disk_size_gb = ceil(2*size(reads_qza, "GiB")) + 5
-        String  docker          = "quay.io/broadinstitute/qiime2:conda" 
+        String  docker          = "quay.io/broadinstitute/qiime2" 
     }
 
     command <<<
@@ -84,18 +88,18 @@ task trim_reads {
         --p-front-r "~{reverse_adapter}" \
         ~{"--p-minimum-length " + min_length} \
         ~{true='--p-no-discard-untrimmed' false='--p-discard-untrimmed' keep_untrimmed_reads} \
-        --o-trimmed-sequences "~{qza_basename}_trimmed.qza"
+        --o-trimmed-sequences "trimmed.qza"
 
         #trim_visual 
         qiime demux summarize \
-        --i-data "~{qza_basename}_trimmed.qza" \
-        --o-visualization "~{qza_basename}_trim_summary.qzv"
+        --i-data "trimmed.qza" \
+        --o-visualization "trim_summary.qzv"
     >>>
 
     output {
         #trimmed_sequences = paired ends for vsearch
-        File trimmed_reads_qza     = "~{qza_basename}_trimmed.qza"
-        File trimmed_visualization = "~{qza_basename}_trim_summary.qzv" 
+        File trimmed_reads_qza     = "trimmed.qza"
+        File trimmed_visualization = "trim_summary.qzv" 
     }
 
     runtime {
@@ -115,26 +119,25 @@ task join_paired_ends {
     input {
         #Input File: Merge paired reads
         File    trimmed_reads_qza
-        String  reads_basename = basename(trimmed_reads_qza, '.qza')
         Int     memory_mb = 2000
         Int     cpu = 1
-        Int     disk_size_gb = ceil(2*size(trimmed_reads_qza, "GiB")) + 5
-        String  docker = "quay.io/broadinstitute/qiime2:conda"
+        Int     disk_size_gb = ceil(2*size(trimmed_reads_qza, "GiB")) + 50
+        String  docker = "quay.io/broadinstitute/qiime2"
     }
 
     command <<< 
         set -ex -o pipefail
         qiime vsearch join-pairs \
         --i-demultiplexed-seqs ~{trimmed_reads_qza} \
-        --o-joined-sequences "~{reads_basename}_joined.qza"
+        --o-joined-sequences "joined.qza"
 
         qiime demux summarize \
-        --i-data "~{reads_basename}_joined.qza" \
-        --o-visualization "~{reads_basename}_visualization.qzv"
+        --i-data "joined.qza" \
+        --o-visualization "visualization.qzv"
     >>>
     output {
-        File joined_end_reads_qza       = "~{reads_basename}_joined.qza"
-        File joined_end_visualization = "~{reads_basename}_visualization.qzv"
+        File joined_end_reads_qza       = "joined.qza"
+        File joined_end_visualization = "visualization.qzv"
     }
     runtime {
         docker: docker
@@ -152,38 +155,37 @@ task deblur {
         }
     input {
         File    joined_end_reads_qza
-        String  joined_end_basename = basename(joined_end_reads_qza, '.qza')
         Int     trim_length_var = 300
         Int     memory_mb = 2000
         Int     cpu = 1
         Int     disk_size_gb = ceil(2*size(joined_end_reads_qza, "GiB")) + 5
-        String  docker = "quay.io/broadinstitute/qiime2:conda"
+        String  docker = "quay.io/broadinstitute/qiime2"
     }
         command <<< 
         set -ex -o pipefail
 
             qiime deblur denoise-16S \
-            --i-demultiplexed-seqs ~{joined_end_reads_qza} \
+            --i-demultiplexed-seqs ~{joined_end_reads_qza}\
             ~{"--p-trim-length " + trim_length_var} \
             --p-sample-stats \
-            --o-representative-sequences "~{joined_end_basename}_rep_seqs.qza" \
-            --o-table "~{joined_end_basename}_table.qza" \
-            --o-stats "~{joined_end_basename}_stats.qza"
+            --o-representative-sequences "rep_seqs.qza" \
+            --o-table "table.qza" \
+            --o-stats "stats.qza"
             
             #Generate feature table- give you the number of features per sample 
             qiime feature-table summarize \
-            --i-table  "~{joined_end_basename}_table.qza" \
-            --o-visualization   "~{joined_end_basename}_table.qzv"
+            --i-table  "table.qza" \
+            --o-visualization   "table.qzv"
             #Generate visualization of deblur stats
             qiime deblur visualize-stats \
-            --i-deblur-stats "~{joined_end_basename}_stats.qza" \
-            --o-visualization "~{joined_end_basename}_stats.qzv"
+            --i-deblur-stats "stats.qza" \
+            --o-visualization "stats.qzv"
         >>>
     output {
-        File representative_seqs_qza = "~{joined_end_basename}_rep_seqs.qza"
-        File representative_table_qza = "~{joined_end_basename}_table.qza"
-        File feature_table = "~{joined_end_basename}_table.qzv"
-        File visualize_stats = "~{joined_end_basename}_stats.qzv"
+        File representative_seqs_qza = "rep_seqs.qza"
+        File representative_table_qza = "table.qza"
+        File feature_table = "table.qzv"
+        File visualize_stats = "stats.qzv"
 
     }
     runtime {
@@ -209,7 +211,7 @@ task train_classifier {
         Int     memory_mb = 2000
         Int     cpu = 1
         Int     disk_size_gb = ceil(2*size(otu_ref, "GiB")) + 5
-        String  docker = "quay.io/broadinstitute/qiime2:conda"
+        String  docker = "quay.io/broadinstitute/qiime2"
     }
     command <<<
      set -ex -o pipefail
@@ -259,37 +261,36 @@ task tax_analysis {
         File    trained_classifier
         File    representative_seqs_qza
         File    representative_table_qza 
-        String  basename  =   basename(trained_classifier, '.qza')
         Int     memory_mb = 5
         Int     cpu = 1
         Int     disk_size_gb = 375
-        String  docker = "quay.io/broadinstitute/qiime2:conda"
+        String  docker = "quay.io/broadinstitute/qiime2"
     }
     command <<<
         set -ex -o pipefail
         qiime feature-classifier classify-sklearn \
         --i-classifier ~{trained_classifier} \
         --i-reads ~{representative_seqs_qza} \
-        --o-classification "~{basename}_tax.qza"
+        --o-classification "taxonomy.qza"
         
         qiime feature-table tabulate-seqs \
         --i-data ~{representative_seqs_qza} \
-        --o-visualization "~{basename}_rep_seqs.qzv"
+        --o-visualization "list_rep_seqs.qzv"
 
         qiime taxa barplot \
         --i-table ~{representative_table_qza} \
-        --i-taxonomy "~{basename}_tax.qza" \
-        --o-visualization "~{basename}_bar_plots.qzv"
+        --i-taxonomy "taxonomy.qza" \
+        --o-visualization "taxa_bar_plots.qzv"
     >>>
     output {
-        File rep_seq_list = "~{basename}_rep_seqs.qzv" 
-        File tax_classification_graph = "~{basename}_bar_plots.qzv"
+        File rep_seq_list = "list_rep_seqs.qzv" 
+        File tax_classification_graph = "taxa_bar_plots.qzv"
 }
     runtime {
         docker: docker
-        memory: "7 GB"
+        memory: "10 GB"
         cpu: cpu
         disk: disk_size_gb + " GB"
         disks: "local-disk " + disk_size_gb + " HDD"
     }
-}
+} 

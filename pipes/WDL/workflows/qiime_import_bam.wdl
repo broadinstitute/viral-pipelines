@@ -11,13 +11,11 @@ meta{
     allowNestedInputs: true 
 }
 input {
-    File    reads_bam
-    String  sample_name
+    Array[File]    reads_bam
 }
 
 call infile.qiime_import_from_bam {
     input: 
-            reads_bam  = reads_bam,
-            sample_name = sample_name
+            reads_bam  = reads_bam
     }
 } 
