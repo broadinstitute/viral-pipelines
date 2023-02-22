@@ -1,4 +1,3 @@
 {
-  "qiime_import_bam.reads_bam": "test/input/G5012.3.subset.bam",
-  "qiime_import_bam.sample_name": "G5012.3.subset.bam"
+  "qiime_import_bam.reads_bam": ["test/input/G5012.3.subset.bam"]
 }
