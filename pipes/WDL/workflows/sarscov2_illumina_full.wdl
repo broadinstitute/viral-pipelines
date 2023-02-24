@@ -126,7 +126,7 @@ workflow sarscov2_illumina_full {
                 skip_mark_dupes     = ampseq,
                 trim_coords_bed     = bed_rename.outfile,
                 major_cutoff        = 0.75,
-                min_coverage        = if defined(min_genome_coverage) then min_coverage else (if ampseq then 50 else 3)
+                min_coverage        = if defined(min_genome_coverage) then min_genome_coverage else (if ampseq then 50 else 3)
         }
 
         # log controls
