@@ -14,9 +14,9 @@ task nextclade_one_sample {
         File? virus_properties
         String? dataset_name
         String docker = "nextstrain/nextclade:2.9.1"
+        Int    disk_size = 50
     }
     String basename = basename(genome_fasta, ".fasta")
-    Int disk_size = 50
     command {
         set -e
         apt-get update
@@ -101,8 +101,8 @@ task nextclade_many_samples {
         String       basename
         File?        genome_ids_setdefault_blank
         String       docker = "nextstrain/nextclade:2.9.1"
+        Int          disk_size = 150
     }
-    Int disk_size = 150
     command <<<
         set -e
         apt-get update
@@ -281,8 +281,8 @@ task derived_cols {
         Array[File]   table_map = []
 
         String        docker = "quay.io/broadinstitute/viral-core:2.1.33"
+        Int           disk_size = 50
     }
-    Int disk_size = 50
     parameter_meta {
         lab_highlight_loc: {
           description: "This option copies the 'originating_lab' and 'submitting_lab' columns to new ones including a prefix, but only if they match certain criteria. The value of this string must be of the form prefix;col_header=value:col_header=value. For example, 'MA;country=USA:division=Massachusetts' will copy the originating_lab and submitting_lab columns to MA_originating_lab and MA_submitting_lab, but only for those rows where country=USA and division=Massachusetts."
@@ -394,9 +394,9 @@ task filter_segments {
         Int?  segment = 1
         File? pre_assembled_samples_fasta
 
-        Int?  machine_mem_gb
+        Int   machine_mem_gb = 3
+        Int   disk_size = 375
     }
-    Int disk_size = 375
     command <<<
     python3 <<CODE
 
@@ -424,7 +424,7 @@ task filter_segments {
     >>>
     runtime {
         docker: "python:slim"
-        memory: select_first([machine_mem_gb, 3]) + " GB"
+        memory: machine_mem_gb + " GB"
         cpu:    1
         disks:  "local-disk " + disk_size + " LOCAL"
         disk: disk_size + " GB" # TES
@@ -449,9 +449,10 @@ task nextstrain_build_subsample {
         File?  keep_list
         File?  drop_list
 
-        Int?   machine_mem_gb
+        Int    machine_mem_gb = 50
         String docker = "nextstrain/base:build-20211012T204409Z"
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
+        Int    disk_size = 375
     }
     parameter_meta {
         alignment_msa_fasta: {
@@ -474,7 +475,6 @@ task nextstrain_build_subsample {
             patterns: ["*.yaml"]
         }
     }
-    Int disk_size = 375
     command <<<
         set -e -o pipefail
         augur version > VERSION
@@ -570,7 +570,7 @@ task nextstrain_build_subsample {
     >>>
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 50]) + " GB"
+        memory: machine_mem_gb + " GB"
         cpu :   4
         disks:  "local-disk " + disk_size + " HDD"
         disk: disk_size + " GB" # TES
@@ -595,8 +595,8 @@ task nextstrain_ncov_defaults {
     input {
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
         String docker                      = "nextstrain/base:build-20211012T204409Z"
+        Int    disk_size = 50
     }
-    Int disk_size = 50
     command {
         set -e
         wget -q "https://github.com/nextstrain/ncov/archive/~{nextstrain_ncov_repo_commit}.tar.gz"
@@ -635,7 +635,6 @@ task nextstrain_deduplicate_sequences {
         String docker                      = "nextstrain/base:build-20211012T204409Z"
         Int disk_size = 750
     }
-
 
     parameter_meta {
         sequences_fasta: {
@@ -688,9 +687,8 @@ task nextstrain_ncov_sanitize_gisaid_data {
 
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
         String docker                      = "nextstrain/base:build-20211012T204409Z"
+        Int    disk_size = 750
     }
-
-    Int disk_size = 750
 
     parameter_meta {
         sequences_gisaid_fasta: {
@@ -765,8 +763,8 @@ task filter_subsample_sequences {
         Array[String]? include_where
 
         String         docker = "nextstrain/base:build-20211012T204409Z"
+        Int            disk_size = 750
     }
-    Int disk_size = 750
     parameter_meta {
         sequences_fasta: {
           description: "Set of sequences (unaligned fasta or aligned fasta -- one sequence per genome) or variants (vcf format) to subsample using augur filter.",
@@ -850,8 +848,8 @@ task filter_sequences_to_list {
 
         String       out_fname = sub(sub(basename(sequences), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
         String       docker = "nextstrain/base:build-20211012T204409Z"
+        Int          disk_size = 750
     }
-    Int disk_size = 750
     parameter_meta {
         sequences: {
           description: "Set of sequences (unaligned fasta or aligned fasta -- one sequence per genome) or variants (vcf format) to subsample using augur filter.",
@@ -952,8 +950,8 @@ task mafft_one_chr {
         String   docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
         Int      mem_size = 500
         Int      cpus = 64
+        Int      disk_size = 750
     }
-    Int disk_size = 750
     command <<<
         set -e
 
@@ -1040,8 +1038,8 @@ task mafft_one_chr_chunked {
         String   docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
         Int      mem_size = 32
         Int      cpus = 96
+        Int      disk_size = 750
     }
-    Int disk_size = 750
     command <<<
         set -e
 
@@ -1146,8 +1144,8 @@ task augur_mafft_align {
         Boolean remove_reference = true
 
         String  docker = "nextstrain/base:build-20211012T204409Z"
+        Int     disk_size = 750
     }
-    Int disk_size = 750
     command <<<
         set -e
         augur version > VERSION
@@ -1187,9 +1185,9 @@ task snp_sites {
         File    msa_fasta
         Boolean allow_wildcard_bases = true
         String  docker = "quay.io/biocontainers/snp-sites:2.5.1--hed695b0_0"
+        Int     disk_size = 375
     }
     String out_basename = basename(msa_fasta, ".fasta")
-    Int disk_size = 375
     command {
         snp-sites -V > VERSION
         snp-sites -v ~{true="" false="-c" allow_wildcard_bases} -o "~{out_basename}.vcf" "~{msa_fasta}"
@@ -1219,8 +1217,8 @@ task augur_mask_sites {
         File?  mask_bed
 
         String docker = "nextstrain/base:build-20211012T204409Z"
+        Int    disk_size = 375
     }
-    Int disk_size = 375
     parameter_meta {
         sequences: {
           description: "Set of alignments (fasta format) or variants (vcf format) to mask.",
@@ -1277,8 +1275,8 @@ task draft_augur_tree {
 
         Int?    cpus
         String  docker = "nextstrain/base:build-20211012T204409Z"
+        Int     disk_size = 750
     }
-    Int disk_size = 750
     parameter_meta {
         msa_or_vcf: {
           description: "Set of alignments (fasta format) or variants (vcf format) to construct a tree from using augur tree (iqTree).",
@@ -1346,8 +1344,8 @@ task refine_augur_tree {
         File?    vcf_reference
 
         String   docker = "nextstrain/base:build-20211012T204409Z"
+        Int      disk_size = 375
     }
-    Int disk_size = 375
     parameter_meta {
         msa_or_vcf: {
           description: "Set of alignments (fasta format) or variants (vcf format) to use to guide Treetime.",
@@ -1419,9 +1417,9 @@ task ancestral_traits {
 
         Int?          machine_mem_gb
         String        docker = "nextstrain/base:build-20211012T204409Z"
+        Int           disk_size = 375
     }
     String out_basename = basename(tree, '.nwk')
-    Int disk_size = 375
     command <<<
         set -e
         augur version > VERSION
@@ -1472,8 +1470,8 @@ task ancestral_tree {
         File?    output_vcf
 
         String   docker = "nextstrain/base:build-20211012T204409Z"
+        Int      disk_size = 150
     }
-    Int disk_size = 150
     parameter_meta {
         msa_or_vcf: {
           description: "Set of alignments (fasta format) or variants (vcf format) to use to guide Treetime.",
@@ -1533,9 +1531,9 @@ task translate_augur_tree {
         File?  vcf_reference
 
         String docker = "nextstrain/base:build-20211012T204409Z"
+        Int    disk_size = 150
     }
     String out_basename = basename(tree, '.nwk')
-    Int disk_size = 150
     command <<<
         set -e
         augur version > VERSION
@@ -1591,8 +1589,8 @@ task tip_frequencies {
         Int?     machine_mem_gb
         String   docker = "nextstrain/base:build-20211012T204409Z"
         String   out_basename = basename(tree, '.nwk')
+        Int      disk_size = 100
     }
-    Int disk_size = 100
     command <<<
         set -e
         augur version > VERSION
@@ -1650,9 +1648,9 @@ task assign_clades_to_nodes {
         File clades_tsv
 
         String docker = "nextstrain/base:build-20211012T204409Z"
+        Int    disk_size = 150
     }
     String out_basename = basename(basename(tree_nwk, ".nwk"), "_timetree")
-    Int disk_size = 150
     command <<<
         set -e
         augur version > VERSION
@@ -1695,9 +1693,9 @@ task augur_import_beast {
 
         Int?    machine_mem_gb
         String  docker = "nextstrain/base:build-20211012T204409Z"
+        Int     disk_size = 150
     }
     String tree_basename = basename(beast_mcc_tree, ".tree")
-    Int disk_size = 150
     command <<<
         set -e
         augur version > VERSION
@@ -1756,9 +1754,8 @@ task export_auspice_json {
 
         Int?   machine_mem_gb
         String docker = "nextstrain/base:build-20211012T204409Z"
+        Int    disk_size = 150
     }
-
-    Int disk_size = 150
     
     command <<<
         set -e -o pipefail
