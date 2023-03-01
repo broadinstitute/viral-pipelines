@@ -1037,7 +1037,7 @@ task mafft_one_chr_chunked {
 
         String   docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
         Int      mem_size = 32
-        Int      cpus = 96
+        Int      cpus = 64
         Int      disk_size = 750
     }
     command <<<
