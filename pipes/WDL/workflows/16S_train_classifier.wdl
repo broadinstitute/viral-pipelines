@@ -11,7 +11,7 @@ workflow train_classifier_16S {
     }
     input {
        File     otu_ref
-       File     tax_ref
+       File     taxonomy_ref
        String   forward_adapter
        String   reverse_adapter   
     }
@@ -19,7 +19,7 @@ workflow train_classifier_16S {
     call qiime.train_classifier { 
         input: 
             otu_ref = otu_ref,
-            tax_ref = taxonomy_ref,
+            taxonomy_ref = taxonomy_ref,
             forward_adapter = forward_adapter,
             reverse_adapter = reverse_adapter
     }
