@@ -10,17 +10,17 @@ workflow train_classifier {
         allowNestedInputs: true 
     }
     input {
-       File     otu_ref
-       File     taxonomy_ref
-       String   forward_adapter
-       String   reverse_adapter   
+       File     otu_ref_db
+       File     tax_ref_seqs
+       String   f_adapter
+       String   r_adapter   
     }
 
     call qiime.train_classifier { 
         input: 
-            otu_ref = otu_ref,
-            taxonomy_ref = taxonomy_ref,
-            forward_adapter = forward_adapter,
-            reverse_adapter = reverse_adapter
+            otu_ref_db = otu_ref,
+            tax_ref_seqs = taxonomy_ref,
+            f_adapter = forward_adapter,
+            r_adapter = reverse_adapter
 }
 } 
