@@ -1,8 +1,8 @@
 version 1.0
 
-import "../tasks/tasks_16S_amplicon.wdl" as qiime_import 
+import "../tasks/tasks_16S_amplicon.wdl" as qiime
 
-workflow train_classifier {
+workflow train_classifier_16S {
     meta {
         description: "User imports OTU database that will be trained on your primer sequences."
         author: "Broad Viral Genomics"
@@ -10,17 +10,17 @@ workflow train_classifier {
         allowNestedInputs: true 
     }
     input {
-       File     otu_ref_db
-       File     tax_ref_seqs
-       String   f_adapter
-       String   r_adapter   
+       File     otu_ref
+       File     tax_ref
+       String   forward_adapter
+       String   reverse_adapter   
     }
 
-    call qiime_import.train_classifier { 
+    call qiime.train_classifier { 
         input: 
-            otu_ref_db = otu_ref,
-            tax_ref_seqs = taxonomy_ref,
-            f_adapter = forward_adapter,
-            r_adapter = reverse_adapter
-}
+            otu_ref = otu_ref,
+            tax_ref = taxonomy_ref,
+            forward_adapter = forward_adapter,
+            reverse_adapter = reverse_adapter
+    }
 } 
