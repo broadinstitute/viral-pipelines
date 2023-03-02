@@ -1,6 +1,6 @@
 version 1.0
 
-import "../tasks/tasks_16S_amplicon.wdl" as qiime 
+import "../tasks/tasks_16S_amplicon.wdl" as qiime_import 
 
 workflow train_classifier {
     meta {
@@ -16,7 +16,7 @@ workflow train_classifier {
        String   r_adapter   
     }
 
-    call qiime.train_classifier { 
+    call qiime_import.train_classifier { 
         input: 
             otu_ref_db = otu_ref,
             tax_ref_seqs = taxonomy_ref,
