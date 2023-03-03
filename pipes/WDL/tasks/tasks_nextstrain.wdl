@@ -1345,6 +1345,7 @@ task refine_augur_tree {
 
         String   docker = "nextstrain/base:build-20211012T204409Z"
         Int      disk_size = 375
+        Int      machine_mem_gb = 75
     }
     parameter_meta {
         msa_or_vcf: {
@@ -1384,7 +1385,7 @@ task refine_augur_tree {
     >>>
     runtime {
         docker: docker
-        memory: "50 GB"
+        memory: machine_mem_gb + " GB"
         cpu :   2
         disks:  "local-disk " + disk_size + " HDD"
         disk: disk_size + " GB" # TES
