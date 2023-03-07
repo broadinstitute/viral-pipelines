@@ -1588,7 +1588,7 @@ task tip_frequencies {
         Boolean  censored = false
         Boolean  include_internal_nodes = false
 
-        Int      machine_mem_gb = 50
+        Int      machine_mem_gb = 64
         String   docker = "nextstrain/base:build-20211012T204409Z"
         String   out_basename = basename(tree, '.nwk')
         Int      disk_size = 100
