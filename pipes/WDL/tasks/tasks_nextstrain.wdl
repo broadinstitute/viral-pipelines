@@ -1273,7 +1273,8 @@ task draft_augur_tree {
         File?   vcf_reference
         String? tree_builder_args
 
-        Int?    cpus
+        Int     cpus = 64
+        Int     machine_mem_gb = 32
         String  docker = "nextstrain/base:build-20211012T204409Z"
         Int     disk_size = 750
     }
@@ -1301,8 +1302,8 @@ task draft_augur_tree {
     >>>
     runtime {
         docker: docker
-        memory: "32 GB"
-        cpu:    select_first([cpus, 64])
+        memory: machine_mem_gb + " GB"
+        cpu:    cpus
         disks:  "local-disk " + disk_size + " LOCAL"
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x36"
@@ -1416,7 +1417,7 @@ task ancestral_traits {
         File?         weights
         Float?        sampling_bias_correction
 
-        Int?          machine_mem_gb
+        Int           machine_mem_gb = 32
         String        docker = "nextstrain/base:build-20211012T204409Z"
         Int           disk_size = 375
     }
@@ -1438,7 +1439,7 @@ task ancestral_traits {
     >>>
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 32]) + " GB"
+        memory: machine_mem_gb + " GB"
         cpu :   4
         disks:  "local-disk " + disk_size + " HDD"
         disk: disk_size + " GB" # TES
@@ -1587,7 +1588,7 @@ task tip_frequencies {
         Boolean  censored = false
         Boolean  include_internal_nodes = false
 
-        Int?     machine_mem_gb
+        Int      machine_mem_gb = 50
         String   docker = "nextstrain/base:build-20211012T204409Z"
         String   out_basename = basename(tree, '.nwk')
         Int      disk_size = 100
@@ -1620,7 +1621,7 @@ task tip_frequencies {
     >>>
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 30]) + " GB"
+        memory: machine_mem_gb + " GB"
         cpu :   4
         disks:  "local-disk " + disk_size + " HDD"
         disk: disk_size + " GB" # TES
@@ -1692,7 +1693,7 @@ task augur_import_beast {
         String? tip_date_format
         String? tip_date_delimiter
 
-        Int?    machine_mem_gb
+        Int     machine_mem_gb = 3
         String  docker = "nextstrain/base:build-20211012T204409Z"
         Int     disk_size = 150
     }
@@ -1714,7 +1715,7 @@ task augur_import_beast {
     >>>
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 3]) + " GB"
+        memory: machine_mem_gb + " GB"
         cpu :   2
         disks:  "local-disk " + disk_size + " HDD"
         disk: disk_size + " GB" # TES
@@ -1753,7 +1754,7 @@ task export_auspice_json {
 
         String out_basename = basename(basename(tree, ".nwk"), "_timetree")
 
-        Int?   machine_mem_gb
+        Int    machine_mem_gb = 64
         String docker = "nextstrain/base:build-20211012T204409Z"
         Int    disk_size = 150
     }
@@ -1817,7 +1818,7 @@ task export_auspice_json {
     >>>
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 64]) + " GB"
+        memory: machine_mem_gb + " GB"
         cpu :   4
         disks:  "local-disk " + disk_size + " HDD"
         disk: disk_size + " GB" # TES
