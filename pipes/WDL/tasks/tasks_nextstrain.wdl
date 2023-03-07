@@ -1345,7 +1345,7 @@ task refine_augur_tree {
         File?    vcf_reference
 
         String   docker = "nextstrain/base:build-20211012T204409Z"
-        Int      disk_size = 375
+        Int      disk_size = 750
         Int      machine_mem_gb = 75
     }
     parameter_meta {
