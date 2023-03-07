@@ -122,7 +122,6 @@ workflow sarscov2_illumina_full {
                 reads_unmapped_bams = name_reads.right,
                 reference_fasta     = reference_fasta,
                 sample_name         = name_reads.left,
-                aligner             = "minimap2",
                 skip_mark_dupes     = ampseq,
                 trim_coords_bed     = bed_rename.outfile,
                 major_cutoff        = 0.75,
