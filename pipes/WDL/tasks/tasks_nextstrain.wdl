@@ -1533,7 +1533,7 @@ task translate_augur_tree {
         File?  vcf_reference
 
         String docker = "nextstrain/base:build-20211012T204409Z"
-        Int    disk_size = 150
+        Int    disk_size = 300
     }
     String out_basename = basename(tree, '.nwk')
     command <<<
