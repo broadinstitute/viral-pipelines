@@ -1472,7 +1472,7 @@ task ancestral_tree {
         File?    output_vcf
 
         String   docker = "nextstrain/base:build-20211012T204409Z"
-        Int      disk_size = 150
+        Int      disk_size = 300
     }
     parameter_meta {
         msa_or_vcf: {
