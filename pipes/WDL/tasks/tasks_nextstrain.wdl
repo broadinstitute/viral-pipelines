@@ -1276,7 +1276,7 @@ task draft_augur_tree {
         Int     cpus = 64
         Int     machine_mem_gb = 32
         String  docker = "nextstrain/base:build-20211012T204409Z"
-        Int     disk_size = 750
+        Int     disk_size = 1250
     }
     parameter_meta {
         msa_or_vcf: {
