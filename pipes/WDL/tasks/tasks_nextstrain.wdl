@@ -13,8 +13,8 @@ task nextclade_one_sample {
         File? pcr_primers_csv
         File? virus_properties
         String? dataset_name
-        String docker = "nextstrain/nextclade:2.9.1"
         Int    disk_size = 50
+        String docker = "nextstrain/nextclade:2.12.0"
     }
     String basename = basename(genome_fasta, ".fasta")
     command {
@@ -100,8 +100,8 @@ task nextclade_many_samples {
         String?      dataset_name
         String       basename
         File?        genome_ids_setdefault_blank
-        String       docker = "nextstrain/nextclade:2.9.1"
         Int          disk_size = 150
+        String       docker = "nextstrain/nextclade:2.12.0"
     }
     command <<<
         set -e
@@ -391,7 +391,7 @@ task derived_cols {
 task filter_segments {
     input {
         File  all_samples_fasta
-        Int?  segment = 1
+        Int   segment = 1
         File? pre_assembled_samples_fasta
 
         Int   machine_mem_gb = 3
