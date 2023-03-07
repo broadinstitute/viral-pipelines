@@ -1591,7 +1591,7 @@ task tip_frequencies {
         Int      machine_mem_gb = 64
         String   docker = "nextstrain/base:build-20211012T204409Z"
         String   out_basename = basename(tree, '.nwk')
-        Int      disk_size = 100
+        Int      disk_size = 200
     }
     command <<<
         set -e
