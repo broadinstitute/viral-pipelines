@@ -1756,7 +1756,7 @@ task export_auspice_json {
 
         Int    machine_mem_gb = 64
         String docker = "nextstrain/base:build-20211012T204409Z"
-        Int    disk_size = 150
+        Int    disk_size = 300
     }
     
     command <<<
