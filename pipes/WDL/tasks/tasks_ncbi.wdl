@@ -928,9 +928,11 @@ task vadr {
     File   genome_fasta
     String vadr_opts = "--glsearch -s -r --nomisc --mkey sarscov2 --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn"
 
-    String docker = "quay.io/staphb/vadr:1.4.2"
+    String docker = "quay.io/staphb/vadr:1.5.1"
     Int    minlen = 50
     Int    maxlen = 30000
+    Int    mem_size = 4
+    Int    cpus = 2
   }
   String out_base = basename(genome_fasta, '.fasta')
   command <<<
@@ -969,8 +971,8 @@ task vadr {
   }
   runtime {
     docker: docker
-    memory: "2 GB"
-    cpu: 1
+    memory: mem_size + " GB"
+    cpu: cpus
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
