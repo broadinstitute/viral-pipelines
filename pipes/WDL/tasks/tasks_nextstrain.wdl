@@ -1650,7 +1650,7 @@ task assign_clades_to_nodes {
         File clades_tsv
 
         String docker = "nextstrain/base:build-20211012T204409Z"
-        Int    disk_size = 150
+        Int    disk_size = 300
     }
     String out_basename = basename(basename(tree_nwk, ".nwk"), "_timetree")
     command <<<
