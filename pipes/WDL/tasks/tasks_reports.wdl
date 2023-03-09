@@ -67,11 +67,12 @@ task alignment_metrics {
     echo -e "sample_sanitized\tbam\tamplicon_set\tamplicon_idx\tamplicon_left\tamplicon_right\tFREADS\tFDEPTH\tFPCOV\tFAMP" > "~{out_basename}.ampliconstats_parsed.txt"
     if [ -n "~{primers_bed}" ]; then
       # samtools ampliconstats
+      cat "~{primers_bed}" | sort -k 4 -t $'\t' > primers-sorted_for_samtools.bed
       samtools ampliconstats -s -@ $(nproc) \
         ~{'-d ' + min_coverage} \
         ~{'-l ' + max_amp_len} \
         ~{'-a ' + max_amplicons} \
-        -o "~{out_basename}".ampliconstats.txt "~{primers_bed}" "~{aligned_bam}"
+        -o "~{out_basename}".ampliconstats.txt primers-sorted_for_samtools.bed "~{aligned_bam}"
 
       # parse into our own tsv to facilitate tsv joining later
       if [ -n "~{default='' amplicon_set}" ]; then
