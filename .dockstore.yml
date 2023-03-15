@@ -359,3 +359,8 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/qiime_import_bam.wdl
     testParameterFiles:
       - empty.json
+  - name: 16S_train_classifier
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/16S_train_classifier.wdl
+    testParameterFiles:
+      - empty.json
