@@ -48,6 +48,35 @@ workflow assemble_refbased {
         major_cutoff: {
             description: "If the major allele is present at a frequency higher than this cutoff, we will call an unambiguous base at that position.  If it is equal to or below this cutoff, we will call an ambiguous base representing all possible alleles at that position."
         }
+        #New annotations below - Edit
+        align_to_ref: {
+            description: "Reads aligned to a singular FASTQC reference genome."
+            category: "Output"
+        }
+        align_to_ref_fastqc: {
+            description: "Headers (from aligned read BAM files) are mathced to their corresponding trimmed genomic sequences."
+            category: "Output"
+        }
+        align_to_ref_isnvs_vcf: {
+            description: "File contains predicted variants from aligned reads indexed with the sequences in the reference genome."
+            category: "Output"
+        }
+        align_to_ref_merged_aligned_trimmed_only_bam: {
+            description: "Aligning merged, trimmed reads to the reference sequence."
+            category: "Output"
+        }
+        align_to_ref_merged_bases_aligned: {
+            description:"Number of bases aligned; reports only primary alignments, excludes unaligned reads and secondary mappings"
+            category: "Output"
+        }
+        align_to_ref_merged_coverage_plot: {
+            description: "Visual plots generated to demonstrate read depth separatyly segmented by color."
+            category: "Output"
+        }
+        align_to_ref_merged_coverage_tsv: {
+            description: "Paired sequence reads output data for read depth (coverage)."
+        }
+
 
 
         assembly_fasta: { description: "The new assembly / consensus sequence for this sample" }

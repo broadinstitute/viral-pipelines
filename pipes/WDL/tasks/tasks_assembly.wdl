@@ -17,6 +17,19 @@ task assemble {
       Int?     machine_mem_gb
       String   docker = "quay.io/broadinstitute/viral-assemble:2.1.33.0"
     }
+    parameter_meta{
+      reads_unmapped_bam: {
+        description: "Unaligned reads in BAM format."
+        patterns: ["*.bam"]
+        common: "required"
+      }
+      trim_clip_db: {
+        description: ""
+        patterns
+      }
+      
+
+    }
 
     Int disk_size = 375
 
