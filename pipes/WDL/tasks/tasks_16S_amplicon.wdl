@@ -13,18 +13,18 @@ task qiime_import_from_bam {
     }
     parameter_meta {
         reads_bam: {
-            description: "Unaligned reads in BAM format, one sample per BAM file."
-            patterns: ["*.bam"]
+            description: "Unaligned reads in BAM format, one sample per BAM file.",
+            patterns: ["*.bam"],
             category: "required"
         }
         reads_qza: {
-            description: "All unaligned reads in a single QZA (QIIME) file."
-            patterns: ["*.qza"]
+            description: "All unaligned reads in a single QZA (QIIME) file.",
+            patterns: ["*.qza"],
             category: "other"
         }
         samplename_master_sheet: {
-            description: "File contains all samples names."
-            patterns:["*.txt"]
+            description: "File contains all samples names.",
+            patterns:["*.txt"],
             category: "other"
         }
     }
