@@ -6,7 +6,7 @@ workflow train_classifier_16S {
     meta {
         description: "User imports OTU database that will be trained on your primer sequences."
         author: "Broad Viral Genomics"
-        email: "viral_ngs@broadinstitue.org"
+        email: "viral-ngs@broadinstitue.org"
         allowNestedInputs: true 
     }
     input {
