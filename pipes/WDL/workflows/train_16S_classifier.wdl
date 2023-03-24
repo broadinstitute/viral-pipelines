@@ -4,7 +4,7 @@ import "../tasks/tasks_16S_amplicon.wdl" as qiime
 
 workflow train_classifier_16S {
     meta {
-        description: "User imports OTU database that will be trained on your primer sequences."
+        description: "User imports OTU database that will be trained on your primer sequences. All outputs can be visualized using https://view.qiime2.org/"
         author: "Broad Viral Genomics"
         email: "viral-ngs@broadinstitue.org"
         allowNestedInputs: true 
