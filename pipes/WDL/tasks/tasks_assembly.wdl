@@ -19,16 +19,43 @@ task assemble {
     }
     parameter_meta{
       reads_unmapped_bam: {
-        description: "Unaligned reads in BAM format."
-        patterns: ["*.bam"]
-        common: "required"
+        description: "Unaligned reads in BAM format.",
+        patterns: ["*.bam"],
+        category: "required"
       }
       trim_clip_db: {
-        description: ""
-        patterns
+        description: "Trimmomatic clip db.",
+        category: "required"
       }
-      
-
+      spades_n_reads: {
+        description: "Subsample reads threshold prior to assembly. Default set to 10000000",
+        category: "required"
+      }
+      spades_min_contig_len: {
+        description: "Minimum length of output contig.",
+        category: "other"
+      }
+      spades_options: {
+        description: "Display additional options to pass the SPAdes assembler.",
+        category: "other"
+      }
+      always_succeed: {
+        description: "In the event that assembly fails for any reason, output an empty contigs file instead of an error code.",
+        cateogory: "other"
+      }
+      contigs_fasta: {
+        description:"De novo RNA-seq assembly of contigs with the SPAdes assembler in FASTA format.",
+        patterns: ["*.fasta"],
+        category: "other"
+      }
+      subsampBam:{
+        description: "Subsample your reads to speed up the process of the run.",
+        category: "other"
+      }
+      subsample_read_count:{
+        description: "Number of reads that your subsample contains.",
+        category: "other"
+      }
     }
 
     Int disk_size = 375
@@ -99,6 +126,67 @@ task scaffold {
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
     }
+    parameter_meta {
+      reads_unmapped_bam: {
+        description: "Unaligned reads in BAM format.",
+        patterns: ["*.bam"],
+        category: "required"
+      }
+
+      contigs_fasta: {
+        description: "De novo assembled fasta file",
+        patterns: ["*.fasta"],
+        category: "required"
+      }
+
+      reference_genome_fasta: {
+        description: "Reference genome to impute with.",
+        patterns: ["*.fasta"],
+        category: "required"
+      }
+      aligner: {
+        description: "Alignment tools used to align the reference sequence to aligned contigs. Possible options: muscle, mafft, mummer (= nucmer), set to muscle for default.",
+        cateogory: "advanced"
+      }
+      min_length_fraction: {
+        description: "The minimal length for contig, as a reference fraction.",
+        category: "advanced"
+      }
+      min_unambig: {
+        description: "Minimum percentage of unambiguous bases for contig.",
+        category: "advanced"
+      }
+      replace_length: {
+        description: "Length of N bases replaced with reference (Default = 55  bp).",
+        category: "other"
+      }
+      nucmer_max_gap: {
+        description: "Maximum distance between adjacent matches inside a cluster. Our nucmer default 90, promer default 30. Manual suggests going to 1000.",
+        category: "advanced"
+      }
+      nucmer_min_match: {
+        description: "Minimum length of an maximal exact match.",
+        category: "advanced"
+      }
+        nucmer_min_cluster:{
+        description: "Minimum cluster length (Default = 65 (nucmer), Default = 20 (promer)",
+        category: "advanced"
+      }
+      scaffold_min_contig_len: {
+        description: "Minimum length of contigs.",
+        category: "advanced"
+      }
+      scaffold_min_pct_contig_aligned: {
+        description: "Minimum percent of contig length in alignment (0.0 - 1.0)",
+        category: "advanced"
+      }
+      scaffold_fasta: {
+        description: "FASTA with best computed scaffolds from assembled read.",
+        patterns: ["*.fasta"]
+        category: "other"
+      }
+  #didnt include other outputs, not sure if i should
+    }
 
     Int disk_size = 375
 
@@ -137,6 +225,7 @@ task scaffold {
         grep -v '^>' ~{sample_name}.intermediate_gapfill.fasta | tr -d '\n' | wc -c | tee assembly_preimpute_length
         grep -v '^>' ~{sample_name}.intermediate_gapfill.fasta | tr -d '\nNn' | wc -c | tee assembly_preimpute_length_unambiguous
 
+        #Input assembly/contigs, FASTA, already ordered oriented and merged with the reference gneome (FASTA)
         assembly.py impute_from_reference \
           ~{sample_name}.intermediate_gapfill.fasta \
           ~{sample_name}.scaffolding_chosen_ref.fasta \
@@ -188,17 +277,33 @@ task ivar_trim {
       
       Int?   machine_mem_gb
       String docker = "andersenlabapps/ivar:1.3.1"
+
+      String  bam_basename=basename(aligned_bam, ".bam")
+      Int disk_size = 375
     }
-
-    String  bam_basename=basename(aligned_bam, ".bam")
-    Int disk_size = 375
-
     parameter_meta {
-      aligned_bam:     { description: "aligned reads in BAM format", patterns: ["*.bam"] }
-      trim_coords_bed: { description: "optional primers to trim in reference coordinate space (0-based BED format)", patterns: ["*.bed"] }
-      min_keep_length: { description: "Minimum length of read to retain after trimming (Default: 30)" }
-      sliding_window:  { description: "Width of sliding window for quality trimming (Default: 4)" }
-      min_quality:     { description: "Minimum quality threshold for sliding window to pass (Default: 20)" }
+      aligned_bam:{
+        description: "aligned reads in BAM format",
+        patterns: ["*.bam"],
+        category: "required"
+      }
+      trim_coords_bed:{
+        description: "optional primers to trim in reference coordinate space (0-based BED format)",
+        patterns: ["*.bed"],
+        category: "advanced"
+      }
+      min_keep_length:{
+        description: "Minimum length of read to retain after trimming (Default: 30)",
+        category: "advanced"
+      }
+      sliding_window:  {
+        description: "Width of sliding window for quality trimming (Default: 4)",
+        category: "advanced"
+      }
+      min_quality: {
+        description: "Minimum quality threshold for sliding window to pass (Default: 20)",
+        category: "advanced"
+      }
     }
 
     command {
@@ -249,7 +354,12 @@ task ivar_trim_stats {
 
       String docker = "quay.io/broadinstitute/py3-bio:0.1.2"
     }
-
+    parameter_meta {
+      ivar_trim_stats_tsv: {
+        description: "Number of trimmed sequences based on a quality threshold set above.",
+        category: "required"
+      }
+    }
     Int disk_size = 50
 
     command <<<
@@ -325,7 +435,22 @@ task align_reads {
   Int disk_size = 375
 
   parameter_meta {
-    aligner: { description: "Short read aligner to use: novoalign, minimap2, or bwa. (Default: novoalign)" }
+    reference_fasta: {
+      description: "Reference genome, in FASTA format, pre-indexed by Novoindex",
+      category: "required"
+    }
+    reads_unmapped_bam: {
+      description: "Unaligned reads in BAM format.",
+      category: "required"
+    }
+    aligner: { 
+      description: "Short read aligner to use novoalign, minimap2, or bwa. (Default novoalign)",
+      category: "advanced"
+      }
+    skip_mark_dupes: {
+      description: 'If specific, duplicate reads will not be marked in the resulting output file.',
+      category: "advanced"
+    }
   }
   
   command <<<
@@ -443,11 +568,26 @@ task refine_assembly_with_aligned_reads {
     Int disk_size = 375
 
     parameter_meta {
+      reference_fasta:{
+        description: "Reference genome, in FASTA format, pre-indexed by Novoindex",
+        category: "required"
+      }
+      reads_aligned_bam: {
+        description: "Aligned reads in BAM format.",
+        patterns: ["*.bam"]
+      category: "required"
+      }  
+      mark_duplicates:{
+        description: "Instead of removing duplicates, simply marks them.",
+        category: "advanced"
+      }
       major_cutoff: {
-        description: "If the major allele is present at a frequency higher than this cutoff, we will call an unambiguous base at that position.  If it is equal to or below this cutoff, we will call an ambiguous base representing all possible alleles at that position."
+        description: "If the major allele is present at a frequency higher than this cutoff, we will call an unambiguous base at that position.  If it is equal to or below this cutoff, we will call an ambiguous base representing all possible alleles at that position.",
+        category: "advanced"
       }
       min_coverage: {
-        description: "Minimum read coverage required to call a position unambiguous."
+        description: "Minimum read coverage required to call a position unambiguous.",
+        category: "advanaced"
       }
     }
 
@@ -551,6 +691,48 @@ task refine_2x_and_plot {
 
       # do this in two steps in case the input doesn't actually have "cleaned" in the name
       String  sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
+    }
+    parameter_meta {
+      assembly_fasta :{
+        description: "Reference assembled genome in FASTA format ",
+        category: "required"
+      }
+      reads_unmapped_bam: {
+        description: "Unaligned reads in BAM Format",
+        category: "required"
+      }
+      refine1_novoalign_options: {
+        description: "Alignment parameters for Novoalign: -l | sets the minimum number of good quality bases for a read; -g | Sets the gap opening penalty. Default 40; -x | Sets the gap extend penalty. Default 6; -t Sets the maximum alignment score acceptable for the best alignment. Default at 502.",
+        category: "advanced"
+      }
+      refine1_major_cutoff: {
+        description: "If the major allele is present at a frequency higher than this cutoff, we will call an unambiguous base at that position.  If it is equal to or below this cutoff, we will call an ambiguous base representing all possible alleles at that position.",
+        category: "advanced"
+      }
+      refine1_min_coverage: {
+        description: "Minimum read coverage required to call a position unambiguous, set to 2.",
+        category: "advanced"
+      }
+      refine2_novoalign_options:{ 
+        description: "Alignment parameters for Novoalign: -l | sets the minimum number of good quality bases for a read (default =40); -g | Sets the gap opening penalty. Default 40; -x | Sets the gap extend penalty. Default 6; -t Sets the maximum alignment score acceptable for the best alignment. Default at 100.",
+        category: "advanced"
+      }
+      refine1_min_coverage: {
+        description: "Minimum read coverage required to call a position unambiguous, set to 3.",
+        category: "advanced"
+      }
+      refine1_assembly_fasta: {
+        description: "Assembled fasta genome from novalign run with the refine1 parameters.",
+        category: "advanced"
+      }
+      aligned_bam: {
+        description: "Aligned reads in BAM format.",
+        category: "other"
+      }
+      coverage_plot: {
+        description: "Visualize coverage plot for reads.",
+        category: "advanced"
+      }
     }
 
     Int disk_size = 375
@@ -685,6 +867,21 @@ task run_discordance {
 
       String docker = "quay.io/broadinstitute/viral-core:2.1.33"
     }
+    parameter_meta {
+      reads_aligned_bam: {
+        description: "Unaligned reads in BAM Format",
+        category: "required"
+      }
+      reference_fasta: {
+        description: "Reference assembled genome in FASTA format ",
+        category: "required"
+      }
+      discordant_sites_vcf:{
+        description:"The SNPs between runs of the same sample. ",
+        category: "other"
+      }
+    }
+  
 
     Int disk_size = 100
 
@@ -763,6 +960,20 @@ task filter_bad_ntc_batches {
         Int         ntc_min_unambig
         File?       genome_status_json
     }
+    parameter_meta {
+      seqid_list:{
+        description: "List of sequence ID tags for orginal samples.",
+        category: "required"
+      }
+      demux_meta_by_sample_json: {
+        description: "JSON file that specifies demux meta",
+        cateogry: "required"      
+      }
+      assembly_meta_tsv: {
+        description: "File containing list of assembled reads in table format",
+        category: "required"
+      }
+    }
     Int disk_size = 50
     command <<<
         set -e
@@ -788,7 +999,7 @@ task filter_bad_ntc_batches {
 
         # re-index demux_meta lookup table by sample_original instead of sample_sanitized
         demux_meta = dict((v['sample_original'],v) for k,v in demux_meta_orig.items())
-
+    
         # identify bad NTCs
         reject_lanes = set()
         reject_batches = set()
