@@ -67,7 +67,7 @@ workflow classify_single {
           category: "other"
         }
         raw_fastqc:{
-          description: "Merged raw fastqc reads."
+          description: "Merged raw fastqc reads.",
           category: "other"
         }
 
