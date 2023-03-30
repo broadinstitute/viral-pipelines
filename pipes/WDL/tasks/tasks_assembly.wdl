@@ -182,7 +182,7 @@ task scaffold {
       }
       scaffold_fasta: {
         description: "FASTA with best computed scaffolds from assembled read.",
-        patterns: ["*.fasta"]
+        patterns: ["*.fasta"],
         category: "other"
       }
   #didnt include other outputs, not sure if i should
