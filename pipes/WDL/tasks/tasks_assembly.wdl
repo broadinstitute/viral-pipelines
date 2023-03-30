@@ -448,7 +448,7 @@ task align_reads {
       category: "advanced"
       }
     skip_mark_dupes: {
-      description: 'If specific, duplicate reads will not be marked in the resulting output file.',
+      description: "If specific, duplicate reads will not be marked in the resulting output file.",
       category: "advanced"
     }
   }
@@ -692,49 +692,7 @@ task refine_2x_and_plot {
       # do this in two steps in case the input doesn't actually have "cleaned" in the name
       String  sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
     }
-    parameter_meta {
-      assembly_fasta :{
-        description: "Reference assembled genome in FASTA format ",
-        category: "required"
-      }
-      reads_unmapped_bam: {
-        description: "Unaligned reads in BAM Format",
-        category: "required"
-      }
-      refine1_novoalign_options: {
-        description: "Alignment parameters for Novoalign: -l | sets the minimum number of good quality bases for a read; -g | Sets the gap opening penalty. Default 40; -x | Sets the gap extend penalty. Default 6; -t Sets the maximum alignment score acceptable for the best alignment. Default at 502.",
-        category: "advanced"
-      }
-      refine1_major_cutoff: {
-        description: "If the major allele is present at a frequency higher than this cutoff, we will call an unambiguous base at that position.  If it is equal to or below this cutoff, we will call an ambiguous base representing all possible alleles at that position.",
-        category: "advanced"
-      }
-      refine1_min_coverage: {
-        description: "Minimum read coverage required to call a position unambiguous, set to 2.",
-        category: "advanced"
-      }
-      refine2_novoalign_options:{ 
-        description: "Alignment parameters for Novoalign: -l | sets the minimum number of good quality bases for a read (default =40); -g | Sets the gap opening penalty. Default 40; -x | Sets the gap extend penalty. Default 6; -t Sets the maximum alignment score acceptable for the best alignment. Default at 100.",
-        category: "advanced"
-      }
-      refine1_min_coverage: {
-        description: "Minimum read coverage required to call a position unambiguous, set to 3.",
-        category: "advanced"
-      }
-      refine1_assembly_fasta: {
-        description: "Assembled fasta genome from novalign run with the refine1 parameters.",
-        category: "advanced"
-      }
-      aligned_bam: {
-        description: "Aligned reads in BAM format.",
-        category: "other"
-      }
-      coverage_plot: {
-        description: "Visualize coverage plot for reads.",
-        category: "advanced"
-      }
-    }
-
+  
     Int disk_size = 375
 
     command {
