@@ -24,7 +24,7 @@ task assemble {
         category: "required"
       }
       trim_clip_db: {
-        description: "Trimmomatic clip db.",
+        description: "Trimmomatic clip database.",
         category: "required"
       }
       spades_n_reads: {
@@ -574,8 +574,8 @@ task refine_assembly_with_aligned_reads {
       }
       reads_aligned_bam: {
         description: "Aligned reads in BAM format.",
-        patterns: ["*.bam"]
-      category: "required"
+        patterns: ["*.bam"],
+        category: "required"
       }  
       mark_duplicates:{
         description: "Instead of removing duplicates, simply marks them.",

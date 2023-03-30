@@ -19,14 +19,17 @@ task krakenuniq {
   parameter_meta {
     reads_unmapped_bam: {
       description: "Reads to classify. May be unmapped or mapped or both, paired-end or single-end.",
-      patterns: ["*.bam"] }
+      patterns: ["*.bam"],
+      category: "required" }
     krakenuniq_db_tar_lz4: {
       description: "Pre-built Kraken database tarball.",
-      patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+      patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"],
+      category:"required"
     }
     krona_taxonomy_db_tgz: {
       description: "Krona taxonomy database containing a single file: taxonomy.tab, or possibly just a compressed taxonomy.tab",
-      patterns: ["*.tab.zst", "*.tab.gz", "*.tab", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+      patterns: ["*.tab.zst", "*.tab.gz", "*.tab", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"],
+      category: "required"
     }
   }
 

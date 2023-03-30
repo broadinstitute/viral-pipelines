@@ -285,6 +285,13 @@ task fastqc {
 
     String docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
+  parameter_meta {
+    reads_bam:{ 
+    description: "Reads in BAM format.",
+    category: "required"
+    }
+
+  }
 
   String   reads_basename=basename(reads_bam, ".bam")
   Int disk_size = 375
