@@ -13,15 +13,15 @@ task qiime_import_from_bam {
     }
     parameter_meta {
         reads_bam: {
-            description: "Unaligned reads in BAM format, one sample per BAM file."
+            description: "Unaligned reads in BAM format, one sample per BAM file.",
             category: "required"
         }
         reads_qza: {
-            description: "All unaligned reads in a single QZA (QIIME) file."
+            description: "All unaligned reads in a single QZA (QIIME) file.",
             category: "other"
         }
         samplename_master_sheet: {
-            description: "File contains all samples names."
+            description: "File contains all samples names.",
             category: "other"
         }
     }
@@ -90,28 +90,32 @@ task trim_reads {
     }
     parameter_meta {
         reads_qza: {
-            description: "All unaligned reads in a single QZA (QIIME) file."
+            description: "All unaligned reads in a single QZA (QIIME) file.",
             cateogry: "required"
         }
         forward_adapter: {
-            description: "Forward amplicon primer sequence."
+            description: "Forward amplicon primer sequence.",
             category: "advanced"
         }
         reverse_adapter: {
-            description: "Reverse amplicon primer sequence."
+            description: "Reverse amplicon primer sequence.",
             cateogry: "advanced"
         }
         min_length: {
-            description: "Minimum length of the read, cutadapt will discard anything that is shorter than n bp AFTER trimming.Set to default "
+            description: "Minimum length of the read, cutadapt will discard anything that is shorter than n bp AFTER trimming.Set to default.",
+            category: "other"
         }
         keep_untrimmed_reads: {
-            description: "Allows you to choose whether or not to discard untrimmed reads."
+            description: "Allows you to choose whether or not to discard untrimmed reads.",
+            category: "advanced"
         }
         trimmed_reads_qza: {
-            description: "Trimmed reads data file."
+            description: "Trimmed reads data file.",
+            category: "advanced"
         }
         trimmed_visualization: {
-            description: "A diagram that compares your demuxed reads before and after cutting (i.e. length of reads, how many reads were retained)."
+            description: "A diagram that compares your demuxed reads before and after cutting (i.e. length of reads, how many reads were retained).",
+            category: "advanced"
         }
     }
     command <<<
@@ -160,13 +164,16 @@ task join_paired_ends {
     }
     parameter_meta{
         trimmed_reads_qza: {
-            description:"Trimmed reads data file."
+            description:"Trimmed reads data file.",
+            category: "required"
         }
         joined_end_reads_qza:{
-            description: "Merge paired read file."
+            description: "Merge paired read file.",
+            category: "other"
         }
         joined_end_visualization: {
-            description: "This summary is especially useful for assessing the length of linked reads and the quality scores at each sequence base position. "
+            description: "This summary is especially useful for assessing the length of linked reads and the quality scores at each sequence base position. ",
+            category: "other"
         }
     }
     command <<< 
@@ -206,12 +213,30 @@ task deblur {
         String  docker = "quay.io/broadinstitute/qiime2"
     }
     parameter_meta {
-        joined_end_reads_qza: {description: "Merge paired read file."}
-        trim_length_var: {description: "Length that all seqeuences will be trimmed, and discard any sequences that are not at least this long."}
-        representative_seqs_qza: {description: "Generate a list of the representative sequences. May be useful to the user if they want to blast these sequences or check for correct trimming."}
-        representative_table_qza: {description: "Generate a table of the representaitve sequences."}
-        feature_table: {description: "A table that represent the number of of features per sample, the number of samples a given feature is found in."}
-        visualize_stats:{ description: "Generate visualization of deblur stats."}
+        joined_end_reads_qza: {
+            description: "Merge paired read file.",
+            category: "required"
+        }
+        trim_length_var: {
+            description: "Length that all seqeuences will be trimmed, and discard any sequences that are not at least this long.",
+            category: "advanced"
+        }
+        representative_seqs_qza: {
+            description: "Generate a list of the representative sequences. May be useful to the user if they want to blast these sequences or check for correct trimming.",
+            category: "other"
+        }
+        representative_table_qza: {
+            description: "Generate a table of the representaitve sequences.",
+            category: "other"
+        }
+        feature_table: {
+            description: "A table that represent the number of of features per sample, the number of samples a given feature is found in.",
+            category: "other"
+        }
+        visualize_stats:{
+            description: "Generate visualization of deblur stats.",
+            category: "other"
+        }
     }
         command <<< 
         set -ex -o pipefail
@@ -267,25 +292,32 @@ task train_classifier {
     }
     parameter_meta{
         otu_ref: {
-            description: "Operational taxonomic units (OTUs) sequences imported as FASTA file."
+            description: "Operational taxonomic units (OTUs) sequences imported as FASTA file.",
+            category:"required"
         }
         taxanomy_ref: {
-            description: "Reference taxonomy file."
+            description: "Reference taxonomy file.",
+            category: "required"
         }
         forward_adapter: {
-            description: "The forward primer sequence for the amplicon target."
+            description: "The forward primer sequence for the amplicon target.",
+            category: "advanced"
         }
         reverse_adapter: {
-            description: "The reverse primer sequence for the amplicon target."
+            description: "The reverse primer sequence for the amplicon target.",
+            category:"advanced"
         }
         min_length: {
-            description: "Minimum length of amplicon sequences."
+            description: "Minimum length of amplicon sequences.",
+            category: "advanced"
         }
         max_length: {
-            description: "Maximum length of amplicon sequences."
+            description: "Maximum length of amplicon sequences.",
+            category:"advanced"
         }
         trained_classifier: {
-            description: "Trained taxonomic classifier on target amplicon sequences."
+            description: "Trained taxonomic classifier on target amplicon sequences.",
+            category: "other"
         }
     }
 
@@ -344,19 +376,24 @@ task tax_analysis {
     }
     parameter_meta{ 
         trained_classifier: {
-            description: "Trained taxonomic classifier on target amplicon sequences."
+            description: "Trained taxonomic classifier on target amplicon sequences.",
+            category: "required"
             }
         representative_seqs_qza: {
-            description: "List of representative sequences."
+            description: "List of representative sequences.",
+            category:"required"
             }
         representative_table_qza: {
-            description: "Table of representative sequences."
+            description: "Table of representative sequences.",
+            category:"other"
             }
         rep_seq_list: {
-            description: "Generate list of representative sequences."
+            description: "Generate list of representative sequences.",
+            category:"other"
             }
         tax_classification_graph: {
-            description: "Create a bar graph of your taxonomic classification."
+            description: "Create a bar graph of your taxonomic classification.",
+            category:"other"
             }
     }
     command <<<
