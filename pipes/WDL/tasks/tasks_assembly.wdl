@@ -127,8 +127,8 @@ task scaffold {
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
     }
     parameter_meta {
-      reads_unmapped_bam: {
-        description: "Unaligned reads in BAM format.",
+      reads_bam: {
+        description: "Reads in BAM format.",
         patterns: ["*.bam"],
         category: "required"
       }
