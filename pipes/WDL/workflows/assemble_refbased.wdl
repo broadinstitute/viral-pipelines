@@ -67,18 +67,18 @@ workflow assemble_refbased {
         Float        major_cutoff=0.75
         Boolean      skip_mark_dupes=false
         File?        trim_coords_bed
-    }
 
-    Map[String,String] align_to_ref_options = {
+        Map[String,String] align_to_ref_options = {
                             "novoalign": "-r Random -l 40 -g 40 -x 20 -t 501 -k",
                             "bwa": "-k 12 -B 1",
                             "minimap2": ""
                             }
-    Map[String,String] align_to_self_options = {
+        Map[String,String] align_to_self_options = {
                             "novoalign": "-r Random -l 40 -g 40 -x 20 -t 100",
                             "bwa": "",
                             "minimap2": ""
                             }
+    }
 
     scatter(reads_unmapped_bam in reads_unmapped_bams) {
         call assembly.align_reads as align_to_ref {

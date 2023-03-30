@@ -721,8 +721,8 @@ task filter_sequences_by_length {
         Int    min_non_N = 1
 
         String docker = "quay.io/broadinstitute/viral-core:2.1.33"
+        Int    disk_size = 750
     }
-    Int disk_size = 300
     parameter_meta {
         sequences_fasta: {
           description: "Set of sequences in fasta format",

@@ -51,6 +51,7 @@ workflow sarscov2_illumina_full {
         Int           min_genome_bases = 24000
         Int           max_vadr_alerts = 0
         Int           ntc_max_unambig = 3000
+        Int?          min_genome_coverage
 
         File?         sample_rename_map
 
@@ -121,11 +122,10 @@ workflow sarscov2_illumina_full {
                 reads_unmapped_bams = name_reads.right,
                 reference_fasta     = reference_fasta,
                 sample_name         = name_reads.left,
-                aligner             = "minimap2",
                 skip_mark_dupes     = ampseq,
                 trim_coords_bed     = bed_rename.outfile,
                 major_cutoff        = 0.75,
-                min_coverage        = if ampseq then 50 else 3
+                min_coverage        = if defined(min_genome_coverage) then min_genome_coverage else (if ampseq then 50 else 3)
         }
 
         # log controls
