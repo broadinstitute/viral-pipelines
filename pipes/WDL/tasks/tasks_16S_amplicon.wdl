@@ -14,20 +14,18 @@ task qiime_import_from_bam {
     parameter_meta {
         reads_bam: {
             description: "Unaligned reads in BAM format, one sample per BAM file.",
-            patterns: ["*.bam"],
             category: "required"
         }
         reads_qza: {
             description: "All unaligned reads in a single QZA (QIIME) file.",
-            patterns: ["*.qza"],
             category: "other"
         }
         samplename_master_sheet: {
             description: "File contains all samples names.",
-            patterns:["*.txt"],
             category: "other"
         }
     }
+
     command <<<
         set -ex -o pipefail
 
@@ -93,8 +91,7 @@ task trim_reads {
     parameter_meta {
         reads_qza: {
             description: "All unaligned reads in a single QZA (QIIME) file.",
-            patterns: ["*.qza"],
-            category: "required"
+            cateogry: "required"
         }
         forward_adapter: {
             description: "Forward amplicon primer sequence.",
@@ -102,10 +99,10 @@ task trim_reads {
         }
         reverse_adapter: {
             description: "Reverse amplicon primer sequence.",
-            category: "advanced"
+            cateogry: "advanced"
         }
         min_length: {
-            description: "Minimum length of the read, cutadapt will discard anything that is shorter than n bp AFTER trimming.",
+            description: "Minimum length of the read, cutadapt will discard anything that is shorter than n bp AFTER trimming.Set to default.",
             category: "other"
         }
         keep_untrimmed_reads: {
@@ -114,13 +111,11 @@ task trim_reads {
         }
         trimmed_reads_qza: {
             description: "Trimmed reads data file.",
-            patterns: ["*.qza"],
-            category: "other"
+            category: "advanced"
         }
         trimmed_visualization: {
             description: "A diagram that compares your demuxed reads before and after cutting (i.e. length of reads, how many reads were retained).",
-            patterns: ["*.qzv"],
-            category: "other"
+            category: "advanced"
         }
     }
     command <<<
@@ -170,18 +165,15 @@ task join_paired_ends {
     parameter_meta{
         trimmed_reads_qza: {
             description:"Trimmed reads data file.",
-            patternss:[ '*.qza'],
             category: "required"
         }
         joined_end_reads_qza:{
             description: "Merge paired read file.",
-            patternss:[ '*.qza'],
-            category: "required"
+            category: "other"
         }
         joined_end_visualization: {
-            description: "This summary is especially useful for assessing the length of linked reads and the quality scores at each sequence base position.",
-            patternss:[ '*.qzv'],
-            catgeory: "other"
+            description: "This summary is especially useful for assessing the length of linked reads and the quality scores at each sequence base position. ",
+            category: "other"
         }
     }
     command <<< 
@@ -223,32 +215,26 @@ task deblur {
     parameter_meta {
         joined_end_reads_qza: {
             description: "Merge paired read file.",
-            patternss:[ '*.qza'],
             category: "required"
-            
         }
         trim_length_var: {
-            description: "Length that all seqeuences will be trimmed, and discard any sequences that are not at least this long. Default = 300 bp",
+            description: "Length that all seqeuences will be trimmed, and discard any sequences that are not at least this long.",
             category: "advanced"
         }
         representative_seqs_qza: {
             description: "Generate a list of the representative sequences. May be useful to the user if they want to blast these sequences or check for correct trimming.",
-            patternss:[ '*.qza'],
             category: "other"
         }
         representative_table_qza: {
             description: "Generate a table of the representaitve sequences.",
-            patternss:[ '*.qza'],
             category: "other"
         }
         feature_table: {
             description: "A table that represent the number of of features per sample, the number of samples a given feature is found in.",
-            patternss:[ '*.qzv'],
             category: "other"
         }
         visualize_stats:{
             description: "Generate visualization of deblur stats.",
-            patternss:[ '*.qzv'],
             category: "other"
         }
     }
@@ -307,32 +293,30 @@ task train_classifier {
     parameter_meta{
         otu_ref: {
             description: "Operational taxonomic units (OTUs) sequences imported as FASTA file.",
-            patterns: ["*.fasta"],
-            category: "required"
+            category:"required"
         }
         taxanomy_ref: {
-            description: "Reference taxonomy file that list the sequence ID's of the OTUs in the reference file.",
+            description: "Reference taxonomy file.",
             category: "required"
         }
         forward_adapter: {
             description: "The forward primer sequence for the amplicon target.",
-            category: "other"
+            category: "advanced"
         }
         reverse_adapter: {
             description: "The reverse primer sequence for the amplicon target.",
-            category: "other"
+            category:"advanced"
         }
         min_length: {
             description: "Minimum length of amplicon sequences.",
-            category: "other"
+            category: "advanced"
         }
         max_length: {
             description: "Maximum length of amplicon sequences.",
-            category: "other"
+            category:"advanced"
         }
         trained_classifier: {
             description: "Trained taxonomic classifier on target amplicon sequences.",
-            patterns: ["*.qza"]
             category: "other"
         }
     }
@@ -393,28 +377,23 @@ task tax_analysis {
     parameter_meta{ 
         trained_classifier: {
             description: "Trained taxonomic classifier on target amplicon sequences.",
-            patterns: ["*.qza"],
             category: "required"
             }
         representative_seqs_qza: {
             description: "List of representative sequences.",
-            patterns: ["*.qza"],
-            category: "required"
+            category:"required"
             }
         representative_table_qza: {
             description: "Table of representative sequences.",
-            patterns: ["*.qza"],
-            category: "required"
+            category:"other"
             }
         rep_seq_list: {
             description: "Generate list of representative sequences.",
-            patterns: ["*.qzv"],
-            category: "other"
+            category:"other"
             }
         tax_classification_graph: {
             description: "Create a bar graph of your taxonomic classification.",
-            patterns: ["*.qzv"],
-            category: "other"
+            category:"other"
             }
     }
     command <<<
