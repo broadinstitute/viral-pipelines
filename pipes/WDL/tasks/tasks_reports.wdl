@@ -287,7 +287,7 @@ task fastqc {
   }
   parameter_meta {
     reads_bam:{ 
-    description: "Reads in BAM format.",
+    description: "Input reads in BAM format.",
     category: "required"
     }
 
@@ -332,7 +332,19 @@ task align_and_count {
   String  reads_basename=basename(reads_bam, ".bam")
   String  ref_basename=basename(ref_db, ".fasta")
   Int disk_size = 375
-
+  
+  parameter_meta {
+    reads_bam: {
+      description: "Unaligned reads in BAM format"
+      pattern: ["*.bam"]
+      category: "required"
+    }
+    ref_db: {
+      description: "Reference genome in FASTA format"
+      pattern: ["*.FASTA"]
+      category: "required"
+    }
+  }
   command {
     set -ex -o pipefail
 
