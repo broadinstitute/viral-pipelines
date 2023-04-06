@@ -170,11 +170,11 @@ task illumina_demux {
           patterns: ["*.tar.gz", ".tar.zst", ".tar.bz2", ".tar.lz4", ".tgz"]
       }
       samplesheet: {
-        description: "CSV file with the library chemistry, sample names and the index tag used for each sample, in addition to some other metrics describing the run."
+        description: "CSV file with the library chemistry, sample names and the index tag used for each sample, in addition to some other metrics describing the run.",
         category: "required"
       }
       runinfo: { 
-        description: "if we are overriding the RunInfo file, use the path of the file provided. Otherwise the default will be RunInfo.xml. "
+        description: "if we are overriding the RunInfo file, use the path of the file provided. Otherwise the default will be RunInfo.xml. ",
         category: "advanced"
       }
   }
