@@ -39,75 +39,75 @@ workflow demux_deplete {
     parameter_meta {
         flowcell_tgz: {
             description: "Illumina BCL directory compressed as tarball. Must contain RunInfo.xml, SampleSheet.csv, RTAComplete.txt, and Data/Intensities/BaseCalls/*",
-            patterns: ["*.tar.gz", ".tar.zst", ".tar.bz2", ".tar.lz4", ".tgz"]
+            patterns: ["*.tar.gz", ".tar.zst", ".tar.bz2", ".tar.lz4", ".tgz"],
             category: "required"
             
         }
         samplesheets: {
             description: "Custom formatted 'extended' format tsv samplesheets that will override any SampleSheet.csv in the illumina BCL directory. Must supply one file per lane of the flowcell, and must provide them in lane order. Required tsv column headings are: sample, library_id_per_sample, barcode_1, barcode_2 (if paired reads, omit if single-end), library_strategy, library_source, library_selection, design_description. 'sample' must correspond to a biological sample. 'sample' x 'library_id_per_sample' must be unique within a samplesheet and correspond to independent libraries from the same original sample. barcode_1 and barcode_2 must correspond to the actual index sequence. Remaining columns must follow strict ontology: see 3rd tab of https://www.ncbi.nlm.nih.gov/core/assets/sra/files/SRA_metadata_acc_example.xlsx for controlled vocabulary and term definitions.",
-            patterns: ["*.txt", "*.tsv"]
+            patterns: ["*.txt", "*.tsv"],
             category: "required"
         }
         sample_rename_map: {
             description: "If 'samples' need to be renamed, provide a two-column tsv that contains at least the following columns: internal_id, external_id. All samples will be renamed prior to analysis. Any samples described in the samplesheets that are not present in sample_rename_map will be unaltered. If this is omitted, no samples will be renamed.",
-            patterns: ["*.txt", "*.tsv"]
+            patterns: ["*.txt", "*.tsv"],
             category: "advanced"
         }
         biosample_map: {
             description: "A two-column tsv that contains at least the following columns: sample_name, accession. sample_name refers to the external sample id, accession is the NCBI BioSample accession number (SAMNxxx). If this file is omitted, SRA submission prep will be skipped.",
-            patterns: ["*.txt", "*.tsv"]
+            patterns: ["*.txt", "*.tsv"],
             category: "advanced"
         }
         spikein_db: {
-            description: "Archeal DNA that is used to track potential contamination within sequencing plate processing."
+            description: "Archeal DNA that is used to track potential contamination within sequencing plate processing.",
             category: "advanced"
         }
         read_structure: { 
-            description: "File that details how the bases should be organized into logical reads."
+            description: "File that details how the bases should be organized into logical reads.",
             category: "advanced"
         }
         sort_reads: {
-            description: "Barcode/index information organized into barcode files to sort data to separate files for each sample."
+            description: "Barcode/index information organized into barcode files to sort data to separate files for each sample.",
             category: "advanced"
         }
         bmtaggerDbs: {
-            description: "Tool that can discriminate between human and bacterial reads and other reads by using short fragments. Databases must be provided to onset depletion.Sequences in fasta format will be indexed on the fly, pre-bmtagger-indexed databases may be provided as tarballs."
+            description: "Tool that can discriminate between human and bacterial reads and other reads by using short fragments. Databases must be provided to onset depletion.Sequences in fasta format will be indexed on the fly, pre-bmtagger-indexed databases may be provided as tarballs.",
             category: "advanced"
         }
         cleaned_bams_tiny: {
-            description: "BAM files that did not meet the sufficient amount of minimum reads mapped."
+            description: "BAM files that did not meet the sufficient amount of minimum reads mapped.",
             category: "other"
         }
         cleaned_bam_uris: {
-            description: "BAM files' URIs tags to clearly define which assembly has been used "
+            description: "BAM files' URIs tags to clearly define which assembly has been used ",
             category: "other"
         }
         cleaned_reads_unaligned_bams: {
-            description: "Unaligned reads without PCR duplicates in BAM format."
+            description: "Unaligned reads without PCR duplicates in BAM format.",
             category: "other"
         }
         demux_commonBarcodes: {
-            description: "a TSV report of all barcode counts, in descending order."
+            description: "a TSV report of all barcode counts, in descending order.",
             category: "other"
         }
         demux_metrics: { 
-            description: "Output ExtractIlluminaBarcodes metrics file. Default is to dump to a temp file."
+            description: "Output ExtractIlluminaBarcodes metrics file. Default is to dump to a temp file.",
             category: "other"
         }
         multiqc_report_cleaned: {
-            description: "Aggregate results from QC analyses across many samples into a single report."
+            description: "Aggregate results from QC analyses across many samples into a single report.",
             category: "other"
         }
         multiqc_report: {
-            description: "Aggregation of QC metrics for all indexed samples."
+            description: "Aggregation of QC metrics for all indexed samples.",
             category: "other"
         }
         raw_reads_unaligned_bams : { 
-            description: "Unaligned reads in BAM format."
+            description: "Unaligned reads in BAM format.",
             category: "other"
         }
         read_counts_raw: {
-            description: "The number of reads that aligned to gene."
+            description: "The number of reads that aligned to gene.",
             category: "other"
         }
     }
