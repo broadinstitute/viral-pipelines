@@ -63,7 +63,7 @@ workflow demux_deplete {
             category: "advanced"
         }
         read_structure: { 
-            description: "File that details how the bases should be organized into logical reads.",
+            description: "Details how the bases should be organized into logical reads.",
             category: "advanced"
         }
         sort_reads: {
