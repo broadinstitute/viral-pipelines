@@ -111,13 +111,13 @@ task revcomp_i5 {
     revcomp = ~{true="True" false="False" revcomp}
 
     with open(old_sheet, "rt") as inf:
-      with open(new_base+'.tsv', 'wt') as outf:
+      with open('~{new_base}'+'.revcompi5.tsv', 'wt') as outf:
         if revcomp:
           sheet = csv.DictReader(inf, delimiter='\t')
           writer = csv.DictWriter(outf, sheet.fieldnames, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
           writer.writeheader()
           for row in sheet:
-            if row.get('barcode_2')
+            if row.get('barcode_2') \
               and all(s in 'ATGC' for s in row['barcode_2']):
               row['barcode_2'] = str(Bio.Seq.Seq(row['barcode_2']).reverse_complement())
             writer.writerow(row)
