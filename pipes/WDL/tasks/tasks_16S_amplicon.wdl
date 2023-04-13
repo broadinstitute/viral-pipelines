@@ -374,7 +374,7 @@ task tax_analysis {
         Int     disk_size_gb = 375
         String  docker = "quay.io/broadinstitute/qiime2"
     }
-    parameter_meta{ 
+    parameter_meta { 
         trained_classifier: {
             description: "Trained taxonomic classifier on target amplicon sequences.",
             category: "required"
