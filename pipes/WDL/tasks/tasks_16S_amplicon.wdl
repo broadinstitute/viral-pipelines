@@ -290,7 +290,7 @@ task train_classifier {
         Int     disk_size_gb = ceil(2*size(otu_ref, "GiB")) + 5
         String  docker = "quay.io/broadinstitute/qiime2"
     }
-    parameter_meta{
+    parameter_meta {
         otu_ref: {
             description: "Operational taxonomic units (OTUs) sequences imported as FASTA file.",
             category:"required"
