@@ -53,7 +53,7 @@ task assemble {
 
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 15]) + " GB"
+        memory: select_first([machine_mem_gb, 63]) + " GB"
         cpu: 4
         disks:  "local-disk " + disk_size + " LOCAL"
         disk: disk_size + " GB" # TES
@@ -151,7 +151,7 @@ task scaffold {
 
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 31]) + " GB"
+        memory: select_first([machine_mem_gb, 63]) + " GB"
         cpu: 4
         disks:  "local-disk " + disk_size + " LOCAL"
         disk: disk_size + " GB" # TES
