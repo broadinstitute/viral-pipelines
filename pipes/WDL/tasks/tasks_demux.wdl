@@ -152,9 +152,10 @@ task illumina_demux {
     Int?    maxRecordsInRam
 
     Int?    machine_mem_gb
+    Int?     disk_size = 2625
     String  docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
-  Int disk_size = 2625
+
   parameter_meta {
       flowcell_tgz: {
           description: "Illumina BCL directory compressed as tarball. Must contain RunInfo.xml (unless overridden by runinfo), SampleSheet.csv (unless overridden by samplesheet), RTAComplete.txt, and Data/Intensities/BaseCalls/*",
