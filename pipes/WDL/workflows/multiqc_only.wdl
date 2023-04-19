@@ -8,7 +8,17 @@ workflow multiqc_only {
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
     }
-    call reports.MultiQC
+    input {
+        Array[File] input_files
+        String      file_name = "multiqc-raw.html"
+        Boolean     show_sample_names_with_paths = false
+    }
+    call reports.MultiQC {
+        input:
+            input_files = input_files,
+            file_name = file_name,
+            show_sample_names_with_paths = show_sample_names_with_paths
+    }
     output {
         File multiqc = MultiQC.multiqc_report
     }

@@ -447,7 +447,7 @@ task aggregate_metagenomics_reports {
 
 task MultiQC {
   input {
-    Array[File]    input_files = []
+    Array[File]    input_files
 
     Boolean        force = false
     Boolean        full_names = false
@@ -464,6 +464,7 @@ task MultiQC {
     Array[String]? module_to_use
     Boolean        data_dir = false
     Boolean        no_data_dir = false
+    Boolean        show_sample_names_with_paths = false
     String?        output_data_format
     Boolean        zip_data_dir = false
     Boolean        export = false
@@ -494,7 +495,6 @@ task MultiQC {
 
       multiqc \
       --file-list input-filenames.txt \
-      --dirs \
       --outdir "${out_dir}" \
       ${true="--force" false="" force} \
       ${true="--fullnames" false="" full_names} \
@@ -509,6 +509,7 @@ task MultiQC {
       ${true="--exclude " false="" defined(exclude_modules)}${sep=' --exclude ' select_first([exclude_modules,[]])} \
       ${true="--module " false="" defined(module_to_use)}${sep=' --module ' select_first([module_to_use,[]])} \
       ${true="--data-dir" false="" data_dir} \
+      ${true="--dirs" false="" show_sample_names_with_paths} \
       ${true="--no-data-dir" false="" no_data_dir} \
       ${"--data-format " + output_data_format} \
       ${true="--zip-data-dir" false="" zip_data_dir} \

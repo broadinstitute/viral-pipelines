@@ -11,6 +11,7 @@ workflow bams_multiqc {
 
     input {
         Array[File]+ read_bams
+        Boolean      show_sample_names_with_paths = false
     }
 
     scatter(reads_bam in read_bams) {
@@ -22,7 +23,8 @@ workflow bams_multiqc {
 
     call reports.MultiQC {
         input:
-            input_files = fastqc.fastqc_zip
+            input_files = fastqc.fastqc_zip,
+            show_sample_names_with_paths = show_sample_names_with_paths
     }
 
     output {
