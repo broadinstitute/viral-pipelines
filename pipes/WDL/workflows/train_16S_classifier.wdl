@@ -9,18 +9,5 @@ workflow train_16S_classifier {
         email: "viral-ngs@broadinstitue.org"
         allowNestedInputs: true 
     }
-    input {
-       File     otu_ref
-       File     taxanomy_ref
-       String   forward_adapter
-       String   reverse_adapter   
-    }
-
-    call qiime.train_classifier { 
-        input: 
-            otu_ref = otu_ref,
-            taxanomy_ref = taxanomy_ref,
-            forward_adapter = forward_adapter,
-            reverse_adapter = reverse_adapter
-    }
+    call qiime.train_classifier
 } 
