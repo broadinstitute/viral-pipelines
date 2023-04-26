@@ -91,7 +91,7 @@ workflow demux_deplete {
             category: "other"
         }
         demux_metrics: { 
-            description: "Output ExtractIlluminaBarcodes metrics file. Default is to dump to a temp file.",
+            description: "Output ExtractIlluminaBarcodes metrics file.",
             category: "other"
         }
         multiqc_report_cleaned: {
