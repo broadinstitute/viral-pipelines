@@ -75,7 +75,7 @@ workflow demux_deplete {
             category: "advanced"
         }
         cleaned_bams_tiny: {
-            description: "BAM files that did not meet the sufficient amount of minimum reads mapped.",
+            description: "cleaned BAM files that contain less than min_reads_per_bam will be included here and omitted from cleaned_reads_unaligned_bams and cleaned_bam_uris",
             category: "other"
         }
         cleaned_bam_uris: {
