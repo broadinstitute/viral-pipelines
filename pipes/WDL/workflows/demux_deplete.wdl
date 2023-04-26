@@ -79,7 +79,7 @@ workflow demux_deplete {
             category: "other"
         }
         cleaned_bam_uris: {
-            description: "BAM files' URIs tags to clearly define which assembly has been used ",
+            description: "A text file containing a string-serialized version of each File in cleaned_reads_unaligned_bams on a separate line.",
             category: "other"
         }
         cleaned_reads_unaligned_bams: {
