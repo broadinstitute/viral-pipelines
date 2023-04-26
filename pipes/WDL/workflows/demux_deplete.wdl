@@ -107,7 +107,7 @@ workflow demux_deplete {
             category: "other"
         }
         read_counts_raw: {
-            description: "The number of reads that aligned to gene.",
+            description: "A list of the read counts of each file in raw_reads_unaligned_bams",
             category: "other"
         }
     }
