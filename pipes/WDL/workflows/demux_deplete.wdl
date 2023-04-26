@@ -83,7 +83,7 @@ workflow demux_deplete {
             category: "other"
         }
         cleaned_reads_unaligned_bams: {
-            description: "Unaligned reads without PCR duplicates in BAM format.",
+            description: "Unaligned reads without human reads or PCR duplicates in BAM format. This will not include any bams that contain less than min_reads_per_bam reads.",
             category: "other"
         }
         demux_commonBarcodes: {
