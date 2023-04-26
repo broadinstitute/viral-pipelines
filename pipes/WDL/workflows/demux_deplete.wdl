@@ -59,7 +59,7 @@ workflow demux_deplete {
             category: "advanced"
         }
         spikein_db: {
-            description: "Archeal DNA that is used to track potential contamination within sequencing plate processing.",
+            description: "Synthetic sequences (e.g. ERCC, SDSI) that are used to track potential contamination within sequencing plate processing.",
             category: "advanced"
         }
         read_structure: { 
