@@ -39,7 +39,7 @@ workflow demux_deplete {
     parameter_meta {
         flowcell_tgz: {
             description: "Illumina BCL directory compressed as tarball. Must contain RunInfo.xml, SampleSheet.csv, RTAComplete.txt, and Data/Intensities/BaseCalls/*",
-            patterns: ["*.tar.gz", ".tar.zst", ".tar.bz2", ".tar.lz4", ".tgz"],
+            patterns: ["*.tar.gz", ".tar.zst", ".tar.bz2", ".tar.lz4", ".tgz", ".tar"],
             category: "required"
             
         }
