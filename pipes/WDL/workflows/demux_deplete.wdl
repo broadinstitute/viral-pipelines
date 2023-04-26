@@ -67,7 +67,7 @@ workflow demux_deplete {
             category: "advanced"
         }
         sort_reads: {
-            description: "Barcode/index information organized into barcode files to sort data to separate files for each sample.",
+            description: "Output bam files will be sorted by read name.",
             category: "advanced"
         }
         bmtaggerDbs: {
