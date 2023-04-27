@@ -185,7 +185,6 @@ task scaffold {
         patterns: ["*.fasta"],
         category: "other"
       }
-  #didnt include other outputs, not sure if i should
     }
 
     Int disk_size = 375

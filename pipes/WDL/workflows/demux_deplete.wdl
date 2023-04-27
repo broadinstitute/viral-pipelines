@@ -39,7 +39,7 @@ workflow demux_deplete {
     parameter_meta {
         flowcell_tgz: {
             description: "Illumina BCL directory compressed as tarball. Must contain RunInfo.xml, SampleSheet.csv, RTAComplete.txt, and Data/Intensities/BaseCalls/*",
-            patterns: ["*.tar.gz", ".tar.zst", ".tar.bz2", ".tar.lz4", ".tgz"],
+            patterns: ["*.tar.gz", ".tar.zst", ".tar.bz2", ".tar.lz4", ".tgz", ".tar"],
             category: "required"
             
         }
@@ -59,7 +59,7 @@ workflow demux_deplete {
             category: "advanced"
         }
         spikein_db: {
-            description: "Archeal DNA that is used to track potential contamination within sequencing plate processing.",
+            description: "Synthetic sequences (e.g. ERCC, SDSI) that are used to track potential contamination within sequencing plate processing.",
             category: "advanced"
         }
         read_structure: { 
@@ -67,7 +67,7 @@ workflow demux_deplete {
             category: "advanced"
         }
         sort_reads: {
-            description: "Barcode/index information organized into barcode files to sort data to separate files for each sample.",
+            description: "Output bam files will be sorted by read name.",
             category: "advanced"
         }
         bmtaggerDbs: {
@@ -75,15 +75,15 @@ workflow demux_deplete {
             category: "advanced"
         }
         cleaned_bams_tiny: {
-            description: "BAM files that did not meet the sufficient amount of minimum reads mapped.",
+            description: "cleaned BAM files that contain less than min_reads_per_bam will be included here and omitted from cleaned_reads_unaligned_bams and cleaned_bam_uris",
             category: "other"
         }
         cleaned_bam_uris: {
-            description: "BAM files' URIs tags to clearly define which assembly has been used ",
+            description: "A text file containing a string-serialized version of each File in cleaned_reads_unaligned_bams on a separate line.",
             category: "other"
         }
         cleaned_reads_unaligned_bams: {
-            description: "Unaligned reads without PCR duplicates in BAM format.",
+            description: "Unaligned reads without human reads or PCR duplicates in BAM format. This will not include any bams that contain less than min_reads_per_bam reads.",
             category: "other"
         }
         demux_commonBarcodes: {
@@ -91,7 +91,7 @@ workflow demux_deplete {
             category: "other"
         }
         demux_metrics: { 
-            description: "Output ExtractIlluminaBarcodes metrics file. Default is to dump to a temp file.",
+            description: "Output ExtractIlluminaBarcodes metrics file.",
             category: "other"
         }
         multiqc_report_cleaned: {
@@ -107,7 +107,7 @@ workflow demux_deplete {
             category: "other"
         }
         read_counts_raw: {
-            description: "The number of reads that aligned to gene.",
+            description: "A list of the read counts of each file in raw_reads_unaligned_bams",
             category: "other"
         }
     }
