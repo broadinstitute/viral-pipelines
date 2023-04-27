@@ -61,7 +61,7 @@ task qiime_import_from_bam {
     }
     runtime {
         docker: docker
-        memory: "~{memory_mb} MiB"
+        memory: "~{memory_mb} GB"
         cpu: cpu
         disk: disk_size_gb + " GB"
         disks: "local-disk " + disk_size_gb + " HDD"
@@ -142,7 +142,7 @@ task trim_reads {
 
     runtime {
         docker: docker
-        memory: "${memory_mb} MiB"
+        memory: "${memory_mb} GB"
         cpu: cpu
         disk: disk_size_gb + " GB"
         disks: "local-disk " + disk_size_gb + " HDD"
@@ -192,7 +192,7 @@ task join_paired_ends {
     }
     runtime {
         docker: docker
-        memory: "${memory_mb} MiB"
+        memory: "${memory_mb} GB"
         cpu: cpu
         disk: disk_size_gb + " GB"
         disks: "local-disk " + disk_size_gb + " HDD"
@@ -267,7 +267,7 @@ task deblur {
     }
     runtime {
         docker: docker
-        memory: "${memory_mb} MiB"
+        memory: "${memory_mb} GB"
         cpu: cpu
         disk: disk_size_gb + " GB"
         disks: "local-disk " + disk_size_gb + " HDD"
@@ -355,7 +355,7 @@ task train_classifier {
     }
     runtime {
         docker: docker
-        memory: "${memory_mb} MiB"
+        memory: "${memory_mb} GB"
         cpu: cpu
         disk: disk_size_gb + " GB"
         disks: "local-disk " + disk_size_gb + " HDD"
