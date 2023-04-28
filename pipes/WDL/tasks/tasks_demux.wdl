@@ -102,13 +102,13 @@ task revcomp_i5 {
     revcomp = ~{true="True" false="False" revcomp}
 
     with open(old_sheet, "rt") as inf:
-      with open(new_base+'.tsv', 'wt') as outf:
+      with open('~{new_base}'+'.revcompi5.tsv', 'wt') as outf:
         if revcomp:
           sheet = csv.DictReader(inf, delimiter='\t')
           writer = csv.DictWriter(outf, sheet.fieldnames, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
           writer.writeheader()
           for row in sheet:
-            if row.get('barcode_2')
+            if row.get('barcode_2') \
               and all(s in 'ATGC' for s in row['barcode_2']):
               row['barcode_2'] = str(Bio.Seq.Seq(row['barcode_2']).reverse_complement())
             writer.writerow(row)
@@ -152,9 +152,10 @@ task illumina_demux {
     Int?    maxRecordsInRam
 
     Int?    machine_mem_gb
+    Int     disk_size = 2625
     String  docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
-  Int disk_size = 2625
+
   parameter_meta {
       flowcell_tgz: {
           description: "Illumina BCL directory compressed as tarball. Must contain RunInfo.xml (unless overridden by runinfo), SampleSheet.csv (unless overridden by samplesheet), RTAComplete.txt, and Data/Intensities/BaseCalls/*",
@@ -259,8 +260,8 @@ task illumina_demux {
         demux_threads=32 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
         mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 80)
         # max_reads_in_ram_per_tile=600000 # deprecared in newer versions of picard, to be removed
-        max_records_in_ram=2000000
-        echo "Detected $total_tile_count tiles, interpreting as NovaSeq run."
+        max_records_in_ram=10000000
+        echo "Detected $total_tile_count tiles, interpreting as NovaSeq S2 run."
         echo "  **Note: Q20 threshold used since NovaSeq with RTA3 writes only four Q-score values: 2, 12, 23, and 37.**"
         echo "    See: https://www.illumina.com/content/dam/illumina-marketing/documents/products/appnotes/novaseq-hiseq-q30-app-note-770-2017-010.pdf"
     elif [ "$total_tile_count" -le 3744 ]; then
