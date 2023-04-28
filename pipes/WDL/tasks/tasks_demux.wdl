@@ -152,7 +152,7 @@ task illumina_demux {
     Int?    maxRecordsInRam
 
     Int?    machine_mem_gb
-    Int?     disk_size = 2625
+    Int     disk_size = 2625
     String  docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
 
