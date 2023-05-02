@@ -161,15 +161,15 @@ task scaffold {
         category: "other"
       }
       nucmer_max_gap: {
-        description: "Maximum distance between adjacent matches inside a cluster. Our nucmer default 90, promer default 30. Manual suggests going to 1000.",
+        description: "When scaffolding contigs to the reference via nucmer, this specifies the -g parameter to nucmer (the maximum allowed gap between adjacent matches in a cluster). Our default is 200 (up from nucmer default of 90), mummer documentation suggests it is valid to increase up to 1000 to allow for more diversity.",
         category: "advanced"
       }
       nucmer_min_match: {
-        description: "Minimum length of an maximal exact match.",
+        description: "When scaffolding contigs to the reference via nucmer, this specifies the -l parameter to nucmer (the minimal size of a maximal exact match). Our default is 10 (down from nucmer default of 20) to allow for more divergence.",
         category: "advanced"
       }
         nucmer_min_cluster:{
-        description: "Minimum cluster length (Default = 65 (nucmer), Default = 20 (promer)",
+        description: "When scaffolding contigs to the reference via nucmer, this specifies the -c parameter to nucmer (minimum cluster length). Our default is the nucmer default of 65 bp.",
         category: "advanced"
       }
       scaffold_min_contig_len: {
