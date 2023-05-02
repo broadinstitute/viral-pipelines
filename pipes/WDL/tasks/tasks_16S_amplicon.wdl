@@ -61,7 +61,7 @@ task qiime_import_from_bam {
     }
     runtime {
         docker: docker
-        memory: "~{memory_mb} GB"
+        memory: "~{memory_mb} MiB"
         cpu: cpu
         disk: disk_size_gb + " GB"
         disks: "local-disk " + disk_size_gb + " HDD"
