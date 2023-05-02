@@ -173,11 +173,11 @@ task scaffold {
         category: "advanced"
       }
       scaffold_min_contig_len: {
-        description: "Minimum length of contigs.",
+        description: "Any sequences in contigs_fasta that are shorter than this length will be ignored for scaffolding.",
         category: "advanced"
       }
       scaffold_min_pct_contig_aligned: {
-        description: "Minimum percent of contig length in alignment (0.0 - 1.0)",
+        description: "Any contig alignments to the reference scaffold that account for less than this fraction of the contig's length will be rejected for scaffolding. Valid values are fractions from 0 to 1; the default value is 0.3.",
         category: "advanced"
       }
       scaffold_fasta: {
