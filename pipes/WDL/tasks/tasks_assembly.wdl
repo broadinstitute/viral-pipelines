@@ -134,7 +134,7 @@ task scaffold {
       }
 
       contigs_fasta: {
-        description: "De novo assembled fasta file",
+        description: "De novo contigs in fasta format",
         patterns: ["*.fasta"],
         category: "required"
       }
