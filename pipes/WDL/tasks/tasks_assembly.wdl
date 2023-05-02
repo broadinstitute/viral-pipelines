@@ -140,7 +140,7 @@ task scaffold {
       }
 
       reference_genome_fasta: {
-        description: "Reference genome to impute with.",
+        description: "Reference genomes to scaffold against. Multiple reference genomes may be provided, one per fasta file, and this task will attempt each of them and select the reference that produces the most complete output. Each reference genome should be in a single fasta file with all segments/chromosomes contained in the file as separate sequences in the correct order. Output genomes from this task will contain the same number of sequences as the selected input reference genome, and will be emitted in the same order.",
         patterns: ["*.fasta"],
         category: "required"
       }
