@@ -181,7 +181,12 @@ task scaffold {
         category: "advanced"
       }
       scaffold_fasta: {
-        description: "FASTA with best computed scaffolds from assembled read.",
+        description: "This is the output draft genome after scaffolding contigs to references and imputing missing sequence from those references. This resulting genome is a hybrid of sequences from the de novo assembly and imputed reference sequence, and *requires* polishing with reads to be considered a valid consensus sequence. This is the final output of this task that should be used for polishing.",
+        patterns: ["*.fasta"],
+        category: "other"
+      }
+      intermediate_scaffold_fasta: {
+        description: "This is the output draft genome after scaffolding contigs to reference genomes but prior to imputation with reference sequence or gapfilling with reads. The only unambiguous bases are from the contigs_fasta file.",
         patterns: ["*.fasta"],
         category: "other"
       }
