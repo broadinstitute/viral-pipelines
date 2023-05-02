@@ -149,16 +149,16 @@ task scaffold {
         cateogory: "advanced"
       }
       min_length_fraction: {
-        description: "The minimal length for contig, as a reference fraction.",
-        category: "advanced"
+        description: "This step will fail with a PoorAssemblyError if the total end-to-end genome length in the output genome (inclusive of interior Ns) is less than this fraction of the length of the reference genome selected. Valid values are fractions from 0 to 1, default value is 0.5.",
+        category: "common"
       }
       min_unambig: {
-        description: "Minimum percentage of unambiguous bases for contig.",
-        category: "advanced"
+        description: "This step will fail with a PoorAssemblyError if the total number of unambiguous bases in the output genome (exclusive of interior Ns) is less than this fraction of its end-to-end length (inclusive of interior Ns). Valid values are fractions from 0 to 1, default value is 0.5.",
+        category: "common"
       }
       replace_length: {
-        description: "Length of N bases replaced with reference (Default = 55  bp).",
-        category: "other"
+        description: "The first and last replace_length base pairs of each segment in the output genome will be replaced with the equivalent sequences in the reference genome as a mechanism to handle common assembly errors in repetitive or inverted regions that are common to chromosome/segment ends. Valid values are any non-negative integer. Default is 55 bp.",
+        category: "advanced"
       }
       nucmer_max_gap: {
         description: "When scaffolding contigs to the reference via nucmer, this specifies the -g parameter to nucmer (the maximum allowed gap between adjacent matches in a cluster). Our default is 200 (up from nucmer default of 90), mummer documentation suggests it is valid to increase up to 1000 to allow for more diversity.",
