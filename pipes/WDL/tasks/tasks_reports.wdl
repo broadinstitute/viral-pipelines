@@ -466,7 +466,7 @@ task aggregate_metagenomics_reports {
 
 task MultiQC {
   input {
-    Array[File]    input_files = []
+    Array[File]    input_files
 
     Boolean        force = false
     Boolean        full_names = false
@@ -513,7 +513,6 @@ task MultiQC {
 
       multiqc \
       --file-list input-filenames.txt \
-      --dirs \
       --outdir "${out_dir}" \
       ${true="--force" false="" force} \
       ${true="--fullnames" false="" full_names} \

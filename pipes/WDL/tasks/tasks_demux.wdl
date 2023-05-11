@@ -161,7 +161,7 @@ task illumina_demux {
     Int?    maxRecordsInRam
 
     Int?    machine_mem_gb
-    Int?     disk_size = 2625
+    Int     disk_size = 2625
     String  docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
 
@@ -277,8 +277,8 @@ task illumina_demux {
         demux_threads=32 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
         mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 80)
         # max_reads_in_ram_per_tile=600000 # deprecared in newer versions of picard, to be removed
-        max_records_in_ram=2000000
-        echo "Detected $total_tile_count tiles, interpreting as NovaSeq run."
+        max_records_in_ram=10000000
+        echo "Detected $total_tile_count tiles, interpreting as NovaSeq S2 run."
         echo "  **Note: Q20 threshold used since NovaSeq with RTA3 writes only four Q-score values: 2, 12, 23, and 37.**"
         echo "    See: https://www.illumina.com/content/dam/illumina-marketing/documents/products/appnotes/novaseq-hiseq-q30-app-note-770-2017-010.pdf"
     elif [ "$total_tile_count" -le 3744 ]; then
