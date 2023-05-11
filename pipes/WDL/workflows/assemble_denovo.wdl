@@ -140,22 +140,29 @@ workflow assemble_denovo {
           sample_name         = out_basename
   }
 
+  call assemble_refbased.assemble_refbased as refine2 {
+      input:
+          reads_unmapped_bams = reads_depleted_bams, # assemble_refbased will scatter on individual bams
+          reference_fasta     = refine.assembly_fasta,
+          sample_name         = out_basename
+  }
+
   if (defined(sample_original_name)) {
     call ncbi.rename_fasta_header {
       input:
-        genome_fasta = refine.assembly_fasta,
+        genome_fasta = refine2.assembly_fasta,
         new_name     = select_first([sample_original_name])
     }
   }
 
   output {
-    File    final_assembly_fasta                  = select_first([rename_fasta_header.renamed_fasta, refine.assembly_fasta])
-    File    aligned_only_reads_bam                = refine.align_to_self_merged_aligned_only_bam
-    File    coverage_plot                         = refine.align_to_self_merged_coverage_plot
-    Int     assembly_length                       = refine.assembly_length
-    Int     assembly_length_unambiguous           = refine.assembly_length_unambiguous
-    Int     reads_aligned                         = refine.align_to_self_merged_reads_aligned
-    Float   mean_coverage                         = refine.align_to_self_merged_mean_coverage
+    File    final_assembly_fasta                  = select_first([rename_fasta_header.renamed_fasta, refine2.assembly_fasta])
+    File    aligned_only_reads_bam                = refine2.align_to_self_merged_aligned_only_bam
+    File    coverage_plot                         = refine2.align_to_self_merged_coverage_plot
+    Int     assembly_length                       = refine2.assembly_length
+    Int     assembly_length_unambiguous           = refine2.assembly_length_unambiguous
+    Int     reads_aligned                         = refine2.align_to_self_merged_reads_aligned
+    Float   mean_coverage                         = refine2.align_to_self_merged_mean_coverage
     
     File    cleaned_bam                           = merge_cleaned_reads.out_bam
     File    cleaned_fastqc                        = merge_cleaned_reads.fastqc
@@ -182,20 +189,20 @@ workflow assemble_denovo {
     File    scaffolding_stats                     = scaffold.scaffolding_stats
     File    scaffolding_alt_contigs               = scaffold.scaffolding_alt_contigs
 
-    Int     replicate_concordant_sites            = refine.replicate_concordant_sites
-    Int     replicate_discordant_snps             = refine.replicate_discordant_snps
-    Int     replicate_discordant_indels           = refine.replicate_discordant_indels
-    Int     num_read_groups                       = refine.num_read_groups
-    Int     num_libraries                         = refine.num_libraries
-    File    replicate_discordant_vcf              = refine.replicate_discordant_vcf
+    Int     replicate_concordant_sites            = refine2.replicate_concordant_sites
+    Int     replicate_discordant_snps             = refine2.replicate_discordant_snps
+    Int     replicate_discordant_indels           = refine2.replicate_discordant_indels
+    Int     num_read_groups                       = refine2.num_read_groups
+    Int     num_libraries                         = refine2.num_libraries
+    File    replicate_discordant_vcf              = refine2.replicate_discordant_vcf
 
-    File    isnvs_vcf                             = refine.align_to_self_isnvs_vcf
+    File    isnvs_vcf                             = refine2.align_to_self_isnvs_vcf
     
-    File    aligned_bam                           = refine.align_to_self_merged_aligned_only_bam
-    File    aligned_only_reads_fastqc             = refine.align_to_ref_fastqc
-    File    coverage_tsv                          = refine.align_to_self_merged_coverage_tsv
-    Int     read_pairs_aligned                    = refine.align_to_self_merged_read_pairs_aligned
-    Float   bases_aligned                         = refine.align_to_self_merged_bases_aligned
+    File    aligned_bam                           = refine2.align_to_self_merged_aligned_only_bam
+    File    aligned_only_reads_fastqc             = refine2.align_to_ref_fastqc
+    File    coverage_tsv                          = refine2.align_to_self_merged_coverage_tsv
+    Int     read_pairs_aligned                    = refine2.align_to_self_merged_read_pairs_aligned
+    Float   bases_aligned                         = refine2.align_to_self_merged_bases_aligned
     
     String  assembly_method = "viral-ngs/assemble_denovo"
     String  assemble_viral_assemble_version       = assemble.viralngs_version
