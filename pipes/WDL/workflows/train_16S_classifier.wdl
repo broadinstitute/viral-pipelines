@@ -9,5 +9,12 @@ workflow train_16S_classifier {
         email: "viral-ngs@broadinstitue.org"
         allowNestedInputs: true 
     }
-    call qiime.train_classifier
+    call qiime.train_classifier{
+        input:
+            otu_ref = otu_ref,
+            taxonomy_ref = taxonomy_ref,
+            forward_adapter = forward_adapter, 
+            reverse_adapter = reverse_adapter
+
+    }
 } 
