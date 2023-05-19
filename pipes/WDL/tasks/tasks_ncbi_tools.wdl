@@ -6,7 +6,7 @@ task Fetch_SRA_to_BAM {
         String  SRA_ID
 
         Int?    machine_mem_gb
-        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.8"
     }
     Int disk_size = 750
     meta {
@@ -148,7 +148,7 @@ task Fetch_SRA_to_BAM {
 task fetch_genbank_metadata {
     input {
         String  genbank_accession
-        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.8"
     }
     Int disk_size = 50
     command <<<
@@ -175,12 +175,62 @@ task fetch_genbank_metadata {
     }
 }
 
+task fetch_sra_runs_for_genbank_accession {
+    input {
+        String  genbank_accession
+        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.8"
+    }
+
+    Int disk_size = 1000
+
+    command <<<
+        set -e
+        source /opt/miniconda/bin/activate $CONDA_DEFAULT_ENV # for miniwdl / non-login docker runners
+
+        # get SRA run accessions for the given genbank accession
+        # map GenBank to biosample -> SRA SRS -> SRR
+        SRA_run_accession_file="SRA_run_accessions_for_~{genbank_accession}.txt"
+        esearch -db nuccore -query ~{genbank_accession} | \
+            elink -target biosample | \
+            efetch -format docsum | \
+            xtract -pattern DocumentSummary -block Ids -element Id -group SRA | \
+            rev | \ # get the last field by reversing the values and grabbing the first, which is then the SRS# accession
+            cut -f1 | \
+            rev | \
+            # get the SRA run (SRR#) accessions for the SRS# provided
+            xargs -I{} /bin/bash -c 'esearch -db SRA -query {} | efetch -format runinfo -mode xml | xtract -pattern Run -element Run' \
+                # write the SRR# accessions to a file
+                > "${SRA_run_accession_file}"
+
+        echo "Found SRA runs for ~{genbank_accession}:"
+        cat "${SRA_run_accession_file}"
+
+        # download bam files for SRR accessions in parallel
+        xargs -a "${SRA_run_accession_file}" \
+            -P$(nproc --all --ignore 1) \
+            -I{} /opt/docker/scripts/sra_to_ubam.sh {} {}.bam;
+
+    >>>
+    output {
+        Array[File] sra_bams = glob("*.bam")
+    }
+    runtime {
+        cpu:     1
+        memory:  "3 GB"
+        disks:   "local-disk " + disk_size + " LOCAL"
+        disk:    disk_size + " GB" # TES
+        dx_instance_type: "mem2_ssd1_v2_x2"
+        docker:  docker
+        maxRetries: 2
+    }
+}
+
 task biosample_tsv_filter_preexisting {
     input {
         File           meta_submit_tsv
 
         String         out_basename = "biosample_attributes"
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.8"
     }
     Int disk_size = 50
     meta {
@@ -242,7 +292,7 @@ task fetch_biosamples {
         Array[String]  biosample_ids
 
         String         out_basename = "biosample_attributes"
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.8"
     }
     Int disk_size = 50
     meta {
@@ -278,7 +328,7 @@ task ncbi_sftp_upload {
 
         String         wait_for="1"  # all, disabled, some number
 
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.8"
     }
     Int disk_size = 100
     command <<<
@@ -324,7 +374,7 @@ task sra_tsv_to_xml {
         String   bioproject
         String   data_bucket_uri
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.8"
     }
     Int disk_size = 50
     command <<<
@@ -361,7 +411,7 @@ task biosample_submit_tsv_to_xml {
         File     meta_submit_tsv
         File     config_js
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.8"
     }
     Int disk_size = 50
     meta {
@@ -399,7 +449,7 @@ task biosample_submit_tsv_ftp_upload {
         File     config_js
         String   target_path
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.8"
     }
     String base=basename(meta_submit_tsv, '.tsv')
     Int disk_size = 100    
@@ -439,7 +489,7 @@ task biosample_xml_response_to_tsv {
         File     meta_submit_tsv
         File     ncbi_report_xml
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.8"
     }
     String out_name = "~{basename(meta_submit_tsv, '.tsv')}-attributes.tsv"
     Int disk_size = 100
