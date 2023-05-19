@@ -22,7 +22,7 @@ workflow genbank {
         File?         coverage_table
 
         String        email_address # required for fetching data from NCBI APIs
-        String        author_list # of the form "Lastname,A.B., Lastname,C.,"; optional alternative to names in author_sbt_defaults_yaml
+        String?       author_list # of the form "Lastname,A.B., Lastname,C.,"; optional alternative to names in author_sbt_defaults_yaml
         File          author_sbt_defaults_yaml # defaults to fill in for author_sbt file (including both author and non-author fields)
         File          author_sbt_j2_template
         File          biosample_attributes
