@@ -34,9 +34,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       # fetch git tags (tagged releases) because 
-      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      # actions/checkout@v3 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags      
       - name: Programmatic environment setup
@@ -87,9 +87,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       # fetch git tags (tagged releases) because 
-      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      # actions/checkout@v3 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
@@ -137,9 +137,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       # fetch git tags (tagged releases) because 
-      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      # actions/checkout@v3 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
@@ -182,9 +182,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       # fetch git tags (tagged releases) because 
-      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      # actions/checkout@v3 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
@@ -230,9 +230,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       # fetch git tags (tagged releases) because 
-      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      # actions/checkout@v3 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
@@ -289,9 +289,9 @@ jobs:
       DX_PROJECT: project-F8PQ6380xf5bK0Qk0YPjB17P
     steps:
       - name: checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       # fetch git tags (tagged releases) because 
-      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      # actions/checkout@v3 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
