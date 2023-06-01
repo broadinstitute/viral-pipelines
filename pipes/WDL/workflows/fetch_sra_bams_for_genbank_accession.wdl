@@ -13,6 +13,6 @@ workflow fetch_sra_bams_for_genbank_accession {
     call ncbi_tools.fetch_sra_runs_for_genbank_accession
 
     output {
-        File sra_bams = fetch_sra_runs_for_genbank_accession.sra_bams
+        Array[File] sra_bams = fetch_sra_runs_for_genbank_accession.sra_bams
     }
 }
