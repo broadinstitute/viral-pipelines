@@ -1,6 +1,6 @@
 version 1.0 
 
-task vadr {
+task vadr_tool {
     meta {
         description: "VADR test run"
     }
@@ -22,7 +22,6 @@ task vadr {
         Int     max_len = 30000
         Int    mem_size = 4
         Int     disk_size_gb = ceil(2*20) + 5
-        String  docker     = "quay.io/broadinstitute/qiime2" 
         Int    cpus = 2
   }
   String out_base = basename(genome_fasta, '.fasta')
