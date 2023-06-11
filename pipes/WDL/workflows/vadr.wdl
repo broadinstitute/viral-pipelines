@@ -10,7 +10,10 @@ workflow vadr {
         email: "viral_ngs@broadinstitute.org"
         allowNestedInputs: true
     }
-
+    input{ 
+        File    genome_fasta
+        String  library_accession_no
+    }
     call vadr_kit.vadr_tool{
         input: 
             genome_fasta = genome_fasta,
