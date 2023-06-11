@@ -18,11 +18,11 @@ task vadr_tool {
         File    genome_fasta
         String  library_accession_no
         String  docker = "quay.io/staphb/vadr:1.5.1"
-        Int     min_len = 50
-        Int     max_len = 30000
+        Int     minlen = 50
+        Int     maxlen = 30000
         Int    mem_size = 4
         Int     disk_size_gb = ceil(2*20) + 5
-        Int    cpus = 2
+        Int    cpu = 2
   }
   String out_base = basename(genome_fasta, '.fasta')
   command <<<
