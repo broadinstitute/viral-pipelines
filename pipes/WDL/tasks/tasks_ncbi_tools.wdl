@@ -189,18 +189,18 @@ task fetch_sra_runs_for_genbank_accession {
 
         # get SRA run accessions for the given genbank accession
         # map GenBank to biosample -> SRA SRS -> SRR
+        # get the last field by reversing the values and grabbing the first, which is then the SRS# accession
+        # get the SRA run (SRR#) accessions for the SRS# provided
+        # write the SRR# accessions to a file
         SRA_run_accession_file="SRA_run_accessions_for_~{genbank_accession}.txt"
-        esearch -db nuccore -query ~{genbank_accession} | \
-            elink -target biosample | \
-            efetch -format docsum | \
-            xtract -pattern DocumentSummary -block Ids -element Id -group SRA | \
-            rev | \ # get the last field by reversing the values and grabbing the first, which is then the SRS# accession
-            cut -f1 | \
-            rev | \
-            # get the SRA run (SRR#) accessions for the SRS# provided
-            xargs -I{} /bin/bash -c 'esearch -db SRA -query {} | efetch -format runinfo -mode xml | xtract -pattern Run -element Run' \
-                # write the SRR# accessions to a file
-                > "${SRA_run_accession_file}"
+            
+        efetch -db nuccore -id "~{genbank_accession}" -format docsum | \
+            xtract -pattern DocumentSummary -element BioSample | \
+            efetch -db biosample -format docsum | \
+            xtract -pattern DocumentSummary -block Id -if Id@db -equals "SRA" -element Id | \
+            efetch -db sra -format docsum | \
+            xtract -pattern DocumentSummary -element Run@acc \
+            > "${SRA_run_accession_file}"
 
         echo "Found SRA runs for ~{genbank_accession}:"
         cat "${SRA_run_accession_file}"
