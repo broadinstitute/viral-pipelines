@@ -9,16 +9,12 @@ while IFS='=' read module version; do
   OLD_TAG=$module
   if ! grep -q "sha256" <<< "$version"; then
     echo "$module is specified using image tag"
-
     NEW_TAG="$module:$version"
-    echo Replacing $OLD_TAG with $NEW_TAG in all task WDL files
-    sed -i "s|$OLD_TAG[^\"\']*|$NEW_TAG|g" pipes/WDL/tasks/*.wdl
   else
     echo "$module is specified using image build hash"
-
     NEW_TAG="$module@$version"
-    echo Replacing $OLD_TAG with $NEW_TAG in all task WDL files
-    sed -i "s|$OLD_TAG[^\"\']*|$NEW_TAG|g" pipes/WDL/tasks/*.wdl
   fi
+  echo Replacing $OLD_TAG with $NEW_TAG in all task WDL files
+  sed -i "s|$OLD_TAG[^\"\']*|$NEW_TAG|g" pipes/WDL/tasks/*.wdl
   
 done < $MODULE_VERSIONS

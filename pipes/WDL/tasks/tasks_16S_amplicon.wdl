@@ -9,7 +9,7 @@ task qiime_import_from_bam {
         Int     memory_mb = 7000
         Int     cpu = 5
         Int     disk_size_gb = ceil(2*20) + 5
-        String  docker     = "quay.io/broadinstitute/qiime2@sha256:b1b8824516dc8b2d829cf562d4525d87f0ba5aec0a08a4c63d640eff5f91978b" 
+        String  docker     = "quay.io/broadinstitute/qiime2@sha256:b1b8824516dc8b2d829cf562d4525d87f0ba5aec0a08a4c63d640eff5f91978b"
     }
     parameter_meta {
         reads_bam: {description: "Unaligned reads in BAM format, one sample per BAM file."}
@@ -77,7 +77,7 @@ task trim_reads {
         Int     memory_mb = 2000
         Int     cpu = 4
         Int     disk_size_gb = ceil(2*size(reads_qza, "GiB")) + 5
-        String  docker          = "quay.io/broadinstitute/qiime2@sha256:b1b8824516dc8b2d829cf562d4525d87f0ba5aec0a08a4c63d640eff5f91978b"
+        String  docker = "quay.io/broadinstitute/qiime2@sha256:b1b8824516dc8b2d829cf562d4525d87f0ba5aec0a08a4c63d640eff5f91978b"
     }
 
     command <<<
