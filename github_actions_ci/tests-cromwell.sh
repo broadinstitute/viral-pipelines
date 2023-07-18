@@ -6,6 +6,8 @@ cp *.jar pipes/WDL/workflows/*.wdl pipes/WDL/tasks/*.wdl workflows
 cp -r test workflows/
 cd workflows
 
+CROMWELL_LOG_LEVEL="${CROMWELL_LOG_LEVEL:=WARN}"
+
 for workflow in ../pipes/WDL/workflows/*.wdl; do
 	workflow_name=$(basename $workflow .wdl)
 	input_json="test/input/WDL/cromwell-local/test_inputs-$workflow_name-local.json"
@@ -14,6 +16,8 @@ for workflow in ../pipes/WDL/workflows/*.wdl; do
 		echo "Executing $workflow_name using Cromwell on local instance"
 		# the "cat" is to allow a pipe failure (otherwise it halts because of set -e)
 		java -Dconfig.file=../pipes/cromwell/cromwell.local-github_actions.conf \
+			-DLOG_MODE=pretty \
+			-DLOG_LEVEL=${CROMWELL_LOG_LEVEL} \
 			-jar cromwell.jar run \
 			$workflow_name.wdl \
 			-i $input_json | tee cromwell.out
