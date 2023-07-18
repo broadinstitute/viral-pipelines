@@ -9,7 +9,7 @@ task qiime_import_from_bam {
         Int     memory_mb = 7000
         Int     cpu = 5
         Int     disk_size_gb = ceil(2*20) + 5
-        String  docker     = "quay.io/broadinstitute/qiime2:latest" 
+        String  docker     = "quay.io/broadinstitute/qiime2@sha256:b1b8824516dc8b2d829cf562d4525d87f0ba5aec0a08a4c63d640eff5f91978b" 
     }
     parameter_meta {
         reads_bam: {description: "Unaligned reads in BAM format, one sample per BAM file."}
@@ -77,7 +77,7 @@ task trim_reads {
         Int     memory_mb = 2000
         Int     cpu = 4
         Int     disk_size_gb = ceil(2*size(reads_qza, "GiB")) + 5
-        String  docker          = "quay.io/broadinstitute/qiime2:latest"
+        String  docker          = "quay.io/broadinstitute/qiime2@sha256:b1b8824516dc8b2d829cf562d4525d87f0ba5aec0a08a4c63d640eff5f91978b"
     }
 
     command <<<
@@ -122,7 +122,7 @@ task join_paired_ends {
         Int     memory_mb = 2000
         Int     cpu = 1
         Int     disk_size_gb = ceil(2*size(trimmed_reads_qza, "GiB")) + 50
-        String  docker = "quay.io/broadinstitute/qiime2:latest"
+        String  docker = "quay.io/broadinstitute/qiime2@sha256:b1b8824516dc8b2d829cf562d4525d87f0ba5aec0a08a4c63d640eff5f91978b"
     }
 
     command <<< 
@@ -159,7 +159,7 @@ task deblur {
         Int     memory_mb = 2000
         Int     cpu = 1
         Int     disk_size_gb = ceil(2*size(joined_end_reads_qza, "GiB")) + 5
-        String  docker = "quay.io/broadinstitute/qiime2:latest"
+        String  docker = "quay.io/broadinstitute/qiime2@sha256:b1b8824516dc8b2d829cf562d4525d87f0ba5aec0a08a4c63d640eff5f91978b"
     }
         command <<< 
         set -ex
@@ -211,7 +211,7 @@ task train_classifier {
         Int     memory_mb = 2000
         Int     cpu = 1
         Int     disk_size_gb = ceil(2*size(otu_ref, "GiB")) + 5
-        String  docker = "quay.io/broadinstitute/qiime2:latest"
+        String  docker = "quay.io/broadinstitute/qiime2@sha256:b1b8824516dc8b2d829cf562d4525d87f0ba5aec0a08a4c63d640eff5f91978b"
     }
     command <<<
      set -ex
@@ -264,7 +264,7 @@ task tax_analysis {
         Int     memory_mb = 5
         Int     cpu = 1
         Int     disk_size_gb = 375
-        String  docker = "quay.io/broadinstitute/qiime2:latest"
+        String  docker = "quay.io/broadinstitute/qiime2@sha256:b1b8824516dc8b2d829cf562d4525d87f0ba5aec0a08a4c63d640eff5f91978b"
     }
     command <<<
         set -ex

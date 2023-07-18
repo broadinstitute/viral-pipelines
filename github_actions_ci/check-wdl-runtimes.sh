@@ -4,13 +4,18 @@
 
 echo "Checking wdl container versions against ${MODULE_VERSIONS}"
 
+
 # this is the newer script that simply validates existing version strings
 should_error=false
 for task_file in $(ls -1 pipes/WDL/tasks/*.wdl); do
     echo "Checking ${task_file}"
     while IFS='=' read module version; do
     	OLD_TAG=$module
-    	NEW_TAG="$module:$version"
+        if ! grep -q "sha256" <<< "$version"; then
+    	   NEW_TAG="$module:$version"
+        else
+           NEW_TAG="$module@$version"
+        fi
         
         offending_lines="$(grep -nE "^[^#]*$OLD_TAG" "${task_file}" | grep -v $NEW_TAG)"
 
