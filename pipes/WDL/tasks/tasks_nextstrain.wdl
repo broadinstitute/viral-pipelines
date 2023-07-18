@@ -449,7 +449,7 @@ task nextstrain_build_subsample {
         File?  keep_list
         File?  drop_list
 
-        Int    machine_mem_gb = 50
+        Int    machine_mem_gb = 90
         String docker = "nextstrain/base:build-20211012T204409Z"
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
         Int    disk_size = 750
@@ -574,7 +574,7 @@ task nextstrain_build_subsample {
         cpu :   4
         disks:  "local-disk " + disk_size + " HDD"
         disk: disk_size + " GB" # TES
-        dx_instance_type: "mem3_ssd1_v2_x8"
+        dx_instance_type: "mem3_ssd1_v2_x16"
         maxRetries: 2
     }
     output {
