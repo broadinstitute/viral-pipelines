@@ -17,7 +17,7 @@ task qiime_import_from_bam {
     }
 
     command <<<
-        set -ex -o pipefail
+        set -ex
 
         #Part 1A | BAM -> FASTQ [Simple samtools command]
         manifest_TSV=manifest.tsv
@@ -81,7 +81,7 @@ task trim_reads {
     }
 
     command <<<
-        set -ex -o pipefail
+        set -ex
         qiime cutadapt trim-paired \
         --i-demultiplexed-sequences "~{reads_qza}" \
         --p-front-f "~{forward_adapter}" \
@@ -126,7 +126,7 @@ task join_paired_ends {
     }
 
     command <<< 
-        set -ex -o pipefail
+        set -ex
         qiime vsearch join-pairs \
         --i-demultiplexed-seqs ~{trimmed_reads_qza} \
         --o-joined-sequences "joined.qza"
@@ -162,7 +162,7 @@ task deblur {
         String  docker = "quay.io/broadinstitute/qiime2:latest"
     }
         command <<< 
-        set -ex -o pipefail
+        set -ex
 
             qiime deblur denoise-16S \
             --i-demultiplexed-seqs ~{joined_end_reads_qza}\
@@ -214,7 +214,7 @@ task train_classifier {
         String  docker = "quay.io/broadinstitute/qiime2:latest"
     }
     command <<<
-     set -ex -o pipefail
+     set -ex
         CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
         conda activate ${CONDA_ENV_NAME}
 
@@ -267,7 +267,7 @@ task tax_analysis {
         String  docker = "quay.io/broadinstitute/qiime2:latest"
     }
     command <<<
-        set -ex -o pipefail
+        set -ex
         qiime feature-classifier classify-sklearn \
         --i-classifier ~{trained_classifier} \
         --i-reads ~{representative_seqs_qza} \
