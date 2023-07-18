@@ -16,7 +16,7 @@ task Fetch_SRA_to_BAM {
     command <<<
         set -e
         # fetch SRA metadata on this record
-        esearch -db sra -q "~{SRA_ID}" | efetch -mode json -json > SRA.json
+        esearch -db sra -query "~{SRA_ID}" | efetch -mode xml -json > SRA.json
         cp SRA.json "~{SRA_ID}.json"
 
         # pull reads from SRA and make a fully annotated BAM -- must succeed
@@ -154,7 +154,7 @@ task fetch_genbank_metadata {
     command <<<
         set -e
         source /opt/miniconda/bin/activate $CONDA_DEFAULT_ENV # for miniwdl / non-login docker runners
-        esearch -db nuccore -q "~{genbank_accession}" | efetch -db nuccore -format gb -mode xml -json  > gb.json
+        esearch -db nuccore -query "~{genbank_accession}" | efetch -db nuccore -format gb -mode xml -json  > gb.json
         jq -r '[.GBSet.GBSeq."GBSeq_feature-table".GBFeature[0].GBFeature_quals.GBQualifier|.[]|{(.GBQualifier_name): .GBQualifier_value}]|add ' gb.json > "~{genbank_accession}".metadata.json
         jq -r '.db_xref' "~{genbank_accession}".metadata.json | grep ^taxon: | cut -f 2 -d : > taxid.txt
         jq -r '.organism' "~{genbank_accession}".metadata.json > organism.txt
