@@ -9,3 +9,4 @@ nextstrain/base=build-20211012T204409Z
 andersenlabapps/ivar=1.3.1
 quay.io/staphb/pangolin=4.2-pdata-1.18.1.1
 nextstrain/nextclade=2.12.0
+quay.io/broadinstitute/qiime2=latest

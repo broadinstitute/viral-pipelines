@@ -9,7 +9,7 @@ task qiime_import_from_bam {
         Int     memory_mb = 7000
         Int     cpu = 5
         Int     disk_size_gb = ceil(2*20) + 5
-        String  docker     = "quay.io/broadinstitute/qiime2" 
+        String  docker     = "quay.io/broadinstitute/qiime2:latest" 
     }
     parameter_meta {
         reads_bam: {description: "Unaligned reads in BAM format, one sample per BAM file."}
