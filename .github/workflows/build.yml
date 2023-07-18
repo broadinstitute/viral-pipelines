@@ -189,7 +189,7 @@ jobs:
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
         run: |
-          set -e -x
+          set -ex
           # $GITHUB_ENV is available for subsequent steps
           GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')
           echo "GITHUB_ACTIONS_TAG=$GITHUB_ACTIONS_TAG" >> $GITHUB_ENV
@@ -237,7 +237,7 @@ jobs:
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
         run: |
-          set -e -x
+          set -ex
           # $GITHUB_ENV is available for subsequent steps
           GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')
           echo "GITHUB_ACTIONS_TAG=$GITHUB_ACTIONS_TAG" >> $GITHUB_ENV
