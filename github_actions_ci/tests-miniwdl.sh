@@ -11,7 +11,7 @@ test_dir="miniwdl_testing"
 function cleanup(){
     echo "Cleaning up from miniwdl run; exit code: $?"
     cd "$starting_dir"
-    if [ -d "$test_dir" ] && [ KEEP_OUTPUT -ne "true" ]; then
+    if [ -d "$test_dir" ] && [[ $KEEP_OUTPUT != "true" ]]; then
       rm -r "$test_dir"
     fi
 }
