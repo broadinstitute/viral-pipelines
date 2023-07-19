@@ -218,6 +218,8 @@ jobs:
         shell: bash
         run: |
           github_actions_ci/install-wdl.sh
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
       - name: test with cromwell
         shell: bash
         run: |
