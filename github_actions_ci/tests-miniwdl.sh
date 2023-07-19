@@ -23,10 +23,12 @@ cd $test_dir
 
 docker --version
 
-# miniwdl tries to chown output files to the UID
-# of the user executing miniwdl, but this can cause problems
-# when docker is itself running in a virtualized environment (macOS)
-export MINIWDL__FILE_IO__CHOWN=false
+if [ "$(uname)" == "Darwin" ]; then
+	# miniwdl tries to chown output files to the UID
+	# of the user executing miniwdl, but this can cause problems
+	# when docker is itself running in a virtualized environment (macOS)
+	export MINIWDL__FILE_IO__CHOWN=false
+fi
 
 # make sure our system has everything it needs to perform "miniwdl run" (e.g. docker swarm works)
 miniwdl run_self_test
