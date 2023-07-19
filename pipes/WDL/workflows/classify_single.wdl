@@ -50,6 +50,27 @@ workflow classify_single {
           description: "An NCBI taxdump.tar.gz file that contains, at the minimum, a nodes.dmp and names.dmp file.",
           patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
         }
+        cleaned_fastqc: { 
+          description: "Output cleaned fastqc reports in HTML.",
+          category: "other"
+        }
+        deduplicated_reads_unaligned: {
+          description: "Deduplication on unaligned reads in BAM format using mvicuna or cdhit.",
+          category: "other"
+        }
+        kraken2_krona_plot: {
+          description:"Visualize the results of the Kraken2 analysis with Krona, which disaplys taxonmic hierarchiral data in multi-layerd pie.",
+          category:"other"
+        }
+        kraken2_summary_report: {
+          description: "Kraken report output file.",
+          category: "other"
+        }
+        raw_fastqc:{
+          description: "Merged raw fastqc reads.",
+          category: "other"
+        }
+
     }
 
     call read_utils.merge_and_reheader_bams as merge_raw_reads {

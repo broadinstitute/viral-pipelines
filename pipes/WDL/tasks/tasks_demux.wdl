@@ -54,7 +54,16 @@ task samplesheet_rename_ids {
   command <<<
     python3 << CODE
     import csv
-
+  parameter_meta { 
+    old_sheet: {
+      description: "Illumina file with old sample names."
+      category: "required"
+    }
+    rename_map: {
+      description: "New sample name sheet."
+      category: "required"
+    }
+  }
     # read in the rename_map file
     old_to_new = {}
     with open('~{default="/dev/null" rename_map}', 'rt') as inf:
@@ -160,6 +169,14 @@ task illumina_demux {
       flowcell_tgz: {
           description: "Illumina BCL directory compressed as tarball. Must contain RunInfo.xml (unless overridden by runinfo), SampleSheet.csv (unless overridden by samplesheet), RTAComplete.txt, and Data/Intensities/BaseCalls/*",
           patterns: ["*.tar.gz", ".tar.zst", ".tar.bz2", ".tar.lz4", ".tgz"]
+      }
+      samplesheet: {
+        description: "CSV file with the library chemistry, sample names and the index tag used for each sample, in addition to some other metrics describing the run.",
+        category: "required"
+      }
+      runinfo: { 
+        description: "if we are overriding the RunInfo file, use the path of the file provided. Otherwise the default will be RunInfo.xml. ",
+        category: "advanced"
       }
   }
 
