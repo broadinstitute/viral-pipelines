@@ -1,13 +1,17 @@
 #!/bin/bash
 set -ex -o pipefail
 
+# increase docker timeouts to allow for staging of larger images (seconds)
+export DOCKER_CLIENT_TIMEOUT=240
+export COMPOSE_HTTP_TIMEOUT=240
+
 starting_dir="$(pwd)"
 test_dir="miniwdl_testing"
 
 function cleanup(){
     echo "Cleaning up from miniwdl run; exit code: $?"
     cd "$starting_dir"
-    if [ -d "$test_dir" ]; then
+    if [ -d "$test_dir" ] && [ KEEP_OUTPUT -ne "true" ]; then
       rm -r "$test_dir"
     fi
 }
@@ -18,6 +22,11 @@ cp -r test $test_dir
 cd $test_dir
 
 docker --version
+
+# miniwdl tries to chown output files to the UID
+# of the user executing miniwdl, but this can cause problems
+# when docker is itself running in a virtualized environment (macOS)
+export MINIWDL__FILE_IO__CHOWN=false
 
 # make sure our system has everything it needs to perform "miniwdl run" (e.g. docker swarm works)
 miniwdl run_self_test
