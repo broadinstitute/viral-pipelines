@@ -21,7 +21,6 @@ mkdir -p ${test_dir}
 cp pipes/WDL/workflows/*.wdl pipes/WDL/tasks/*.wdl $test_dir
 sed -i -- 's|import \"../tasks/|import \"|g' ${test_dir}/*.wdl
 cp -r test ${test_dir}/
-cd ${test_dir}
 
 CROMWELL_LOG_LEVEL="${CROMWELL_LOG_LEVEL:=WARN}"
 
@@ -37,6 +36,8 @@ else
 	cp *.jar ${test_dir}
 	CROMWELL_JAR_ARG="-jar cromwell.jar"
 fi
+
+cd ${test_dir}
 
 for workflow in ../pipes/WDL/workflows/*.wdl; do
 	workflow_name=$(basename $workflow .wdl)
