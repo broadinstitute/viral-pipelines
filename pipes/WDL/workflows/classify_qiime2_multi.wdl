@@ -1,6 +1,6 @@
 version 1.0
 
-import "../tasks/tasks_16S_amplicon.wdl" as qiime 
+import "../tasks/tasks_16S_amplicon.wdl" as qiime_16S 
 
 workflow amplicon16S_analysis {
     
@@ -16,28 +16,28 @@ workflow amplicon16S_analysis {
         Boolean keep_untrimmed_reads
     }
 
-    call qiime.qiime_import_from_bam {
+    call qiime_16S.qiime_import_from_bam {
         input:
             reads_bam  = reads_bam
     }
     #__________________________________________
-    call qiime.trim_reads {
+    call qiime_16S.trim_reads {
         input:
            reads_qza            = qiime_import_from_bam.reads_qza,
            keep_untrimmed_reads = keep_untrimmed_reads
     }
     #__________________________________________
-    call qiime.join_paired_ends {
+    call qiime_16S.join_paired_ends {
         input: 
             trimmed_reads_qza = trim_reads.trimmed_reads_qza
     }
     #_________________________________________
-    call qiime.deblur {
+    call qiime_16S.deblur {
         input: 
             joined_end_reads_qza = join_paired_ends.joined_end_reads_qza
     }
     #_________________________________________
-    call qiime.tax_analysis {
+    call qiime_16S.tax_analysis {
         input:
             trained_classifier = trained_classifier,
             representative_seqs_qza = deblur.representative_seqs_qza,
