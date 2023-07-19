@@ -15,6 +15,6 @@ while IFS='=' read module version; do
     NEW_TAG="$module@$version"
   fi
   echo Replacing $OLD_TAG with $NEW_TAG in all task WDL files
-  sed -i "s|$OLD_TAG[^\"\']*|$NEW_TAG|g" pipes/WDL/tasks/*.wdl
+  sed -i '' "s|$OLD_TAG[^\"\']*|$NEW_TAG|g" pipes/WDL/tasks/*.wdl
   
 done < $MODULE_VERSIONS
