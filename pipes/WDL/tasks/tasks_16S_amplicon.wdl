@@ -6,14 +6,24 @@ task qiime_import_from_bam {
     }
     input { 
         Array[File] reads_bam
-        Int     memory_mb = 7000
+        Int    memory_mb = 7000
         Int     cpu = 5
         Int     disk_size_gb = ceil(2*20) + 5
         String  docker     = "quay.io/broadinstitute/qiime2" 
     }
     parameter_meta {
-        reads_bam: {description: "Unaligned reads in BAM format, one sample per BAM file."}
-        reads_qza: {description: "All unaligned reads in a single QZA (QIIME) file"}
+        reads_bam: {
+            description: "Unaligned reads in BAM format, one sample per BAM file.",
+            category: "required"
+        }
+        reads_qza: {
+            description: "All unaligned reads in a single QZA (QIIME) file.",
+            category: "other"
+        }
+        samplename_master_sheet: {
+            description: "File contains all samples names.",
+            category: "other"
+        }
     }
 
     command <<<
@@ -69,17 +79,45 @@ task trim_reads {
 
     input {
         File    reads_qza
-        #Boolean not_default = false
         String  forward_adapter         = "CTGCTGCCTCCCGTAGGAGT"
         String  reverse_adapter         = "AGAGTTTGATCCTGGCTCAG"
-        Int    min_length              = 1
+        Int     min_length              = 1
         Boolean keep_untrimmed_reads   = false
         Int     memory_mb = 2000
         Int     cpu = 4
         Int     disk_size_gb = ceil(2*size(reads_qza, "GiB")) + 5
         String  docker          = "quay.io/broadinstitute/qiime2" 
     }
-
+    parameter_meta {
+        reads_qza: {
+            description: "All unaligned reads in a single QZA (QIIME) file.",
+            cateogry: "required"
+        }
+        forward_adapter: {
+            description: "Forward amplicon primer sequence.",
+            category: "advanced"
+        }
+        reverse_adapter: {
+            description: "Reverse amplicon primer sequence.",
+            cateogry: "advanced"
+        }
+        min_length: {
+            description: "Minimum length of the read, cutadapt will discard anything that is shorter than n bp AFTER trimming.Set to default.",
+            category: "other"
+        }
+        keep_untrimmed_reads: {
+            description: "Allows you to choose whether or not to discard untrimmed reads.",
+            category: "advanced"
+        }
+        trimmed_reads_qza: {
+            description: "Trimmed reads data file.",
+            category: "advanced"
+        }
+        trimmed_visualization: {
+            description: "A diagram that compares your demuxed reads before and after cutting (i.e. length of reads, how many reads were retained).",
+            category: "advanced"
+        }
+    }
     command <<<
         set -ex -o pipefail
         qiime cutadapt trim-paired \
@@ -124,7 +162,20 @@ task join_paired_ends {
         Int     disk_size_gb = ceil(2*size(trimmed_reads_qza, "GiB")) + 50
         String  docker = "quay.io/broadinstitute/qiime2"
     }
-
+    parameter_meta{
+        trimmed_reads_qza: {
+            description:"Trimmed reads data file.",
+            category: "required"
+        }
+        joined_end_reads_qza:{
+            description: "Merge paired read file.",
+            category: "other"
+        }
+        joined_end_visualization: {
+            description: "This summary is especially useful for assessing the length of linked reads and the quality scores at each sequence base position. ",
+            category: "other"
+        }
+    }
     command <<< 
         set -ex -o pipefail
         qiime vsearch join-pairs \
@@ -160,6 +211,32 @@ task deblur {
         Int     cpu = 1
         Int     disk_size_gb = ceil(2*size(joined_end_reads_qza, "GiB")) + 5
         String  docker = "quay.io/broadinstitute/qiime2"
+    }
+    parameter_meta {
+        joined_end_reads_qza: {
+            description: "Merge paired read file.",
+            category: "required"
+        }
+        trim_length_var: {
+            description: "Length that all seqeuences will be trimmed, and discard any sequences that are not at least this long.",
+            category: "advanced"
+        }
+        representative_seqs_qza: {
+            description: "Generate a list of the representative sequences. May be useful to the user if they want to blast these sequences or check for correct trimming.",
+            category: "other"
+        }
+        representative_table_qza: {
+            description: "Generate a table of the representaitve sequences.",
+            category: "other"
+        }
+        feature_table: {
+            description: "A table that represent the number of of features per sample, the number of samples a given feature is found in.",
+            category: "other"
+        }
+        visualize_stats:{
+            description: "Generate visualization of deblur stats.",
+            category: "other"
+        }
     }
         command <<< 
         set -ex -o pipefail
@@ -213,6 +290,37 @@ task train_classifier {
         Int     disk_size_gb = ceil(2*size(otu_ref, "GiB")) + 5
         String  docker = "quay.io/broadinstitute/qiime2"
     }
+    parameter_meta{
+        otu_ref: {
+            description: "Operational taxonomic units (OTUs) sequences imported as FASTA file.",
+            category:"required"
+        }
+        taxanomy_ref: {
+            description: "Reference taxonomy file.",
+            category: "required"
+        }
+        forward_adapter: {
+            description: "The forward primer sequence for the amplicon target.",
+            category: "advanced"
+        }
+        reverse_adapter: {
+            description: "The reverse primer sequence for the amplicon target.",
+            category:"advanced"
+        }
+        min_length: {
+            description: "Minimum length of amplicon sequences.",
+            category: "advanced"
+        }
+        max_length: {
+            description: "Maximum length of amplicon sequences.",
+            category:"advanced"
+        }
+        trained_classifier: {
+            description: "Trained taxonomic classifier on target amplicon sequences.",
+            category: "other"
+        }
+    }
+
     command <<<
      set -ex -o pipefail
         CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
@@ -265,6 +373,28 @@ task tax_analysis {
         Int     cpu = 1
         Int     disk_size_gb = 375
         String  docker = "quay.io/broadinstitute/qiime2"
+    }
+    parameter_meta{ 
+        trained_classifier: {
+            description: "Trained taxonomic classifier on target amplicon sequences.",
+            category: "required"
+            }
+        representative_seqs_qza: {
+            description: "List of representative sequences.",
+            category:"required"
+            }
+        representative_table_qza: {
+            description: "Table of representative sequences.",
+            category:"other"
+            }
+        rep_seq_list: {
+            description: "Generate list of representative sequences.",
+            category:"other"
+            }
+        tax_classification_graph: {
+            description: "Create a bar graph of your taxonomic classification.",
+            category:"other"
+            }
     }
     command <<<
         set -ex -o pipefail

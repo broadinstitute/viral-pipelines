@@ -12,6 +12,7 @@ workflow assemble_refbased {
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
         allowNestedInputs: true
+        # https://wdl-aid.readthedocs.io/en/latest/usage.html -- can exclude certain inputs from documentation; attempt to do this on with docker nominated variables 
     }
 
     parameter_meta {
@@ -30,10 +31,6 @@ workflow assemble_refbased {
         aligner: {
             description: "Read aligner software to use. Options: novoalign, bwa, minimap2. Minimap2 can automatically handle Illumina, PacBio, or Oxford Nanopore reads as long as the 'PL' field in the BAM read group header is set properly (novoalign and bwa are Illumina-only)."
         }
-        novocraft_license: {
-            description: "The default Novoalign short read aligner is a commercially licensed software that is available in a much slower, single-threaded version for free. If you have a paid license file, provide it here to run in multi-threaded mode. If this is omitted, it will run in single-threaded mode.",
-            patterns: ["*.lic"]
-        }
         skip_mark_dupes: {
             description: "skip Picard MarkDuplicates step after alignment. This is recommended to be set to true for PCR amplicon based data. (Default: false)"
         }
@@ -48,12 +45,18 @@ workflow assemble_refbased {
         major_cutoff: {
             description: "If the major allele is present at a frequency higher than this cutoff, we will call an unambiguous base at that position.  If it is equal to or below this cutoff, we will call an ambiguous base representing all possible alleles at that position."
         }
-
-
-        assembly_fasta: { description: "The new assembly / consensus sequence for this sample" }
-        align_to_ref_variants_vcf_gz: { description: "All variants in the input reads against the original reference genome. This VCF file is used to create the assembly_fasta" }
-        assembly_length: { description: "The length of the sequence described in assembly_fasta, inclusive of any uncovered regions denoted by Ns" }
-        assembly_length_unambiguous: { description: "The number of called consensus bases in assembly_fasta (excludes regions of the genome that lack read coverage)" }
+        assembly_fasta: { 
+            description: "The new assembly / consensus sequence for this sample" 
+        }
+        align_to_ref_variants_vcf_gz: { 
+            description: "All variants in the input reads against the original reference genome. This VCF file is used to create the assembly_fasta" 
+        }
+        assembly_length: { 
+            description: "The length of the sequence described in assembly_fasta, inclusive of any uncovered regions denoted by Ns" 
+        }
+        assembly_length_unambiguous: { 
+            description: "The number of called consensus bases in assembly_fasta (excludes regions of the genome that lack read coverage)" 
+        }
     }
 
     input {
