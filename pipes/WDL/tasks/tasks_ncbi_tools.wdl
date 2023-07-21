@@ -175,13 +175,13 @@ task fetch_genbank_metadata {
     }
 }
 
-task fetch_sra_runs_for_genbank_accession {
+task fetch_sra_run_accessions_for_genbank_accession {
     input {
         String  genbank_accession
         String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.9"
     }
 
-    Int disk_size = 1000
+    Int disk_size = 100
 
     command <<<
         set -e
@@ -192,7 +192,8 @@ task fetch_sra_runs_for_genbank_accession {
         # get the last field by reversing the values and grabbing the first, which is then the SRS# accession
         # get the SRA run (SRR#) accessions for the SRS# provided
         # write the SRR# accessions to a file
-        SRA_run_accession_file="SRA_run_accessions_for_~{genbank_accession}.txt"
+        #SRA_run_accession_file="SRA_run_accessions_for_~{genbank_accession}.txt"
+        SRA_run_accession_file="SRA_run_accessions.txt"
             
         efetch -db nuccore -id "~{genbank_accession}" -format docsum | \
             xtract -pattern DocumentSummary -element BioSample | \
@@ -206,13 +207,14 @@ task fetch_sra_runs_for_genbank_accession {
         cat "${SRA_run_accession_file}"
 
         # download bam files for SRR accessions in parallel
-        xargs -a "${SRA_run_accession_file}" \
-            -P$(nproc --all --ignore 1) \
-            -I{} /opt/docker/scripts/sra_to_ubam.sh {} {}.bam;
+        #xargs -a "${SRA_run_accession_file}" \
+        #    -P$(nproc --all --ignore 1) \
+        #    -I{} /opt/docker/scripts/sra_to_ubam.sh {} {}.bam;
 
     >>>
     output {
-        Array[File] sra_bams = glob("*.bam")
+        #Array[File] sra_bams = glob("*.bam")
+        Array[String] sra_accessions = read_lines("SRA_run_accessions.txt")
     }
     runtime {
         cpu:     1

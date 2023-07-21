@@ -10,9 +10,16 @@ workflow fetch_sra_bams_for_genbank_accession {
         allowNestedInputs: true
     }
 
-    call ncbi_tools.fetch_sra_runs_for_genbank_accession
+    call ncbi_tools.fetch_sra_run_accessions_for_genbank_accession
+
+    scatter(sra_accession in fetch_sra_run_accessions_for_genbank_accession.sra_accessions) {
+        call ncbi_tools.Fetch_SRA_to_BAM {
+            input:
+                SRA_ID = sra_accession
+        }
+    }
 
     output {
-        Array[File] sra_bams = fetch_sra_runs_for_genbank_accession.sra_bams
+        Array[File] sra_bams = Fetch_SRA_to_BAM.reads_ubam
     }
 }
