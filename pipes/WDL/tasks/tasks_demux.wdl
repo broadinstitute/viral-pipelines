@@ -49,11 +49,6 @@ task samplesheet_rename_ids {
     String old_id_col = 'internal_id'
     String new_id_col = 'external_id'
   }
-  String new_base = basename(old_sheet, '.txt')
-  Int disk_size = 50
-  command <<<
-    python3 << CODE
-    import csv
   parameter_meta { 
     old_sheet: {
       description: "Illumina file with old sample names."
@@ -64,6 +59,11 @@ task samplesheet_rename_ids {
       category: "required"
     }
   }
+  String new_base = basename(old_sheet, '.txt')
+  Int disk_size = 50
+  command <<<
+    python3 << CODE
+    import csv
     # read in the rename_map file
     old_to_new = {}
     with open('~{default="/dev/null" rename_map}', 'rt') as inf:
