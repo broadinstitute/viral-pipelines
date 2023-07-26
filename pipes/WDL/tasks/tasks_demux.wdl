@@ -51,11 +51,11 @@ task samplesheet_rename_ids {
   }
   parameter_meta { 
     old_sheet: {
-      description: "Illumina file with old sample names."
+      description: "Illumina file with old sample names.",
       category: "required"
     }
     rename_map: {
-      description: "New sample name sheet."
+      description: "New sample name sheet.",
       category: "required"
     }
   }
