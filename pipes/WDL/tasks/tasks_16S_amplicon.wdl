@@ -9,7 +9,7 @@ task qiime_import_from_bam {
         Int    memory_mb = 7000
         Int     cpu = 5
         Int     disk_size_gb = ceil(2*20) + 5
-        String  docker     = "quay.io/broadinstitute/qiime2" 
+        String  docker     = "quay.io/broadinstitute/qiime2@sha256:b1b8824516dc8b2d829cf562d4525d87f0ba5aec0a08a4c63d640eff5f91978b"
     }
     parameter_meta {
         reads_bam: {
@@ -27,7 +27,7 @@ task qiime_import_from_bam {
     }
 
     command <<<
-        set -ex -o pipefail
+        set -ex
 
         #Part 1A | BAM -> FASTQ [Simple samtools command]
         manifest_TSV=manifest.tsv
@@ -86,7 +86,7 @@ task trim_reads {
         Int     memory_mb = 2000
         Int     cpu = 4
         Int     disk_size_gb = ceil(2*size(reads_qza, "GiB")) + 5
-        String  docker          = "quay.io/broadinstitute/qiime2" 
+        String  docker = "quay.io/broadinstitute/qiime2@sha256:b1b8824516dc8b2d829cf562d4525d87f0ba5aec0a08a4c63d640eff5f91978b"
     }
     parameter_meta {
         reads_qza: {
@@ -119,7 +119,7 @@ task trim_reads {
         }
     }
     command <<<
-        set -ex -o pipefail
+        set -ex
         qiime cutadapt trim-paired \
         --i-demultiplexed-sequences "~{reads_qza}" \
         --p-front-f "~{forward_adapter}" \
@@ -160,7 +160,7 @@ task join_paired_ends {
         Int     memory_mb = 2000
         Int     cpu = 1
         Int     disk_size_gb = ceil(2*size(trimmed_reads_qza, "GiB")) + 50
-        String  docker = "quay.io/broadinstitute/qiime2"
+        String  docker = "quay.io/broadinstitute/qiime2@sha256:b1b8824516dc8b2d829cf562d4525d87f0ba5aec0a08a4c63d640eff5f91978b"
     }
     parameter_meta{
         trimmed_reads_qza: {
@@ -177,7 +177,7 @@ task join_paired_ends {
         }
     }
     command <<< 
-        set -ex -o pipefail
+        set -ex
         qiime vsearch join-pairs \
         --i-demultiplexed-seqs ~{trimmed_reads_qza} \
         --o-joined-sequences "joined.qza"
@@ -210,7 +210,7 @@ task deblur {
         Int     memory_mb = 2000
         Int     cpu = 1
         Int     disk_size_gb = ceil(2*size(joined_end_reads_qza, "GiB")) + 5
-        String  docker = "quay.io/broadinstitute/qiime2"
+        String  docker = "quay.io/broadinstitute/qiime2@sha256:b1b8824516dc8b2d829cf562d4525d87f0ba5aec0a08a4c63d640eff5f91978b"
     }
     parameter_meta {
         joined_end_reads_qza: {
@@ -239,7 +239,7 @@ task deblur {
         }
     }
         command <<< 
-        set -ex -o pipefail
+        set -ex
 
             qiime deblur denoise-16S \
             --i-demultiplexed-seqs ~{joined_end_reads_qza}\
@@ -288,7 +288,7 @@ task train_classifier {
         Int     memory_mb = 2000
         Int     cpu = 1
         Int     disk_size_gb = ceil(2*size(otu_ref, "GiB")) + 5
-        String  docker = "quay.io/broadinstitute/qiime2"
+        String  docker = "quay.io/broadinstitute/qiime2@sha256:b1b8824516dc8b2d829cf562d4525d87f0ba5aec0a08a4c63d640eff5f91978b"
     }
     parameter_meta{
         otu_ref: {
@@ -322,7 +322,7 @@ task train_classifier {
     }
 
     command <<<
-     set -ex -o pipefail
+     set -ex
         CONDA_ENV_NAME=$(conda info --envs -q | awk -F" " '/qiime.*/{ print $1 }')
         conda activate ${CONDA_ENV_NAME}
 
@@ -372,7 +372,7 @@ task tax_analysis {
         Int     memory_mb = 5
         Int     cpu = 1
         Int     disk_size_gb = 375
-        String  docker = "quay.io/broadinstitute/qiime2"
+        String  docker = "quay.io/broadinstitute/qiime2@sha256:b1b8824516dc8b2d829cf562d4525d87f0ba5aec0a08a4c63d640eff5f91978b"
     }
     parameter_meta{ 
         trained_classifier: {
@@ -397,7 +397,7 @@ task tax_analysis {
             }
     }
     command <<<
-        set -ex -o pipefail
+        set -ex
         qiime feature-classifier classify-sklearn \
         --i-classifier ~{trained_classifier} \
         --i-reads ~{representative_seqs_qza} \

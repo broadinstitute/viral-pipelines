@@ -154,6 +154,16 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/fetch_sra_to_bam.wdl
     testParameterFiles:
       - empty.json
+  - name: fetch_sra_bams_for_genbank_accession
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/fetch_sra_bams_for_genbank_accession.wdl
+    testParameterFiles:
+      - empty.json
+  - name: fetch_fasta_for_genbank_accessions
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/fetch_fasta_for_genbank_accessions.wdl
+    testParameterFiles:
+      - empty.json
   - name: filter_classified_bam_to_taxa
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/filter_classified_bam_to_taxa.wdl

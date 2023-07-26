@@ -6,7 +6,7 @@ task Fetch_SRA_to_BAM {
         String  SRA_ID
 
         Int?    machine_mem_gb
-        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.9"
     }
     Int disk_size = 750
     meta {
@@ -16,7 +16,7 @@ task Fetch_SRA_to_BAM {
     command <<<
         set -e
         # fetch SRA metadata on this record
-        esearch -db sra -q "~{SRA_ID}" | efetch -mode json -json > SRA.json
+        esearch -db sra -query "~{SRA_ID}" | efetch -mode xml -json > SRA.json
         cp SRA.json "~{SRA_ID}.json"
 
         # pull reads from SRA and make a fully annotated BAM -- must succeed
@@ -148,13 +148,13 @@ task Fetch_SRA_to_BAM {
 task fetch_genbank_metadata {
     input {
         String  genbank_accession
-        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.9"
     }
     Int disk_size = 50
     command <<<
         set -e
         source /opt/miniconda/bin/activate $CONDA_DEFAULT_ENV # for miniwdl / non-login docker runners
-        esearch -db nuccore -q "~{genbank_accession}" | efetch -db nuccore -format gb -mode xml -json  > gb.json
+        esearch -db nuccore -query "~{genbank_accession}" | efetch -db nuccore -format gb -mode xml -json  > gb.json
         jq -r '[.GBSet.GBSeq."GBSeq_feature-table".GBFeature[0].GBFeature_quals.GBQualifier|.[]|{(.GBQualifier_name): .GBQualifier_value}]|add ' gb.json > "~{genbank_accession}".metadata.json
         jq -r '.db_xref' "~{genbank_accession}".metadata.json | grep ^taxon: | cut -f 2 -d : > taxid.txt
         jq -r '.organism' "~{genbank_accession}".metadata.json > organism.txt
@@ -175,12 +175,64 @@ task fetch_genbank_metadata {
     }
 }
 
+task fetch_sra_run_accessions_for_genbank_accession {
+    input {
+        String  genbank_accession
+        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.9"
+    }
+
+    Int disk_size = 100
+
+    command <<<
+        set -e
+        source /opt/miniconda/bin/activate $CONDA_DEFAULT_ENV # for miniwdl / non-login docker runners
+
+        # get SRA run accessions for the given genbank accession
+        # map GenBank to biosample -> SRA SRS -> SRR
+        # get the last field by reversing the values and grabbing the first, which is then the SRS# accession
+        # get the SRA run (SRR#) accessions for the SRS# provided
+        # write the SRR# accessions to a file
+        #SRA_run_accession_file="SRA_run_accessions_for_~{genbank_accession}.txt"
+        SRA_run_accession_file="SRA_run_accessions.txt"
+            
+        efetch -db nuccore -id "~{genbank_accession}" -format docsum | \
+            xtract -pattern DocumentSummary -element BioSample | \
+            efetch -db biosample -format docsum | \
+            xtract -pattern DocumentSummary -block Id -if Id@db -equals "SRA" -element Id | \
+            efetch -db sra -format docsum | \
+            xtract -pattern DocumentSummary -element Run@acc \
+            > "${SRA_run_accession_file}"
+
+        echo "Found SRA runs for ~{genbank_accession}:"
+        cat "${SRA_run_accession_file}"
+
+        # download bam files for SRR accessions in parallel
+        #xargs -a "${SRA_run_accession_file}" \
+        #    -P$(nproc --all --ignore 1) \
+        #    -I{} /opt/docker/scripts/sra_to_ubam.sh {} {}.bam;
+
+    >>>
+    output {
+        #Array[File] sra_bams = glob("*.bam")
+        Array[String] sra_accessions = read_lines("SRA_run_accessions.txt")
+    }
+    runtime {
+        cpu:     1
+        memory:  "3 GB"
+        disks:   "local-disk " + disk_size + " LOCAL"
+        disk:    disk_size + " GB" # TES
+        dx_instance_type: "mem2_ssd1_v2_x2"
+        docker:  docker
+        maxRetries: 2
+    }
+}
+
 task biosample_tsv_filter_preexisting {
     input {
         File           meta_submit_tsv
 
         String         out_basename = "biosample_attributes"
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.9"
     }
     Int disk_size = 50
     meta {
@@ -242,7 +294,7 @@ task fetch_biosamples {
         Array[String]  biosample_ids
 
         String         out_basename = "biosample_attributes"
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.9"
     }
     Int disk_size = 50
     meta {
@@ -278,7 +330,7 @@ task ncbi_sftp_upload {
 
         String         wait_for="1"  # all, disabled, some number
 
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.9"
     }
     Int disk_size = 100
     command <<<
@@ -324,7 +376,7 @@ task sra_tsv_to_xml {
         String   bioproject
         String   data_bucket_uri
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.9"
     }
     Int disk_size = 50
     command <<<
@@ -361,7 +413,7 @@ task biosample_submit_tsv_to_xml {
         File     meta_submit_tsv
         File     config_js
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.9"
     }
     Int disk_size = 50
     meta {
@@ -399,7 +451,7 @@ task biosample_submit_tsv_ftp_upload {
         File     config_js
         String   target_path
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.9"
     }
     String base=basename(meta_submit_tsv, '.tsv')
     Int disk_size = 100    
@@ -439,7 +491,7 @@ task biosample_xml_response_to_tsv {
         File     meta_submit_tsv
         File     ncbi_report_xml
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.9"
     }
     String out_name = "~{basename(meta_submit_tsv, '.tsv')}-attributes.tsv"
     Int disk_size = 100

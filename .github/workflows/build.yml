@@ -189,7 +189,7 @@ jobs:
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
         run: |
-          set -e -x
+          set -ex
           # $GITHUB_ENV is available for subsequent steps
           GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')
           echo "GITHUB_ACTIONS_TAG=$GITHUB_ACTIONS_TAG" >> $GITHUB_ENV
@@ -218,6 +218,8 @@ jobs:
         shell: bash
         run: |
           github_actions_ci/install-wdl.sh
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
       - name: test with cromwell
         shell: bash
         run: |
@@ -237,7 +239,7 @@ jobs:
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
         run: |
-          set -e -x
+          set -ex
           # $GITHUB_ENV is available for subsequent steps
           GITHUB_ACTIONS_TAG=$(git describe --tags --exact-match && sed 's/^v//g' || echo '')
           echo "GITHUB_ACTIONS_TAG=$GITHUB_ACTIONS_TAG" >> $GITHUB_ENV
@@ -269,7 +271,7 @@ jobs:
         run: |
           pip3 install miniwdl docker[tls] six
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
       - name: test with miniwdl
         shell: bash
         run: |
