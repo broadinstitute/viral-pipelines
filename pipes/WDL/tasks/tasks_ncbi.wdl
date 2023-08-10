@@ -46,7 +46,7 @@ task download_annotations {
   input {
     Array[String]+ accessions
     String         emailAddress
-    String         apiKey
+    String         apiKeyNCBI
     String         combined_out_prefix
 
     String         docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
