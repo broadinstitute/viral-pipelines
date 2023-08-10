@@ -5,17 +5,25 @@ task download_fasta {
     String         out_prefix
     Array[String]+ accessions
     String         emailAddress
+    String         apiKeyNCBI
 
     String         docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
+  }
+
+  parameter_meta {
+    out_prefix:   { description: "basename of the output fasta file. Will contain multiple sequences if multiple accessions are specified" }
+    accessions:   { description: "accessions of sequences to download" }
+    apiKeyNCBI:   { description: "NCBI API key for more frequent requests; see: https://support.nlm.nih.gov/knowledgebase/article/KA-05317/en-us" }
   }
 
   command {
     ncbi.py --version | tee VERSION
     ncbi.py fetch_fastas \
+        --combinedFilePrefix ${out_prefix} \
+        ~{'--api_key ' + apiKeyNCBI} \
         ${emailAddress} \
         . \
-        ${sep=' ' accessions} \
-        --combinedFilePrefix ${out_prefix} \
+        ${sep=' ' accessions}
   }
 
   output {
@@ -36,31 +44,42 @@ task download_annotations {
   input {
     Array[String]+ accessions
     String         emailAddress
+    String         apiKey
     String         combined_out_prefix
 
     String         docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
+  }
+
+  parameter_meta {
+    combined_out_prefix: { description: "basename of the output fasta file. Will contain multiple sequences if multiple accessions are specified" }
+    accessions:          { description: "accessions for which sequences and feature tables will be downloaded" }
+    apiKeyNCBI:          { description: "NCBI API key for more frequent requests; see: https://support.nlm.nih.gov/knowledgebase/article/KA-05317/en-us" }
   }
 
   command <<<
     set -ex -o pipefail
     ncbi.py --version | tee VERSION
     ncbi.py fetch_feature_tables \
+        ~{'--api_key ' + apiKeyNCBI} \
         ~{emailAddress} \
         ./ \
         ~{sep=' ' accessions} \
         --loglevel DEBUG
     mkdir -p combined
+    pushd combined
     ncbi.py fetch_fastas \
+        --combinedFilePrefix "~{combined_out_prefix}" \
+        ~{'--api_key ' + apiKeyNCBI} \
+        --forceOverwrite \
         ~{emailAddress} \
         ./ \
         ~{sep=' ' accessions} \
-        --combinedFilePrefix "combined/~{combined_out_prefix}" \
-        --forceOverwrite \
         --loglevel DEBUG
+    popd
   >>>
 
   output {
-    File        combined_fasta   = "~{combined_out_prefix}.fasta"
+    File        combined_fasta   = "combined/~{combined_out_prefix}.fasta"
     Array[File] genomes_fasta    = glob("*.fasta")
     Array[File] features_tbl     = glob("*.tbl")
     String      viralngs_version = read_string("VERSION")
