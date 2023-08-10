@@ -18,16 +18,18 @@ task download_fasta {
 
   command {
     ncbi.py --version | tee VERSION
+    mkdir -p combined
     ncbi.py fetch_fastas \
-        --combinedFilePrefix ${out_prefix} \
+        --combinedFilePrefix "tmp.${out_prefix}" \
         ~{'--api_key ' + apiKeyNCBI} \
         ${emailAddress} \
         . \
         ${sep=' ' accessions}
+    mv "tmp.${out_prefix}.fasta" "combined/${out_prefix}.fasta"
   }
 
   output {
-    File   sequences_fasta  = "${out_prefix}.fasta"
+    File   sequences_fasta  = "combined/${out_prefix}.fasta"
     String viralngs_version = read_string("VERSION")
   }
 
@@ -66,16 +68,15 @@ task download_annotations {
         ~{sep=' ' accessions} \
         --loglevel DEBUG
     mkdir -p combined
-    pushd combined
     ncbi.py fetch_fastas \
-        --combinedFilePrefix "~{combined_out_prefix}" \
+        --combinedFilePrefix "temp.~{combined_out_prefix}" \
         ~{'--api_key ' + apiKeyNCBI} \
         --forceOverwrite \
         ~{emailAddress} \
         ./ \
         ~{sep=' ' accessions} \
         --loglevel DEBUG
-    popd
+    mv "temp.~{combined_out_prefix}.fasta" "combined/~{combined_out_prefix}.fasta"
   >>>
 
   output {
