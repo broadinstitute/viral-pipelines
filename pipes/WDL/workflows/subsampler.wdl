@@ -78,8 +78,10 @@ task subsample {
                                          geo_column=~{geo_column} \
                                          date_column=~{date_column}
 
+        echo "pwd rsults"
         pwd
-
+        echo "ls results"
+        ls
 
     }
     runtime {
@@ -90,6 +92,6 @@ task subsample {
         dx_instance_type: "mem1_ssd1_v2_x2"
     }
     output {
-        File genome_matrix_days = "opt/subsampler/genome_matrix_days.tsv"
+        File genome_matrix_days = "/opt/subsampler/genome_matrix_days.tsv"
     }
 }
