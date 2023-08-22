@@ -13,6 +13,10 @@ workflow Subsampler {
             geo_column  =   geo_column,
             date_column =   date_column
     }
+
+    output {
+        File    matrix_days_file    =   subsample.genome_matrix_days
+    }
 }
 
 task subsample {
