@@ -35,9 +35,9 @@ task subsample {
       # cd ../
       # /opt/conda/bin/snakemake subsample
 
-      snakemake genome_matrix --config metadata=~{metadata} \
-                                       geo_column=~{geo_column} \
-                                       date_column=~{date_column}
+      /opt/subsampler/snakemake genome_matrix --config metadata=~{metadata} \
+                                                       geo_column=~{geo_column} \
+                                                       date_column=~{date_column}
 
     }
     runtime {
