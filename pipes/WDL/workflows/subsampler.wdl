@@ -78,9 +78,11 @@ task subsample {
                                          geo_column=~{geo_column} \
                                          date_column=~{date_column}
 
-        echo "pwd rsults"
         pwd
-        echo "ls results"
+        ls
+        echo "go back up one path"
+        cd ..
+        pwd
         ls
 
     }
