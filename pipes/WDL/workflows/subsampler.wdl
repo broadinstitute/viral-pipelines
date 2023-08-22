@@ -84,7 +84,7 @@ task subsample {
         echo "LS AFTER SUBSAMPLER"
         ls
         echo "go back up one path to /cromwell_root"
-        cd
+        cd /cromwell_root
         echo "PWD"
         pwd
         echo "LS"
