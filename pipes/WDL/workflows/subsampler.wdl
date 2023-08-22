@@ -70,26 +70,16 @@ task subsample {
         String  docker = "quay.io/broadinstitute/subsampler"
     }
     command {
-        
         # run the snakemake command
-        echo "original path"
-        pwd
         cd /opt/subsampler
         snakemake genome_matrix --config metadata=~{metadata} \
                                          geo_column=~{geo_column} \
                                          date_column=~{date_column}
 
-        echo "PWD AFTER SUBSAMPLER"
-        pwd
-        echo "LS AFTER SUBSAMPLER"
-        ls
-        echo "go back up one path to /cromwell_root"
+        # delocalization script requires outputs to be in /cromwell_root
+        cp *.tsv /cromwell_root
+        # cp *.txt /cromwell_root
         cd /cromwell_root
-        echo "PWD"
-        pwd
-        echo "LS"
-        ls
-
     }
     runtime {
         docker: docker
@@ -99,6 +89,6 @@ task subsample {
         dx_instance_type: "mem1_ssd1_v2_x2"
     }
     output {
-        File genome_matrix_days = "opt/subsampler/genome_matrix_days.tsv"
+        File genome_matrix_days = "genome_matrix_days.tsv"
     }
 }
