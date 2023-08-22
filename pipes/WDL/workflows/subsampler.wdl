@@ -72,7 +72,8 @@ task subsample {
     command {
         
         # run the snakemake command
-
+        echo "original path"
+        pwd
         cd /opt/subsampler
         snakemake genome_matrix --config metadata=~{metadata} \
                                          geo_column=~{geo_column} \
@@ -81,7 +82,7 @@ task subsample {
         pwd
         ls
         echo "go back up one path"
-        cd ..
+        cd ~/cromwell_root
         pwd
         ls
 
