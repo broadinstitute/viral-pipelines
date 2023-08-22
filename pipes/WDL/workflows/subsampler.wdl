@@ -70,15 +70,16 @@ task subsample {
         String  docker = "quay.io/broadinstitute/subsampler"
     }
     command {
+        
+        # run the snakemake command
 
-      # run the snakemake command
-      # cd ../
-      # /opt/conda/bin/snakemake subsample
+        cd /opt/subsampler
+        snakemake genome_matrix --config metadata=~{metadata} \
+                                         geo_column=~{geo_column} \
+                                         date_column=~{date_column}
 
-      cd /opt/subsampler
-      snakemake genome_matrix --config metadata=~{metadata} \
-                                       geo_column=~{geo_column} \
-                                       date_column=~{date_column}
+        pwd
+
 
     }
     runtime {
@@ -89,6 +90,6 @@ task subsample {
         dx_instance_type: "mem1_ssd1_v2_x2"
     }
     output {
-        File genome_matrix_days = "genome_matrix_days.tsv"
+        File genome_matrix_days = "opt/subsampler/genome_matrix_days.tsv"
     }
 }
