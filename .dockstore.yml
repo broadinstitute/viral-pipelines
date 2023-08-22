@@ -359,3 +359,8 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/bam_to_qiime.wdl
     testParameterFiles:
       - empty.json
+  - name: subsampler
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/subsampler.wdl
+    testParameterFiles:
+      - empty.json
