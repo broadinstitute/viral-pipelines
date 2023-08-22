@@ -79,11 +79,15 @@ task subsample {
                                          geo_column=~{geo_column} \
                                          date_column=~{date_column}
 
+        echo "PWD AFTER SUBSAMPLER"
         pwd
+        echo "LS AFTER SUBSAMPLER"
         ls
-        echo "go back up one path"
-        cd ~/cromwell_root
+        echo "go back up one path to /cromwell_root"
+        cd
+        echo "PWD"
         pwd
+        echo "LS"
         ls
 
     }
