@@ -41,7 +41,12 @@ workflow Subsampler {
     }
 
     output {
-        File    matrix_days_file    =   subsample.genome_matrix_days
+        File    genome_matrix_days_file             =   subsample.genome_matrix_days
+        File    matrix_genomes_unit_file            =   subsample.matrix_genomes_unit
+        File    matrix_cases_unit_file              =   subsample.matrix_cases_unit
+        File    weekly_sampling_proportions_file    =   subsample.weekly_sampling_proportions
+		File    weekly_sampling_bias_file           =   subsample.weekly_sampling_bias
+		File    matrix_genomes_unit_corrected_file  =   subsample.matrix_genomes_unit_corrected
     }
 }
 
@@ -72,12 +77,57 @@ task subsample {
     command {
         # run the snakemake command
         cd /opt/subsampler
+        
         snakemake genome_matrix --config metadata=~{metadata} \
+                                         case_data=~{case_data} \
+                                         keep_file=~{keep_file} \
+                                         remove_file=~{remove_file} \
+                                         filter_file=~{filter_file} \
+                                         id_column=~{id_column} \
                                          geo_column=~{geo_column} \
-                                         date_column=~{date_column}
+                                         date_column=~{date_column} \
+                                         baseline=~{baseline} \
+                                         refgenome_size=~{refgenome_size} \
+                                         max_missing=~{max_missing} \
+                                         seed_num=~{seed_num} \
+                                         start_date=~{start_date} \
+                                         end_date=~{end_date} \
+                                         unit=~{unit}
+
+        snakemake unit_conversion --config metadata=~{metadata} \
+                                         case_data=~{case_data} \
+                                         keep_file=~{keep_file} \
+                                         remove_file=~{remove_file} \
+                                         filter_file=~{filter_file} \
+                                         id_column=~{id_column} \
+                                         geo_column=~{geo_column} \
+                                         date_column=~{date_column} \
+                                         baseline=~{baseline} \
+                                         refgenome_size=~{refgenome_size} \
+                                         max_missing=~{max_missing} \
+                                         seed_num=~{seed_num} \
+                                         start_date=~{start_date} \
+                                         end_date=~{end_date} \
+                                         unit=~{unit}
+
+        snakemake correct_bias --config metadata=~{metadata} \
+                                         case_data=~{case_data} \
+                                         keep_file=~{keep_file} \
+                                         remove_file=~{remove_file} \
+                                         filter_file=~{filter_file} \
+                                         id_column=~{id_column} \
+                                         geo_column=~{geo_column} \
+                                         date_column=~{date_column} \
+                                         baseline=~{baseline} \
+                                         refgenome_size=~{refgenome_size} \
+                                         max_missing=~{max_missing} \
+                                         seed_num=~{seed_num} \
+                                         start_date=~{start_date} \
+                                         end_date=~{end_date} \
+                                         unit=~{unit}
 
         # delocalization script requires outputs to be in /cromwell_root
-        cp *.tsv /cromwell_root
+        cp outputs/* /cromwell_root
         # cp *.txt /cromwell_root
         cd /cromwell_root
     }
@@ -89,6 +139,11 @@ task subsample {
         dx_instance_type: "mem1_ssd1_v2_x2"
     }
     output {
-        File genome_matrix_days = "genome_matrix_days.tsv"
+        File    genome_matrix_days              =   "genome_matrix_days.tsv"
+        File    matrix_genomes_unit             =   "matrix_genomes_unit.tsv"
+        File    matrix_cases_unit               =   "matrix_cases_unit.tsv"
+        File    weekly_sampling_proportions     =   "weekly_sampling_proportions.tsv"
+		File    weekly_sampling_bias            =   "weekly_sampling_bias.tsv"
+		File    matrix_genomes_unit_corrected   =   "matrix_genomes_unit_corrected.tsv"
     }
 }
