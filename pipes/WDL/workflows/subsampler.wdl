@@ -8,6 +8,8 @@ workflow Subsampler {
         File    remove_file
         File    filter_file
 
+        String  start_date
+        String  end_date
         String  id_column
         String  geo_column
         String  date_column
@@ -15,8 +17,6 @@ workflow Subsampler {
         String  refgenome_size  =   "1"
         String  max_missing     =   "99"
         String  seed_num        =   "2007"
-        String  start_date      =   "2020-03-01"
-        String  end_date        =   "2021-12-31"
         String  unit            =   "week"
 
     }
