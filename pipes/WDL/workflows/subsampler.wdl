@@ -126,7 +126,7 @@ task subsample {
         #                                  end_date=~{end_date} \
         #                                  unit=~{unit}
 
-        snakemake subsampler --config metadata=~{metadata} \
+        snakemake subsample --config metadata=~{metadata} \
                                          case_data=~{case_data} \
                                          keep_file=~{keep_file} \
                                          remove_file=~{remove_file} \
