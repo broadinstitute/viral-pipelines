@@ -126,6 +126,21 @@ task subsample {
                                          end_date=~{end_date} \
                                          unit=~{unit}
 
+        snakemake subsampler --config metadata=~{metadata} \
+                                         case_data=~{case_data} \
+                                         keep_file=~{keep_file} \
+                                         remove_file=~{remove_file} \
+                                         filter_file=~{filter_file} \
+                                         id_column=~{id_column} \
+                                         geo_column=~{geo_column} \
+                                         date_column=~{date_column} \
+                                         baseline=~{baseline} \
+                                         refgenome_size=~{refgenome_size} \
+                                         max_missing=~{max_missing} \
+                                         seed_num=~{seed_num} \
+                                         start_date=~{start_date} \
+                                         end_date=~{end_date} \
+                                         unit=~{unit}
         # delocalization script requires outputs to be in /cromwell_root
         cp outputs/* /cromwell_root
         # cp *.txt /cromwell_root
