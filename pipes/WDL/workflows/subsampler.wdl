@@ -8,11 +8,11 @@ workflow Subsampler {
         File    remove_file
         File    filter_file
 
-        String  start_date
-        String  end_date
         String  id_column
         String  geo_column
         String  date_column
+        String? start_date
+        String? end_date
         String  baseline        =   "0.001"
         String  refgenome_size  =   "1"
         String  max_missing     =   "99"
@@ -61,6 +61,8 @@ task subsample {
         File    remove_file
         File    filter_file
 
+        String? start_date
+        String? end_date
         String  id_column
         String  geo_column
         String  date_column
@@ -68,8 +70,6 @@ task subsample {
         String  refgenome_size  =   "1"
         String  max_missing     =   "99"
         String  seed_num        =   "2007"
-        String  start_date      =   "2020-03-01"
-        String  end_date        =   "2021-12-31"
         String  unit            =   "week"
 
         String  docker = "quay.io/broadinstitute/subsampler"
@@ -78,53 +78,53 @@ task subsample {
         # run the snakemake command
         cd /opt/subsampler
         
-        snakemake genome_matrix --config metadata=~{metadata} \
-                                         case_data=~{case_data} \
-                                         keep_file=~{keep_file} \
-                                         remove_file=~{remove_file} \
-                                         filter_file=~{filter_file} \
-                                         id_column=~{id_column} \
-                                         geo_column=~{geo_column} \
-                                         date_column=~{date_column} \
-                                         baseline=~{baseline} \
-                                         refgenome_size=~{refgenome_size} \
-                                         max_missing=~{max_missing} \
-                                         seed_num=~{seed_num} \
-                                         start_date=~{start_date} \
-                                         end_date=~{end_date} \
-                                         unit=~{unit}
+        # snakemake genome_matrix --config metadata=~{metadata} \
+        #                                  case_data=~{case_data} \
+        #                                  keep_file=~{keep_file} \
+        #                                  remove_file=~{remove_file} \
+        #                                  filter_file=~{filter_file} \
+        #                                  id_column=~{id_column} \
+        #                                  geo_column=~{geo_column} \
+        #                                  date_column=~{date_column} \
+        #                                  baseline=~{baseline} \
+        #                                  refgenome_size=~{refgenome_size} \
+        #                                  max_missing=~{max_missing} \
+        #                                  seed_num=~{seed_num} \
+        #                                  start_date=~{start_date} \
+        #                                  end_date=~{end_date} \
+        #                                  unit=~{unit}
 
-        snakemake unit_conversion --config metadata=~{metadata} \
-                                         case_data=~{case_data} \
-                                         keep_file=~{keep_file} \
-                                         remove_file=~{remove_file} \
-                                         filter_file=~{filter_file} \
-                                         id_column=~{id_column} \
-                                         geo_column=~{geo_column} \
-                                         date_column=~{date_column} \
-                                         baseline=~{baseline} \
-                                         refgenome_size=~{refgenome_size} \
-                                         max_missing=~{max_missing} \
-                                         seed_num=~{seed_num} \
-                                         start_date=~{start_date} \
-                                         end_date=~{end_date} \
-                                         unit=~{unit}
+        # snakemake unit_conversion --config metadata=~{metadata} \
+        #                                  case_data=~{case_data} \
+        #                                  keep_file=~{keep_file} \
+        #                                  remove_file=~{remove_file} \
+        #                                  filter_file=~{filter_file} \
+        #                                  id_column=~{id_column} \
+        #                                  geo_column=~{geo_column} \
+        #                                  date_column=~{date_column} \
+        #                                  baseline=~{baseline} \
+        #                                  refgenome_size=~{refgenome_size} \
+        #                                  max_missing=~{max_missing} \
+        #                                  seed_num=~{seed_num} \
+        #                                  start_date=~{start_date} \
+        #                                  end_date=~{end_date} \
+        #                                  unit=~{unit}
 
-        snakemake correct_bias --config metadata=~{metadata} \
-                                         case_data=~{case_data} \
-                                         keep_file=~{keep_file} \
-                                         remove_file=~{remove_file} \
-                                         filter_file=~{filter_file} \
-                                         id_column=~{id_column} \
-                                         geo_column=~{geo_column} \
-                                         date_column=~{date_column} \
-                                         baseline=~{baseline} \
-                                         refgenome_size=~{refgenome_size} \
-                                         max_missing=~{max_missing} \
-                                         seed_num=~{seed_num} \
-                                         start_date=~{start_date} \
-                                         end_date=~{end_date} \
-                                         unit=~{unit}
+        # snakemake correct_bias --config metadata=~{metadata} \
+        #                                  case_data=~{case_data} \
+        #                                  keep_file=~{keep_file} \
+        #                                  remove_file=~{remove_file} \
+        #                                  filter_file=~{filter_file} \
+        #                                  id_column=~{id_column} \
+        #                                  geo_column=~{geo_column} \
+        #                                  date_column=~{date_column} \
+        #                                  baseline=~{baseline} \
+        #                                  refgenome_size=~{refgenome_size} \
+        #                                  max_missing=~{max_missing} \
+        #                                  seed_num=~{seed_num} \
+        #                                  start_date=~{start_date} \
+        #                                  end_date=~{end_date} \
+        #                                  unit=~{unit}
 
         snakemake subsampler --config metadata=~{metadata} \
                                          case_data=~{case_data} \
@@ -138,9 +138,9 @@ task subsample {
                                          refgenome_size=~{refgenome_size} \
                                          max_missing=~{max_missing} \
                                          seed_num=~{seed_num} \
-                                         start_date=~{start_date} \
-                                         end_date=~{end_date} \
-                                         unit=~{unit}
+                                         unit=~{unit} \
+                                         ~{"start_date=" + start_date} \
+                                         ~{"end_date=" + end_date}
         # delocalization script requires outputs to be in /cromwell_root
         cp outputs/* /cromwell_root
         # cp *.txt /cromwell_root
