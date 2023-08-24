@@ -47,6 +47,9 @@ workflow Subsampler {
         File    weekly_sampling_proportions_file    =   subsample.weekly_sampling_proportions
 		File    weekly_sampling_bias_file           =   subsample.weekly_sampling_bias
 		File    matrix_genomes_unit_corrected_file  =   subsample.matrix_genomes_unit_corrected
+        File    selected_sequences_file             =   subsample.selected_sequences
+        File    selected_metadata_file              =   subsample.selected_metadata
+        File    sampling_stats_file                 =   subsample.sampling_stats
     }
 }
 
@@ -77,55 +80,6 @@ task subsample {
     command {
         # run the snakemake command
         cd /opt/subsampler
-        
-        # snakemake genome_matrix --config metadata=~{metadata} \
-        #                                  case_data=~{case_data} \
-        #                                  keep_file=~{keep_file} \
-        #                                  remove_file=~{remove_file} \
-        #                                  filter_file=~{filter_file} \
-        #                                  id_column=~{id_column} \
-        #                                  geo_column=~{geo_column} \
-        #                                  date_column=~{date_column} \
-        #                                  baseline=~{baseline} \
-        #                                  refgenome_size=~{refgenome_size} \
-        #                                  max_missing=~{max_missing} \
-        #                                  seed_num=~{seed_num} \
-        #                                  start_date=~{start_date} \
-        #                                  end_date=~{end_date} \
-        #                                  unit=~{unit}
-
-        # snakemake unit_conversion --config metadata=~{metadata} \
-        #                                  case_data=~{case_data} \
-        #                                  keep_file=~{keep_file} \
-        #                                  remove_file=~{remove_file} \
-        #                                  filter_file=~{filter_file} \
-        #                                  id_column=~{id_column} \
-        #                                  geo_column=~{geo_column} \
-        #                                  date_column=~{date_column} \
-        #                                  baseline=~{baseline} \
-        #                                  refgenome_size=~{refgenome_size} \
-        #                                  max_missing=~{max_missing} \
-        #                                  seed_num=~{seed_num} \
-        #                                  start_date=~{start_date} \
-        #                                  end_date=~{end_date} \
-        #                                  unit=~{unit}
-
-        # snakemake correct_bias --config metadata=~{metadata} \
-        #                                  case_data=~{case_data} \
-        #                                  keep_file=~{keep_file} \
-        #                                  remove_file=~{remove_file} \
-        #                                  filter_file=~{filter_file} \
-        #                                  id_column=~{id_column} \
-        #                                  geo_column=~{geo_column} \
-        #                                  date_column=~{date_column} \
-        #                                  baseline=~{baseline} \
-        #                                  refgenome_size=~{refgenome_size} \
-        #                                  max_missing=~{max_missing} \
-        #                                  seed_num=~{seed_num} \
-        #                                  start_date=~{start_date} \
-        #                                  end_date=~{end_date} \
-        #                                  unit=~{unit}
-
         snakemake subsample --config metadata=~{metadata} \
                                          case_data=~{case_data} \
                                          keep_file=~{keep_file} \
@@ -143,7 +97,6 @@ task subsample {
                                          ~{"end_date=" + end_date}
         # delocalization script requires outputs to be in /cromwell_root
         cp outputs/* /cromwell_root
-        # cp *.txt /cromwell_root
         cd /cromwell_root
     }
     runtime {
@@ -160,5 +113,8 @@ task subsample {
         File    weekly_sampling_proportions     =   "weekly_sampling_proportions.tsv"
 		File    weekly_sampling_bias            =   "weekly_sampling_bias.tsv"
 		File    matrix_genomes_unit_corrected   =   "matrix_genomes_unit_corrected.tsv"
+        File    selected_sequences              =   "selected_sequences.txt"
+        File    selected_metadata               =   "selected_metadata.tsv"
+        File    sampling_stats                  =   "sampling_stats.txt"
     }
 }
