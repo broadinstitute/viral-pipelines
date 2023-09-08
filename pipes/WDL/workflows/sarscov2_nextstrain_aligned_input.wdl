@@ -13,7 +13,7 @@ workflow sarscov2_nextstrain_aligned_input {
     }
 
     input {
-        Array[File]+    aligned_sequences_fasta=["gs://nextstrain-data/files/ncov/open/aligned.fasta.xz"]
+        Array[File]+    aligned_sequences_fasta=["gs://nextstrain-data/files/ncov/open/aligned.fasta.zst"]
         Array[File]+    sample_metadata_tsvs=["gs://nextstrain-data/files/ncov/open/metadata.tsv.gz"]
 
         String          build_name
@@ -57,7 +57,7 @@ workflow sarscov2_nextstrain_aligned_input {
     call utils.zcat {
         input:
             infiles     = aligned_sequences_fasta,
-            output_name = "all_samples_combined_assembly.fasta"
+            output_name = "all_samples_combined_assembly.fasta.xz"
     }
 
     #### merge metadata, compute derived cols
