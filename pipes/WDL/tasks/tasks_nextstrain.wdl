@@ -846,14 +846,14 @@ task filter_sequences_to_list {
         File         sequences
         Array[File]? keep_list
 
-        String       out_fname = sub(sub(basename(sequences), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
-        String       docker = "nextstrain/base:build-20211012T204409Z"
+        String       out_fname = sub(sub(basename(sequences, ".zst"), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
+        String       docker = "quay.io/broadinstitute/viral-core:2.1.33" # "nextstrain/base:build-20211012T204409Z"
         Int          disk_size = 750
     }
     parameter_meta {
         sequences: {
           description: "Set of sequences (unaligned fasta or aligned fasta -- one sequence per genome) or variants (vcf format) to subsample using augur filter.",
-          patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
+          patterns: ["*.fasta", "*.fa", "*.fasta.zst", "*.vcf", "*.vcf.gz"]
         }
         keep_list: {
           description: "List of strain ids.",
@@ -876,13 +876,14 @@ task filter_sequences_to_list {
                 echo filtering fasta file
     python3 <<CODE
     import Bio.SeqIO
+    import util.file
     keep_list = set()
     with open('keep_list.txt', 'rt') as inf:
         keep_list = set(line.strip() for line in inf)
     n_total = 0
     n_kept = 0
-    with open('~{sequences}', 'rt') as inf:
-        with open('~{out_fname}', 'wt') as outf:
+    with util.file.open_or_gzopen('~{sequences}', 'rt') as inf:
+        with util.file.open_or_gzopen('~{out_fname}', 'wt') as outf:
             for seq in Bio.SeqIO.parse(inf, 'fasta'):
                 n_total += 1
                 if seq.id in keep_list:

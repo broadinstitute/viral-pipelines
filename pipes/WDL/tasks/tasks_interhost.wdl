@@ -1,5 +1,71 @@
 version 1.0
 
+task subsample_by_cases {
+    meta {
+        description: "Run subsampler to get downsampled dataset and metadata proportional to epidemiological case counts."
+    }
+    input {
+        File    metadata
+        File    case_data
+        File    keep_file
+        File    remove_file
+        File    filter_file
+
+        String? start_date
+        String? end_date
+        String  id_column
+        String  geo_column
+        String  date_column
+        String  baseline        =   "0.001"
+        String  refgenome_size  =   "1"
+        String  max_missing     =   "99"
+        String  seed_num        =   "2007"
+        String  unit            =   "week"
+
+        String  docker = "quay.io/broadinstitute/subsampler"
+    }
+    command {
+        # subsampler is a snakemake target and must be run from /opt/subsampler
+        cd /opt/subsampler
+        snakemake subsample --config metadata=~{metadata} \
+                                         case_data=~{case_data} \
+                                         keep_file=~{keep_file} \
+                                         remove_file=~{remove_file} \
+                                         filter_file=~{filter_file} \
+                                         id_column=~{id_column} \
+                                         geo_column=~{geo_column} \
+                                         date_column=~{date_column} \
+                                         baseline=~{baseline} \
+                                         refgenome_size=~{refgenome_size} \
+                                         max_missing=~{max_missing} \
+                                         seed_num=~{seed_num} \
+                                         unit=~{unit} \
+                                         ~{"start_date=" + start_date} \
+                                         ~{"end_date=" + end_date}
+        # put outputs in original working directory for delocalization
+        cd -
+        ln -s /opt/subsampler/outputs/* .
+    }
+    runtime {
+        docker: docker
+        memory: "1 GB"
+        cpu:    1
+        disks: "local-disk 375 LOCAL"
+        dx_instance_type: "mem1_ssd1_v2_x2"
+    }
+    output {
+        File    genome_matrix_days              =   "genome_matrix_days.tsv"
+        File    matrix_genomes_unit             =   "matrix_genomes_unit.tsv"
+        File    matrix_cases_unit               =   "matrix_cases_unit.tsv"
+        File    weekly_sampling_proportions     =   "weekly_sampling_proportions.tsv"
+        File    weekly_sampling_bias            =   "weekly_sampling_bias.tsv"
+        File    matrix_genomes_unit_corrected   =   "matrix_genomes_unit_corrected.tsv"
+        File    selected_sequences              =   "selected_sequences.txt"
+        File    selected_metadata               =   "selected_metadata.tsv"
+        File    sampling_stats                  =   "sampling_stats.txt"
+    }
+}
+
 task multi_align_mafft_ref {
   input {
     File         reference_fasta
