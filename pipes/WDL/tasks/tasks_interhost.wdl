@@ -168,6 +168,9 @@ task beast {
   output {
     File        beast_log    = glob("*.log")[0]
     Array[File] trees        = glob("*.trees")
+    Array[File] ops          = glob("*.ops")
+    Array[File] rates        = glob("*.rates")
+    Array[File] root         = glob("*.root")
     File        beast_stdout = stdout()
   }
 
