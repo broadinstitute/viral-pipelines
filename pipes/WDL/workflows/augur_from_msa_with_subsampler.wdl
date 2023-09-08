@@ -148,6 +148,9 @@ workflow augur_from_msa_with_subsampler {
     }
 
     output {
+        File        selected_metadata     = subsample_by_cases.selected_metadata
+        File        sampling_stats_file   = subsample_by_cases.sampling_stats
+
         File        masked_subsampled_msa = masked_sequences
         
         File        ml_tree               = draft_augur_tree.aligned_tree
