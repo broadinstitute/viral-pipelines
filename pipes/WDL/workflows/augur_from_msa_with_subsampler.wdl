@@ -76,7 +76,7 @@ workflow augur_from_msa_with_subsampler {
     call nextstrain.filter_sequences_to_list {
         input:
             sequences = aligned_msa_fasta,
-            keep_list = subsample_by_cases.selected_sequences
+            keep_list = [subsample_by_cases.selected_sequences]
     }
 
     # standard augur pipeline
@@ -121,7 +121,7 @@ workflow augur_from_msa_with_subsampler {
             input:
                 tree       = refine_augur_tree.tree_refined,
                 nt_muts    = ancestral_tree.nt_muts_json,
-                genbank_gb = genbank_gb
+                genbank_gb = select_first([genbank_gb])
         }
     }
     if(defined(clades_tsv) && defined(ref_fasta)) {
@@ -130,7 +130,7 @@ workflow augur_from_msa_with_subsampler {
                 tree_nwk     = refine_augur_tree.tree_refined,
                 nt_muts_json = ancestral_tree.nt_muts_json,
                 aa_muts_json = translate_augur_tree.aa_muts_json,
-                ref_fasta    = ref_fasta,
+                ref_fasta    = select_first([ref_fasta]),
                 clades_tsv   = select_first([clades_tsv])
         }
     }

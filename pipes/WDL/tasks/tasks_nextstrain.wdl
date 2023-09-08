@@ -1646,7 +1646,7 @@ task assign_clades_to_nodes {
     input {
         File tree_nwk
         File nt_muts_json
-        File aa_muts_json
+        File? aa_muts_json
         File ref_fasta
         File clades_tsv
 
@@ -1659,7 +1659,7 @@ task assign_clades_to_nodes {
         augur version > VERSION
         AUGUR_RECURSION_LIMIT=10000 augur clades \
         --tree "~{tree_nwk}" \
-        --mutations "~{nt_muts_json}" "~{aa_muts_json}" \
+        --mutations "~{nt_muts_json}" ~{'"' + aa_muts_json + '"'} \
         --reference "~{ref_fasta}" \
         --clades "~{clades_tsv}" \
         --output-node-data "~{out_basename}_clades.json"
