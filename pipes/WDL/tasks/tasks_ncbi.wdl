@@ -60,7 +60,7 @@ task download_annotations {
   >>>
 
   output {
-    File        combined_fasta   = "~{combined_out_prefix}.fasta"
+    File        combined_fasta   = "combined/~{combined_out_prefix}.fasta"
     Array[File] genomes_fasta    = glob("*.fasta")
     Array[File] features_tbl     = glob("*.tbl")
     String      viralngs_version = read_string("VERSION")
