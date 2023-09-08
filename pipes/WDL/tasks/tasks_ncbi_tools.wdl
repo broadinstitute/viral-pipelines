@@ -34,11 +34,6 @@ task Fetch_SRA_to_BAM {
             SAM_PLATFORM="$PLATFORM"
         fi
 
-        # Pull full quality scores (i.e. not "SRA lite" format)
-        # See: 
-        #   https://www.ncbi.nlm.nih.gov/sra/docs/sra-data-formats/
-        vdb-config --simplified-quality-scores no
-
         sam-dump --unaligned --header "~{SRA_ID}" \
             | samtools view -bhS - \
             > temp.bam
