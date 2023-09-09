@@ -1,5 +1,7 @@
 version 1.0
 
+#DX_SKIP_WORKFLOW
+
 import "../tasks/tasks_16S_amplicon.wdl" as infile
 
 workflow qiime_import_bam {
