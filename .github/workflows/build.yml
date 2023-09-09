@@ -277,7 +277,7 @@ jobs:
 
   deploy_dnanexus:
     #if: ${{ github.event.ref == 'dnanexus' }}
-    if: github.event_name == 'release' || github.ref == 'refs/heads/master'
+    if: github.event_name == 'release' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dnanexus'
     needs:
       - validate_wdl_womtool
       - validate_wdl_miniwdl

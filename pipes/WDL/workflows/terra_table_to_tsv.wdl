@@ -1,5 +1,7 @@
 version 1.0
 
+#DX_SKIP_WORKFLOW
+
 import "../tasks/tasks_terra.wdl" as terra
 
 workflow terra_table_to_tsv {

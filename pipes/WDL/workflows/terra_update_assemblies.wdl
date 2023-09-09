@@ -1,5 +1,7 @@
 version 1.0
 
+#DX_SKIP_WORKFLOW
+
 import "../tasks/tasks_terra.wdl" as terra
 
 workflow update_data_tables {
