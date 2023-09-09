@@ -13,6 +13,9 @@ workflow beast_gpu {
     output {
         File        beast_log    = beast.beast_log
         Array[File] trees        = beast.trees
+        Array[File] ops          = beast.ops
+        Array[File] rates        = beast.rates
+        Array[File] root         = beast.root
         String      beast_stdout = beast.beast_stdout
     }
 }

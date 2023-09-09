@@ -34,9 +34,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       # fetch git tags (tagged releases) because 
-      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      # actions/checkout@v3 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags      
       - name: Programmatic environment setup
@@ -66,7 +66,7 @@ jobs:
         run: |
           env
       - name: install python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: '3.8'
       - name: install system dependencies
@@ -87,9 +87,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       # fetch git tags (tagged releases) because 
-      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      # actions/checkout@v3 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
@@ -115,7 +115,7 @@ jobs:
           echo "GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_BRANCH"
           echo "GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_BRANCH" >> $GITHUB_ENV
       - name: install java
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v3
         with:
           distribution: 'adopt'
           java-version: '11'
@@ -137,9 +137,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       # fetch git tags (tagged releases) because 
-      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      # actions/checkout@v3 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
@@ -165,7 +165,7 @@ jobs:
           echo "GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_BRANCH"
           echo "GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_BRANCH" >> $GITHUB_ENV
       - name: install python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with: 
           python-version: '3.8'
       - name: install docs dependencies
@@ -182,9 +182,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       # fetch git tags (tagged releases) because 
-      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      # actions/checkout@v3 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
@@ -210,7 +210,7 @@ jobs:
           echo "GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_BRANCH"
           echo "GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_BRANCH" >> $GITHUB_ENV
       - name: install java
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v3
         with:
           distribution: 'adopt'
           java-version: '11'
@@ -230,9 +230,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       # fetch git tags (tagged releases) because 
-      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      # actions/checkout@v3 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
@@ -258,7 +258,7 @@ jobs:
           echo "GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_BRANCH"
           echo "GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_BRANCH" >> $GITHUB_ENV
       - name: install python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: '3.8'
       - name: install system dependencies
@@ -277,7 +277,7 @@ jobs:
 
   deploy_dnanexus:
     #if: ${{ github.event.ref == 'dnanexus' }}
-    if: github.event_name == 'release' || github.ref == 'refs/heads/master'
+    if: github.event_name == 'release' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dnanexus'
     needs:
       - validate_wdl_womtool
       - validate_wdl_miniwdl
@@ -289,9 +289,9 @@ jobs:
       DX_PROJECT: project-F8PQ6380xf5bK0Qk0YPjB17P
     steps:
       - name: checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       # fetch git tags (tagged releases) because 
-      # actions/checkout@v2 does either a full checkout or a shallow checkout without tags
+      # actions/checkout@v3 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
@@ -322,11 +322,11 @@ jobs:
           echo "${{ github.event.action }}"
           echo "${{ github.event.pull_request.merged }}"
       - name: install python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with: 
           python-version: '3.8'
       - name: install java
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v3
         with:
           distribution: 'adopt'
           java-version: '11'
