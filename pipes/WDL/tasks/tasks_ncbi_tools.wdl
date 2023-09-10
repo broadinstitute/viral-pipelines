@@ -92,7 +92,7 @@ task Fetch_SRA_to_BAM {
         biosample['accession'] = meta['EXPERIMENT_PACKAGE_SET']['EXPERIMENT_PACKAGE']['SAMPLE']['IDENTIFIERS']['EXTERNAL_ID']['content']
         biosample['message'] = 'Successfully loaded'
         biosample['bioproject_accession'] = meta['EXPERIMENT_PACKAGE_SET']['EXPERIMENT_PACKAGE']['STUDY']['IDENTIFIERS']['EXTERNAL_ID']['content']
-        biosample['sample_name'] = biosample['isolate']
+        biosample['sample_name'] = biosample.get('isolate', biosample.get('Sample Name', biosample.get('strain', '')))
         for k,v in biosample.items():
             if v == 'not provided':
                 biosample[k] = ''
