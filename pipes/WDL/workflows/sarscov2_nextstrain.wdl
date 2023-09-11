@@ -15,7 +15,7 @@ workflow sarscov2_nextstrain {
     }
 
     input {
-        Array[File]+    assembly_fastas=["gs://nextstrain-data/files/ncov/open/sequences.fasta.xz"]
+        Array[File]+    assembly_fastas=["gs://nextstrain-data/files/ncov/open/sequences.fasta.zst"]
         Array[File]+    sample_metadata_tsvs=["gs://nextstrain-data/files/ncov/open/metadata.tsv.gz"]
         File?           ref_fasta
         Int             min_unambig_genome = 27000
@@ -57,7 +57,7 @@ workflow sarscov2_nextstrain {
     call utils.zcat {
         input:
             infiles     = assembly_fastas,
-            output_name = "all_samples_combined_assembly.fasta"
+            output_name = "all_samples_combined_assembly.fasta.zst"
     }
 
     call nextstrain.nextstrain_deduplicate_sequences as dedup_seqs {

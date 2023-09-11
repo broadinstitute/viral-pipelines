@@ -57,7 +57,7 @@ workflow sarscov2_nextstrain_aligned_input {
     call utils.zcat {
         input:
             infiles     = aligned_sequences_fasta,
-            output_name = "all_samples_combined_assembly.fasta.xz"
+            output_name = "all_samples_combined_assembly.fasta.zst"
     }
 
     #### merge metadata, compute derived cols
