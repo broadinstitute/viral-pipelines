@@ -450,7 +450,7 @@ task nextstrain_build_subsample {
         File?  drop_list
 
         Int    machine_mem_gb = 50
-        String docker = "nextstrain/base:build-20211012T204409Z"
+        String docker = "nextstrain/base:build-20230905T192825Z"
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
         Int    disk_size = 750
     }
@@ -594,7 +594,7 @@ task nextstrain_build_subsample {
 task nextstrain_ncov_defaults {
     input {
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
-        String docker                      = "nextstrain/base:build-20211012T204409Z"
+        String docker                      = "nextstrain/base:build-20230905T192825Z"
         Int    disk_size = 50
     }
     command {
@@ -632,7 +632,7 @@ task nextstrain_deduplicate_sequences {
         Boolean error_on_seq_diff = false
 
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
-        String docker                      = "nextstrain/base:build-20211012T204409Z"
+        String docker                      = "nextstrain/base:build-20230905T192825Z"
         Int disk_size = 750
     }
 
@@ -686,7 +686,7 @@ task nextstrain_ncov_sanitize_gisaid_data {
         String? prefix_to_strip
 
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
-        String docker                      = "nextstrain/base:build-20211012T204409Z"
+        String docker                      = "nextstrain/base:build-20230905T192825Z"
         Int    disk_size = 750
     }
 
@@ -762,7 +762,7 @@ task filter_subsample_sequences {
         Array[String]? exclude_where
         Array[String]? include_where
 
-        String         docker = "nextstrain/base:build-20211012T204409Z"
+        String         docker = "nextstrain/base:build-20230905T192825Z"
         Int            disk_size = 750
     }
     parameter_meta {
@@ -847,7 +847,7 @@ task filter_sequences_to_list {
         Array[File]? keep_list
 
         String       out_fname = sub(sub(basename(sequences), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
-        String       docker = "nextstrain/base:build-20211012T204409Z"
+        String       docker = "nextstrain/base:build-20230905T192825Z"
         Int          disk_size = 750
     }
     parameter_meta {
@@ -1143,7 +1143,7 @@ task augur_mafft_align {
         Boolean fill_gaps = true
         Boolean remove_reference = true
 
-        String  docker = "nextstrain/base:build-20211012T204409Z"
+        String  docker = "nextstrain/base:build-20230905T192825Z"
         Int     disk_size = 750
     }
     command <<<
@@ -1216,7 +1216,7 @@ task augur_mask_sites {
         File   sequences
         File?  mask_bed
 
-        String docker = "nextstrain/base:build-20211012T204409Z"
+        String docker = "nextstrain/base:build-20230905T192825Z"
         Int    disk_size = 750
     }
     parameter_meta {
@@ -1275,7 +1275,7 @@ task draft_augur_tree {
 
         Int     cpus = 64
         Int     machine_mem_gb = 32
-        String  docker = "nextstrain/base:build-20211012T204409Z"
+        String  docker = "nextstrain/base:build-20230905T192825Z"
         Int     disk_size = 1250
     }
     parameter_meta {
@@ -1344,7 +1344,7 @@ task refine_augur_tree {
         String?  divergence_units = "mutations"
         File?    vcf_reference
 
-        String   docker = "nextstrain/base:build-20211012T204409Z"
+        String   docker = "nextstrain/base:build-20230905T192825Z"
         Int      disk_size = 750
         Int      machine_mem_gb = 75
     }
@@ -1418,7 +1418,7 @@ task ancestral_traits {
         Float?        sampling_bias_correction
 
         Int           machine_mem_gb = 32
-        String        docker = "nextstrain/base:build-20211012T204409Z"
+        String        docker = "nextstrain/base:build-20230905T192825Z"
         Int           disk_size = 750
     }
     String out_basename = basename(tree, '.nwk')
@@ -1471,7 +1471,7 @@ task ancestral_tree {
         File?    vcf_reference
         File?    output_vcf
 
-        String   docker = "nextstrain/base:build-20211012T204409Z"
+        String   docker = "nextstrain/base:build-20230905T192825Z"
         Int      disk_size = 300
     }
     parameter_meta {
@@ -1532,7 +1532,7 @@ task translate_augur_tree {
         File?  vcf_reference_output
         File?  vcf_reference
 
-        String docker = "nextstrain/base:build-20211012T204409Z"
+        String docker = "nextstrain/base:build-20230905T192825Z"
         Int    disk_size = 300
     }
     String out_basename = basename(tree, '.nwk')
@@ -1589,7 +1589,7 @@ task tip_frequencies {
         Boolean  include_internal_nodes = false
 
         Int      machine_mem_gb = 64
-        String   docker = "nextstrain/base:build-20211012T204409Z"
+        String   docker = "nextstrain/base:build-20230905T192825Z"
         String   out_basename = basename(tree, '.nwk')
         Int      disk_size = 200
     }
@@ -1649,7 +1649,7 @@ task assign_clades_to_nodes {
         File ref_fasta
         File clades_tsv
 
-        String docker = "nextstrain/base:build-20211012T204409Z"
+        String docker = "nextstrain/base:build-20230905T192825Z"
         Int    disk_size = 300
     }
     String out_basename = basename(basename(tree_nwk, ".nwk"), "_timetree")
@@ -1694,7 +1694,7 @@ task augur_import_beast {
         String? tip_date_delimiter
 
         Int     machine_mem_gb = 3
-        String  docker = "nextstrain/base:build-20211012T204409Z"
+        String  docker = "nextstrain/base:build-20230905T192825Z"
         Int     disk_size = 150
     }
     String tree_basename = basename(beast_mcc_tree, ".tree")
@@ -1755,7 +1755,7 @@ task export_auspice_json {
         String out_basename = basename(basename(tree, ".nwk"), "_timetree")
 
         Int    machine_mem_gb = 64
-        String docker = "nextstrain/base:build-20211012T204409Z"
+        String docker = "nextstrain/base:build-20230905T192825Z"
         Int    disk_size = 300
     }
     
