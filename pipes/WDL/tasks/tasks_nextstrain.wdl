@@ -1288,7 +1288,7 @@ task draft_augur_tree {
     command <<<
         set -e
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur tree --alignment "~{msa_or_vcf}" \
+        AUGUR_RECURSION_LIMIT=100000 augur tree --alignment "~{msa_or_vcf}" \
             --output "~{out_basename}_~{method}.nwk" \
             --method "~{method}" \
             --substitution-model ~{default="GTR" substitution_model} \
@@ -1358,7 +1358,7 @@ task refine_augur_tree {
     command <<<
         set -e
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur refine \
+        AUGUR_RECURSION_LIMIT=100000 augur refine \
             --tree "~{raw_tree}" \
             --alignment "~{msa_or_vcf}" \
             --metadata "~{metadata}" \
@@ -1425,7 +1425,7 @@ task ancestral_traits {
     command <<<
         set -e
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur traits \
+        AUGUR_RECURSION_LIMIT=100000 augur traits \
             --tree "~{tree}" \
             --metadata "~{metadata}" \
             --columns ~{sep=" " columns} \
@@ -1484,7 +1484,7 @@ task ancestral_tree {
     command <<<
         set -e
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur ancestral \
+        AUGUR_RECURSION_LIMIT=100000 augur ancestral \
             --tree "~{tree}" \
             --alignment "~{msa_or_vcf}" \
             --output-node-data "~{out_basename}_nt_muts.json" \
@@ -1539,7 +1539,7 @@ task translate_augur_tree {
     command <<<
         set -e
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur translate --tree "~{tree}" \
+        AUGUR_RECURSION_LIMIT=100000 augur translate --tree "~{tree}" \
             --ancestral-sequences "~{nt_muts}" \
             --reference-sequence "~{genbank_gb}" \
             ~{"--vcf-reference-output " + vcf_reference_output} \
@@ -1596,7 +1596,7 @@ task tip_frequencies {
     command <<<
         set -e
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur frequencies \
+        AUGUR_RECURSION_LIMIT=100000 augur frequencies \
             --method "~{method}" \
             --tree "~{tree}" \
             --metadata "~{metadata}" \
@@ -1656,7 +1656,7 @@ task assign_clades_to_nodes {
     command <<<
         set -e
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur clades \
+        AUGUR_RECURSION_LIMIT=100000 augur clades \
         --tree "~{tree_nwk}" \
         --mutations "~{nt_muts_json}" "~{aa_muts_json}" \
         --reference "~{ref_fasta}" \
@@ -1701,7 +1701,7 @@ task augur_import_beast {
     command <<<
         set -e
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur import beast \
+        AUGUR_RECURSION_LIMIT=100000 augur import beast \
             --mcc "~{beast_mcc_tree}" \
             --output-tree "~{tree_basename}.nwk" \
             --output-node-data "~{tree_basename}.json" \
@@ -1803,7 +1803,7 @@ task export_auspice_json {
         echo --auspice-config >> exportargs
         echo "~{auspice_config}" >> exportargs
 
-        (export AUGUR_RECURSION_LIMIT=15000; cat exportargs | grep . | tr '\n' '\0' | xargs -0 -t augur export v2 \
+        (export AUGUR_RECURSION_LIMIT=100000; cat exportargs | grep . | tr '\n' '\0' | xargs -0 -t augur export v2 \
             ~{"--metadata " + sample_metadata} \
             ~{"--lat-longs " + lat_longs_tsv} \
             ~{"--colors " + colors_tsv} \
