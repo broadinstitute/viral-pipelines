@@ -1539,7 +1539,7 @@ task translate_augur_tree {
     command <<<
         set -e
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=100000 augur translate --tree "~{tree}" \
+        AUGUR_RECURSION_LIMIT=500000 augur translate --tree "~{tree}" \
             --ancestral-sequences "~{nt_muts}" \
             --reference-sequence "~{genbank_gb}" \
             ~{"--vcf-reference-output " + vcf_reference_output} \
