@@ -42,9 +42,7 @@ task subsample_by_cases {
                                          unit=~{unit} \
                                          ~{"start_date=" + start_date} \
                                          ~{"end_date=" + end_date}
-        # put outputs in original working directory for delocalization
-        cd -
-        ln -s /opt/subsampler/outputs/* .
+        ls /opt/subsampler/outputs
     }
     runtime {
         docker: docker
@@ -54,15 +52,15 @@ task subsample_by_cases {
         dx_instance_type: "mem1_ssd1_v2_x2"
     }
     output {
-        File    genome_matrix_days              =   "genome_matrix_days.tsv"
-        File    matrix_genomes_unit             =   "matrix_genomes_unit.tsv"
-        File    matrix_cases_unit               =   "matrix_cases_unit.tsv"
-        File    weekly_sampling_proportions     =   "weekly_sampling_proportions.tsv"
-        File    weekly_sampling_bias            =   "weekly_sampling_bias.tsv"
-        File    matrix_genomes_unit_corrected   =   "matrix_genomes_unit_corrected.tsv"
-        File    selected_sequences              =   "selected_sequences.txt"
-        File    selected_metadata               =   "selected_metadata.tsv"
-        File    sampling_stats                  =   "sampling_stats.txt"
+        File    genome_matrix_days              =   "/opt/subsampler/outputs/genome_matrix_days.tsv"
+        File    matrix_genomes_unit             =   "/opt/subsampler/outputs/matrix_genomes_unit.tsv"
+        File    matrix_cases_unit               =   "/opt/subsampler/outputs/matrix_cases_unit.tsv"
+        File    weekly_sampling_proportions     =   "/opt/subsampler/outputs/weekly_sampling_proportions.tsv"
+        File    weekly_sampling_bias            =   "/opt/subsampler/outputs/weekly_sampling_bias.tsv"
+        File    matrix_genomes_unit_corrected   =   "/opt/subsampler/outputs/matrix_genomes_unit_corrected.tsv"
+        File    selected_sequences              =   "/opt/subsampler/outputs/selected_sequences.txt"
+        File    selected_metadata               =   "/opt/subsampler/outputs/selected_metadata.tsv"
+        File    sampling_stats                  =   "/opt/subsampler/outputs/sampling_stats.txt"
     }
 }
 
