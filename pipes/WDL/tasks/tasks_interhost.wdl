@@ -31,8 +31,8 @@ task subsample_by_cases {
         snakemake subsample --config metadata=~{metadata} \
                                          case_data=~{case_data} \
                                          ~{"keep_file=" + keep_file} \
-                                         ~{"remove_file" + remove_file} \
-                                         ~{"filter_file" + filter_file} \
+                                         ~{"remove_file=" + remove_file} \
+                                         ~{"filter_file=" + filter_file} \
                                          id_column=~{id_column} \
                                          geo_column=~{geo_column} \
                                          date_column=~{date_column} \
