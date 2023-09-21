@@ -7,19 +7,20 @@ task subsample_by_cases {
     input {
         File    metadata
         File    case_data
-        File    keep_file
-        File    remove_file
-        File    filter_file
+
+        File?   keep_file
+        File?   remove_file
+        File?   filter_file
 
         String? start_date
         String? end_date
         String  id_column
         String  geo_column
-        String  date_column
-        String  baseline        =   "0.001"
-        String  refgenome_size  =   "1"
-        String  max_missing     =   "99"
-        String  seed_num        =   "2007"
+        String  date_column     =   "date"
+        Float   baseline        =   0.001
+        Int     refgenome_size  =   1
+        Int     max_missing     =   99
+        Int     seed_num        =   2007
         String  unit            =   "week"
 
         String  docker = "quay.io/broadinstitute/subsampler"
@@ -29,9 +30,9 @@ task subsample_by_cases {
         cd /opt/subsampler
         snakemake subsample --config metadata=~{metadata} \
                                          case_data=~{case_data} \
-                                         keep_file=~{keep_file} \
-                                         remove_file=~{remove_file} \
-                                         filter_file=~{filter_file} \
+                                         ~{"keep_file=" + keep_file} \
+                                         ~{"remove_file" + remove_file} \
+                                         ~{"filter_file" + filter_file} \
                                          id_column=~{id_column} \
                                          geo_column=~{geo_column} \
                                          date_column=~{date_column} \
