@@ -28,6 +28,9 @@ task subsample_by_cases {
     command {
         # subsampler is a snakemake target and must be run from /opt/subsampler
         cd /opt/subsampler
+        # blank out some defaults that aren't empty
+        cp /dev/null config/keep.txt
+        cp /dev/null config/remove.txt
         snakemake subsample --config metadata=~{metadata} \
                                          case_data=~{case_data} \
                                          ~{"keep_file=" + keep_file} \
@@ -46,6 +49,8 @@ task subsample_by_cases {
         # copy outputs from container's temp dir to host-accessible working dir for delocalization
         cd -
         cp /opt/subsampler/outputs/* .
+        # get counts
+        cat selected_sequences.txt | wc -l | tee NUM_OUT
     }
     runtime {
         docker: docker
@@ -65,6 +70,7 @@ task subsample_by_cases {
         File    selected_sequences              =   "selected_sequences.txt"
         File    selected_metadata               =   "selected_metadata.tsv"
         File    sampling_stats                  =   "sampling_stats.txt"
+        Int     num_selected                    =   read_int("NUM_OUT")
     }
 }
 
