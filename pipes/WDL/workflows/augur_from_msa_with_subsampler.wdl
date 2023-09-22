@@ -27,11 +27,11 @@ workflow augur_from_msa_with_subsampler {
     parameter_meta {
         aligned_msa_fasta: {
           description: "Multiple sequence alignment (aligned fasta).",
-          patterns: ["*.fasta", "*.fa"]
+          patterns: ["*.fasta", "*.fa", "*.fasta.gz", "*.fa.gz", "*.fasta.zst", "*.fa.zst"]
         }
         sample_metadata: {
           description: "Metadata in tab-separated text format. See https://nextstrain-augur.readthedocs.io/en/stable/faq/metadata.html for details. At least one tab file must be provided--if multiple are provided, they will be joined via a full left outer join using the 'strain' column as the join ID.",
-          patterns: ["*.txt", "*.tsv"]
+          patterns: ["*.txt", "*.tsv", "*.txt.gz", "*.txt.zst", "*.tsv.gz", "*.tsv.zst"]
         }
         ref_fasta: {
           description: "A reference assembly (not included in assembly_fastas) to align assembly_fastas against. Typically from NCBI RefSeq or similar.",
@@ -64,7 +64,8 @@ workflow augur_from_msa_with_subsampler {
             input:
                 input_tsvs   = sample_metadata,
                 id_col       = 'strain',
-                out_basename = "metadata-merged"
+                out_basename = "metadata-merged",
+                out_suffix   = ".txt.zst"
         }
     }
 
