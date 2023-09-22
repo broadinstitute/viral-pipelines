@@ -22,6 +22,7 @@ task subsample_by_cases {
         String? end_date
 
         String  docker = "quay.io/broadinstitute/subsampler"
+        Int     machine_mem_gb  = 30
     }
     command <<<
         set -e -o pipefail
@@ -119,7 +120,7 @@ task subsample_by_cases {
     >>>
     runtime {
         docker: docker
-        memory: "30 GB"
+        memory: machine_mem_gb + " GB"
         cpu:    2
         disks:  "local-disk 200 HDD"
         disk:   "200 GB"
