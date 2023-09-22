@@ -8,20 +8,18 @@ task subsample_by_cases {
         File    metadata
         File    case_data
 
-        File?   keep_file
-        File?   remove_file
-        File?   filter_file
-
-        String? start_date
-        String? end_date
         String  id_column
         String  geo_column
         String  date_column     =   "date"
-        Float   baseline        =   0.001
-        Int     refgenome_size  =   1
-        Int     max_missing     =   99
-        Int     seed_num        =   2007
         String  unit            =   "week"
+
+        File?   keep_file
+        File?   remove_file
+        File?   filter_file
+        Float   baseline        =   0.001
+        Int     seed_num        =   2007
+        String? start_date
+        String? end_date
 
         String  docker = "quay.io/broadinstitute/subsampler"
     }
@@ -31,21 +29,93 @@ task subsample_by_cases {
         # blank out some defaults that aren't empty
         cp /dev/null config/keep.txt
         cp /dev/null config/remove.txt
-        snakemake subsample --config metadata=~{metadata} \
-                                         case_data=~{case_data} \
-                                         ~{"keep_file=" + keep_file} \
-                                         ~{"remove_file=" + remove_file} \
-                                         ~{"filter_file=" + filter_file} \
-                                         id_column=~{id_column} \
-                                         geo_column=~{geo_column} \
-                                         date_column=~{date_column} \
-                                         baseline=~{baseline} \
-                                         refgenome_size=~{refgenome_size} \
-                                         max_missing=~{max_missing} \
-                                         seed_num=~{seed_num} \
-                                         unit=~{unit} \
-                                         ~{"start_date=" + start_date} \
-                                         ~{"end_date=" + end_date}
+        # this doesn't really work since inputs are not configurable...
+        #snakemake subsample --config metadata=~{metadata} \
+        #                                 case_data=~{case_data} \
+        #                                 ~{"keep_file=" + keep_file} \
+        #                                 ~{"remove_file=" + remove_file} \
+        #                                 ~{"filter_file=" + filter_file} \
+        #                                 id_column=~{id_column} \
+        #                                 geo_column=~{geo_column} \
+        #                                 date_column=~{date_column} \
+        #                                 baseline=~{baseline} \
+        #                                 seed_num=~{seed_num} \
+        #                                 unit=~{unit} \
+        #                                 ~{"start_date=" + start_date} \
+        #                                 ~{"end_date=" + end_date}
+
+        # decompress if compressed
+        mkdir -p data; rm data/*
+        if [[ ~{metadata} == *.gz ]]; then
+          cat "~{metadata}" | gzip -d > data/metadata.tsv
+        else
+          ln -s "~{metadata}" data/metadata.tsv
+        fi
+        if [[ ~{case_data} == *.gz ]]; then
+          cat "~{case_data}" | gzip -d > data/case_data.tsv
+        else
+          ln -s "~{case_data}" data/case_data.tsv
+        fi
+
+        ## replicate snakemake DAG manually
+        mkdir -p outputs
+        # rule genome_matrix
+        # Generate matrix of genome counts per day, for each element in column ~{geo_column}
+        python3 scripts/get_genome_matrix.py \
+          --metadata data/metadata.tsv \
+          --index-column ~{geo_column} \
+          --date-column ~{date_column} \
+          ~{"--start_date " + start_date} \
+          ~{"--end_date " + end_date} \
+          --output outputs/genome_matrix_days.tsv
+
+        # rule unit_conversion
+        # Generate matrix of genome and case counts per epiweek
+        python3 scripts/aggregator.py \
+          --input outputs/genome_matrix_days.tsv \
+          --unit ~{unit} \
+          --format integer \
+          --output outputs/matrix_genomes_unit.tsv
+        python3 scripts/aggregator.py \
+          --input data/case_data.tsv \
+          --unit ~{unit} \
+          --format integer \
+          ~{"--start_date " + start_date} \
+          ~{"--end_date " + end_date} \
+          --output outputs/matrix_cases_unit.tsv
+
+        # rule correct_bias
+        # Correct under- and oversampling genome counts based on epidemiological data
+        python3 scripts/correct_bias.py \
+          --genome-matrix outputs/matrix_genomes_unit.tsv \
+          --case-matrix outputs/matrix_cases_unit.tsv \
+          --index-column code \
+          ~{"--baseline " + baseline} \
+          --output1 outputs/weekly_sampling_proportions.tsv \
+          --output2 outputs/weekly_sampling_bias.tsv \
+          --output3 outputs/matrix_genomes_unit_corrected.tsv
+
+        # rule subsample
+        # Sample genomes and metadata according to the corrected genome matrix
+        python3 scripts/subsampler_timeseries.py \
+          --metadata data/metadata.tsv \
+          --genome-matrix outputs/matrix_genomes_unit_corrected.tsv \
+          --index-column ~{id_column} \
+          --geo-column ~{geo_column} \
+          --date-column ~{date_column} \
+          --time-unit ~{unit} \
+          ~{"--keep " + keep_file} \
+          ~{"--remove " + remove_file} \
+          ~{"--filter-file " + filter_file} \
+          ~{"--seed " + seed_num} \
+          ~{"--start_date " + start_date} \
+          ~{"--end_date " + end_date} \
+          --weekasdate no \
+          --sampled-sequences outputs/selected_sequences.txt \
+          --sampled-metadata outputs/selected_metadata.tsv \
+          --report outputs/sampling_stats.txt
+        echo '# Sampling proportion: ~{baseline}' | cat - outputs/sampling_stats.txt > temp && mv temp outputs/sampling_stats.txt
+
         # copy outputs from container's temp dir to host-accessible working dir for delocalization
         cd -
         cp /opt/subsampler/outputs/* .
@@ -54,7 +124,7 @@ task subsample_by_cases {
     }
     runtime {
         docker: docker
-        memory: "1 GB"
+        memory: "2 GB"
         cpu:    1
         disks: "local-disk 100 HDD"
         disk:  "100 GB"
