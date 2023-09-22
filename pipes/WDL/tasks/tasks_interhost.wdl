@@ -127,14 +127,19 @@ task subsample_by_cases {
         cp /opt/subsampler/outputs/* .
         # get counts
         cat selected_sequences.txt | wc -l | tee NUM_OUT
+        # get hardware utilization
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg > CPU_LOAD
+        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+
     }
     runtime {
         docker: docker
-        memory: "14 GB"
+        memory: "30 GB"
         cpu:    2
-        disks: "local-disk 100 HDD"
-        disk:  "100 GB"
-        dx_instance_type: "mem3_ssd1_v2_x2"
+        disks:  "local-disk 200 HDD"
+        disk:   "200 GB"
+        dx_instance_type: "mem3_ssd1_v2_x4"
     }
     output {
         File    genome_matrix_days              =   "genome_matrix_days.tsv"
@@ -147,6 +152,9 @@ task subsample_by_cases {
         File    selected_metadata               =   "selected_metadata.tsv"
         File    sampling_stats                  =   "sampling_stats.txt"
         Int     num_selected                    =   read_int("NUM_OUT")
+        Int     max_ram_gb                      =   ceil(read_float("MEM_BYTES")/1000000000)
+        Int     runtime_sec                     =   ceil(read_float("UPTIME_SEC"))
+        String  cpu_load                        =   read_string("CPU_LOAD")
     }
 }
 
