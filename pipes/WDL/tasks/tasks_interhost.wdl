@@ -49,7 +49,7 @@ task subsample_by_cases {
         # rule genome_matrix
         # Generate matrix of genome counts per day, for each element in column ~{geo_column}
         echo "getting genome matrix"
-        python3 scripts/get_genome_matrix.py \
+        python3 /opt/subsampler/scripts/get_genome_matrix.py \
           --metadata data/metadata.tsv \
           --index-column ~{geo_column} \
           --date-column ~{date_column} \
@@ -60,12 +60,12 @@ task subsample_by_cases {
         # rule unit_conversion
         # Generate matrix of genome and case counts per epiweek
         echo "converting matricies to epiweeks"
-        python3 scripts/aggregator.py \
+        python3 /opt/subsampler/scripts/aggregator.py \
           --input outputs/genome_matrix_days.tsv \
           --unit ~{unit} \
           --format integer \
           --output outputs/matrix_genomes_unit.tsv
-        python3 scripts/aggregator.py \
+        python3 /opt/subsampler/scripts/aggregator.py \
           --input data/case_data.tsv \
           --unit ~{unit} \
           --format integer \
@@ -76,7 +76,7 @@ task subsample_by_cases {
         # rule correct_bias
         # Correct under- and oversampling genome counts based on epidemiological data
         echo "create bias-correction matrix"
-        python3 scripts/correct_bias.py \
+        python3 /opt/subsampler/scripts/correct_bias.py \
           --genome-matrix outputs/matrix_genomes_unit.tsv \
           --case-matrix outputs/matrix_cases_unit.tsv \
           --index-column code \
@@ -88,7 +88,7 @@ task subsample_by_cases {
         # rule subsample
         # Sample genomes and metadata according to the corrected genome matrix
         echo "subsample data according to bias-correction"
-        python3 scripts/subsampler_timeseries.py \
+        python3 /opt/subsampler/scripts/subsampler_timeseries.py \
           --metadata data/metadata.tsv \
           --genome-matrix outputs/matrix_genomes_unit_corrected.tsv \
           --index-column ~{id_column} \
