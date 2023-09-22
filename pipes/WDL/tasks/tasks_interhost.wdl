@@ -25,30 +25,10 @@ task subsample_by_cases {
     }
     command <<<
         set -e -o pipefail
-
-        # subsampler is a snakemake target and must be run from /opt/subsampler
-        cd /opt/subsampler
-        # blank out some defaults that aren't empty
-        cp /dev/null config/keep.txt
-        cp /dev/null config/remove.txt
-        # this doesn't really work since inputs are not configurable...
-        #snakemake subsample --config metadata=~{metadata} \
-        #                                 case_data=~{case_data} \
-        #                                 ~{"keep_file=" + keep_file} \
-        #                                 ~{"remove_file=" + remove_file} \
-        #                                 ~{"filter_file=" + filter_file} \
-        #                                 id_column=~{id_column} \
-        #                                 geo_column=~{geo_column} \
-        #                                 date_column=~{date_column} \
-        #                                 baseline=~{baseline} \
-        #                                 seed_num=~{seed_num} \
-        #                                 unit=~{unit} \
-        #                                 ~{"start_date=" + start_date} \
-        #                                 ~{"end_date=" + end_date}
+        mkdir -p data outputs
 
         # decompress if compressed
         echo "staging and decompressing input data files"
-        mkdir -p data; rm data/*
         if [[ ~{metadata} == *.gz ]]; then
           cat "~{metadata}" | pigz -d > data/metadata.tsv
         elif [[ ~{metadata} == *.zst ]]; then
@@ -65,7 +45,6 @@ task subsample_by_cases {
         fi
 
         ## replicate snakemake DAG manually
-        mkdir -p outputs
         # rule genome_matrix
         # Generate matrix of genome counts per day, for each element in column ~{geo_column}
         echo "getting genome matrix"
@@ -129,8 +108,7 @@ task subsample_by_cases {
 
         # copy outputs from container's temp dir to host-accessible working dir for delocalization
         echo "wrap up"
-        cd -
-        cp /opt/subsampler/outputs/* .
+        mv outputs/* .
         # get counts
         cat selected_sequences.txt | wc -l | tee NUM_OUT
         # get hardware utilization
