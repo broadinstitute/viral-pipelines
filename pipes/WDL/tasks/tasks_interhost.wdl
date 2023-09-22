@@ -47,6 +47,7 @@ task subsample_by_cases {
         #                                 ~{"end_date=" + end_date}
 
         # decompress if compressed
+        echo "staging and decompressing input data files"
         mkdir -p data; rm data/*
         if [[ ~{metadata} == *.gz ]]; then
           cat "~{metadata}" | pigz -d > data/metadata.tsv
@@ -67,6 +68,7 @@ task subsample_by_cases {
         mkdir -p outputs
         # rule genome_matrix
         # Generate matrix of genome counts per day, for each element in column ~{geo_column}
+        echo "getting genome matrix"
         python3 scripts/get_genome_matrix.py \
           --metadata data/metadata.tsv \
           --index-column ~{geo_column} \
@@ -77,6 +79,7 @@ task subsample_by_cases {
 
         # rule unit_conversion
         # Generate matrix of genome and case counts per epiweek
+        echo "converting matricies to epiweeks"
         python3 scripts/aggregator.py \
           --input outputs/genome_matrix_days.tsv \
           --unit ~{unit} \
@@ -92,6 +95,7 @@ task subsample_by_cases {
 
         # rule correct_bias
         # Correct under- and oversampling genome counts based on epidemiological data
+        echo "create bias-correction matrix"
         python3 scripts/correct_bias.py \
           --genome-matrix outputs/matrix_genomes_unit.tsv \
           --case-matrix outputs/matrix_cases_unit.tsv \
@@ -103,6 +107,7 @@ task subsample_by_cases {
 
         # rule subsample
         # Sample genomes and metadata according to the corrected genome matrix
+        echo "subsample data according to bias-correction"
         python3 scripts/subsampler_timeseries.py \
           --metadata data/metadata.tsv \
           --genome-matrix outputs/matrix_genomes_unit_corrected.tsv \
@@ -123,6 +128,7 @@ task subsample_by_cases {
         echo '# Sampling proportion: ~{baseline}' | cat - outputs/sampling_stats.txt > temp && mv temp outputs/sampling_stats.txt
 
         # copy outputs from container's temp dir to host-accessible working dir for delocalization
+        echo "wrap up"
         cd -
         cp /opt/subsampler/outputs/* .
         # get counts
