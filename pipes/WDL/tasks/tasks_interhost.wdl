@@ -24,6 +24,8 @@ task subsample_by_cases {
         String  docker = "quay.io/broadinstitute/subsampler"
     }
     command {
+        set -e -o pipefail
+
         # subsampler is a snakemake target and must be run from /opt/subsampler
         cd /opt/subsampler
         # blank out some defaults that aren't empty
@@ -47,12 +49,16 @@ task subsample_by_cases {
         # decompress if compressed
         mkdir -p data; rm data/*
         if [[ ~{metadata} == *.gz ]]; then
-          cat "~{metadata}" | gzip -d > data/metadata.tsv
+          cat "~{metadata}" | pigz -d > data/metadata.tsv
+        elif [[ ~{metadata} == *.zst ]]; then
+          cat "~{metadata}" | zstd -d > data/metadata.tsv
         else
           ln -s "~{metadata}" data/metadata.tsv
         fi
         if [[ ~{case_data} == *.gz ]]; then
-          cat "~{case_data}" | gzip -d > data/case_data.tsv
+          cat "~{case_data}" | pigz -d > data/case_data.tsv
+        elif [[ ~{case_data} == *.zst ]]; then
+          cat "~{case_data}" | zstd -d > data/case_data.tsv
         else
           ln -s "~{case_data}" data/case_data.tsv
         fi
@@ -124,11 +130,11 @@ task subsample_by_cases {
     }
     runtime {
         docker: docker
-        memory: "2 GB"
-        cpu:    1
+        memory: "14 GB"
+        cpu:    2
         disks: "local-disk 100 HDD"
         disk:  "100 GB"
-        dx_instance_type: "mem1_ssd1_v2_x2"
+        dx_instance_type: "mem3_ssd1_v2_x2"
     }
     output {
         File    genome_matrix_days              =   "genome_matrix_days.tsv"
