@@ -56,6 +56,7 @@ task subsample_by_cases {
           ~{"--start_date " + start_date} \
           ~{"--end_date " + end_date} \
           --output outputs/genome_matrix_days.tsv
+        date;uptime;free
 
         # rule unit_conversion
         # Generate matrix of genome and case counts per epiweek
@@ -72,6 +73,7 @@ task subsample_by_cases {
           ~{"--start_date " + start_date} \
           ~{"--end_date " + end_date} \
           --output outputs/matrix_cases_unit.tsv
+        date;uptime;free
 
         # rule correct_bias
         # Correct under- and oversampling genome counts based on epidemiological data
@@ -84,10 +86,14 @@ task subsample_by_cases {
           --output1 outputs/weekly_sampling_proportions.tsv \
           --output2 outputs/weekly_sampling_bias.tsv \
           --output3 outputs/matrix_genomes_unit_corrected.tsv
+        date;uptime;free
 
         # rule subsample
         # Sample genomes and metadata according to the corrected genome matrix
         echo "subsample data according to bias-correction"
+        # subsampler_timeseries says --keep is optional but actually fails if you don't specify one
+        cp /dev/null data/keep.txt
+        ~{"cp " + keep_file + " data/keep.txt"}
         python3 /opt/subsampler/scripts/subsampler_timeseries.py \
           --metadata data/metadata.tsv \
           --genome-matrix outputs/matrix_genomes_unit_corrected.tsv \
@@ -95,7 +101,7 @@ task subsample_by_cases {
           --geo-column ~{geo_column} \
           --date-column ~{date_column} \
           --time-unit ~{unit} \
-          ~{"--keep " + keep_file} \
+          --keep data/keep.txt \
           ~{"--remove " + remove_file} \
           ~{"--filter-file " + filter_file} \
           ~{"--seed " + seed_num} \
@@ -106,6 +112,7 @@ task subsample_by_cases {
           --sampled-metadata outputs/selected_metadata.tsv \
           --report outputs/sampling_stats.txt
         echo '# Sampling proportion: ~{baseline}' | cat - outputs/sampling_stats.txt > temp && mv temp outputs/sampling_stats.txt
+        date;uptime;free
 
         # copy outputs from container's temp dir to host-accessible working dir for delocalization
         echo "wrap up"
@@ -113,6 +120,7 @@ task subsample_by_cases {
         # get counts
         cat selected_sequences.txt | wc -l | tee NUM_OUT
         # get hardware utilization
+        set +o pipefail
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
         { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
