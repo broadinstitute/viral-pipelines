@@ -22,7 +22,7 @@ task subsample_by_cases {
         String? end_date
 
         String  docker = "quay.io/broadinstitute/subsampler"
-        Int     machine_mem_gb  = 12
+        Int     machine_mem_gb  = 30
     }
     command <<<
         set -e -o pipefail
@@ -132,7 +132,7 @@ task subsample_by_cases {
         cpu:    2
         disks:  "local-disk 200 HDD"
         disk:   "200 GB"
-        dx_instance_type: "mem3_ssd1_v2_x2"
+        dx_instance_type: "mem3_ssd1_v2_x4"
     }
     output {
         File    genome_matrix_days              =   "genome_matrix_days.tsv"
