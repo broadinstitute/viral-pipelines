@@ -16,13 +16,13 @@ task subsample_by_cases {
         File?   keep_file
         File?   remove_file
         File?   filter_file
-        Float   baseline        =   0.001
-        Int     seed_num        =   2007
+        Float   baseline        =   0.0002
+        Int?    seed_num
         String? start_date
         String? end_date
 
         String  docker = "quay.io/broadinstitute/subsampler"
-        Int     machine_mem_gb  = 30
+        Int     machine_mem_gb  = 12
     }
     command <<<
         set -e -o pipefail
@@ -132,7 +132,7 @@ task subsample_by_cases {
         cpu:    2
         disks:  "local-disk 200 HDD"
         disk:   "200 GB"
-        dx_instance_type: "mem3_ssd1_v2_x4"
+        dx_instance_type: "mem3_ssd1_v2_x2"
     }
     output {
         File    genome_matrix_days              =   "genome_matrix_days.tsv"
