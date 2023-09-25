@@ -16,7 +16,7 @@ task subsample_by_cases {
         File?   keep_file
         File?   remove_file
         File?   filter_file
-        Float   baseline        =   0.0002
+        Float   baseline        =   0.0001
         Int?    seed_num
         String? start_date
         String? end_date
@@ -53,8 +53,8 @@ task subsample_by_cases {
           --metadata data/metadata.tsv \
           --index-column ~{geo_column} \
           --date-column ~{date_column} \
-          ~{"--start_date " + start_date} \
-          ~{"--end_date " + end_date} \
+          ~{"--start-date " + start_date} \
+          ~{"--end-date " + end_date} \
           --output outputs/genome_matrix_days.tsv
         date;uptime;free
 
@@ -70,8 +70,8 @@ task subsample_by_cases {
           --input data/case_data.tsv \
           --unit ~{unit} \
           --format integer \
-          ~{"--start_date " + start_date} \
-          ~{"--end_date " + end_date} \
+          ~{"--start-date " + start_date} \
+          ~{"--end-date " + end_date} \
           --output outputs/matrix_cases_unit.tsv
         date;uptime;free
 
@@ -105,8 +105,8 @@ task subsample_by_cases {
           ~{"--remove " + remove_file} \
           ~{"--filter-file " + filter_file} \
           ~{"--seed " + seed_num} \
-          ~{"--start_date " + start_date} \
-          ~{"--end_date " + end_date} \
+          ~{"--start-date " + start_date} \
+          ~{"--end-date " + end_date} \
           --weekasdate no \
           --sampled-sequences outputs/selected_sequences.txt \
           --sampled-metadata outputs/selected_metadata.tsv \
