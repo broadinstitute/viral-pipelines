@@ -1,5 +1,156 @@
 version 1.0
 
+task subsample_by_cases {
+    meta {
+        description: "Run subsampler to get downsampled dataset and metadata proportional to epidemiological case counts."
+    }
+    input {
+        File    metadata
+        File    case_data
+
+        String  id_column
+        String  geo_column
+        String  date_column     =   "date"
+        String  unit            =   "week"
+
+        File?   keep_file
+        File?   remove_file
+        File?   filter_file
+        Float   baseline        =   0.0001
+        Int?    seed_num
+        String? start_date
+        String? end_date
+
+        String  docker = "quay.io/broadinstitute/subsampler"
+        Int     machine_mem_gb  = 30
+    }
+    command <<<
+        set -e -o pipefail
+        mkdir -p data outputs
+
+        # decompress if compressed
+        echo "staging and decompressing input data files"
+        if [[ ~{metadata} == *.gz ]]; then
+          cat "~{metadata}" | pigz -d > data/metadata.tsv
+        elif [[ ~{metadata} == *.zst ]]; then
+          cat "~{metadata}" | zstd -d > data/metadata.tsv
+        else
+          ln -s "~{metadata}" data/metadata.tsv
+        fi
+        if [[ ~{case_data} == *.gz ]]; then
+          cat "~{case_data}" | pigz -d > data/case_data.tsv
+        elif [[ ~{case_data} == *.zst ]]; then
+          cat "~{case_data}" | zstd -d > data/case_data.tsv
+        else
+          ln -s "~{case_data}" data/case_data.tsv
+        fi
+
+        ## replicate snakemake DAG manually
+        # rule genome_matrix
+        # Generate matrix of genome counts per day, for each element in column ~{geo_column}
+        echo "getting genome matrix"
+        python3 /opt/subsampler/scripts/get_genome_matrix.py \
+          --metadata data/metadata.tsv \
+          --index-column ~{geo_column} \
+          --date-column ~{date_column} \
+          ~{"--start-date " + start_date} \
+          ~{"--end-date " + end_date} \
+          --output outputs/genome_matrix_days.tsv
+        date;uptime;free
+
+        # rule unit_conversion
+        # Generate matrix of genome and case counts per epiweek
+        echo "converting matricies to epiweeks"
+        python3 /opt/subsampler/scripts/aggregator.py \
+          --input outputs/genome_matrix_days.tsv \
+          --unit ~{unit} \
+          --format integer \
+          --output outputs/matrix_genomes_unit.tsv
+        python3 /opt/subsampler/scripts/aggregator.py \
+          --input data/case_data.tsv \
+          --unit ~{unit} \
+          --format integer \
+          ~{"--start-date " + start_date} \
+          ~{"--end-date " + end_date} \
+          --output outputs/matrix_cases_unit.tsv
+        date;uptime;free
+
+        # rule correct_bias
+        # Correct under- and oversampling genome counts based on epidemiological data
+        echo "create bias-correction matrix"
+        python3 /opt/subsampler/scripts/correct_bias.py \
+          --genome-matrix outputs/matrix_genomes_unit.tsv \
+          --case-matrix outputs/matrix_cases_unit.tsv \
+          --index-column code \
+          ~{"--baseline " + baseline} \
+          --output1 outputs/weekly_sampling_proportions.tsv \
+          --output2 outputs/weekly_sampling_bias.tsv \
+          --output3 outputs/matrix_genomes_unit_corrected.tsv
+        date;uptime;free
+
+        # rule subsample
+        # Sample genomes and metadata according to the corrected genome matrix
+        echo "subsample data according to bias-correction"
+        # subsampler_timeseries says --keep is optional but actually fails if you don't specify one
+        cp /dev/null data/keep.txt
+        ~{"cp " + keep_file + " data/keep.txt"}
+        python3 /opt/subsampler/scripts/subsampler_timeseries.py \
+          --metadata data/metadata.tsv \
+          --genome-matrix outputs/matrix_genomes_unit_corrected.tsv \
+          --index-column ~{id_column} \
+          --geo-column ~{geo_column} \
+          --date-column ~{date_column} \
+          --time-unit ~{unit} \
+          --keep data/keep.txt \
+          ~{"--remove " + remove_file} \
+          ~{"--filter-file " + filter_file} \
+          ~{"--seed " + seed_num} \
+          ~{"--start-date " + start_date} \
+          ~{"--end-date " + end_date} \
+          --weekasdate no \
+          --sampled-sequences outputs/selected_sequences.txt \
+          --sampled-metadata outputs/selected_metadata.tsv \
+          --report outputs/sampling_stats.txt
+        echo '# Sampling proportion: ~{baseline}' | cat - outputs/sampling_stats.txt > temp && mv temp outputs/sampling_stats.txt
+        date;uptime;free
+
+        # copy outputs from container's temp dir to host-accessible working dir for delocalization
+        echo "wrap up"
+        mv outputs/* .
+        # get counts
+        cat selected_sequences.txt | wc -l | tee NUM_OUT
+        # get hardware utilization
+        set +o pipefail
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg > CPU_LOAD
+        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+
+    >>>
+    runtime {
+        docker: docker
+        memory: machine_mem_gb + " GB"
+        cpu:    2
+        disks:  "local-disk 200 HDD"
+        disk:   "200 GB"
+        dx_instance_type: "mem3_ssd1_v2_x4"
+    }
+    output {
+        File    genome_matrix_days              =   "genome_matrix_days.tsv"
+        File    matrix_genomes_unit             =   "matrix_genomes_unit.tsv"
+        File    matrix_cases_unit               =   "matrix_cases_unit.tsv"
+        File    weekly_sampling_proportions     =   "weekly_sampling_proportions.tsv"
+        File    weekly_sampling_bias            =   "weekly_sampling_bias.tsv"
+        File    matrix_genomes_unit_corrected   =   "matrix_genomes_unit_corrected.tsv"
+        File    selected_sequences              =   "selected_sequences.txt"
+        File    selected_metadata               =   "selected_metadata.tsv"
+        File    sampling_stats                  =   "sampling_stats.txt"
+        Int     num_selected                    =   read_int("NUM_OUT")
+        Int     max_ram_gb                      =   ceil(read_float("MEM_BYTES")/1000000000)
+        Int     runtime_sec                     =   ceil(read_float("UPTIME_SEC"))
+        String  cpu_load                        =   read_string("CPU_LOAD")
+    }
+}
+
 task multi_align_mafft_ref {
   input {
     File         reference_fasta
