@@ -16,7 +16,7 @@ workflow augur_from_msa {
         File           msa_or_vcf
         Array[File]+   sample_metadata
         File           ref_fasta
-        File           genbank_gb
+        File?          genbank_gb
         File           auspice_config
         File?          clades_tsv
         Array[String]? ancestral_traits_to_infer
@@ -108,11 +108,13 @@ workflow augur_from_msa {
             tree       = refine_augur_tree.tree_refined,
             msa_or_vcf = augur_mask_sites.masked_sequences
     }
-    call nextstrain.translate_augur_tree {
-        input:
-            tree       = refine_augur_tree.tree_refined,
-            nt_muts    = ancestral_tree.nt_muts_json,
-            genbank_gb = genbank_gb
+    if(defined(genbank_gb)) {
+        call nextstrain.translate_augur_tree {
+            input:
+                tree       = refine_augur_tree.tree_refined,
+                nt_muts    = ancestral_tree.nt_muts_json,
+                genbank_gb = select_first([genbank_gb])
+        }
     }
     if(defined(clades_tsv)) {
         call nextstrain.assign_clades_to_nodes {
