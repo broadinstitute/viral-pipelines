@@ -1752,6 +1752,7 @@ task export_auspice_json {
         Array[String]? maintainers
         String?        title
         Boolean        include_root_sequence = true
+        Boolean        skip_validation = false
 
         String out_basename = basename(basename(tree, ".nwk"), "_timetree")
 
@@ -1810,6 +1811,7 @@ task export_auspice_json {
             ~{"--colors " + colors_tsv} \
             ~{"--description " + description_md} \
             ~{true="--include-root-sequence " false=""  include_root_sequence} \
+            ~{true="--skip-validation " false="" skip_validation} \
             --output "~{out_basename}_auspice.json")
         touch "~{out_basename}_auspice_root-sequence.json"
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
