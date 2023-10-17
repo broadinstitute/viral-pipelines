@@ -23,8 +23,8 @@ workflow genbank {
 
         String        email_address # required for fetching data from NCBI APIs
         String?       author_list # of the form "Lastname,A.B., Lastname,C.,"; optional alternative to names in author_sbt_defaults_yaml
-        File          author_sbt_defaults_yaml # defaults to fill in for author_sbt file (including both author and non-author fields)
-        File          author_sbt_j2_template
+        File?         author_sbt_defaults_yaml # defaults to fill in for author_sbt file (including both author and non-author fields)
+        File          author_sbt_j2_template # an sbt file (optionally) with Jinja2 variables filled in based on author_sbt_defaults_yaml if provided
         File          biosample_attributes
         String        sequencingTech
         String?       comment
@@ -48,7 +48,7 @@ workflow genbank {
           patterns: ["*.yaml","*.yml"]
         }
         author_sbt_j2_template: {
-          description: "A jinja2-format template for the sbt file expected by NCBI. Example: gs://pathogen-public-dbs/other-related/author_template.sbt.j2"
+          description: "an sbt file (optionally) with Jinja2 variables to be filled in based on values present in author_sbt_defaults_yaml, if provided. If author_list is blank and author_sbt_defaults_yaml is not provided (or is blank), this file is passed through verbatim. Example: gs://pathogen-public-dbs/other-related/author_template.sbt.j2"
         }
         biosample_attributes: {
           description: "A post-submission attributes file from NCBI BioSample, which is available at https://submit.ncbi.nlm.nih.gov/subs/ and clicking on 'Download attributes file with BioSample accessions'.",

@@ -607,7 +607,7 @@ task generate_author_sbt_file {
   input {
     String? author_list
     File    j2_template
-    File    defaults_yaml
+    File?   defaults_yaml
     String? out_base = "authors"
 
     String  docker = "quay.io/broadinstitute/py3-bio:0.1.2"
@@ -618,7 +618,7 @@ task generate_author_sbt_file {
       description: "A string containing a space-delimited list with of author surnames separated by first name and (optional) middle initial. Ex. 'Lastname,Firstname, Last-hypenated,First,M., Last,F.'"
     }
     j2_template: {
-      description: "A jinja2-format template for the sbt file expected by NCBI. Example: gs://pathogen-public-dbs/other-related/author_template.sbt.j2"
+      description: "an sbt file (optionally) with Jinja2 variables to be filled in based on values present in author_sbt_defaults_yaml, if provided. If no yaml is provided, this file is passed through verbatim. Example: gs://pathogen-public-dbs/other-related/author_template.sbt.j2"
     }
     defaults_yaml: {
       description: "A YAML file with default values to use for the submitter, submitter affiliation, and author affiliation. Optionally including authors at the start and end of the author_list. Example: gs://pathogen-public-dbs/other-related/default_sbt_values.yaml",
@@ -632,10 +632,14 @@ task generate_author_sbt_file {
   command <<<
     set -e
 
+    # blank yaml file to be used if the optional input is not specified
+    touch blank.yml
+
     python3 << CODE
     # generates an sbt file of the format returned by:
     # http://www.ncbi.nlm.nih.gov/WebSub/template.cgi
     import re
+    import shutil
     # external dependencies
     import yaml # pyyaml
     from jinja2 import Template #jinja2
@@ -644,19 +648,34 @@ task generate_author_sbt_file {
         # simple version for only initials: #author_re=re.compile(r"\s?(?P<lastname>[\w\'\-\ ]+),(?P<initials>(?:[A-Z]\.){1,3})")
         author_re=re.compile(r"\s?(?P<lastname>[\w\'\-\ ]+),((?P<first>\w[\w\'\-\ ]+\.?),?|(?P<initials>(?:[A-Z]\.)+))(?P<initials_ext>(?:[A-Z]\.)*)")
 
+        authors=[]
+        defaults_data_last_authors=[]
         defaults_data = {}
+
+        authors_affil = None
+        submitter     = None
+        bioproject    = None
+        title         = None
+        citation      = None
+
         if defaults_yaml is not None:
             with open(defaults_yaml) as defaults_yaml:
                 defaults_data = yaml.load(defaults_yaml, Loader=yaml.FullLoader)
 
-        authors=[]
-        submitter     = defaults_data.get("submitter")
-        bioproject    = defaults_data.get("bioproject")
-        title         = defaults_data.get("title")
-        citation      = defaults_data.get("citation")
-        authors_affil = defaults_data.get("authors_affil")
-        
-        authors.extend(defaults_data.get("authors_start",[]))
+                if defaults_data is not None:
+                    submitter     = defaults_data.get("submitter")
+                    bioproject    = defaults_data.get("bioproject")
+                    title         = defaults_data.get("title")
+                    citation      = defaults_data.get("citation")
+                    authors_affil = defaults_data.get("authors_affil")
+                    
+                    defaults_data_authors = defaults_data.get("authors_start",[])
+                    for author in defaults_data_authors:
+                        authors.extend(author)
+
+                    defaults_data_last_authors = defaults_data.get("authors_last",[])
+                    for author in defaults_data_last_authors:
+                        last_authors.append(author)
         
         for author_match in author_re.finditer(author_string):
             author = {}
@@ -680,24 +699,37 @@ task generate_author_sbt_file {
             if author not in authors: # could use less exact match
                 authors.append(author)
 
-        for author in defaults_data.get("authors_last",[]):
+        for author in defaults_data_last_authors:
             if author not in authors:
                 authors.append(author)
 
-        with open(j2_template) as sbt_template:
-            template = Template(sbt_template.read())
-        rendered = template.render( authors=authors, 
-                                    authors_affil=authors_affil, 
-                                    title=title, 
-                                    submitter=submitter, 
-                                    citation=citation, 
-                                    bioproject=bioproject)
-        
-        #print(rendered)
-        with open(sbt_out_path,"w") as sbt_out:
-            sbt_out.write(rendered)
+        jinja_rendering_kwargs={}
+        if authors_affil is not None:
+            jinja_rendering_kwargs["authors_affil"]=authors_affil
+        if title is not None:
+            jinja_rendering_kwargs["title"]=title
+        if submitter is not None:
+            jinja_rendering_kwargs["submitter"]=submitter
+        if citation is not None:
+            jinja_rendering_kwargs["citation"]=citation
+        if bioproject is not None:
+            jinja_rendering_kwargs["bioproject"]=bioproject
 
-    render_sbt("~{author_list}", defaults_yaml="~{defaults_yaml}", sbt_out_path="~{out_base}.sbt", j2_template="~{j2_template}")
+        if len(authors) >= 1 or len(jinja_rendering_kwargs) >= 1:
+            with open(j2_template) as sbt_template:
+                template = Template(sbt_template.read())
+
+            rendered = template.render( authors=authors, 
+                                        **jinja_rendering_kwargs)
+        
+            #print(rendered)
+            with open(sbt_out_path,"w") as sbt_out:
+                sbt_out.write(rendered)
+        else:
+            # if no authors were specified, simply copy the template to the output
+            shutil.copyfile(j2_template, sbt_out_path)
+
+    render_sbt("~{author_list}", defaults_yaml="~{default='blank.yml' defaults_yaml}", sbt_out_path="~{out_base}.sbt", j2_template="~{j2_template}")
     CODE
   >>>
   output {
