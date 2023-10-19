@@ -267,6 +267,7 @@ task rmdup_ubam {
 task downsample_bams {
   meta {
     description: "Downsample reads in a BAM file randomly subsampling to a target read count. Read deduplication can occur either before or after random subsampling, or not at all (default: not at all)."
+    volatile: true
   }
 
   input {
