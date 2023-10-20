@@ -32,6 +32,10 @@ task gcs_copy {
 
 task get_gcloud_env_info {
   input {
+    String workspace_name
+    String workspace_namespace
+    String workspace_googleProject
+
     String? additional_command_to_run
   }
   meta {
@@ -74,6 +78,15 @@ task get_gcloud_env_info {
     # extract workspace namespace
     WORKSPACE_NAMESPACE=$(jq -cr '.[] | select( .workspace.googleProject == "terra-bf70b335" ).workspace | .namespace' workspace_list.json)
     echo "$WORKSPACE_NAMESPACE" > workspace_namespace.txt
+
+    # ========== method 3: resolved by Terra as inputs
+
+    echo ""
+    echo "Strings passed in to workflow:"
+    echo "workspace.name: ~{workspace_name}"
+    echo "workspace.namespace: ~{workspace_namespace}"
+    echo "workspace.googleProject: ~{workspace_googleProject}"
+    echo ""
 
     # ======================================================================================
 
