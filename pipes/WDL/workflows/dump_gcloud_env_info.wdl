@@ -14,8 +14,7 @@ workflow dump_gcloud_env_info {
     call terra.get_gcloud_env_info
 
     output {
-        Array[String] gcloud_env_info_files     = get_gcloud_env_info.env_info_files
-        File          additional_command_stdout = get_gcloud_env_info.additional_command_stdout
+        Array[String] gcloud_env_info_files = get_gcloud_env_info.env_info_files
         
         String workspace_name_out      = get_gcloud_env_info.workspace_name_out
         String workspace_namespace_out = get_gcloud_env_info.workspace_namespace_out
