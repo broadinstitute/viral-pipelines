@@ -107,9 +107,9 @@ task get_gcloud_env_info {
     Array[String] env_info_files            = glob("./*_info.log")
     File          additional_command_stdout = "additional_command_stdout.log"
     
-    String workspace_name      = read_string("workspace_name.txt")
-    String workspace_namespace = read_string("workspace_namespace.txt")
-    String google_project_id   = read_string("google_project_id.txt")
+    String workspace_name_out      = read_string("workspace_name.txt")
+    String workspace_namespace_out = read_string("workspace_namespace.txt")
+    String google_project_id_out   = read_string("google_project_id.txt")
   }
   runtime {
     docker: "quay.io/broadinstitute/viral-baseimage:0.1.20"
