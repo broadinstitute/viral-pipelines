@@ -47,7 +47,15 @@ task get_gcloud_env_info {
 
     gcloud auth print-access-token
 
-    gcloud config list --format='text(core.project)'
+    GOOGLE_PROJECT_ID="$(gcloud config list --format='value(core.project)')"
+
+    #get project namespace:
+    WORKSPACE_NAMESPACE="$(gcloud projects describe $GOOGLE_PROJECT_ID --format='value(labels.workspacenamespace)')"
+    WORKSPACE_NAME="$(gcloud projects describe $GOOGLE_PROJECT_ID --format='value(labels.workspacename)')"
+
+    echo "GOOGLE_PROJECT_ID:   ${GOOGLE_PROJECT_ID}"
+    echo "WORKSPACE_NAMESPACE: ${WORKSPACE_NAMESPACE}"
+    echo "WORKSPACE_NAME:      ${WORKSPACE_NAME}"
 
     touch additional_command_stdout.log
 
