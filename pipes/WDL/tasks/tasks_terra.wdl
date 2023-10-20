@@ -65,6 +65,8 @@ task get_gcloud_env_info {
 
     # ========== method 2: matching a project returned by the API based on the google project ID
 
+    GOOGLE_PROJECT_ID="$(gcloud config list --format='value(core.project)')"
+
     # get list of workspaces, limiting the output to only the fields we need
     curl -X 'GET' \
     'https://api.firecloud.org/api/workspaces?fields=workspace.name%2Cworkspace.namespace%2Cworkspace.googleProject' \
@@ -72,11 +74,11 @@ task get_gcloud_env_info {
     -H "Authorization: Bearer $(gcloud auth print-access-token)" > workspace_list.json
 
     # extract workspace name
-    WORKSPACE_NAME=$(jq -cr '.[] | select( .workspace.googleProject == "terra-bf70b335" ).workspace | .name' workspace_list.json)
+    WORKSPACE_NAME=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .name' workspace_list.json)
     echo "$WORKSPACE_NAME" > workspace_name.txt
     
     # extract workspace namespace
-    WORKSPACE_NAMESPACE=$(jq -cr '.[] | select( .workspace.googleProject == "terra-bf70b335" ).workspace | .namespace' workspace_list.json)
+    WORKSPACE_NAMESPACE=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .namespace' workspace_list.json)
     echo "$WORKSPACE_NAMESPACE" > workspace_namespace.txt
 
     # ========== method 3: resolved by Terra as inputs
