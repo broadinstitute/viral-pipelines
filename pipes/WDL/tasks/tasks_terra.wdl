@@ -100,7 +100,7 @@ task get_gcloud_env_info {
     String google_project_id_out   = read_string("google_project_id.txt")
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-baseimage:0.1.20"
+    docker: "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     memory: "1 GB"
     cpu: 1
     maxRetries: 1
