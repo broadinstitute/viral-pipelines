@@ -47,6 +47,8 @@ task get_gcloud_env_info {
 
     gcloud auth print-access-token
 
+    gcloud config list --format='text(core.project)'
+
     touch additional_command_stdout.log
 
     if [ -n "~{default='' additional_command_to_run}" ]; then
