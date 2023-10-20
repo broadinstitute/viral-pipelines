@@ -57,6 +57,11 @@ task get_gcloud_env_info {
     echo "WORKSPACE_NAMESPACE: ${WORKSPACE_NAMESPACE}"
     echo "WORKSPACE_NAME:      ${WORKSPACE_NAME}"
 
+    curl -X 'GET' \
+    "https://leonardo.dsde-dev.broadinstitute.org/api/google/v1/apps/${GOOGLE_PROJECT_ID}" \
+    -H 'accept: text/plain' \
+    -H "Authorization: Bearer $(gcloud auth print-access-token)"
+
     touch additional_command_stdout.log
 
     if [ -n "~{default='' additional_command_to_run}" ]; then
