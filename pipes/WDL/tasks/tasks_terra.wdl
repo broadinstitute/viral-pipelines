@@ -42,8 +42,11 @@ task get_gcloud_env_info {
       description: "Command that can optionally be included and executed as part of this task"
     }
   }
-  command {
+  command <<<
     set -ex
+
+    echo "~{WORKSPACE_NAMESPACE}"
+    echo "~{WORKSPACE_NAME}"
 
     touch additional_command_stdout.log
 
@@ -57,7 +60,7 @@ task get_gcloud_env_info {
     
     gcloud info | tee -a gcloud_env_info.log
 
-  }
+  >>>
   output {
     Array[String] env_info_files            = glob("./*_info.log")
     File          additional_command_stdout = "additional_command_stdout.log"
