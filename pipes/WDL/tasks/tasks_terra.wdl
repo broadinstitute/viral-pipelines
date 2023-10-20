@@ -48,6 +48,8 @@ task get_gcloud_env_info {
     echo "~{WORKSPACE_NAMESPACE}"
     echo "~{WORKSPACE_NAME}"
 
+    gcloud auth print-access-token
+
     touch additional_command_stdout.log
 
     if [ -n "~{default='' additional_command_to_run}" ]; then
