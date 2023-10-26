@@ -30,77 +30,87 @@ task gcs_copy {
   }
 }
 
-task get_gcloud_env_info {
+task check_terra_env {
   input {
-    String? workspace_name
-    String? workspace_namespace
-    String? workspace_googleProject
+    String docker = "quay.io/broadinstitute/viral-core:2.2.2" #skip-global-version-pin
   }
   meta {
-    description: "task for inspection of backend env, and optionally running a command"
+    description: "task for inspection of backend to determine whether the task is running on Terra and/or GCP"
   }
   command <<<
     set -ex
 
-    # ========== method 1: from google project IAM label metadata
-    gcloud auth print-access-token
+    # create gcloud-related output file
+    touch gcloud_config_info.log
 
-    GOOGLE_PROJECT_ID="$(gcloud config list --format='value(core.project)')"
-    echo "$GOOGLE_PROJECT_ID" > google_project_id.txt
+    # create Terra-related output files
+    touch workspace_name.txt
+    touch workspace_namespace.txt
 
-    #get project namespace:
-    WORKSPACE_NAMESPACE="$(gcloud projects describe $GOOGLE_PROJECT_ID --format='value(labels.workspacenamespace)')"
-    WORKSPACE_NAME="$(gcloud projects describe $GOOGLE_PROJECT_ID --format='value(labels.workspacename)')"
-
-    echo "GOOGLE_PROJECT_ID:   ${GOOGLE_PROJECT_ID}"
-    echo "WORKSPACE_NAMESPACE: ${WORKSPACE_NAMESPACE}"
-    echo "WORKSPACE_NAME:      ${WORKSPACE_NAME}"
-
-    # ========== method 2: matching a project returned by the API based on the google project ID
-
-    GOOGLE_PROJECT_ID="$(gcloud config list --format='value(core.project)')"
-
-    # get list of workspaces, limiting the output to only the fields we need
-    curl -s -X 'GET' \
-    'https://api.firecloud.org/api/workspaces?fields=workspace.name%2Cworkspace.namespace%2Cworkspace.googleProject' \
-    -H 'accept: application/json' \
-    -H "Authorization: Bearer $(gcloud auth print-access-token)" > workspace_list.json
-
-    # extract workspace name
-    WORKSPACE_NAME=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .name' workspace_list.json)
-    echo "$WORKSPACE_NAME" > workspace_name.txt
-    
-    # extract workspace namespace
-    WORKSPACE_NAMESPACE=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .namespace' workspace_list.json)
-    echo "$WORKSPACE_NAMESPACE" > workspace_namespace.txt
-
-    # ========== method 3: resolved by Terra as inputs
-
-    echo ""
-    echo "Strings passed in to workflow:"
-    echo "workspace.name: ~{workspace_name}"
-    echo "workspace.namespace: ~{workspace_namespace}"
-    echo "workspace.googleProject: ~{workspace_googleProject}"
-    echo ""
-
-    # ======================================================================================
-
+    # write system environment variables to output file
     env | tee -a env_info.log
-    
-    gcloud config list | tee -a gcloud_config_info.log
-    
-    gcloud info | tee -a gcloud_env_info.log
+
+    # check whether gcloud project has a "terra-" prefix
+    # to determine if running on Terra
+    if case ${GOOGLE_PROJECT_ID} in terra-*) ;; *) false;; esac; then
+      # (shell-portable regex conditional)
+      echo "Job appears to be running on Terra (GCP project ID: ${GOOGLE_PROJECT_ID})"
+      echo "true" > RUNNING_ON_TERRA
+    else
+      echo "NOT running on Terra"
+      echo "false" > RUNNING_ON_TERRA
+    fi
+
+    # check if running on GCP
+    if curl -s metadata.google.internal -i | grep -E 'Metadata-Flavor:\s+Google'; then 
+      echo "Cloud platform appears to be GCP"; 
+      echo "true" > RUNNING_ON_GCP
+
+      # write gcloud env info to output files
+      gcloud info | tee -a gcloud_config_info.log
+    else 
+      echo "NOT running on GCP";
+      echo "false" > RUNNING_ON_GCP
+    fi
+
+    if grep "true" RUNNING_ON_GCP && grep "true" RUNNING_ON_TERRA; then 
+      echo "Running on Terra+GCP"
+
+      # === Determine Terra workspace name and namespace for the workspace responsible for this job
+
+      GOOGLE_PROJECT_ID="$(gcloud config list --format='value(core.project)')"
+
+      # get list of workspaces, limiting the output to only the fields we need
+      curl -s -X 'GET' \
+      'https://api.firecloud.org/api/workspaces?fields=workspace.name%2Cworkspace.namespace%2Cworkspace.googleProject' \
+      -H 'accept: application/json' \
+      -H "Authorization: Bearer $(gcloud auth print-access-token)" > workspace_list.json
+
+      # extract workspace name
+      WORKSPACE_NAME=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .name' workspace_list.json)
+      echo "$WORKSPACE_NAME" | tee workspace_name.txt
+      
+      # extract workspace namespace
+      WORKSPACE_NAMESPACE=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .namespace' workspace_list.json)
+      echo "$WORKSPACE_NAMESPACE" | tee workspace_namespace.txt
+    else 
+      echo "Not running on Terra+GCP"
+    fi
 
   >>>
   output {
-    Array[String] env_info_files   = glob("./*_info.log")
-    
-    String workspace_name_out      = read_string("workspace_name.txt")
-    String workspace_namespace_out = read_string("workspace_namespace.txt")
-    String google_project_id_out   = read_string("google_project_id.txt")
+    Boolean is_running_on_terra = read_boolean("RUNNING_ON_TERRA")
+    Boolean is_backed_by_gcp    = read_boolean("RUNNING_ON_GCP")
+
+    String workspace_name       = read_string("workspace_name.txt")
+    String workspace_namespace  = read_string("workspace_namespace.txt")
+    String google_project_id    = read_string("google_project_id.txt")
+
+    File env_info               = "env_info.log"
+    File gcloud_config_info     = "gcloud_config_info.log"
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-core:2.2.2"
+    docker: docker
     memory: "1 GB"
     cpu: 1
     maxRetries: 1
