@@ -51,6 +51,9 @@ task check_terra_env {
     # write system environment variables to output file
     env | tee -a env_info.log
 
+    GOOGLE_PROJECT_ID="$(gcloud config list --format='value(core.project)')"
+    echo "$GOOGLE_PROJECT_ID" > google_project_id.txt
+
     # check whether gcloud project has a "terra-" prefix
     # to determine if running on Terra
     if case ${GOOGLE_PROJECT_ID} in terra-*) ;; *) false;; esac; then
@@ -78,9 +81,6 @@ task check_terra_env {
       echo "Running on Terra+GCP"
 
       # === Determine Terra workspace name and namespace for the workspace responsible for this job
-
-      GOOGLE_PROJECT_ID="$(gcloud config list --format='value(core.project)')"
-      echo "$GOOGLE_PROJECT_ID" > google_project_id.txt
 
       # get list of workspaces, limiting the output to only the fields we need
       curl -s -X 'GET' \
