@@ -48,6 +48,8 @@ task check_terra_env {
     touch workspace_name.txt
     touch workspace_namespace.txt
     touch workspace_bucket_path.txt
+    touch input_table_name.txt
+    touch input_row_id.txt
 
     # write system environment variables to output file
     env | tee -a env_info.log
@@ -87,16 +89,19 @@ task check_terra_env {
       #   from: https://github.com/broadinstitute/gatk/blob/ah_var_store/scripts/variantstore/wdl/GvsUtils.wdl#L35-L40
       sed -n -E 's!.*gs://fc-(secure-)?([^\/]+).*!\2!p' /cromwell_root/gcs_delocalization.sh | sort -u 
       sed -n -E 's!.*(gs://(fc-(secure-)?[^\/]+)).*!\1!p' /cromwell_root/gcs_delocalization.sh | sort -u 
+
+      # top-level submission ID
       sed -n -E 's!.*gs://fc-(secure-)?([^\/]+)/submissions/([^\/]+).*!\3!p' /cromwell_root/gcs_delocalization.sh | sort -u 
+      # workflow job ID within submission
       sed -n -E 's!.*gs://fc-(secure-)?([^\/]+)/submissions/([^\/]+)/([^\/]+)/([^\/]+).*!\5!p' /cromwell_root/gcs_delocalization.sh | sort -u 
+
       sed -n -E 's!.*(terra-[0-9a-f]+).*# project to use if requester pays$!\1!p' /cromwell_root/gcs_localization.sh | sort -u 
 
       # MORE DIRECT IF BUCKET PATH IS KNOWN:
       #curl -X 'GET' \
       #  'https://rawls.dsde-prod.broadinstitute.org/api/workspaces/id/8819db8a-7afb-4a27-97e2-6c314968b421?fields=workspace.name%2Cworkspace.namespace' \
       #  -H 'accept: application/json' \
-      #  -H 'Authorization: Bearer ya29.a0AfB_byDnTCv4_f-qON3w2_z-zFv8Px1_sA1xy8n2Q4MD4suiWyi6YGCYNTs-QXI8VN50COKFT5FtrN05FpWtgPfGv8EZcAxBGNw3TRkYSIbDfbOgRzRVmHe2fmcompALhnHXbVC837qHqUeit1cD22rhwxZQX3EpP2APaCgYKAS0SARMSFQGOcNnCnzFNqCJPvZrC7iHFMed00w0171'
-
+      #  -H "Authorization: Bearer $(gcloud auth print-access-token)"
 
       # get list of workspaces, limiting the output to only the fields we need
       curl -s -X 'GET' \
@@ -110,11 +115,23 @@ task check_terra_env {
       
       # extract workspace namespace
       WORKSPACE_NAMESPACE=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .namespace' workspace_list.json)
+      WORKSPACE_NAME_URL_ENCODED="$(jq -rn --arg x "${WORKSPACE_NAME}" '$x|@uri')"
       echo "$WORKSPACE_NAMESPACE" | tee workspace_namespace.txt
 
       # extract workspace bucket
       WORKSPACE_BUCKET=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .bucketName' workspace_list.json)
       echo "gs://${WORKSPACE_BUCKET}" | tee workspace_bucket_path.txt
+
+      touch submission_metadata.json
+      curl -s -X 'GET' \
+      "https://api.firecloud.org/api/workspaces/${WORKSPACE_NAMESPACE}/${WORKSPACE_NAME_URL_ENCODED}/submissions/d4b0ecfd-a630-431f-ad82-d95eefa7ed2f" \
+      -H 'accept: application/json' \
+      -H "Authorization: Bearer $(gcloud auth print-access-token)" > submission_metadata.json
+
+      INPUT_TABLE_NAME="$(jq -cr '.submissionEntity.entityType | select (.!=null)' submission_metadata.json)"
+      echo "$INPUT_TABLE_NAME" | tee input_table_name.txt
+      INPUT_ROW_ID="$(jq -cr '.submissionEntity.entityName | select (.!=null)' submission_metadata.json)"
+      echo "$INPUT_ROW_ID" | tee input_row_id.txt
     else 
       echo "Not running on Terra+GCP"
     fi
@@ -128,6 +145,8 @@ task check_terra_env {
     String workspace_namespace   = read_string("workspace_namespace.txt")
     String workspace_bucket_path = read_string("workspace_bucket_path.txt")
     String google_project_id     = read_string("google_project_id.txt")
+    String input_table_name      = read_string("input_table_name.txt")
+    String input_row_id          = read_string("input_row_id.txt")
 
     File env_info                = "env_info.log"
     File gcloud_config_info      = "gcloud_config_info.log"
