@@ -129,9 +129,11 @@ task check_terra_env {
       -H 'accept: application/json' \
       -H "Authorization: Bearer $(gcloud auth print-access-token)" > submission_metadata.json
 
-      INPUT_TABLE_NAME="$(jq -cr '.submissionEntity.entityType | select (.!=null)' submission_metadata.json)"
+      #INPUT_TABLE_NAME="$(jq -cr '.submissionEntity.entityType | select (.!=null)' submission_metadata.json)"
+      INPUT_TABLE_NAME="$(jq -cr 'if .submissionEntity == null then "" elif (.workflows | length)==1 then .submissionEntity.entityType else [.workflows[].workflowEntity.entityType] | join(",") end' submission_metadata.json)"
       echo "$INPUT_TABLE_NAME" | tee input_table_name.txt
-      INPUT_ROW_ID="$(jq -cr '.submissionEntity.entityName | select (.!=null)' submission_metadata.json)"
+      #INPUT_ROW_ID="$(jq -cr '.submissionEntity.entityName | select (.!=null)' submission_metadata.json)"
+      INPUT_ROW_ID="$(jq -cr 'if .submissionEntity == null then "" elif (.workflows | length)==1 then .submissionEntity.entityName else [.workflows[].workflowEntity.entityName] | join(",") end' submission_metadata.json)"
       echo "$INPUT_ROW_ID" | tee input_row_id.txt
     else 
       echo "Not running on Terra+GCP"
