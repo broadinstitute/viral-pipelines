@@ -5,7 +5,7 @@
 # skip this replacement for any version string line with the comment "#skip-global-version-pin"
 #
 # requires $MODULE_VERSIONS to be set to point to a text file with equal-sign-separated values
-# export MODULE_VERSIONS="./requirements-modules.txt" && ./github_actions_ci/version-wdl-runtimes.sh
+# export MODULE_VERSIONS="./requirements-modules.txt" && ./github_actions_ci/check-wdl-runtimes.sh
 
 printf "Updating docker image tags in WDL files with those in ${MODULE_VERSIONS}\n\n"
 

@@ -83,21 +83,6 @@ task check_terra_env {
 
       # === Determine Terra workspace name and namespace for the workspace responsible for this job
 
-      # Scrape out various workflow / workspace info from the localization and delocalization scripts.
-      #   from: https://github.com/broadinstitute/gatk/blob/ah_var_store/scripts/variantstore/wdl/GvsUtils.wdl#L35-L40
-      sed -n -E 's!.*gs://fc-(secure-)?([^\/]+).*!\2!p' /cromwell_root/gcs_delocalization.sh | sort -u 
-      sed -n -E 's!.*(gs://(fc-(secure-)?[^\/]+)).*!\1!p' /cromwell_root/gcs_delocalization.sh | sort -u 
-      sed -n -E 's!.*gs://fc-(secure-)?([^\/]+)/submissions/([^\/]+).*!\3!p' /cromwell_root/gcs_delocalization.sh | sort -u 
-      sed -n -E 's!.*gs://fc-(secure-)?([^\/]+)/submissions/([^\/]+)/([^\/]+)/([^\/]+).*!\5!p' /cromwell_root/gcs_delocalization.sh | sort -u 
-      sed -n -E 's!.*(terra-[0-9a-f]+).*# project to use if requester pays$!\1!p' /cromwell_root/gcs_localization.sh | sort -u 
-
-      # MORE DIRECT IF BUCKET PATH IS KNOWN:
-      #curl -X 'GET' \
-      #  'https://rawls.dsde-prod.broadinstitute.org/api/workspaces/id/8819db8a-7afb-4a27-97e2-6c314968b421?fields=workspace.name%2Cworkspace.namespace' \
-      #  -H 'accept: application/json' \
-      #  -H 'Authorization: Bearer ya29.a0AfB_byDnTCv4_f-qON3w2_z-zFv8Px1_sA1xy8n2Q4MD4suiWyi6YGCYNTs-QXI8VN50COKFT5FtrN05FpWtgPfGv8EZcAxBGNw3TRkYSIbDfbOgRzRVmHe2fmcompALhnHXbVC837qHqUeit1cD22rhwxZQX3EpP2APaCgYKAS0SARMSFQGOcNnCnzFNqCJPvZrC7iHFMed00w0171'
-
-
       # get list of workspaces, limiting the output to only the fields we need
       curl -s -X 'GET' \
       'https://api.firecloud.org/api/workspaces?fields=workspace.name%2Cworkspace.namespace%2Cworkspace.bucketName%2Cworkspace.googleProject' \
@@ -271,39 +256,3 @@ task download_entities_tsv {
   }
 }
 
-task create_or_update_sample_tables {
-  input {
-    String flowcell_run_id
-
-    String workspace_namespace
-    String workspace_name
-    String workspace_bucket
-
-    String  docker = "quay.io/broadinstitute/viral-core:2.2.2" #skip-global-version-pin
-  }
-
-  meta {
-    volatile: true
-  }
-
-  command <<<
-    python3<<CODE
-
-    workspace_project = '~{workspace_namespace}'
-    workspace_name    = '~{workspace_name}'
-    workspace_bucket  = '~{workspace_bucket}'
-    table_name        = ''
-
-    CODE
-  >>>
-  runtime {
-    docker: docker
-    memory: "2 GB"
-    cpu: 1
-    maxRetries: 2
-  }
-  output {
-    File stdout_log = stdout()
-    File stderr_log = stderr()
-  }
-}
