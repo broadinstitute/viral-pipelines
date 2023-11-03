@@ -85,6 +85,12 @@ task get_gcloud_env_info {
 
     # ======================================================================================
 
+    #touch additional_command_stdout.log
+
+    #if [ -n "~{default='' additional_command_to_run}" ]; then
+    #  ~{default='echo ""' additional_command_to_run} | tee -a additional_command_stdout.log
+    #fi
+
     env | tee -a env_info.log
     
     gcloud config list | tee -a gcloud_config_info.log
@@ -93,7 +99,8 @@ task get_gcloud_env_info {
 
   >>>
   output {
-    Array[String] env_info_files   = glob("./*_info.log")
+    Array[String] env_info_files            = glob("./*_info.log")
+    #File          additional_command_stdout = "additional_command_stdout.log"
     
     String workspace_name_out      = read_string("workspace_name.txt")
     String workspace_namespace_out = read_string("workspace_namespace.txt")
