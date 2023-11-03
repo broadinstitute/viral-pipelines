@@ -30,42 +30,6 @@ task gcs_copy {
   }
 }
 
-task get_gcloud_env_info {
-  input {
-    String? additional_command_to_run
-  }
-  meta {
-    description: "task for inspection of backend env, and optionally running a command"
-  }
-  parameter_meta {
-    additional_command_to_run: {
-      description: "Command that can optionally be included and executed as part of this task"
-    }
-  }
-  command {
-    set -ex
-
-    ~{additional_command_to_run} | tee -a additional_command_stdout.log
-
-    env | tee -a env_info.log
-    
-    gcloud config list | tee -a gcloud_config_info.log
-    
-    gcloud info | tee -a gcloud_env_info.log
-
-  }
-  output {
-    Array[String] env_info_files            = glob("./*_info.log")
-    File          additional_command_stdout = "additional_command_stdout.log"
-  }
-  runtime {
-    docker: "quay.io/broadinstitute/viral-baseimage:0.1.20"
-    memory: "1 GB"
-    cpu: 1
-    maxRetries: 1
-  }
-}
-
 task upload_reads_assemblies_entities_tsv {
   input {
     String        workspace_name
