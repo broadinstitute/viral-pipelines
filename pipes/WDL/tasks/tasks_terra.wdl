@@ -42,7 +42,6 @@ task check_terra_env {
 
     # create gcloud-related output file
     touch gcloud_config_info.log
-    touch google_project_id.txt
 
     # create Terra-related output files
     touch workspace_name.txt
@@ -80,7 +79,6 @@ task check_terra_env {
       # === Determine Terra workspace name and namespace for the workspace responsible for this job
 
       GOOGLE_PROJECT_ID="$(gcloud config list --format='value(core.project)')"
-      echo "$GOOGLE_PROJECT_ID" > google_project_id.txt
 
       # get list of workspaces, limiting the output to only the fields we need
       curl -s -X 'GET' \
