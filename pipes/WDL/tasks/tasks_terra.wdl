@@ -68,7 +68,7 @@ task get_gcloud_env_info {
     GOOGLE_PROJECT_ID="$(gcloud config list --format='value(core.project)')"
 
     # get list of workspaces, limiting the output to only the fields we need
-    curl -s -X 'GET' \
+    curl -X 'GET' \
     'https://api.firecloud.org/api/workspaces?fields=workspace.name%2Cworkspace.namespace%2Cworkspace.googleProject' \
     -H 'accept: application/json' \
     -H "Authorization: Bearer $(gcloud auth print-access-token)" > workspace_list.json
