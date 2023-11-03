@@ -32,9 +32,9 @@ task gcs_copy {
 
 task get_gcloud_env_info {
   input {
-    String? workspace_name
-    String? workspace_namespace
-    String? workspace_googleProject
+    String workspace_name
+    String workspace_namespace
+    String workspace_googleProject
 
     String? additional_command_to_run
   }
