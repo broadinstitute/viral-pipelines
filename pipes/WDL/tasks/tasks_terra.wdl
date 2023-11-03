@@ -45,6 +45,9 @@ task get_gcloud_env_info {
   command <<<
     set -ex
 
+    echo "~{WORKSPACE_NAMESPACE}"
+    echo "~{WORKSPACE_NAME}"
+
     gcloud auth print-access-token
 
     touch additional_command_stdout.log
