@@ -144,11 +144,6 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/downsample.wdl
     testParameterFiles:
       - empty.json
-  - name: dump_gcloud_env_info
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/dump_gcloud_env_info.wdl
-    testParameterFiles:
-      - empty.json
   - name: fastq_to_ubam
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/fastq_to_ubam.wdl
