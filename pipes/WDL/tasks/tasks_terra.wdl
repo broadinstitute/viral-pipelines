@@ -57,8 +57,6 @@ task get_gcloud_env_info {
     echo "WORKSPACE_NAMESPACE: ${WORKSPACE_NAMESPACE}"
     echo "WORKSPACE_NAME:      ${WORKSPACE_NAME}"
 
-    ls -lah /cromwell_root
-
     curl -X 'GET' \
     "https://leonardo.dsde-dev.broadinstitute.org/api/google/v1/apps/${GOOGLE_PROJECT_ID}" \
     -H 'accept: text/plain' \
