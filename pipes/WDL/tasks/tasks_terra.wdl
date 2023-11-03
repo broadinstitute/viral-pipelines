@@ -35,9 +35,16 @@ task get_gcloud_env_info {
     String? workspace_name
     String? workspace_namespace
     String? workspace_googleProject
+
+    String? additional_command_to_run
   }
   meta {
     description: "task for inspection of backend env, and optionally running a command"
+  }
+  parameter_meta {
+    additional_command_to_run: {
+      description: "Command that can optionally be included and executed as part of this task"
+    }
   }
   command <<<
     set -ex
@@ -85,11 +92,11 @@ task get_gcloud_env_info {
 
     # ======================================================================================
 
-    #touch additional_command_stdout.log
+    touch additional_command_stdout.log
 
-    #if [ -n "~{default='' additional_command_to_run}" ]; then
-    #  ~{default='echo ""' additional_command_to_run} | tee -a additional_command_stdout.log
-    #fi
+    if [ -n "~{default='' additional_command_to_run}" ]; then
+      ~{default='echo ""' additional_command_to_run} | tee -a additional_command_stdout.log
+    fi
 
     env | tee -a env_info.log
     
@@ -100,7 +107,7 @@ task get_gcloud_env_info {
   >>>
   output {
     Array[String] env_info_files            = glob("./*_info.log")
-    #File          additional_command_stdout = "additional_command_stdout.log"
+    File          additional_command_stdout = "additional_command_stdout.log"
     
     String workspace_name_out      = read_string("workspace_name.txt")
     String workspace_namespace_out = read_string("workspace_namespace.txt")
