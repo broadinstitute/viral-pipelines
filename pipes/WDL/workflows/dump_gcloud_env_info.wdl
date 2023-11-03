@@ -14,22 +14,19 @@ workflow dump_gcloud_env_info {
     call terra.check_terra_env
 
     output {
-        Boolean is_running_on_terra     = check_terra_env.is_running_on_terra
-        Boolean is_backed_by_gcp        = check_terra_env.is_backed_by_gcp
+        Boolean is_running_on_terra   = check_terra_env.is_running_on_terra
+        Boolean is_backed_by_gcp      = check_terra_env.is_backed_by_gcp
 
-        String  google_project_id       = check_terra_env.google_project_id
-
-        String  workspace_id            = check_terra_env.workspace_id
-        String  workspace_name          = check_terra_env.workspace_name
-        String  workspace_namespace     = check_terra_env.workspace_namespace
-        String  workspace_bucket_path   = check_terra_env.workspace_bucket_path
+        String  workspace_name        = check_terra_env.workspace_name
+        String  workspace_namespace   = check_terra_env.workspace_namespace
+        String  workspace_bucket_path = check_terra_env.workspace_bucket_path
         
-        String  input_table_name        = check_terra_env.input_table_name
-        String  input_row_id            = check_terra_env.input_row_id
+        String  input_table_name      = check_terra_env.input_table_name
+        String  input_row_id          = check_terra_env.input_row_id
 
-        String  top_level_submission_id = check_terra_env.top_level_submission_id
+        String  google_project_id     = check_terra_env.google_project_id
 
-        File    env_info                = check_terra_env.env_info
-        File    gcloud_config_info      = check_terra_env.gcloud_config_info
+        File    env_info              = check_terra_env.env_info
+        File    gcloud_config_info    = check_terra_env.gcloud_config_info
     }
 }

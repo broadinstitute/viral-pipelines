@@ -87,20 +87,16 @@ task check_terra_env {
 
       # Scrape out various workflow / workspace info from the localization and delocalization scripts.
       #   from: https://github.com/broadinstitute/gatk/blob/ah_var_store/scripts/variantstore/wdl/GvsUtils.wdl#L35-L40
-      WORKSPACE_ID="$(sed -n -E 's!.*gs://fc-(secure-)?([^\/]+).*!\2!p' /cromwell_root/gcs_delocalization.sh | sort -u | tee workspace_id.txt)"
-      echo "WORKSPACE_ID: ${WORKSPACE_ID}"
-
-      # bucket path prefix
-      #BUCKET_PREFIX="$(sed -n -E 's!.*(gs://(fc-(secure-)?[^\/]+)).*!\1!p' /cromwell_root/gcs_delocalization.sh | sort -u | tee bucket_prefix.txt)"
-      #echo "BUCKET_PREFIX: ${BUCKET_PREFIX}"
+      sed -n -E 's!.*gs://fc-(secure-)?([^\/]+).*!\2!p' /cromwell_root/gcs_delocalization.sh | sort -u 
+      sed -n -E 's!.*(gs://(fc-(secure-)?[^\/]+)).*!\1!p' /cromwell_root/gcs_delocalization.sh | sort -u 
 
       # top-level submission ID
-      TOP_LEVEL_SUBMISSION_ID="$(sed -n -E 's!.*gs://fc-(secure-)?([^\/]+)/submissions/([^\/]+).*!\3!p' /cromwell_root/gcs_delocalization.sh | sort -u | tee top_level_submission_id.txt)"
+      TOP_LEVEL_SUBMISSION_ID="$(sed -n -E 's!.*gs://fc-(secure-)?([^\/]+)/submissions/([^\/]+).*!\3!p' /cromwell_root/gcs_delocalization.sh | sort -u)"
       echo "TOP_LEVEL_SUBMISSION_ID: ${TOP_LEVEL_SUBMISSION_ID}"
-
       # workflow job ID within submission
       sed -n -E 's!.*gs://fc-(secure-)?([^\/]+)/submissions/([^\/]+)/([^\/]+)/([^\/]+).*!\5!p' /cromwell_root/gcs_delocalization.sh | sort -u 
-      #sed -n -E 's!.*(terra-[0-9a-f]+).*# project to use if requester pays$!\1!p' /cromwell_root/gcs_localization.sh | sort -u 
+
+      sed -n -E 's!.*(terra-[0-9a-f]+).*# project to use if requester pays$!\1!p' /cromwell_root/gcs_localization.sh | sort -u 
 
       # MORE DIRECT IF BUCKET PATH IS KNOWN:
       #curl -X 'GET' \
@@ -145,23 +141,18 @@ task check_terra_env {
 
   >>>
   output {
-    Boolean is_running_on_terra    = read_boolean("RUNNING_ON_TERRA")
-    Boolean is_backed_by_gcp       = read_boolean("RUNNING_ON_GCP")
+    Boolean is_running_on_terra  = read_boolean("RUNNING_ON_TERRA")
+    Boolean is_backed_by_gcp     = read_boolean("RUNNING_ON_GCP")
 
-    String google_project_id       = read_string("google_project_id.txt")
+    String workspace_name        = read_string("workspace_name.txt")
+    String workspace_namespace   = read_string("workspace_namespace.txt")
+    String workspace_bucket_path = read_string("workspace_bucket_path.txt")
+    String google_project_id     = read_string("google_project_id.txt")
+    String input_table_name      = read_string("input_table_name.txt")
+    String input_row_id          = read_string("input_row_id.txt")
 
-    String workspace_id            = read_string("workspace_id.txt")
-    String workspace_name          = read_string("workspace_name.txt")
-    String workspace_namespace     = read_string("workspace_namespace.txt")
-    String workspace_bucket_path   = read_string("workspace_bucket_path.txt")    
-
-    String input_table_name        = read_string("input_table_name.txt")
-    String input_row_id            = read_string("input_row_id.txt")
-
-    String top_level_submission_id = read_string("top_level_submission_id.txt")
-
-    File env_info                  = "env_info.log"
-    File gcloud_config_info        = "gcloud_config_info.log"
+    File env_info                = "env_info.log"
+    File gcloud_config_info      = "gcloud_config_info.log"
   }
   runtime {
     docker: docker
