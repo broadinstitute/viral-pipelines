@@ -83,9 +83,9 @@ task check_terra_env {
     if grep "true" RUNNING_ON_GCP && grep "true" RUNNING_ON_TERRA; then 
       echo "Running on Terra+GCP"
 
-      # === Determine Terra workspace name and namespace for the workspace responsible for this job
+      # === Determine Terra workspace ID and submission ID for the workspace responsible for this job
 
-      # Scrape out various workflow / workspace info from the localization and delocalization scripts.
+      # Scrape various workflow / workspace info from the localization and delocalization scripts.
       #   from: https://github.com/broadinstitute/gatk/blob/ah_var_store/scripts/variantstore/wdl/GvsUtils.wdl#L35-L40
       WORKSPACE_ID="$(sed -n -E 's!.*gs://fc-(secure-)?([^\/]+).*!\2!p' /cromwell_root/gcs_delocalization.sh | sort -u | tee workspace_id.txt)"
       echo "WORKSPACE_ID: ${WORKSPACE_ID}"
@@ -99,46 +99,62 @@ task check_terra_env {
       echo "TOP_LEVEL_SUBMISSION_ID: ${TOP_LEVEL_SUBMISSION_ID}"
 
       # workflow job ID within submission
-      sed -n -E 's!.*gs://fc-(secure-)?([^\/]+)/submissions/([^\/]+)/([^\/]+)/([^\/]+).*!\5!p' /cromwell_root/gcs_delocalization.sh | sort -u 
-      #sed -n -E 's!.*(terra-[0-9a-f]+).*# project to use if requester pays$!\1!p' /cromwell_root/gcs_localization.sh | sort -u 
-
-      # MORE DIRECT IF BUCKET PATH IS KNOWN:
-      #curl -X 'GET' \
-      #  'https://rawls.dsde-prod.broadinstitute.org/api/workspaces/id/8819db8a-7afb-4a27-97e2-6c314968b421?fields=workspace.name%2Cworkspace.namespace' \
-      #  -H 'accept: application/json' \
-      #  -H "Authorization: Bearer $(gcloud auth print-access-token)"
-
-      # get list of workspaces, limiting the output to only the fields we need
-      curl -s -X 'GET' \
-      'https://api.firecloud.org/api/workspaces?fields=workspace.name%2Cworkspace.namespace%2Cworkspace.bucketName%2Cworkspace.googleProject' \
-      -H 'accept: application/json' \
-      -H "Authorization: Bearer $(gcloud auth print-access-token)" > workspace_list.json
-
-      # extract workspace name
-      WORKSPACE_NAME=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .name' workspace_list.json)
-      echo "$WORKSPACE_NAME" | tee workspace_name.txt
+      #WORKFLOW_ID="$(sed -n -E 's!.*gs://fc-(secure-)?([^\/]+)/submissions/([^\/]+)/([^\/]+)/([^\/]+).*!\5!p' /cromwell_root/gcs_delocalization.sh | sort -u)"
       
-      # extract workspace namespace
-      WORKSPACE_NAMESPACE=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .namespace' workspace_list.json)
+      # other way to obtain Terra project ID, via scraping rather than from gcloud call used above
+      #GOOGLE_PROJECT_ID="$(sed -n -E 's!.*(terra-[0-9a-f]+).*# project to use if requester pays$!\1!p' /cromwell_root/gcs_localization.sh | sort -u)"
+      # =======================================
+
+      # === request workspace name AND namespace from API, based on bucket path / ID ===
+      curl -s -X 'GET' \
+        "https://api.firecloud.org/api/workspaces/id/${WORKSPACE_ID}?fields=workspace.name%2Cworkspace.namespace%2Cworkspace.googleProject" \
+        -H 'accept: application/json' \
+        -H "Authorization: Bearer $(gcloud auth print-access-token)" > workspace_info.json
+
+
+      WORKSPACE_NAME="$(jq -cr '.workspace.name | select (.!=null)' workspace_info.json)"
       WORKSPACE_NAME_URL_ENCODED="$(jq -rn --arg x "${WORKSPACE_NAME}" '$x|@uri')"
-      echo "$WORKSPACE_NAMESPACE" | tee workspace_namespace.txt
+      WORKSPACE_NAMESPACE="$(jq -cr '.workspace.namespace | select (.!=null)' workspace_info.json)"
+      WORKSPACE_BUCKET="gs://${WORKSPACE_ID}"
 
-      # extract workspace bucket
-      WORKSPACE_BUCKET=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .bucketName' workspace_list.json)
-      echo "gs://${WORKSPACE_BUCKET}" | tee workspace_bucket_path.txt
+      echo "${WORKSPACE_NAME}" | tee workspace_name.txt
+      echo "${WORKSPACE_NAMESPACE}" | tee workspace_namespace.txt
+      echo "${WORKSPACE_BUCKET}" | tee workspace_bucket_path.txt
 
+          # --- less direct way of obtaining workspace info by matching Terra project ID --
+          #     preserved here for potential utility in obtaining workspace info for other projects/workspaces
+          # get list of workspaces, limiting the output to only the fields we need
+          #curl -s -X 'GET' \
+          #'https://api.firecloud.org/api/workspaces?fields=workspace.name%2Cworkspace.namespace%2Cworkspace.bucketName%2Cworkspace.googleProject' \
+          #-H 'accept: application/json' \
+          #-H "Authorization: Bearer $(gcloud auth print-access-token)" > workspace_list.json
+
+          # extract workspace name
+          #WORKSPACE_NAME=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .name' workspace_list.json)
+          
+          # extract workspace namespace
+          #WORKSPACE_NAMESPACE=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .namespace' workspace_list.json)
+          #WORKSPACE_NAME_URL_ENCODED="$(jq -rn --arg x "${WORKSPACE_NAME}" '$x|@uri')"
+
+          # extract workspace bucket
+          #WORKSPACE_BUCKET=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .bucketName' workspace_list.json)
+          # --- end less direct way of obtaining workspace info ---
+      # =======================================
+
+
+      # === obtain info on job submission inputs (table name, row ID)===
       touch submission_metadata.json
       curl -s -X 'GET' \
       "https://api.firecloud.org/api/workspaces/${WORKSPACE_NAMESPACE}/${WORKSPACE_NAME_URL_ENCODED}/submissions/${TOP_LEVEL_SUBMISSION_ID}" \
       -H 'accept: application/json' \
       -H "Authorization: Bearer $(gcloud auth print-access-token)" > submission_metadata.json
 
-      #INPUT_TABLE_NAME="$(jq -cr '.submissionEntity.entityType | select (.!=null)' submission_metadata.json)"
       INPUT_TABLE_NAME="$(jq -cr 'if .submissionEntity == null then "" elif (.workflows | length)==1 then .submissionEntity.entityType else [.workflows[].workflowEntity.entityType] | join(",") end' submission_metadata.json)"
-      echo "$INPUT_TABLE_NAME" | tee input_table_name.txt
-      #INPUT_ROW_ID="$(jq -cr '.submissionEntity.entityName | select (.!=null)' submission_metadata.json)"
       INPUT_ROW_ID="$(jq -cr 'if .submissionEntity == null then "" elif (.workflows | length)==1 then .submissionEntity.entityName else [.workflows[].workflowEntity.entityName] | join(",") end' submission_metadata.json)"
+
+      echo "$INPUT_TABLE_NAME" | tee input_table_name.txt
       echo "$INPUT_ROW_ID" | tee input_row_id.txt
+      # =======================================
     else 
       echo "Not running on Terra+GCP"
     fi
