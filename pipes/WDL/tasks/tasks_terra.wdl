@@ -45,11 +45,9 @@ task get_gcloud_env_info {
   command <<<
     set -ex
 
-    # ========== method 1: from google project IAM label metadata
     gcloud auth print-access-token
 
     GOOGLE_PROJECT_ID="$(gcloud config list --format='value(core.project)')"
-    echo "$GOOGLE_PROJECT_ID" > google_project_id.txt
 
     #get project namespace:
     WORKSPACE_NAMESPACE="$(gcloud projects describe $GOOGLE_PROJECT_ID --format='value(labels.workspacenamespace)')"
@@ -59,23 +57,12 @@ task get_gcloud_env_info {
     echo "WORKSPACE_NAMESPACE: ${WORKSPACE_NAMESPACE}"
     echo "WORKSPACE_NAME:      ${WORKSPACE_NAME}"
 
-    # ========== method 2: matching a project returned by the API based on the google project ID
+    ls -lah /cromwell_root
 
-    # get list of workspaces, limiting the output to only the fields we need
     curl -X 'GET' \
-    'https://api.firecloud.org/api/workspaces?fields=workspace.name%2Cworkspace.namespace%2Cworkspace.googleProject' \
-    -H 'accept: application/json' \
-    -H "Authorization: Bearer $(gcloud auth print-access-token)" > workspace_list.json
-
-    # extract workspace name
-    WORKSPACE_NAME=$(jq -cr '.[] | select( .workspace.googleProject == "terra-bf70b335" ).workspace | .name' workspace_list.json)
-    echo "$WORKSPACE_NAME" > workspace_name.txt
-    
-    # extract workspace namespace
-    WORKSPACE_NAMESPACE=$(jq -cr '.[] | select( .workspace.googleProject == "terra-bf70b335" ).workspace | .namespace' workspace_list.json)
-    echo "$WORKSPACE_NAMESPACE" > workspace_namespace.txt
-
-    # ======================================================================================
+    "https://leonardo.dsde-dev.broadinstitute.org/api/google/v1/apps/${GOOGLE_PROJECT_ID}" \
+    -H 'accept: text/plain' \
+    -H "Authorization: Bearer $(gcloud auth print-access-token)"
 
     touch additional_command_stdout.log
 
@@ -93,10 +80,6 @@ task get_gcloud_env_info {
   output {
     Array[String] env_info_files            = glob("./*_info.log")
     File          additional_command_stdout = "additional_command_stdout.log"
-    
-    String workspace_name      = read_string("workspace_name.txt")
-    String workspace_namespace = read_string("workspace_namespace.txt")
-    String google_project_id   = read_string("google_project_id.txt")
   }
   runtime {
     docker: "quay.io/broadinstitute/viral-baseimage:0.1.20"
