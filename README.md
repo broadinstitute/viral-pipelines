@@ -12,7 +12,6 @@ Workflows are written in [WDL](https://github.com/openwdl/wdl) format. This is a
  - on commercial platform as a service vendors (like [DNAnexus](https://dnanexus.com/))
  - on academic cloud platforms (like [Terra](https://app.terra.bio/))
 
-
 ## Obtaining the latest WDL workflows
 
 Workflows from this repository are continuously deployed to [Dockstore](https://dockstore.org/organizations/BroadInstitute/collections/pgs), a GA4GH Tool Registry Service. They can then be easily imported to any bioinformatic compute platform that utilizes the TRS API and understands WDL (this includes Terra, DNAnexus, DNAstack, etc).

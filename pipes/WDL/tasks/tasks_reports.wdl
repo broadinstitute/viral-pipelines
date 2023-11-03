@@ -1,27 +1,31 @@
 version 1.0
 
 task alignment_metrics {
+  meta {
+      description: "Produce various standard metrics and coverage plots via Picard and Samtools for aligned BAM files."
+  }
+
   input {
     File   aligned_bam
     File   ref_fasta
     File?  primers_bed
+    String? amplicon_set
+    Int?   min_coverage
+    Int?   max_amp_len=5000
+    Int?   max_amplicons=500
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.1.32"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
 
   String out_basename = basename(aligned_bam, ".bam")
+  Int disk_size = 150
 
   command <<<
     set -e
     MEM_MB=$(free -m | head -2 | tail -1 | awk '{print $4}')
     XMX=$(echo "-Xmx"$MEM_MB"m")
     echo "Requesting $MEM_MB MB of RAM for Java"
-
-    # R fails unless you do this, CollectInsertSizeMetrics needs R
-    if [ ! -f /lib/x86_64-linux-gnu/libreadline.so.6 ]; then
-      ln -s /lib/x86_64-linux-gnu/libreadline.so.7 /lib/x86_64-linux-gnu/libreadline.so.6
-    fi
 
     # requisite Picard fasta indexing
     cp "~{ref_fasta}" reference.fasta
@@ -59,12 +63,31 @@ task alignment_metrics {
     echo -e "$SAMPLE\t~{out_basename}" >> prepend.txt
     paste prepend.txt picard_clean.insert_size_metrics.txt > "~{out_basename}".insert_size_metrics.txt
 
-    # actually don't know how to do CollectTargetedPcrMetrics yet
+    touch "~{out_basename}".ampliconstats.txt "~{out_basename}".ampliconstats_parsed.txt
+    echo -e "sample_sanitized\tbam\tamplicon_set\tamplicon_idx\tamplicon_left\tamplicon_right\tFREADS\tFDEPTH\tFPCOV\tFAMP" > "~{out_basename}.ampliconstats_parsed.txt"
     if [ -n "~{primers_bed}" ]; then
-      picard $XMX BedToIntervalList \
-        -I "~{primers_bed}" \
-        -O primers.interval.list \
-        -SD reference.dict
+      # samtools ampliconstats
+      cat "~{primers_bed}" | sort -k 4 -t $'\t' > primers-sorted_for_samtools.bed
+      samtools ampliconstats -s -@ $(nproc) \
+        ~{'-d ' + min_coverage} \
+        ~{'-l ' + max_amp_len} \
+        ~{'-a ' + max_amplicons} \
+        -o "~{out_basename}".ampliconstats.txt primers-sorted_for_samtools.bed "~{aligned_bam}"
+
+      # parse into our own tsv to facilitate tsv joining later
+      if [ -n "~{default='' amplicon_set}" ]; then
+        AMPLICON_SET="~{default='' amplicon_set}"
+      else
+        AMPLICON_SET=$(basename "~{primers_bed}" .bed)
+      fi
+      grep ^AMPLICON "~{out_basename}".ampliconstats.txt | cut -f 2- > AMPLICON
+      grep ^FREADS "~{out_basename}".ampliconstats.txt | cut -f 3- | tr '\t' '\n' > FREADS; echo "" >> FREADS
+      grep ^FDEPTH "~{out_basename}".ampliconstats.txt | cut -f 3- | tr '\t' '\n' > FDEPTH; echo "" >> FDEPTH
+      grep ^FPCOV  "~{out_basename}".ampliconstats.txt | cut -f 3- | tr '\t' '\n' > FPCOV;  echo "" >> FPCOV
+      grep ^FAMP   "~{out_basename}".ampliconstats.txt | cut -f 4 | tail +2 > FAMP
+      for i in $(cut -f 1 AMPLICON); do echo -e "$SAMPLE\t~{out_basename}\t$AMPLICON_SET"; done > prepend.txt
+      wc -l prepend.txt AMPLICON FREADS FDEPTH FPCOV FAMP
+      paste prepend.txt AMPLICON FREADS FDEPTH FPCOV FAMP | grep '\S' >> "~{out_basename}.ampliconstats_parsed.txt"
     fi
   >>>
 
@@ -72,13 +95,16 @@ task alignment_metrics {
     File wgs_metrics         = "~{out_basename}.raw_wgs_metrics.txt"
     File alignment_metrics   = "~{out_basename}.alignment_metrics.txt"
     File insert_size_metrics = "~{out_basename}.insert_size_metrics.txt"
+    File amplicon_stats      = "~{out_basename}.ampliconstats.txt"
+    File amplicon_stats_parsed = "~{out_basename}.ampliconstats_parsed.txt"
   }
 
   runtime {
     docker: "~{docker}"
     memory: select_first([machine_mem_gb, 13]) + " GB"
     cpu: 2
-    disks: "local-disk 150 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -105,8 +131,10 @@ task plot_coverage {
     String? plotXLimits # of the form "min max" (ints, space between)
     String? plotYLimits # of the form "min max" (ints, space between)
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.1.32"
+    String  docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
+
+  Int disk_size = 375
   
   command {
     set -ex -o pipefail
@@ -174,7 +202,8 @@ task plot_coverage {
     docker: "${docker}"
     memory: "7 GB"
     cpu: 2
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     preemptible: 1
     maxRetries: 2
@@ -187,8 +216,10 @@ task coverage_report {
     Array[File]  mapped_bam_idx # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name = "coverage_report.txt"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.1.32"
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
+
+  Int disk_size = 375
 
   command {
     reports.py --version | tee VERSION
@@ -207,7 +238,8 @@ task coverage_report {
     docker: "${docker}"
     memory: "2 GB"
     cpu: 2
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x4"
     maxRetries: 2
   }
@@ -222,6 +254,8 @@ task assembly_bases {
       File   fasta
       String docker ="ubuntu"
     }
+
+    Int disk_size = 50
 
     command {
         set -e
@@ -238,7 +272,8 @@ task assembly_bases {
         docker: "${docker}"
         memory: "1 GB"
         cpu: 1
-        disks: "local-disk 50 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -248,10 +283,18 @@ task fastqc {
   input {
     File   reads_bam
 
-    String docker = "quay.io/broadinstitute/viral-core:2.1.32"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.33"
+  }
+  parameter_meta {
+    reads_bam:{ 
+    description: "Input reads in BAM format.",
+    category: "required"
+    }
+
   }
 
   String   reads_basename=basename(reads_bam, ".bam")
+  Int disk_size = 375
 
   command {
     set -ex -o pipefail
@@ -269,7 +312,8 @@ task fastqc {
     memory: "2 GB"
     cpu: 1
     docker: "${docker}"
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -282,12 +326,25 @@ task align_and_count {
     Int    topNHits = 3
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.1.32"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
   String  ref_basename=basename(ref_db, ".fasta")
+  Int disk_size = 375
 
+  parameter_meta {
+    reads_bam: {
+      description: "Unaligned reads in BAM format",
+      pattern: ["*.bam"],
+      category: "required"
+    }
+    ref_db: {
+      description: "Reference genome in FASTA format",
+      pattern: ["*.FASTA"],
+      category: "required"
+    }
+  }
   command {
     set -ex -o pipefail
 
@@ -316,7 +373,8 @@ task align_and_count {
     memory: select_first([machine_mem_gb, 15]) + " GB"
     cpu: 4
     docker: "${docker}"
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
   }
@@ -328,8 +386,10 @@ task align_and_count_summary {
 
     String       output_prefix = "count_summary"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.1.32"
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
+
+  Int disk_size = 100
 
   command {
     set -ex -o pipefail
@@ -344,10 +404,11 @@ task align_and_count_summary {
   }
 
   runtime {
-    memory: "3 GB"
-    cpu: 2
+    memory: "7 GB"
+    cpu: 8
     docker: "${docker}"
-    disks: "local-disk 50 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -360,7 +421,7 @@ task aggregate_metagenomics_reports {
     String       aggregate_taxlevel_focus                 = "species"
     Int          aggregate_top_N_hits                     = 5
 
-    String       docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.1.33.0"
   }
 
   parameter_meta {
@@ -370,6 +431,7 @@ task aggregate_metagenomics_reports {
   }
 
   String       aggregate_taxon_heading = sub(aggregate_taxon_heading_space_separated, " ", "_") # replace spaces with underscores for use in filename
+  Int disk_size = 50
 
   command {
     set -ex -o pipefail
@@ -394,7 +456,8 @@ task aggregate_metagenomics_reports {
     docker: "${docker}"
     memory: "3 GB"
     cpu: 1
-    disks: "local-disk 50 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
     preemptible: 0
     maxRetries: 2
@@ -403,7 +466,7 @@ task aggregate_metagenomics_reports {
 
 task MultiQC {
   input {
-    Array[File]    input_files = []
+    Array[File]    input_files
 
     Boolean        force = false
     Boolean        full_names = false
@@ -440,6 +503,7 @@ task MultiQC {
 
   # get the basename in all wdl use the filename specified (sans ".html" extension, if specified)
   String report_filename = if (defined(file_name)) then basename(select_first([file_name]), ".html") else "multiqc"
+  Int disk_size = 375
 
   command {
       set -ex -o pipefail
@@ -449,7 +513,6 @@ task MultiQC {
 
       multiqc \
       --file-list input-filenames.txt \
-      --dirs \
       --outdir "${out_dir}" \
       ${true="--force" false="" force} \
       ${true="--fullnames" false="" full_names} \
@@ -490,9 +553,10 @@ task MultiQC {
 
   runtime {
     memory: "8 GB"
-    cpu: 2
+    cpu: 16
     docker: "${docker}"
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -504,20 +568,23 @@ task compare_two_genomes {
     File   genome_two
     String out_basename
 
-    String docker = "quay.io/broadinstitute/viral-assemble:2.1.16.1"
+    String docker = "quay.io/broadinstitute/viral-assemble:2.1.33.0"
   }
 
-  command {
+  Int disk_size = 50
+
+  command <<<
     set -ex -o pipefail
     assembly.py --version | tee VERSION
-    assembly.py alignment_summary "${genome_one}" "${genome_two}" --outfileName "${out_basename}.txt" --printCounts --loglevel=DEBUG
+    assembly.py alignment_summary "~{genome_one}" "~{genome_two}" --outfileName "~{out_basename}.txt" --printCounts --loglevel=DEBUG
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     cat /proc/loadavg > CPU_LOAD
-    cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
-  }
+    set +o pipefail
+    { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+  >>>
 
   output {
-    File   comparison_table = "${out_basename}.txt"
+    File   comparison_table = "~{out_basename}.txt"
     Int    max_ram_gb       = ceil(read_float("MEM_BYTES")/1000000000)
     Int    runtime_sec      = ceil(read_float("UPTIME_SEC"))
     String cpu_load         = read_string("CPU_LOAD")
@@ -527,8 +594,9 @@ task compare_two_genomes {
   runtime {
     memory: "3 GB"
     cpu: 2
-    docker: "${docker}"
-    disks: "local-disk 50 HDD"
+    docker: docker
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 1
     maxRetries: 2

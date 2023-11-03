@@ -23,12 +23,15 @@ task polyphonia_detect_cross_contamination {
     Boolean?     compare_full_column        = false
     Boolean?     compare_full_plate         = false
     
+    Boolean?     print_all_isnvs     = true
     Boolean?     print_all           = false
 
     String       out_basename = "potential_cross_contamination"
 
     String       docker = "quay.io/broadinstitute/polyphonia:latest"
   }
+
+  Int disk_size = 100
 
   parameter_meta {
     lofreq_vcfs:         { description: "VCF file(s) output by LoFreq or GATK; must use reference provided by reference_fasta" }
@@ -52,8 +55,8 @@ task polyphonia_detect_cross_contamination {
     compare_full_column: { description: "Compare samples in the same column (e.g., column 8)" }
     compare_full_plate:  { description: "Compare all samples in the same plate map" }
     
+    print_all_isnvs:     { description: "Include all threshold-passing samples in iSNVs visualizations, including samples without plate neighbors" }
     print_all:           { description: "Output outcomes of all comparisons (all comparisons are marked as potential cross-contamination)" }
-    
   }
 
   command <<<
@@ -94,6 +97,7 @@ task polyphonia_detect_cross_contamination {
       --cores `nproc` \
       --verbose TRUE \
       --overwrite TRUE \
+      --print-all-iSNVs ~{true="TRUE" false="FALSE" print_all_isnvs} \
       --print-all ~{true="TRUE" false="FALSE" print_all}
   >>>
 
@@ -107,8 +111,10 @@ task polyphonia_detect_cross_contamination {
     docker: docker
     cpu:    4
     memory: "13 GB"
-    disks:  "local-disk 100 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
+    maxRetries: 2
   }
 }
 
@@ -120,18 +126,31 @@ task lofreq {
     String    out_basename = basename(aligned_bam, '.bam')
     String    docker = "quay.io/biocontainers/lofreq:2.1.5--py38h588ecb2_4"
   }
+  Int disk_size = 200
   command <<<
     set -e -o pipefail
 
     lofreq version | grep version | sed 's/.* \(.*\)/\1/g' | tee LOFREQ_VERSION
 
-    samtools faidx "~{reference_fasta}"
-    samtools index "~{aligned_bam}"
+    # make local copies because CWD is writeable but localization dir isn't always
+    cp "~{reference_fasta}" reference.fasta
+    cp "~{aligned_bam}" aligned.bam
 
+    # samtools faidx fails if fasta is empty
+    if [ $(grep -v '^>' reference.fasta | tr -d '\nNn' | wc -c) == "0" ]; then
+      touch "~{out_basename}.vcf"
+      exit 0
+    fi
+
+    # index for lofreq
+    samtools faidx reference.fasta
+    samtools index aligned.bam
+
+    # lofreq
     lofreq call \
-      -f "~{reference_fasta}" \
+      -f reference.fasta \
       -o "~{out_basename}.vcf" \
-      "~{aligned_bam}"
+      aligned.bam
   >>>
 
   output {
@@ -142,8 +161,10 @@ task lofreq {
     docker: docker
     cpu:    2
     memory: "3 GB"
-    disks:  "local-disk 200 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -158,10 +179,11 @@ task isnvs_per_sample {
     Boolean removeDoublyMappedReads = true
 
     Int?    machine_mem_gb
-    String  docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String  docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
 
     String  sample_name = basename(basename(basename(mapped_bam, ".bam"), ".all"), ".mapped")
   }
+  
 
   command {
     intrahost.py --version | tee VERSION
@@ -183,6 +205,7 @@ task isnvs_per_sample {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 7]) + " GB"
     dx_instance_type: "mem1_ssd1_v2_x8"
+    maxRetries: 2
   }
 }
 
@@ -199,7 +222,7 @@ task isnvs_vcf {
     Boolean        naiveFilter = false
 
     Int?           machine_mem_gb
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
   }
 
   parameter_meta {
@@ -260,6 +283,7 @@ task isnvs_vcf {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 4]) + " GB"
     dx_instance_type: "mem1_ssd1_v2_x4"
+    maxRetries: 2
   }
 }
 
@@ -272,10 +296,13 @@ task annotate_vcf_snpeff {
     String?        emailAddress
 
     Int?           machine_mem_gb
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
 
     String         output_basename = basename(basename(in_vcf, ".gz"), ".vcf")
   }
+
+  Int disk_size = 375
+
 
   parameter_meta {
     in_vcf:             { description: "input VCF to annotate with snpEff", patterns: ["*.vcf","*.vcf.gz"]}
@@ -349,7 +376,9 @@ task annotate_vcf_snpeff {
   runtime {
     docker: docker
     memory: select_first([machine_mem_gb, 4]) + " GB"
-    disks:  "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
+    maxRetries: 2
   }
 }

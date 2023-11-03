@@ -26,10 +26,11 @@ task gcs_copy {
     docker: "quay.io/broadinstitute/viral-baseimage:0.1.20"
     memory: "1 GB"
     cpu: 1
+    maxRetries: 1
   }
 }
 
-task upload_entities_tsv {
+task upload_reads_assemblies_entities_tsv {
   input {
     String        workspace_name
     String        terra_project
@@ -57,9 +58,44 @@ task upload_entities_tsv {
     docker: docker
     memory: "2 GB"
     cpu: 1
+    maxRetries: 0
   }
   output {
     Array[String] tables = read_lines('TABLES_MODIFIED')
+  }
+}
+
+task upload_entities_tsv {
+  input {
+    String        workspace_name
+    String        terra_project
+    File          tsv_file
+
+    String        docker = "schaluvadi/pathogen-genomic-surveillance:api-wdl"
+  }
+  command {
+    set -e
+    python3<<CODE
+    import sys
+    from firecloud import api as fapi
+    response = fapi.upload_entities_tsv(
+      '~{terra_project}', '~{workspace_name}', '~{tsv_file}', model="flexible")
+    if response.status_code != 200:
+        print('ERROR UPLOADING: See full error message:')
+        print(response.text)
+        sys.exit(1)
+    else:
+        print("Upload complete. Check your workspace for new table!")
+    CODE
+  }
+  runtime {
+    docker: docker
+    memory: "2 GB"
+    cpu: 1
+    maxRetries: 0
+  }
+  output {
+    Array[String] stdout = read_lines(stdout())
   }
 }
 
@@ -118,6 +154,7 @@ task download_entities_tsv {
     docker: docker
     memory: "2 GB"
     cpu: 1
+    maxRetries: 2
   }
   output {
     File tsv_file = '~{outname}'

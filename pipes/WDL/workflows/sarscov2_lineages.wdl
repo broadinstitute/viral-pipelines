@@ -1,5 +1,6 @@
 version 1.0
 
+import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_sarscov2.wdl" as sarscov2
 
 workflow sarscov2_lineages {
@@ -11,9 +12,10 @@ workflow sarscov2_lineages {
         File genome_fasta
     }
 
-    call sarscov2.nextclade_one_sample {
+    call nextstrain.nextclade_one_sample {
         input:
-            genome_fasta = genome_fasta
+            genome_fasta = genome_fasta,
+            dataset_name  = "sars-cov-2"
     }
 
     call sarscov2.pangolin_one_sample {
@@ -31,11 +33,10 @@ workflow sarscov2_lineages {
         String pango_lineage      = pangolin_one_sample.pango_lineage
         String pangolin_conflicts = pangolin_one_sample.pangolin_conflicts
         String pangolin_notes     = pangolin_one_sample.pangolin_notes
+        String scorpio_call       = pangolin_one_sample.scorpio_call
+        String scorpio_notes      = pangolin_one_sample.scorpio_notes
         File   pango_lineage_report = pangolin_one_sample.pango_lineage_report
-        String pangolin_usher_version = pangolin_one_sample.pangolin_usher_version
         String pangolin_docker    = pangolin_one_sample.pangolin_docker
-        String pangolin_version   = pangolin_one_sample.pangolin_version
-        String pangolearn_version = pangolin_one_sample.pangolearn_version
         String pangolin_versions  = pangolin_one_sample.pangolin_versions
     }
 }

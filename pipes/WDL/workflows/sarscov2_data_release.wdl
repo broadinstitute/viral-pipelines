@@ -10,6 +10,7 @@ workflow sarscov2_data_release {
         description: "Submit data bundles to databases and repositories"
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     input {
@@ -134,21 +135,27 @@ workflow sarscov2_data_release {
                     aws_credentials = select_first([cdc_s3_credentials])
             }
         }
-        scatter(reads in cdc_aligned_trimmed_bams) {
-            call utils.s3_copy as s3_cdc_dump_reads {
-                input:
-                    infiles         = [reads],
-                    s3_uri_prefix   = "~{s3_prefix}/rawfiles/",
-                    aws_credentials = select_first([cdc_s3_credentials])
-            }
-        }
         call utils.s3_copy as s3_cdc_dump_meta {
             input:
-                infiles         = select_all([cdc_final_metadata, cdc_passing_fasta, upload_complete.out]),
+                infiles         = select_all([cdc_final_metadata, cdc_passing_fasta]),
+                s3_uri_prefix   = "~{s3_prefix}/",
+                aws_credentials = select_first([cdc_s3_credentials])
+        }
+        call utils.s3_copy as s3_cdc_dump_reads {
+            input:
+                infiles         = cdc_aligned_trimmed_bams,
+                s3_uri_prefix   = "~{s3_prefix}/rawfiles/",
+                aws_credentials = select_first([cdc_s3_credentials]),
+                disk_gb         = 3500,
+                cpus            = 16
+        }
+        call utils.s3_copy as s3_cdc_complete {
+            input:
+                infiles         = [upload_complete.out],
                 s3_uri_prefix   = "~{s3_prefix}/",
                 aws_credentials = select_first([cdc_s3_credentials]),
-                nop_block       = write_lines(flatten(s3_cdc_dump_reads.out_uris))
-                # this step, especially the uploadcomplete.txt, should wait until all of the scattered reads are finished uploading
+                nop_block       = write_lines(flatten([s3_cdc_dump_reads.out_uris, s3_cdc_dump_meta.out_uris]))
+                # this step must wait until all of the scattered reads are finished uploading
         }
     }
 

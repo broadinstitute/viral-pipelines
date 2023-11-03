@@ -11,20 +11,25 @@ task krakenuniq {
     File        krona_taxonomy_db_tgz  # taxonomy.tab
 
     Int?        machine_mem_gb
-    String      docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
+    String      docker = "quay.io/broadinstitute/viral-classify:2.1.33.0" #skip-global-version-pin
   }
+
+  Int disk_size = 750
 
   parameter_meta {
     reads_unmapped_bam: {
       description: "Reads to classify. May be unmapped or mapped or both, paired-end or single-end.",
-      patterns: ["*.bam"] }
+      patterns: ["*.bam"],
+      category: "required" }
     krakenuniq_db_tar_lz4: {
       description: "Pre-built Kraken database tarball.",
-      patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+      patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"],
+      category:"required"
     }
     krona_taxonomy_db_tgz: {
       description: "Krona taxonomy database containing a single file: taxonomy.tab, or possibly just a compressed taxonomy.tab",
-      patterns: ["*.tab.zst", "*.tab.gz", "*.tab", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+      patterns: ["*.tab.zst", "*.tab.gz", "*.tab", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"],
+      category: "required"
     }
   }
 
@@ -117,9 +122,11 @@ task krakenuniq {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 320]) + " GB"
     cpu: 32
-    disks: "local-disk 750 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x48"
     preemptible: 0
+    maxRetries: 2
   }
 }
 
@@ -136,8 +143,10 @@ task build_krakenuniq_db {
     Int?     zstd_compression_level
 
     Int?     machine_mem_gb
-    String   docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
+    String   docker = "quay.io/broadinstitute/viral-classify:2.1.33.0" #skip-global-version-pin
   }
+
+  Int disk_size = 750
 
   command {
     set -ex -o pipefail
@@ -182,10 +191,12 @@ task build_krakenuniq_db {
   runtime {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 240]) + " GB"
-    disks: "local-disk 750 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     cpu: 32
     dx_instance_type: "mem3_ssd1_v2_x32"
     preemptible: 0
+    maxRetries: 2
   }
 }
 
@@ -201,8 +212,8 @@ task kraken2 {
     Float? confidence_threshold
     Int?   min_base_qual
 
-    Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
+    Int    machine_mem_gb = 72
+    String docker = "quay.io/broadinstitute/viral-classify:2.1.33.0"
   }
 
   parameter_meta {
@@ -227,8 +238,9 @@ task kraken2 {
   }
 
   String out_basename = basename(basename(reads_bam, '.bam'), '.fasta')
+  Int disk_size = 750
 
-  command {
+  command <<<
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
@@ -239,76 +251,78 @@ task kraken2 {
 
     # decompress DB to $DB_DIR
     read_utils.py extract_tarball \
-      ${kraken2_db_tgz} $DB_DIR/kraken2 \
+      "~{kraken2_db_tgz}" $DB_DIR/kraken2 \
       --loglevel=DEBUG
     du -hs $DB_DIR/kraken2
 
     # unpack krona taxonomy.tab
-    if [[ ${krona_taxonomy_db_tgz} == *.tar.* ]]; then
+    if [[ "~{krona_taxonomy_db_tgz}" == *.tar.* ]]; then
       read_utils.py extract_tarball \
-        ${krona_taxonomy_db_tgz} $DB_DIR/krona \
+        "~{krona_taxonomy_db_tgz}" $DB_DIR/krona \
         --loglevel=DEBUG &  # we don't need this until later
     else
-      if [[ "${krona_taxonomy_db_tgz}" == *.zst ]]; then
-        cat "${krona_taxonomy_db_tgz}" | zstd -d > $DB_DIR/krona/taxonomy.tab &
-      elif [[ "${krona_taxonomy_db_tgz}" == *.gz ]]; then
-        cat "${krona_taxonomy_db_tgz}" | pigz -dc > $DB_DIR/krona/taxonomy.tab &
-      elif [[ "${krona_taxonomy_db_tgz}" == *.bz2 ]]; then
-        cat "${krona_taxonomy_db_tgz}" | bzip -dc > $DB_DIR/krona/taxonomy.tab &
+      if [[ "~{krona_taxonomy_db_tgz}" == *.zst ]]; then
+        cat "~{krona_taxonomy_db_tgz}" | zstd -d > $DB_DIR/krona/taxonomy.tab &
+      elif [[ "~{krona_taxonomy_db_tgz}" == *.gz ]]; then
+        cat "~{krona_taxonomy_db_tgz}" | pigz -dc > $DB_DIR/krona/taxonomy.tab &
+      elif [[ "~{krona_taxonomy_db_tgz}" == *.bz2 ]]; then
+        cat "~{krona_taxonomy_db_tgz}" | bzip -dc > $DB_DIR/krona/taxonomy.tab &
       else
-        cp "${krona_taxonomy_db_tgz}" $DB_DIR/krona/taxonomy.tab &
+        cp "~{krona_taxonomy_db_tgz}" $DB_DIR/krona/taxonomy.tab &
       fi
     fi
 
     metagenomics.py --version | tee VERSION
 
-    if [[ ${reads_bam} == *.bam ]]; then
+    if [[ "~{reads_bam}" == *.bam ]]; then
         metagenomics.py kraken2 \
           $DB_DIR/kraken2 \
-          ${reads_bam} \
-          --outReads   "${out_basename}".kraken2.reads.txt \
-          --outReports "${out_basename}".kraken2.report.txt \
-          ${"--confidence " + confidence_threshold} \
-          ${"--min_base_qual " + min_base_qual} \
+          "~{reads_bam}" \
+          --outReads   "~{out_basename}".kraken2.reads.txt \
+          --outReports "~{out_basename}".kraken2.report.txt \
+          ~{"--confidence " + confidence_threshold} \
+          ~{"--min_base_qual " + min_base_qual} \
           --loglevel=DEBUG
     else # fasta input file: call kraken2 directly
         kraken2 \
           --db $DB_DIR/kraken2 \
-          ${reads_bam} \
-          --output "${out_basename}".kraken2.reads.txt \
-          --report "${out_basename}".kraken2.report.txt \
-          ${"--confidence " + confidence_threshold} \
-          ${"--min_base_qual " + min_base_qual}
+          "~{reads_bam}" \
+          --output "~{out_basename}".kraken2.reads.txt \
+          --report "~{out_basename}".kraken2.report.txt \
+          ~{"--confidence " + confidence_threshold} \
+          ~{"--min_base_qual " + min_base_qual}
     fi
 
     wait # for krona_taxonomy_db_tgz to download and extract
-    pigz "${out_basename}".kraken2.reads.txt &
+    pigz "~{out_basename}".kraken2.reads.txt &
 
     metagenomics.py krona \
-      "${out_basename}".kraken2.report.txt \
+      "~{out_basename}".kraken2.report.txt \
       $DB_DIR/krona \
-      "${out_basename}".kraken2.krona.html \
-      --sample_name "${out_basename}" \
+      "~{out_basename}".kraken2.krona.html \
+      --sample_name "~{out_basename}" \
       --noRank --noHits --inputType kraken2 \
       --loglevel=DEBUG
 
     wait # pigz reads.txt
-  }
+  >>>
 
   output {
-    File   kraken2_reads_report   = "${out_basename}.kraken2.reads.txt.gz"
-    File   kraken2_summary_report = "${out_basename}.kraken2.report.txt"
-    File   krona_report_html      = "${out_basename}.kraken2.krona.html"
+    File   kraken2_reads_report   = "~{out_basename}.kraken2.reads.txt.gz"
+    File   kraken2_summary_report = "~{out_basename}.kraken2.report.txt"
+    File   krona_report_html      = "~{out_basename}.kraken2.krona.html"
     String viralngs_version       = read_string("VERSION")
   }
 
   runtime {
-    docker: "${docker}"
-    memory: select_first([machine_mem_gb, 52]) + " GB"
+    docker: docker
+    memory: machine_mem_gb + " GB"
     cpu: 8
-    disks: "local-disk 750 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TESs
     dx_instance_type: "mem3_ssd1_v2_x8"
     preemptible: 2
+    maxRetries: 2
   }
 }
 
@@ -334,8 +348,10 @@ task build_kraken2_db {
     Int?          zstd_compression_level
 
     Int?          machine_mem_gb
-    String        docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
+    String        docker = "quay.io/broadinstitute/viral-classify:2.1.33.0"
   }
+
+  Int disk_size = 750
 
   parameter_meta {
     db_basename: { description: "A descriptive string used in output filenames. Outputs will be called kraken2-<db_basename>.tar.zst, krona-<db_basename>.tar.zst, and taxdump-<db_basename>.tar.gz" }
@@ -454,10 +470,12 @@ task build_kraken2_db {
   runtime {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 100]) + " GB"
-    disks: "local-disk 750 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     cpu: 16
     dx_instance_type: "mem3_ssd1_v2_x16"
     preemptible: 0
+    maxRetries: 2
   }
 }
 
@@ -472,7 +490,7 @@ task blastx {
     File   krona_taxonomy_db_tgz
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
+    String docker = "quay.io/broadinstitute/viral-classify:2.1.33.0"
   }
 
   parameter_meta {
@@ -490,6 +508,7 @@ task blastx {
   }
 
   String out_basename=basename(contigs_fasta, '.fasta')
+  Int disk_size = 375
 
   command {
     set -ex -o pipefail
@@ -540,9 +559,11 @@ task blastx {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 8]) + " GB"
     cpu: 32
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x36"
     preemptible: 1
+    maxRetries: 2
   }
 }
 
@@ -559,8 +580,10 @@ task krona {
     Int?         magnitude_column
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.1.33.0"
   }
+
+  Int disk_size = 50
 
   command {
     set -ex -o pipefail
@@ -611,8 +634,10 @@ task krona {
     docker: "${docker}"
     memory: "3 GB"
     cpu: 1
-    disks: "local-disk 50 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -624,6 +649,8 @@ task krona_merge {
     Int?        machine_mem_gb
     String      docker = "biocontainers/krona:v2.7.1_cv1"
   }
+
+  Int disk_size = 50
 
   command {
     set -ex -o pipefail
@@ -640,8 +667,10 @@ task krona_merge {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 3]) + " GB"
     cpu: 1
-    disks: "local-disk 50 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -658,10 +687,11 @@ task filter_bam_to_taxa {
     String         out_filename_suffix = "filtered"
 
     Int?           machine_mem_gb
-    String         docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
+    String         docker = "quay.io/broadinstitute/viral-classify:2.1.33.0"
   }
 
   String out_basename = basename(classified_bam, ".bam") + "." + out_filename_suffix
+  Int disk_size = 375
 
   command {
     set -ex -o pipefail
@@ -728,11 +758,12 @@ task filter_bam_to_taxa {
   runtime {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 26]) + " GB"
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     cpu: 4
     dx_instance_type: "mem3_ssd1_v2_x4"
+    maxRetries: 2
   }
-
 }
 
 task kaiju {
@@ -743,10 +774,11 @@ task kaiju {
     File   krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-classify:2.1.16.0"
+    String docker = "quay.io/broadinstitute/viral-classify:2.1.33.0"
   }
 
   String   input_basename = basename(reads_unmapped_bam, ".bam")
+  Int disk_size = 375
 
   command {
     set -ex -o pipefail
@@ -803,7 +835,9 @@ task kaiju {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 100]) + " GB"
     cpu: 16
-    disks: "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x16"
+    maxRetries: 2
   }
 }

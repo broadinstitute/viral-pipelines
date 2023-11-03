@@ -1,4 +1,5 @@
 version 1.0
+#DX_SKIP_WORKFLOW
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_utils.wdl" as utils
@@ -10,10 +11,11 @@ workflow sarscov2_nextstrain {
         description: "Align assemblies, build trees, and convert to json representation suitable for Nextstrain visualization. See https://nextstrain.org/docs/getting-started/ and https://nextstrain-augur.readthedocs.io/en/stable/"
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     input {
-        Array[File]+    assembly_fastas=["gs://nextstrain-data/files/ncov/open/sequences.fasta.xz"]
+        Array[File]+    assembly_fastas=["gs://nextstrain-data/files/ncov/open/sequences.fasta.zst"]
         Array[File]+    sample_metadata_tsvs=["gs://nextstrain-data/files/ncov/open/metadata.tsv.gz"]
         File?           ref_fasta
         Int             min_unambig_genome = 27000
@@ -55,7 +57,7 @@ workflow sarscov2_nextstrain {
     call utils.zcat {
         input:
             infiles     = assembly_fastas,
-            output_name = "all_samples_combined_assembly.fasta"
+            output_name = "all_samples_combined_assembly.fasta.zst"
     }
 
     call nextstrain.nextstrain_deduplicate_sequences as dedup_seqs {
@@ -63,7 +65,7 @@ workflow sarscov2_nextstrain {
             sequences_fasta = zcat.combined
     }
 
-    call nextstrain.filter_sequences_by_length {
+    call utils.filter_sequences_by_length {
         input:
             sequences_fasta = dedup_seqs.sequences_deduplicated_fasta,
             min_non_N       = min_unambig_genome
@@ -80,9 +82,10 @@ workflow sarscov2_nextstrain {
     if(length(sample_metadata_tsvs)>1) {
         call utils.tsv_join {
             input:
-                input_tsvs   = sample_metadata_tsvs,
-                id_col       = 'strain',
-                out_basename = "metadata-merged"
+                input_tsvs     = sample_metadata_tsvs,
+                id_col         = 'strain',
+                out_basename   = "metadata-merged",
+                machine_mem_gb = 30
         }
     }
     call nextstrain.derived_cols {

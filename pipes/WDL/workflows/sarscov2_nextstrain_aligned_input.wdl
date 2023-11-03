@@ -1,4 +1,5 @@
 version 1.0
+#DX_SKIP_WORKFLOW
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_utils.wdl" as utils
@@ -8,10 +9,11 @@ workflow sarscov2_nextstrain_aligned_input {
         description: "Take aligned assemblies, build trees, and convert to json representation suitable for Nextstrain visualization. See https://nextstrain.org/docs/getting-started/ and https://nextstrain-augur.readthedocs.io/en/stable/"
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     input {
-        Array[File]+    aligned_sequences_fasta=["gs://nextstrain-data/files/ncov/open/aligned.fasta.xz"]
+        Array[File]+    aligned_sequences_fasta=["gs://nextstrain-data/files/ncov/open/aligned.fasta.zst"]
         Array[File]+    sample_metadata_tsvs=["gs://nextstrain-data/files/ncov/open/metadata.tsv.gz"]
 
         String          build_name
@@ -55,7 +57,7 @@ workflow sarscov2_nextstrain_aligned_input {
     call utils.zcat {
         input:
             infiles     = aligned_sequences_fasta,
-            output_name = "all_samples_combined_assembly.fasta"
+            output_name = "all_samples_combined_assembly.fasta.zst"
     }
 
     #### merge metadata, compute derived cols
@@ -64,7 +66,8 @@ workflow sarscov2_nextstrain_aligned_input {
             input:
                 input_tsvs   = sample_metadata_tsvs,
                 id_col       = 'strain',
-                out_basename = "metadata-merged"
+                out_basename = "metadata-merged",
+                machine_mem_gb = 30
         }
     }
     call nextstrain.derived_cols {

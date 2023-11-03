@@ -10,6 +10,7 @@ workflow sarscov2_biosample_load {
         description: "Load Broad CRSP metadata and register samples with NCBI BioSample. Return attributes table, id map, etc."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     input {

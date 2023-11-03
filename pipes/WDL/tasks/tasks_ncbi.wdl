@@ -6,7 +6,7 @@ task download_fasta {
     Array[String]+ accessions
     String         emailAddress
 
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
   }
 
   command {
@@ -28,6 +28,7 @@ task download_fasta {
     memory: "7 GB"
     cpu: 2
     dx_instance_type: "mem2_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -37,27 +38,29 @@ task download_annotations {
     String         emailAddress
     String         combined_out_prefix
 
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
   }
 
-  command {
+  command <<<
     set -ex -o pipefail
     ncbi.py --version | tee VERSION
     ncbi.py fetch_feature_tables \
-        ${emailAddress} \
+        ~{emailAddress} \
         ./ \
-        ${sep=' ' accessions} \
+        ~{sep=' ' accessions} \
         --loglevel DEBUG
+    mkdir -p combined
     ncbi.py fetch_fastas \
-        ${emailAddress} \
+        ~{emailAddress} \
         ./ \
-        ${sep=' ' accessions} \
-        --combinedFilePrefix "${combined_out_prefix}" \
+        ~{sep=' ' accessions} \
+        --combinedFilePrefix "combined/~{combined_out_prefix}" \
+        --forceOverwrite \
         --loglevel DEBUG
-  }
+  >>>
 
   output {
-    File        combined_fasta   = "${combined_out_prefix}.fasta"
+    File        combined_fasta   = "combined/~{combined_out_prefix}.fasta"
     Array[File] genomes_fasta    = glob("*.fasta")
     Array[File] features_tbl     = glob("*.tbl")
     String      viralngs_version = read_string("VERSION")
@@ -68,6 +71,7 @@ task download_annotations {
     memory: "7 GB"
     cpu: 2
     dx_instance_type: "mem2_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -81,7 +85,7 @@ task annot_transfer {
     File         reference_fasta
     Array[File]+ reference_feature_table
 
-    String       docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String       docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
   }
 
   parameter_meta {
@@ -121,6 +125,7 @@ task annot_transfer {
     memory: "3 GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -134,7 +139,7 @@ task align_and_annot_transfer_single {
     Array[File]+ reference_fastas
     Array[File]+ reference_feature_tables
 
-    String       docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String       docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
   }
 
   parameter_meta {
@@ -177,6 +182,7 @@ task align_and_annot_transfer_single {
     cpu: 4
     dx_instance_type: "mem2_ssd1_v2_x4"
     preemptible: 1
+    maxRetries: 2
   }
 }
 
@@ -186,7 +192,7 @@ task structured_comments {
 
     File?  filter_to_ids
 
-    String docker = "quay.io/broadinstitute/viral-core:2.1.32"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -226,6 +232,7 @@ task structured_comments {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -254,6 +261,7 @@ task prefix_fasta_header {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -264,7 +272,7 @@ task rename_fasta_header {
 
     String out_basename = basename(genome_fasta, ".fasta")
 
-    String docker = "quay.io/broadinstitute/viral-core:2.1.32"
+    String docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
   command {
     set -e
@@ -279,6 +287,7 @@ task rename_fasta_header {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -307,7 +316,7 @@ task gisaid_meta_prep {
     # institutional mappings
     address_map = json.loads('~{address_map}')
     authors_map = json.loads('~{authors_map}')
-    assert "~{submitting_lab_name}" in address_map, f"error: institution '{submitting_lab_name}' not found in address_map"
+    assert "~{submitting_lab_name}" in address_map, f"error: institution '~{submitting_lab_name}' not found in address_map"
 
     # lookup table files to dicts
     sample_to_cmt = {}
@@ -386,6 +395,7 @@ task gisaid_meta_prep {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -409,6 +419,7 @@ task lookup_table_by_filename {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -426,8 +437,9 @@ task sra_meta_prep {
     Boolean     paired
 
     String      out_name = "sra_metadata.tsv"
-    String      docker="quay.io/broadinstitute/viral-core:2.1.32"
+    String      docker="quay.io/broadinstitute/viral-core:2.1.33"
   }
+  Int disk_size = 100
   parameter_meta {
     cleaned_bam_filepaths: {
       description: "Unaligned bam files containing cleaned (submittable) reads.",
@@ -535,8 +547,10 @@ task sra_meta_prep {
     docker: docker
     memory: "1 GB"
     cpu: 1
-    disks: "local-disk 100 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -552,7 +566,7 @@ task biosample_to_genbank {
     File?   filter_to_ids
 
     Boolean s_dropout_note = true
-    String  docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String  docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
   }
   String base = basename(biosample_attributes, ".txt")
   command {
@@ -581,6 +595,7 @@ task biosample_to_genbank {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -592,7 +607,7 @@ task generate_author_sbt_file {
   input {
     String? author_list
     File    j2_template
-    File    defaults_yaml
+    File?   defaults_yaml
     String? out_base = "authors"
 
     String  docker = "quay.io/broadinstitute/py3-bio:0.1.2"
@@ -603,7 +618,7 @@ task generate_author_sbt_file {
       description: "A string containing a space-delimited list with of author surnames separated by first name and (optional) middle initial. Ex. 'Lastname,Firstname, Last-hypenated,First,M., Last,F.'"
     }
     j2_template: {
-      description: "A jinja2-format template for the sbt file expected by NCBI. Example: gs://pathogen-public-dbs/other-related/author_template.sbt.j2"
+      description: "an sbt file (optionally) with Jinja2 variables to be filled in based on values present in author_sbt_defaults_yaml, if provided. If no yaml is provided, this file is passed through verbatim. Example: gs://pathogen-public-dbs/other-related/author_template.sbt.j2"
     }
     defaults_yaml: {
       description: "A YAML file with default values to use for the submitter, submitter affiliation, and author affiliation. Optionally including authors at the start and end of the author_list. Example: gs://pathogen-public-dbs/other-related/default_sbt_values.yaml",
@@ -617,10 +632,14 @@ task generate_author_sbt_file {
   command <<<
     set -e
 
+    # blank yaml file to be used if the optional input is not specified
+    touch blank.yml
+
     python3 << CODE
     # generates an sbt file of the format returned by:
     # http://www.ncbi.nlm.nih.gov/WebSub/template.cgi
     import re
+    import shutil
     # external dependencies
     import yaml # pyyaml
     from jinja2 import Template #jinja2
@@ -629,19 +648,34 @@ task generate_author_sbt_file {
         # simple version for only initials: #author_re=re.compile(r"\s?(?P<lastname>[\w\'\-\ ]+),(?P<initials>(?:[A-Z]\.){1,3})")
         author_re=re.compile(r"\s?(?P<lastname>[\w\'\-\ ]+),((?P<first>\w[\w\'\-\ ]+\.?),?|(?P<initials>(?:[A-Z]\.)+))(?P<initials_ext>(?:[A-Z]\.)*)")
 
+        authors=[]
+        defaults_data_last_authors=[]
         defaults_data = {}
+
+        authors_affil = None
+        submitter     = None
+        bioproject    = None
+        title         = None
+        citation      = None
+
         if defaults_yaml is not None:
             with open(defaults_yaml) as defaults_yaml:
                 defaults_data = yaml.load(defaults_yaml, Loader=yaml.FullLoader)
 
-        authors=[]
-        submitter     = defaults_data.get("submitter")
-        bioproject    = defaults_data.get("bioproject")
-        title         = defaults_data.get("title")
-        citation      = defaults_data.get("citation")
-        authors_affil = defaults_data.get("authors_affil")
-        
-        authors.extend(defaults_data.get("authors_start",[]))
+                if defaults_data is not None:
+                    submitter     = defaults_data.get("submitter")
+                    bioproject    = defaults_data.get("bioproject")
+                    title         = defaults_data.get("title")
+                    citation      = defaults_data.get("citation")
+                    authors_affil = defaults_data.get("authors_affil")
+                    
+                    defaults_data_authors = defaults_data.get("authors_start",[])
+                    for author in defaults_data_authors:
+                        authors.extend(author)
+
+                    defaults_data_last_authors = defaults_data.get("authors_last",[])
+                    for author in defaults_data_last_authors:
+                        last_authors.append(author)
         
         for author_match in author_re.finditer(author_string):
             author = {}
@@ -665,24 +699,37 @@ task generate_author_sbt_file {
             if author not in authors: # could use less exact match
                 authors.append(author)
 
-        for author in defaults_data.get("authors_last",[]):
+        for author in defaults_data_last_authors:
             if author not in authors:
                 authors.append(author)
 
-        with open(j2_template) as sbt_template:
-            template = Template(sbt_template.read())
-        rendered = template.render( authors=authors, 
-                                    authors_affil=authors_affil, 
-                                    title=title, 
-                                    submitter=submitter, 
-                                    citation=citation, 
-                                    bioproject=bioproject)
-        
-        #print(rendered)
-        with open(sbt_out_path,"w") as sbt_out:
-            sbt_out.write(rendered)
+        jinja_rendering_kwargs={}
+        if authors_affil is not None:
+            jinja_rendering_kwargs["authors_affil"]=authors_affil
+        if title is not None:
+            jinja_rendering_kwargs["title"]=title
+        if submitter is not None:
+            jinja_rendering_kwargs["submitter"]=submitter
+        if citation is not None:
+            jinja_rendering_kwargs["citation"]=citation
+        if bioproject is not None:
+            jinja_rendering_kwargs["bioproject"]=bioproject
 
-    render_sbt("~{author_list}", defaults_yaml="~{defaults_yaml}", sbt_out_path="~{out_base}.sbt", j2_template="~{j2_template}")
+        if len(authors) >= 1 or len(jinja_rendering_kwargs) >= 1:
+            with open(j2_template) as sbt_template:
+                template = Template(sbt_template.read())
+
+            rendered = template.render( authors=authors, 
+                                        **jinja_rendering_kwargs)
+        
+            #print(rendered)
+            with open(sbt_out_path,"w") as sbt_out:
+                sbt_out.write(rendered)
+        else:
+            # if no authors were specified, simply copy the template to the output
+            shutil.copyfile(j2_template, sbt_out_path)
+
+    render_sbt("~{author_list}", defaults_yaml="~{default='blank.yml' defaults_yaml}", sbt_out_path="~{out_base}.sbt", j2_template="~{j2_template}")
     CODE
   >>>
   output {
@@ -693,6 +740,7 @@ task generate_author_sbt_file {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -716,7 +764,7 @@ task prepare_genbank {
     String?      assembly_method_version
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String       docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
   }
 
   parameter_meta {
@@ -830,10 +878,11 @@ task prepare_genbank {
     memory: select_first([machine_mem_gb, 3]) + " GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
-task package_genbank_ftp_submission {
+task package_sc2_genbank_ftp_submission {
   meta {
     description: "Prepares a zip and xml file for FTP-based NCBI Genbank submission according to instructions at https://www.ncbi.nlm.nih.gov/viewvc/v1/trunk/submit/public-docs/genbank/SARS-CoV-2/."
   }
@@ -899,6 +948,7 @@ task package_genbank_ftp_submission {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -910,9 +960,11 @@ task vadr {
     File   genome_fasta
     String vadr_opts = "--glsearch -s -r --nomisc --mkey sarscov2 --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn"
 
-    String docker = "quay.io/staphb/vadr:1.3"
+    String docker = "quay.io/staphb/vadr:1.5.1"
     Int    minlen = 50
     Int    maxlen = 30000
+    Int    mem_size = 4
+    Int    cpus = 2
   }
   String out_base = basename(genome_fasta, '.fasta')
   command <<<
@@ -951,9 +1003,10 @@ task vadr {
   }
   runtime {
     docker: docker
-    memory: "2 GB"
-    cpu: 1
+    memory: mem_size + " GB"
+    cpu: cpus
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 

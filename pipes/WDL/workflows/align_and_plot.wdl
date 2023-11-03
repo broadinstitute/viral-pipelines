@@ -8,6 +8,7 @@ workflow align_and_plot {
         description: "Align reads to reference and produce coverage plots and statistics."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     call assembly.align_reads as align

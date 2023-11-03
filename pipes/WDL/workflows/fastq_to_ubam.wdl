@@ -7,6 +7,7 @@ workflow fastq_to_ubam {
         description: "Convert reads from fastq format (single or paired) to unaligned BAM format."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     call tasks_read_utils.FastqToUBAM

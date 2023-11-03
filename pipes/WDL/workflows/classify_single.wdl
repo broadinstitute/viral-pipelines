@@ -2,7 +2,6 @@ version 1.0
 
 import "../tasks/tasks_metagenomics.wdl" as metagenomics
 import "../tasks/tasks_read_utils.wdl" as read_utils
-import "../tasks/tasks_taxon_filter.wdl" as taxon_filter
 import "../tasks/tasks_assembly.wdl" as assembly
 import "../tasks/tasks_reports.wdl" as reports
 
@@ -11,10 +10,11 @@ workflow classify_single {
          description: "Runs raw reads through taxonomic classification (Kraken2), human read depletion (based on Kraken2), de novo assembly (SPAdes), and FASTQC/multiQC of reads."
          author: "Broad Viral Genomics"
          email:  "viral-ngs@broadinstitute.org"
+         allowNestedInputs: true
     }
 
     input {
-        File reads_bam
+        Array[File]+ reads_bams
 
         File ncbi_taxdump_tgz
 
@@ -26,8 +26,8 @@ workflow classify_single {
     }
 
     parameter_meta {
-        reads_bam: {
-          description: "Reads to classify. May be unmapped or mapped or both, paired-end or single-end.",
+        reads_bams: {
+          description: "Reads to classify. May be unmapped or mapped or both, paired-end or single-end. Multiple input files will be merged first.",
           patterns: ["*.bam"]
         }
         spikein_db: {
@@ -50,11 +50,35 @@ workflow classify_single {
           description: "An NCBI taxdump.tar.gz file that contains, at the minimum, a nodes.dmp and names.dmp file.",
           patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
         }
+        cleaned_fastqc: { 
+          description: "Output cleaned fastqc reports in HTML.",
+          category: "other"
+        }
+        deduplicated_reads_unaligned: {
+          description: "Deduplication on unaligned reads in BAM format using mvicuna or cdhit.",
+          category: "other"
+        }
+        kraken2_krona_plot: {
+          description:"Visualize the results of the Kraken2 analysis with Krona, which disaplys taxonmic hierarchiral data in multi-layerd pie.",
+          category:"other"
+        }
+        kraken2_summary_report: {
+          description: "Kraken report output file.",
+          category: "other"
+        }
+        raw_fastqc:{
+          description: "Merged raw fastqc reads.",
+          category: "other"
+        }
+
     }
 
-    call reports.fastqc as fastqc_raw {
-        input: reads_bam = reads_bam
+    call read_utils.merge_and_reheader_bams as merge_raw_reads {
+        input:
+            in_bams      = reads_bams
     }
+    File reads_bam = merge_raw_reads.out_bam
+
     call reports.align_and_count as spikein {
         input:
             reads_bam = reads_bam,
@@ -93,7 +117,6 @@ workflow classify_single {
     }
     call assembly.assemble as spades {
         input:
-            assembler          = "spades",
             reads_unmapped_bam = rmdup_ubam.dedup_bam,
             trim_clip_db       = trim_clip_db,
             always_succeed     = true
@@ -111,6 +134,10 @@ workflow classify_single {
         
         File   kraken2_summary_report          = kraken2.kraken2_summary_report
         File   kraken2_krona_plot              = kraken2.krona_report_html
+        File   raw_fastqc                      = merge_raw_reads.fastqc
+        File   cleaned_fastqc                  = fastqc_cleaned.fastqc_html
+        File   spikein_report                  = spikein.report
+        String spikein_tophit                  = spikein.top_hit_id
         
         String kraken2_viral_classify_version  = kraken2.viralngs_version
         String deplete_viral_classify_version  = deplete.viralngs_version
