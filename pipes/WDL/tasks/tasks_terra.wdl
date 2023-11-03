@@ -47,7 +47,6 @@ task check_terra_env {
     # create Terra-related output files
     touch workspace_name.txt
     touch workspace_namespace.txt
-    touch workspace_bucket_path.txt
 
     # write system environment variables to output file
     env | tee -a env_info.log
@@ -85,7 +84,7 @@ task check_terra_env {
 
       # get list of workspaces, limiting the output to only the fields we need
       curl -s -X 'GET' \
-      'https://api.firecloud.org/api/workspaces?fields=workspace.name%2Cworkspace.namespace%2Cworkspace.bucketName%2Cworkspace.googleProject' \
+      'https://api.firecloud.org/api/workspaces?fields=workspace.name%2Cworkspace.namespace%2Cworkspace.googleProject' \
       -H 'accept: application/json' \
       -H "Authorization: Bearer $(gcloud auth print-access-token)" > workspace_list.json
 
@@ -96,26 +95,21 @@ task check_terra_env {
       # extract workspace namespace
       WORKSPACE_NAMESPACE=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .namespace' workspace_list.json)
       echo "$WORKSPACE_NAMESPACE" | tee workspace_namespace.txt
-
-      # extract workspace bucket
-      WORKSPACE_BUCKET=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .bucketName' workspace_list.json)
-      echo "gs://${WORKSPACE_BUCKET}" | tee workspace_bucket_path.txt
     else 
       echo "Not running on Terra+GCP"
     fi
 
   >>>
   output {
-    Boolean is_running_on_terra  = read_boolean("RUNNING_ON_TERRA")
-    Boolean is_backed_by_gcp     = read_boolean("RUNNING_ON_GCP")
+    Boolean is_running_on_terra = read_boolean("RUNNING_ON_TERRA")
+    Boolean is_backed_by_gcp    = read_boolean("RUNNING_ON_GCP")
 
-    String workspace_name        = read_string("workspace_name.txt")
-    String workspace_namespace   = read_string("workspace_namespace.txt")
-    String workspace_bucket_path = read_string("workspace_bucket_path.txt")
-    String google_project_id     = read_string("google_project_id.txt")
+    String workspace_name       = read_string("workspace_name.txt")
+    String workspace_namespace  = read_string("workspace_namespace.txt")
+    String google_project_id    = read_string("google_project_id.txt")
 
-    File env_info                = "env_info.log"
-    File gcloud_config_info      = "gcloud_config_info.log"
+    File env_info               = "env_info.log"
+    File gcloud_config_info     = "gcloud_config_info.log"
   }
   runtime {
     docker: docker
@@ -255,4 +249,3 @@ task download_entities_tsv {
     File tsv_file = '~{outname}'
   }
 }
-
