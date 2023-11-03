@@ -45,7 +45,7 @@ task get_gcloud_env_info {
   command {
     set -ex
 
-    ~{additional_command_to_run} ~{if additional_command_to_run then "| tee -a additional_command_stdout.log" else ""}
+    ~{additional_command_to_run} | tee -a additional_command_stdout.log
 
     env | tee -a env_info.log
     
