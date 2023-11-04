@@ -115,6 +115,11 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/demux_deplete.wdl
     testParameterFiles:
       - empty.json
+  - name: demux_deplete_and_table_insert
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/demux_deplete_and_table_insert.wdl
+    testParameterFiles:
+      - empty.json
   - name: demux_plus
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/demux_plus.wdl
