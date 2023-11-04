@@ -380,8 +380,6 @@ task create_or_update_sample_tables {
 
         # read API response into data frame
         df = pd.read_csv(StringIO(response.text), sep="\t", index_col="entity:flowcell_id")
-        
-        print(df)
 
         # create sample.tsv data frame (entity:sample_set_id)
         cleaned_bams_list = literal_eval(df.cleaned_reads_unaligned_bams[runID])
@@ -452,9 +450,6 @@ task create_or_update_sample_tables {
     if len(df_sample)>0:
         print(df_sample.index)
         for sample_id in sample_to_libraries.keys():
-            #print(df_sample_set.samples[0])
-            #print(sample_id)
-
             if sample_id in df_sample.index:
                 print (f"sample_set {sample_id} pre-exists in Terra table, merging with new members")
                 #sample_set_to_samples[set_id].extend(df_sample_set.samples[set_id])
@@ -493,22 +488,14 @@ task create_or_update_sample_tables {
     out_rows = []
     out_header = ['library_id'] + copy_cols
     print(f"out_header {out_header}")
-    #print(f"rows {rows}")
     for row in rows:
-        #print(f"row {row}")
-        #print(f"type(meta_by_library_all) {type(meta_by_library_all)}")
-        #break
         out_row = {'library_id': row['library_id']}
 
         for sample_id,sample_library_metadata in meta_by_library_all.items():
-            #print(f"sample_libraries_metadata {sample_libraries_metadata}")
-            # TODO: currently the full library ID shows up in the "run" field of the metadata json, which seems incorrect. should double check the WDL output
             if sample_library_metadata["library"] in row['library_id']:
-                #print(f"sample {row['library_id']} is in sample_meta_subentry")
                 for col in copy_cols:
                     out_row[col] = sample_library_metadata.get(col, '')
                 out_rows.append(out_row)
-                #print(f"out_row {out_row}")
 
     library_meta_fname = "sample_metadata.tsv"
     with open(library_meta_fname, 'wt') as outf:
