@@ -326,7 +326,7 @@ task create_or_update_sample_tables {
     String workspace_name
     String workspace_bucket
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.2.2" #skip-global-version-pin
+    String  docker = "quay.io/broadinstitute/viral-core:2.2.3" #skip-global-version-pin
   }
 
   meta {
@@ -336,10 +336,195 @@ task create_or_update_sample_tables {
   command <<<
     python3<<CODE
 
+    flowcell_data_id   = '~{flowcell_run_id}'
+    
     workspace_project = '~{workspace_namespace}'
     workspace_name    = '~{workspace_name}'
     workspace_bucket  = '~{workspace_bucket}'
-    table_name        = ''
+
+    # import required packages.
+    import os
+    import argparse
+    import collections
+    import json
+    import csv
+    import pandas as pd
+    from firecloud import api as fapi
+    from ast import literal_eval
+    from io import StringIO
+
+    print(workspace_project + "\n" + workspace_name + "\n" + "bucket: " + workspace_bucket)
+
+    # get_entities -> python list of dicts
+    def get_entities_to_table(project, workspace, table_name):
+        table = json.loads(fapi.get_entities(project, workspace, table_name).text)
+        headers = collections.OrderedDict()
+        rows = []
+        headers[table_name + "_id"] = 0
+        for row in table:
+            outrow = row['attributes']
+            for x in outrow.keys():
+                headers[x] = 0
+                if type(outrow[x]) == dict and set(outrow[x].keys()) == set(('itemsType', 'items')):
+                    outrow[x] = outrow[x]['items']
+            outrow[table_name + "_id"] = row['name']
+            rows.append(outrow)
+        return (headers, rows)
+
+    # # populate sample table from run outputs
+    # In particular, popualte the raw_bam and cleaned_bam columns
+
+    def create_tsvs(project, workspace, runID):
+        # API call to get flowcell_data table
+        response = fapi.get_entities_tsv(project, workspace, "flowcell", model="flexible")
+
+        # read API response into data frame
+        df = pd.read_csv(StringIO(response.text), sep="\t", index_col="entity:flowcell_id")
+        
+        print(df)
+
+        # create sample.tsv data frame (entity:sample_set_id)
+        cleaned_bams_list = literal_eval(df.cleaned_reads_unaligned_bams[runID])
+        cleaned_library_id_list = [bam.split("/")[-1].replace(".bam", "").replace(".cleaned", "") for bam in cleaned_bams_list]
+        df_library_table = pd.DataFrame({"entity:library_id" : cleaned_library_id_list,
+                                        "cleaned_bam" : cleaned_bams_list})
+        cleaned_library_fname = runID + "_cleaned_bams.tsv"
+        df_library_table.to_csv(cleaned_library_fname, sep="\t", index=False)
+
+        # create sample.tsv data frame (entity:sample_set_id)
+        raw_bams_list = literal_eval(df.raw_reads_unaligned_bams[runID])
+        raw_library_id_list = [bam.split("/")[-1].replace(".bam", "") for bam in raw_bams_list]
+        df_library_table = pd.DataFrame({"entity:library_id" : raw_library_id_list,
+                                        "raw_bam" : raw_bams_list})
+        raw_library_fname = runID + "_raw_bams.tsv"
+        df_library_table.to_csv(raw_library_fname, sep="\t", index=False)
+
+        ## create sample_set.tsv data frame (membership:sample_set_id)
+        #participant_id_list = [sample_id.split(".")[0] for sample_id in raw_bams_list]
+        #df_sample_set_table = pd.DataFrame({"membership:sample_set_id" : participant_id_list,
+        #                                    "sample" : sample_id_list})
+        #set_fname = runID + "_sample_set_table.tsv"
+        #df_sample_set_table.to_csv(set_fname, sep="\t", index=False)
+        
+        return (cleaned_library_fname, raw_library_fname)
+
+    # call the create_tsv function and save files to data tables
+    tsv_list = create_tsvs(workspace_project, workspace_name, flowcell_data_id)
+
+    print (f"wrote outputs to {tsv_list}")
+
+    for tsv in tsv_list:
+        response = fapi.upload_entities_tsv(workspace_project, workspace_name, tsv, model="flexible")
+        if response.status_code != 200:
+            print('ERROR UPLOADING: See full error message:')
+            print(response.text)
+        else:
+            print("Upload complete. Check your workspace for new table!")
+
+    # # update sample_set with new set memberships and flowcell metadata
+
+    # columns to copy from flowcell_data to library table
+    copy_cols = ["sample_original", "spike_in"]
+
+    # API call to get existing sample_set mappings
+    header, rows = get_entities_to_table(workspace_project, workspace_name, "sample")
+    df_sample = pd.DataFrame.from_records(rows, columns=header, index="sample_id")
+
+    # API call to get all existing library ids
+    header, rows = get_entities_to_table(workspace_project, workspace_name, "library")
+    df_library = pd.DataFrame.from_records(rows, columns=header, index="library_id")
+
+    # API call to get flowcell_data table
+    header, rows = get_entities_to_table(workspace_project, workspace_name, "flowcell")
+    df_flowcell = pd.DataFrame.from_records(rows, columns=header, index="flowcell_id")
+
+    # grab the meta_by_filename values to create new sample->library (sample_set->sample) mappings
+    sample_to_libraries = {}
+    for library_id, data in df_flowcell.meta_by_filename[flowcell_data_id].items():
+        sample_id = data['sample']
+        sample_to_libraries.setdefault(sample_id, [])
+        if library_id in df_library.index:
+            sample_to_libraries[sample_id].append(library_id)
+        else:
+            print (f"missing {library_id} from sample table")
+
+    # merge in new sample->library mappings with any pre-existing sample->library mappings
+    if len(df_sample)>0:
+        print(df_sample.index)
+        for sample_id in sample_to_libraries.keys():
+            #print(df_sample_set.samples[0])
+            #print(sample_id)
+
+            if sample_id in df_sample.index:
+                print (f"sample_set {sample_id} pre-exists in Terra table, merging with new members")
+                #sample_set_to_samples[set_id].extend(df_sample_set.samples[set_id])
+                already_associated_libraries = [entity["entityName"] for entity in df_sample.libraries[sample_id]]
+                
+                print(f"already_associated_libraries {already_associated_libraries}")
+                print(f"sample_to_libraries[sample_id] {sample_to_libraries[sample_id]}")
+                continue
+                sample_to_libraries[sample_id].extend(already_associated_libraries)
+                # collapse duplicate sample IDs
+                #sample_to_libraries[sample_id] = list([json.dumps({"entityType":"library","entityName":library_name}) for library_name in set(sample_to_libraries[sample_id])])
+                sample_to_libraries[sample_id] = list(set(sample_to_libraries[sample_id]))
+                #sample_to_libraries[sample_id] = list({"entityType":"library","entityName":library_name}set(sample_to_libraries[sample_id]))
+
+    # create sample_membership.tsv describing sample:library (ie sample-to-library) many-to-one mappings
+    # sample_fname = 'sample_membership.tsv'
+    # with open(sample_fname, 'wt') as outf:
+    #     outf.write('membership:sample_id\tlibrary\n')
+    #     for sample_id, libraries in sample_to_libraries.items():
+    #         for library_id in sorted(libraries):
+    #             outf.write(f'{sample_id}\t{library_id}\n')
+    # !cat $sample_fname
+
+    sample_fname = 'sample_membership.tsv'
+    with open(sample_fname, 'wt') as outf:
+        outf.write('entity:sample_id\tlibraries\n')
+        for sample_id, libraries in sample_to_libraries.items():
+            #for library_id in sorted(libraries):
+            outf.write(f'{sample_id}\t{json.dumps([{"entityType":"library","entityName":library_name} for library_name in libraries])}\n')
+
+    # grab the meta_by_sample values from one row in the flowcell_data table
+    meta_by_library_all = df_flowcell.meta_by_sample[flowcell_data_id]
+
+    # grab all the library IDs
+    header, rows = get_entities_to_table(workspace_project, workspace_name, "library")
+    out_rows = []
+    out_header = ['library_id'] + copy_cols
+    print(f"out_header {out_header}")
+    #print(f"rows {rows}")
+    for row in rows:
+        #print(f"row {row}")
+        #print(f"type(meta_by_library_all) {type(meta_by_library_all)}")
+        #break
+        out_row = {'library_id': row['library_id']}
+
+        for sample_id,sample_library_metadata in meta_by_library_all.items():
+            #print(f"sample_libraries_metadata {sample_libraries_metadata}")
+            # TODO: currently the full library ID shows up in the "run" field of the metadata json, which seems incorrect. should double check the WDL output
+            if sample_library_metadata["library"] in row['library_id']:
+                #print(f"sample {row['library_id']} is in sample_meta_subentry")
+                for col in copy_cols:
+                    out_row[col] = sample_library_metadata.get(col, '')
+                out_rows.append(out_row)
+                #print(f"out_row {out_row}")
+
+    library_meta_fname = "sample_metadata.tsv"
+    with open(library_meta_fname, 'wt') as outf:
+      outf.write("entity:")
+      writer = csv.DictWriter(outf, out_header, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
+      writer.writeheader()
+      writer.writerows(out_rows)
+
+    # write them to the Terra table!
+    for fname in (library_meta_fname,sample_fname):
+        response = fapi.upload_entities_tsv(workspace_project, workspace_name, fname, model="flexible")
+        if response.status_code != 200:
+            print(f'ERROR UPLOADING {fname}: See full error message:')
+            print(response.text)
+        else:
+            print("Upload complete. Check your workspace for new table!")
 
     CODE
   >>>
