@@ -63,12 +63,14 @@ workflow demux_deplete_and_table_insert {
 
     call terra.check_terra_env
 
-    call terra.create_or_update_sample_tables {
-      input:
-        flowcell_run_id     = demux_deplete.run_id,
-        workspace_name      = check_terra_env.workspace_name,
-        workspace_namespace = check_terra_env.workspace_namespace,
-        workspace_bucket    = check_terra_env.workspace_bucket_path
+    if(check_terra_env.is_running_on_terra) {
+        call terra.create_or_update_sample_tables {
+          input:
+            flowcell_run_id     = demux_deplete.run_id,
+            workspace_name      = check_terra_env.workspace_name,
+            workspace_namespace = check_terra_env.workspace_namespace,
+            workspace_bucket    = check_terra_env.workspace_bucket_path
+        }
     }
 
     output {
