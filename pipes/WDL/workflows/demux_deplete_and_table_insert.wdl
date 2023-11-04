@@ -53,7 +53,7 @@ workflow demux_deplete_and_table_insert {
             read_structure                  = read_structure,
             sample_rename_map               = select_first([sample_rename_map])
     }
-    String  flowcell_id = demux_deplete.run_id
+    #String  flowcell_id = demux_deplete.run_id
 
     ### gather data by biosample
     #call read_utils.group_bams_by_sample {
@@ -65,7 +65,7 @@ workflow demux_deplete_and_table_insert {
 
     call terra.create_or_update_sample_tables {
       input:
-        flowcell_run_id     = flowcell_id,
+        flowcell_run_id     = demux_deplete.run_id,
         workspace_name      = check_terra_env.workspace_name,
         workspace_namespace = check_terra_env.workspace_namespace,
         workspace_bucket    = check_terra_env.workspace_bucket_path
