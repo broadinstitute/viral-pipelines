@@ -71,8 +71,23 @@ workflow demux_deplete_and_table_insert {
         workspace_bucket    = check_terra_env.workspace_bucket_path
     }
 
-    #output {
-    #    File stdout_log = create_or_update_sample_tables.stdout_log()
-    #    File stderr_log = create_or_update_sample_tables.stderr_log()
-    #}
+    output {
+        Array[File]   raw_reads_unaligned_bams     = demux_deplete.raw_reads_unaligned_bams
+        Array[File]   cleaned_reads_unaligned_bams = demux_deplete.cleaned_reads_unaligned_bams
+        Array[File]   cleaned_bams_tiny            = demux_deplete.cleaned_bams_tiny
+        File          meta_by_filename_json        = demux_deplete.meta_by_filename_json
+        Array[Int]    read_counts_raw              = demux_deplete.read_counts_raw
+        Array[Int]    read_counts_depleted         = demux_deplete.read_counts_depleted
+        File?         sra_metadata                 = select_first([demux_deplete.sra_metadata])
+        File?         cleaned_bam_uris             = select_first([demux_deplete.cleaned_bam_uris])
+        Array[File]   demux_metrics                = demux_deplete.demux_metrics
+        Array[File]   demux_commonBarcodes         = demux_deplete.demux_commonBarcodes
+        Array[File]   demux_outlierBarcodes        = demux_deplete.demux_outlierBarcodes
+        File          multiqc_report_raw           = demux_deplete.multiqc_report_raw
+        File          multiqc_report_cleaned       = demux_deplete.multiqc_report_cleaned
+        File          spikein_counts               = demux_deplete.spikein_counts
+        Int           num_read_files               = length(demux_deplete.cleaned_reads_unaligned_bams)
+        String        run_date                     = demux_deplete.run_date
+        String        run_id                       = demux_deplete.run_id
+    }
 }
