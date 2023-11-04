@@ -51,7 +51,7 @@ workflow demux_deplete_and_table_insert {
             instrument_model_user_specified = instrument_model,
             sra_title                       = sra_title,
             read_structure                  = read_structure,
-            sample_rename_map               = select_first([sample_rename_map])
+            sample_rename_map               = sample_rename_map
     }
     #String  flowcell_id = demux_deplete.run_id
 
