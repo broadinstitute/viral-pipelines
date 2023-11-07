@@ -80,7 +80,7 @@ workflow demux_deplete_and_table_insert {
         File          meta_by_filename_json        = demux_deplete.meta_by_filename_json
         Array[Int]    read_counts_raw              = demux_deplete.read_counts_raw
         Array[Int]    read_counts_depleted         = demux_deplete.read_counts_depleted
-        File?         sra_metadata                 = select_first([demux_deplete.sra_metadata])
+        File?         sra_metadata                 = demux_deplete.sra_metadata
         File?         cleaned_bam_uris             = select_first([demux_deplete.cleaned_bam_uris])
         Array[File]   demux_metrics                = demux_deplete.demux_metrics
         Array[File]   demux_commonBarcodes         = demux_deplete.demux_commonBarcodes
