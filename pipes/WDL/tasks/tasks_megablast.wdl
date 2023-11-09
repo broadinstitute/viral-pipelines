@@ -47,12 +47,13 @@ task megablast {
 
 output {
     File    LCA_output = "~{bam_basename}_LCA.txt"
-}
+
 runtime {
     docker:docker
     memory: machine_mem_gb + "GB"
     cpu: cpu
     disks: "local-disk" + disk_size_gb + "LOCAL"
     instance_type: "n2-highmem-16"
+}
 }
 }
