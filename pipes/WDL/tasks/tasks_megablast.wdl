@@ -6,12 +6,13 @@ task trim_rmdup_subsamp {
     }
     input { 
         File inBam
-        String bam_basename = basename(bam, '.bam')                    
+        String bam_basename = basename(inBam, '.bam')                    
         File clipDb
         File outBam
         Int n_reads=10000000
         #String trim_opts
         Int machine_mem_gb = 128
+        Int cpu = 16
         Int disk_size_gb = 100 
         String docker ="quay.io/broadinstitute/viral-assemble:2.1.33.0"
     }
