@@ -2,7 +2,7 @@ version 1.0
 
 import "../tasks/tasks_megablast.wdl" as tools
 
-workflow megablast {
+workflow lca_megablast {
     meta {
         desription: "Runs megablast followed by LCA for taxon identification."
         author: "Broad Viral Genomics"
