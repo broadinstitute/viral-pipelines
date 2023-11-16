@@ -326,7 +326,7 @@ task create_or_update_sample_tables {
     String workspace_name
     String workspace_bucket
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.2.3" #skip-global-version-pin
+    String  docker = "quay.io/broadinstitute/viral-core:2.2.4" #skip-global-version-pin
   }
 
   meta {
