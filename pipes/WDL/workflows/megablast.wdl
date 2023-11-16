@@ -2,7 +2,7 @@ version 1.0
 
 import "../tasks/tasks_megablast.wdl" as tools
 
-workflow lca_megablast {
+workflow megablast {
     meta {
         desription: "Runs megablast followed by LCA for taxon identification."
         author: "Broad Viral Genomics"
@@ -16,9 +16,9 @@ workflow lca_megablast {
             clipDb = clipDb
     }
 
-    call tools.megablast {
+    call tools.lca_megablast {
         input:
-            trimmed_fasta = trim_rmdup_subsamp.trimmed_fasta, 
+            trimmed_fasta = trim_rmdup_subsamp.cleaned_fasta, 
             blast_db_tgz = blast_db_tgz,
             taxonomy_db_tgz = taxonomy_db_tgz
     }
