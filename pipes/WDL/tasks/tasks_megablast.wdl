@@ -2,15 +2,15 @@ version 1.0
 
 task trim_rmdup_subsamp {
     meta {
-        description: "Trimming unmapped and unaligned BAM sequences"
+        description: "Trim reads via trimmomatic, remove duplicate reads, and subsample to a desired read count (default of 100,000), bam in, bam out. "
     }
     input { 
         File inBam
         String bam_basename = basename(bam, '.bam')                    
         File clipDb
         File outBam
-        Int n_reads=100000
-        String trim_opts = None
+        Int n_reads=10000000
+        #String trim_opts
         Int machine_mem_gb = 128
         Int disk_size_gb = 100 
         String docker ="quay.io/broadinstitute/viral-assemble:2.1.33.0"
@@ -20,18 +20,18 @@ task trim_rmdup_subsamp {
         assembly.py --version | tee VERSION
         #BAM ->FASTQ-> OutBam? https://github.com/broadinstitute/viral-assemble/blob/80bcc1da5c6a0174362ca9fd8bc0b49ee0b4103b/assembly.py#L91
         assembly.py trim_rmdup_subsamp_reads \
-        ~{'--inBam' + inBamam} \
-        ~{'--clipDb'+ clipDb} \
-        ~{'--outBam' + outBam} \
-        ~{'n_reads' + n_reads} \
-        ~{'trimp_opts' + trim_opts}
+        #if you suspect spaces in the filename use ""
+        "~{inBam}" \
+        "~{clipDb}" \
+        "~{outBam}" \
+        ~{'--n_reads=' + n_reads}
 
-    #samtools [BAM -> FASTA]
-    #-f 4 (f = include only) (4 = unmapped reads) https://broadinstitute.github.io/picard/explain-flags.html
-    samtools fasta -f 4 ~{outBam} > "~{bam_basename}.fasta"
+        #samtools [OutBam -> FASTA]
+        #-f 4 (f = include only) (4 = unmapped reads) https://broadinstitute.github.io/picard/explain-flags.html
+        samtools fasta ~{outBam} > "~{bam_basename}.fasta"
     >>>
 output {
-    File    cleaned_fasta = "~{bam_basename}.fasta"
+    File    trimmed_fasta = "~{bam_basename}.fasta"
 }
 runtime {
     docker:docker
@@ -42,16 +42,15 @@ runtime {
 }
 }
 
-
 task megablast {
     meta {
-        description: "Megablast "
+        description: "Runs megablast followed by LCA for taxon identification."
     }
     input {
-        File    cleaned_fasta
+        File    trimmed_fasta
         File    blast_db_tgz
         File    taxonomy_db_tgz
-        String  fasta_basename = basename(cleaned_fasta, ".fasta")
+        String  fasta_basename = basename(trimmed_fasta, ".fasta")
         Int     machine_mem_gb = 128 
         Int     cpu = 16
         Int     disk_size_gb = 300
@@ -62,12 +61,12 @@ task megablast {
     cd~ 
     mkdir -p blastdb queries fasta results blastdb_custom
     # Move input into queries directory
-    mv ~{cleaned_fasta} queries
+    mv ~{trimmed_fasta} queries
     #tar -xzvf -C for directory 
     tar -xzvf ~{blast_db_tgz} -C blast/blastdb/
     # Run megablast against nt
     ncbi/blast \
-    blastn -task megablast -query /blast/queries/~{cleaned_fasta} -db ~{blast_db_tgz} -max_target_seqs 50 -num_threads 8 \
+    blastn -task megablast -query /blast/queries/~{trimmed_fasta} -db ~{blast_db_tgz} -max_target_seqs 50 -num_threads 8 \
     -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" \
     -out /blast/results/"~{fasta_basename}.fasta_megablast_nt.out"
     
@@ -84,7 +83,7 @@ task megablast {
 >>>
 
 output {
-    File    LCA_output = "~{cleaned_fasta}_LCA.txt"
+    File    LCA_output = "~{trimmed_fasta}_LCA.txt"
 }
 runtime {
     docker:docker
