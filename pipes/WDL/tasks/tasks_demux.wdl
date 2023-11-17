@@ -159,6 +159,7 @@ task illumina_demux {
     Int?    threads
     String? runStartDate
     Int?    maxRecordsInRam
+    Int?    numberOfNegativeControls
 
     Int?    machine_mem_gb
     Int     disk_size = 2625
@@ -337,7 +338,7 @@ task illumina_demux {
       --out_runinfo runinfo.json \
       --loglevel=DEBUG
 
-    illumina.py guess_barcodes --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
+    illumina.py guess_barcodes ~{'--number_of_negative_controls ' + numberOfNegativeControls} --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
 
     illumina.py flowcell_metadata --inDir $FLOWCELL_DIR flowcellMetadataFile.tsv
 
