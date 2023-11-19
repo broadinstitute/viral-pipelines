@@ -9,7 +9,12 @@ workflow megablast {
         email: "viral-ngs@broadinstitute.org"
         allowNestedInputs: true
     }
-
+    input {
+        File    inBam
+        File    clipDb
+        File    blast_db_tgz
+        File    taxonomy_db_tgz
+    }
     call tools.trim_rmdup_subsamp {
         input: 
             inBam = inBam,
@@ -18,12 +23,12 @@ workflow megablast {
 
     call tools.lca_megablast {
         input:
-            trimmed_fasta = trim_rmdup_subsamp.cleaned_fasta, 
+            trimmed_fasta = trim_rmdup_subsamp.trimmed_fasta, 
             blast_db_tgz = blast_db_tgz,
             taxonomy_db_tgz = taxonomy_db_tgz
     }
     
     output {
-        File    LCA_output = megablast.LCA_output
+        File    LCA_output = lca_megablast.LCA_output
     }
 }
