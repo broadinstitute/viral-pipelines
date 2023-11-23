@@ -13,7 +13,7 @@ task polyphonia_detect_cross_contamination {
     Array[File]? read_depths
     Int          max_mismatches      = 1
     String?      masked_positions
-    Array[File]? masked_positions_file
+    File?        masked_positions_file
 
     Array[File]? plate_maps
     Int?         plate_size                 = 96
