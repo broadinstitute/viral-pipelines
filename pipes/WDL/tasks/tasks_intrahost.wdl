@@ -88,7 +88,7 @@ task polyphonia_detect_cross_contamination {
       ~{'--max-mismatches ' + max_mismatches} \
       ~{'--min-maf ' + min_maf} \
       ~{'--masked-positions ' + masked_positions} \
-      ~{'--masked-positions-file ' + masked_positions_file} \
+      --masked-positions-file ~{masked_positions_file} \
       $PLATE_MAPS_INPUT \
       ~{'--plate-size ' + plate_size} \
       ~{'--plate-columns ' + plate_columns} \
