@@ -12,6 +12,8 @@ task polyphonia_detect_cross_contamination {
     Int          min_read_depth      = 100
     Array[File]? read_depths
     Int          max_mismatches      = 1
+    String?      masked_positions
+    Array[File]? masked_positions_file
 
     Array[File]? plate_maps
     Int?         plate_size                 = 96
@@ -44,6 +46,8 @@ task polyphonia_detect_cross_contamination {
     read_depths:         { description: "Read depth tables (tab-separated, no header: reference name, position, read depth); provide alongside vcf files or heterozygosity tables if min-depth>0" }
     min_genome_coverage: { description: "Minimum proportion genome covered for a sample to be included" }
     max_mismatches:      { description: "Maximum allowed bases in contaminating sample consensus not matching contaminated sample alleles" }
+    masked_positions:    { description: "1-indexed positions to mask (e.g., 1-10,50,55-70)" }
+    masked_positions_file: { description: "1-indexed positions to mask, one per line" }
     
     plate_maps:          { description: "Optional plate map(s) (tab-separated, no header: sample name, plate position (e.g., A8))" }
     plate_size:          { description: "Standard plate size (6-well, 12-well, 24, 48, 96, 384, 1536, 3456)" }
@@ -83,6 +87,8 @@ task polyphonia_detect_cross_contamination {
       ~{'--min-readcount ' + min_readcount} \
       ~{'--max-mismatches ' + max_mismatches} \
       ~{'--min-maf ' + min_maf} \
+      ~{'--masked-positions ' + masked_positions} \
+      ~{'--masked-positions-file ' + masked_positions_file} \
       $PLATE_MAPS_INPUT \
       ~{'--plate-size ' + plate_size} \
       ~{'--plate-columns ' + plate_columns} \
