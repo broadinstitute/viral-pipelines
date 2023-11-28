@@ -16,6 +16,24 @@ task trim_rmdup_subsamp {
         Int disk_size_gb = 100 
         String docker ="quay.io/broadinstitute/viral-assemble:2.1.33.0"
     }
+    parameter_meta {
+        inBam: {
+            description: "Input BAM file"
+            cateogory: "required"
+        }
+        clipDb: {
+            description: "FASTA file that has a list of sequences to trim from the end of reads. These includes various sequencing adapters and primer sequences that may be on the ends of reads, including those for most of the Illumina kits we use."
+            category: "required"
+        }
+        outBam: {
+            description: "Cleaned BAM files."
+            category: "other"
+        }
+        n_reads: {
+            description: "Maximum number of reads set to 10000000 by default."
+            category: "required"
+        }
+    }
     command <<<
         set -ex o pipefail
         assembly.py --version | tee VERSION
