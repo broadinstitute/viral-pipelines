@@ -109,6 +109,6 @@ runtime {
     memory: machine_mem_gb + "GB"
     cpu: cpu
     disks: "local-disk" + disk_size_gb + "LOCAL"
-    instance_type: "n2-highmem-16"
+    dx_instance_type: "n2-highmem-16"
 }
 }
