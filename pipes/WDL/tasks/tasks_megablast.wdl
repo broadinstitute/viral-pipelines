@@ -39,6 +39,7 @@ task trim_rmdup_subsamp {
         assembly.py --version | tee VERSION
         #BAM ->FASTQ-> OutBam? https://github.com/broadinstitute/viral-assemble/blob/80bcc1da5c6a0174362ca9fd8bc0b49ee0b4103b/assembly.py#L91
         assembly.py trim_rmdup_subsamp_reads \
+        touch "~{outBam}"
         #if you suspect spaces in the filename use ""
         "~{inBam}" \
         "~{clipDb}" \
