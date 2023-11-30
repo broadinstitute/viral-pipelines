@@ -1,6 +1,6 @@
 version 1.0
 
-task trim_rmdup_subsamp {
+task trim_rmdup_subsamp_reads {
     meta {
         description: "Trim reads via trimmomatic, remove duplicate reads, and subsample to a desired read count (default of 100,000), bam in, bam out. "
     }
@@ -38,7 +38,7 @@ task trim_rmdup_subsamp {
         set -ex o pipefail
         assembly.py --version | tee VERSION
         #BAM ->FASTQ-> OutBam? https://github.com/broadinstitute/viral-assemble/blob/80bcc1da5c6a0174362ca9fd8bc0b49ee0b4103b/assembly.py#L91
-        assembly.py trim_rmdup_subsamp \
+        assembly.py trim_rmdup_subsamp_reads \
         #if you suspect spaces in the filename use ""
         "~{inBam}" \
         "~{clipDb}" \
