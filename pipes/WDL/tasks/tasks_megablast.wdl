@@ -8,7 +8,6 @@ task trim_rmdup_subsamp {
         File inBam
         String bam_basename = basename(inBam, '.bam')                    
         File clipDb
-        #File+ outBam
         Int n_reads=10000000
         #String trim_opts
         Int machine_mem_gb = 128
@@ -19,14 +18,14 @@ task trim_rmdup_subsamp {
     parameter_meta {
         inBam: {
             description: "Input BAM file"
-            cateogory: "required"
+            category: "required"
         }
         clipDb: {
             description: "FASTA file that has a list of sequences to trim from the end of reads. These includes various sequencing adapters and primer sequences that may be on the ends of reads, including those for most of the Illumina kits we use."
             category: "required"
         }
         outBam: {
-            description: "Cleaned BAM files."
+            description: "Cleaned BAM files (default=outbam.bam)"
             category: "other"
         }
         n_reads: {
@@ -41,12 +40,12 @@ task trim_rmdup_subsamp {
         assembly.py trim_rmdup_subsamp \
         "~{inBam}" \
         "~{clipDb}" \
-        "test1.bam" \
+        "outBam.bam" \
         ~{'--n_reads=' + n_reads}
 
         #samtools [OutBam -> FASTA]
         #-f 4 (f = include only) (4 = unmapped reads) https://broadinstitute.github.io/picard/explain-flags.html
-        samtools fasta "test1.bam" > "~{bam_basename}.fasta"
+        samtools fasta "outBam.bam" > "~{bam_basename}.fasta"
     >>>
 output {
     File    trimmed_fasta = "~{bam_basename}.fasta"
@@ -67,6 +66,7 @@ task lca_megablast {
     input {
         File    trimmed_fasta
         File    blast_db_tgz
+        String+  db_name = "nt"
         File    taxonomy_db_tgz
         String  fasta_basename = basename(trimmed_fasta, ".fasta")
         Int     machine_mem_gb = 128 
@@ -74,34 +74,48 @@ task lca_megablast {
         Int     disk_size_gb = 300
         String  docker = "quay.io/broadinstitute/viral-classify:2.1.33.0"
     }
+    parameter_meta {
+        trimmed_fasta: {
+            description: "Input sequence FASTA file with clean bam reads."
+            category: "required"
+        }
+        blast_db_tgz: {
+            description: "Compressed BLAST database."
+            category: 'required'
+        }
+        db_name: {
+            description: "BLAST database name (default = nt)."
+            category: "other"
+        }
+        taxonomy_db_tgz: {
+            description: "Compressed taxnonomy dataset."
+            category: "required"
+        }
+    }
     command <<<
     # Make directories
-    cd~ 
-    mkdir -p blastdb queries fasta results blastdb_custom
-    # Move input into queries directory
-    mv ~{trimmed_fasta} queries
-    #tar -xzvf -C for directory 
-    tar -xzvf ~{blast_db_tgz} -C blast/blastdb/
+    mkdir -p blastdb results taxdump
+    read_utils.py extract_tarball \
+      ~{blast_db_tgz} blastdb \
+      --loglevel=DEBUG
     # Run megablast against nt
-    ncbi/blast \
-    blastn -task megablast -query /blast/queries/~{trimmed_fasta} -db ~{blast_db_tgz} -max_target_seqs 50 -num_threads 8 \
+    blastn -task megablast -query ~{trimmed_fasta} -db blastdb/~{db_name} -max_target_seqs 50 -num_threads `nproc` \
     -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" \
-    -out /blast/results/"~{fasta_basename}.fasta_megablast_nt.out"
+    -out results/"~{fasta_basename}.fasta_megablast_nt.out"
     
     # Download nodes.dmp into taxdump directory, remove this since user input and unpack
-    cd ~ 
-    mkdir taxdump
-    cd taxdump
-    tar -xzvf ~{taxonomy_db_tgz} 
-    cd ~
+    read_utils.py extract_tarball \
+      ~{taxonomy_db_tgz} taxdump \
+      --loglevel=DEBUG
+
     # Run LCA
-    perl retrieve_top_blast_hits_LCA_for_each_sequence.pl results/sample.fasta_megablast_nt.out taxdump/nodes.dmp 10 > results/sample.fasta_megablast_nt.out_LCA.txt
+    perl retrieve_top_blast_hits_LCA_for_each_sequence.pl results/"~{fasta_basename}.fasta_megablast_nt.out" taxdump/nodes.dmp 10 > "results/~{fasta_basename}.fasta_megablast_nt.out_LCA.txt"
     ​
     # Done
 >>>
 
 output {
-    File    LCA_output = "~{trimmed_fasta}_LCA.txt"
+    File    LCA_output = "results/~{fasta_basename}.fasta_megablast_nt.out_LCA.txt"
 }
 runtime {
     docker:docker
