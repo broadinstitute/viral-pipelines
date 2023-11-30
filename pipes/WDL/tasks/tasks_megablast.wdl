@@ -36,11 +36,10 @@ task trim_rmdup_subsamp {
     }
     command <<<
         set -ex o pipefail
+        touch ~{outBam}
         assembly.py --version | tee VERSION
-        cat> "~{outBam}"
-        chmod u+x "~{outBam}"
         #BAM ->FASTQ-> OutBam? https://github.com/broadinstitute/viral-assemble/blob/80bcc1da5c6a0174362ca9fd8bc0b49ee0b4103b/assembly.py#L91
-        assembly.py trim_rmdup_subsamp_reads \
+        assembly.py trim_rmdup_subsamp \
         #if you suspect spaces in the filename use ""
         "~{inBam}" \
         "~{clipDb}" \
