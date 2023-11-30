@@ -23,7 +23,7 @@ workflow megablast {
 
     call tools.lca_megablast {
         input:
-            trimmed_fasta = trim_rmdup_subsamp.trimmed_fasta, 
+            trimmed_fasta = trim_rmdup_subsamp_reads.trimmed_fasta, 
             blast_db_tgz = blast_db_tgz,
             taxonomy_db_tgz = taxonomy_db_tgz
     }
