@@ -15,7 +15,7 @@ workflow megablast {
         File    blast_db_tgz
         File    taxonomy_db_tgz
     }
-    call tools.trim_rmdup_subsamp {
+    call tools.trim_rmdup_subsamp_reads {
         input: 
             inBam = inBam,
             clipDb = clipDb
