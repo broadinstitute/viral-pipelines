@@ -158,7 +158,7 @@ task check_terra_env {
     else 
       echo "Not running on Terra+GCP"
     fi
-
+    { if [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
   >>>
   output {
     Boolean is_running_on_terra    = read_boolean("RUNNING_ON_TERRA")
@@ -178,6 +178,8 @@ task check_terra_env {
 
     File env_info                  = "env_info.log"
     File gcloud_config_info        = "gcloud_config_info.log"
+
+    Int  max_ram_gb                = ceil(read_float("MEM_BYTES")/1000000000)
   }
   runtime {
     docker: docker
@@ -514,6 +516,7 @@ task create_or_update_sample_tables {
             print("Upload complete. Check your workspace for new table!")
 
     CODE
+    { if [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
   >>>
   runtime {
     docker: docker
@@ -524,5 +527,6 @@ task create_or_update_sample_tables {
   output {
     File stdout_log = stdout()
     File stderr_log = stderr()
+    Int  max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
   }
 }

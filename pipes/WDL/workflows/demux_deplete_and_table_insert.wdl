@@ -23,9 +23,9 @@ workflow demux_deplete_and_table_insert {
         File          flowcell_tgz
         String?       read_structure
 
-        #Array[File]?  biosample_attributes
+        #Array[File]? biosample_attributes
         String?       instrument_model
-        String?        sra_title
+        String?       sra_title
 
         File?         sample_rename_map
 
