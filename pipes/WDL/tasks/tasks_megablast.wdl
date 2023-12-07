@@ -71,7 +71,7 @@ task lca_megablast {
         Int     machine_mem_gb = 500 
         Int     cpu = 16
         Int     disk_size_gb = 300
-        String  docker = "quay.io/broadinstitute/viral-classify:2.2.33.0"
+        String  docker = "quay.io/broadinstitute/viral-classify:2.2.3.0"
     }
     parameter_meta {
         trimmed_fasta: {
