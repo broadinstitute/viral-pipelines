@@ -68,10 +68,10 @@ task lca_megablast {
         String  db_name = "nt"
         File    taxonomy_db_tgz
         String  fasta_basename = basename(trimmed_fasta, ".fasta")
-        Int     machine_mem_gb = 128 
+        Int     machine_mem_gb = 500 
         Int     cpu = 16
         Int     disk_size_gb = 300
-        String  docker = "quay.io/broadinstitute/viral-classify:2.1.33.0"
+        String  docker = "quay.io/broadinstitute/viral-classify:2.2.33.0"
     }
     parameter_meta {
         trimmed_fasta: {
@@ -108,8 +108,7 @@ task lca_megablast {
       --loglevel=DEBUG
 
     # Run LCA
-    cd taxon_id_scripts
-    perl retrieve_top_blast_hits_LCA_for_each_sequence.pl results/"~{fasta_basename}.fasta_megablast_nt.out" taxdump/nodes.dmp 10 > "results/~{fasta_basename}.fasta_megablast_nt.out_LCA.txt"
+    retrieve_top_blast_hits_LCA_for_each_sequence.pl results/"~{fasta_basename}.fasta_megablast_nt.out" taxdump/nodes.dmp 10 > "results/~{fasta_basename}.fasta_megablast_nt.out_LCA.txt"
     ​
     # Done
 >>>
