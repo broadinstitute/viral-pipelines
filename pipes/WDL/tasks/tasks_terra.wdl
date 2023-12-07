@@ -50,6 +50,12 @@ task check_terra_env {
     touch workspace_bucket_path.txt
     touch input_table_name.txt
     touch input_row_id.txt
+    touch method_version.txt
+    touch method_source.txt
+    touch method_path.txt
+
+    # disable the version update alert messages gcloud sometimes emits when executing any command
+    gcloud config set component_manager/disable_update_check true
 
     # write system environment variables to output file
     env | tee -a env_info.log
@@ -80,7 +86,7 @@ task check_terra_env {
       echo "false" > RUNNING_ON_GCP
     fi
 
-    if grep "true" RUNNING_ON_GCP && grep "true" RUNNING_ON_TERRA; then 
+    if grep "true" RUNNING_ON_GCP && grep "true" RUNNING_ON_TERRA; then
       echo "Running on Terra+GCP"
 
       # === Determine Terra workspace ID and submission ID for the workspace responsible for this job
@@ -142,7 +148,7 @@ task check_terra_env {
       # =======================================
 
 
-      # === obtain info on job submission inputs (table name, row ID)===
+      # === obtain info on job submission inputs (table name, row ID) ===
       touch submission_metadata.json
       curl -s -X 'GET' \
       "https://api.firecloud.org/api/workspaces/${WORKSPACE_NAMESPACE}/${WORKSPACE_NAME_URL_ENCODED}/submissions/${TOP_LEVEL_SUBMISSION_ID}" \
@@ -154,6 +160,23 @@ task check_terra_env {
 
       echo "$INPUT_TABLE_NAME" | tee input_table_name.txt
       echo "$INPUT_ROW_ID" | tee input_row_id.txt
+      # =======================================
+
+      # === obtain info on workflow version (branch/tag) and source (dockstore, etc.) ===
+      curl -s 'GET' \
+        "https://rawls.dsde-prod.broadinstitute.org/api/workspaces/${WORKSPACE_NAMESPACE}/${WORKSPACE_NAME_URL_ENCODED}/submissions/${TOP_LEVEL_SUBMISSION_ID}/configuration" \
+        -H 'accept: application/json' \
+        -H "Authorization: Bearer $(gcloud auth print-access-token)" > workflow_version_info.json
+
+      # .methodConfigVersion corresponds to snapshot of input/output config (or a method version stored in Broad methods repo?)
+      #jq -cr .methodConfigVersion workflow_version_info.json
+      METHOD_VERSION="$(jq -cr '.methodRepoMethod.methodVersion | select (.!=null)' workflow_version_info.json)"
+      METHOD_SOURCE="$(jq -cr '.methodRepoMethod.sourceRepo | select (.!=null)' workflow_version_info.json)"
+      METHOD_PATH="$(jq -cr '.methodRepoMethod.methodPath | select (.!=null)' workflow_version_info.json)"
+
+      echo "$METHOD_VERSION" | tee method_version.txt
+      echo "$METHOD_SOURCE" | tee method_source.txt
+      echo "$METHOD_PATH" | tee method_path.txt
       # =======================================
     else 
       echo "Not running on Terra+GCP"
@@ -169,7 +192,11 @@ task check_terra_env {
     String workspace_id            = read_string("workspace_id.txt")
     String workspace_name          = read_string("workspace_name.txt")
     String workspace_namespace     = read_string("workspace_namespace.txt")
-    String workspace_bucket_path   = read_string("workspace_bucket_path.txt")    
+    String workspace_bucket_path   = read_string("workspace_bucket_path.txt")
+
+    String method_version          = read_string("method_version.txt")
+    String method_source           = read_string("method_source.txt")
+    String method_path             = read_string("method_path.txt")
 
     String input_table_name        = read_string("input_table_name.txt")
     String input_row_id            = read_string("input_row_id.txt")
