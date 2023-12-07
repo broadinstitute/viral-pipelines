@@ -9,7 +9,6 @@ task trim_rmdup_subsamp {
         String bam_basename = basename(inBam, '.bam')                    
         File clipDb
         Int n_reads=10000000
-        #String trim_opts
         Int machine_mem_gb = 128
         Int cpu = 16
         Int disk_size_gb = 100 
@@ -109,7 +108,7 @@ task lca_megablast {
       --loglevel=DEBUG
 
     # Run LCA
-    perl retrieve_top_blast_hits_LCA_for_each_sequence.pl results/"~{fasta_basename}.fasta_megablast_nt.out" taxdump/nodes.dmp 10 > "results/~{fasta_basename}.fasta_megablast_nt.out_LCA.txt"
+    perl taxon_id_scripts/retrieve_top_blast_hits_LCA_for_each_sequence.pl results/"~{fasta_basename}.fasta_megablast_nt.out" taxdump/nodes.dmp 10 > "results/~{fasta_basename}.fasta_megablast_nt.out_LCA.txt"
     ​
     # Done
 >>>
