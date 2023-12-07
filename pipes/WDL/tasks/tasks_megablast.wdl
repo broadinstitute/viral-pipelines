@@ -66,7 +66,7 @@ task lca_megablast {
     input {
         File    trimmed_fasta
         File    blast_db_tgz
-        String+  db_name = "nt"
+        String  db_name = "nt"
         File    taxonomy_db_tgz
         String  fasta_basename = basename(trimmed_fasta, ".fasta")
         Int     machine_mem_gb = 128 
