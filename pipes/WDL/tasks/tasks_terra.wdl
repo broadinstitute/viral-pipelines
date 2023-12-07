@@ -38,7 +38,8 @@ task check_terra_env {
     description: "task for inspection of backend to determine whether the task is running on Terra and/or GCP"
   }
   command <<<
-    set -ex
+    # set -x # echo commands upon execution [commented out to avoid leaking the gcloud auth token]
+    set -e # exit on pipe fail
 
     # create gcloud-related output file
     touch gcloud_config_info.log
@@ -111,11 +112,13 @@ task check_terra_env {
       #GOOGLE_PROJECT_ID="$(sed -n -E 's!.*(terra-[0-9a-f]+).*# project to use if requester pays$!\1!p' /cromwell_root/gcs_localization.sh | sort -u)"
       # =======================================
 
+      GCLOUD_OAUTH_BEARER_TOKEN="$(gcloud auth print-access-token)"
+
       # === request workspace name AND namespace from API, based on bucket path / ID ===
       curl -s -X 'GET' \
         "https://api.firecloud.org/api/workspaces/id/${WORKSPACE_ID}?fields=workspace.name%2Cworkspace.namespace%2Cworkspace.googleProject" \
         -H 'accept: application/json' \
-        -H "Authorization: Bearer $(gcloud auth print-access-token)" > workspace_info.json
+        -H "Authorization: Bearer $GCLOUD_OAUTH_BEARER_TOKEN" > workspace_info.json
 
 
       WORKSPACE_NAME="$(jq -cr '.workspace.name | select (.!=null)' workspace_info.json)"
@@ -133,7 +136,7 @@ task check_terra_env {
           #curl -s -X 'GET' \
           #'https://api.firecloud.org/api/workspaces?fields=workspace.name%2Cworkspace.namespace%2Cworkspace.bucketName%2Cworkspace.googleProject' \
           #-H 'accept: application/json' \
-          #-H "Authorization: Bearer $(gcloud auth print-access-token)" > workspace_list.json
+          #-H "Authorization: Bearer $GCLOUD_OAUTH_BEARER_TOKEN" > workspace_list.json
 
           # extract workspace name
           #WORKSPACE_NAME=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .name' workspace_list.json)
@@ -153,7 +156,7 @@ task check_terra_env {
       curl -s -X 'GET' \
       "https://api.firecloud.org/api/workspaces/${WORKSPACE_NAMESPACE}/${WORKSPACE_NAME_URL_ENCODED}/submissions/${TOP_LEVEL_SUBMISSION_ID}" \
       -H 'accept: application/json' \
-      -H "Authorization: Bearer $(gcloud auth print-access-token)" > submission_metadata.json
+      -H "Authorization: Bearer $GCLOUD_OAUTH_BEARER_TOKEN" > submission_metadata.json
 
       INPUT_TABLE_NAME="$(jq -cr 'if .submissionEntity == null then "" elif (.workflows | length)==1 then .submissionEntity.entityType else [.workflows[].workflowEntity.entityType] | join(",") end' submission_metadata.json)"
       INPUT_ROW_ID="$(jq -cr 'if .submissionEntity == null then "" elif (.workflows | length)==1 then .submissionEntity.entityName else [.workflows[].workflowEntity.entityName] | join(",") end' submission_metadata.json)"
@@ -166,7 +169,7 @@ task check_terra_env {
       curl -s 'GET' \
         "https://rawls.dsde-prod.broadinstitute.org/api/workspaces/${WORKSPACE_NAMESPACE}/${WORKSPACE_NAME_URL_ENCODED}/submissions/${TOP_LEVEL_SUBMISSION_ID}/configuration" \
         -H 'accept: application/json' \
-        -H "Authorization: Bearer $(gcloud auth print-access-token)" > workflow_version_info.json
+        -H "Authorization: Bearer $GCLOUD_OAUTH_BEARER_TOKEN" > workflow_version_info.json
 
       # .methodConfigVersion corresponds to snapshot of input/output config (or a method version stored in Broad methods repo?)
       #jq -cr .methodConfigVersion workflow_version_info.json
