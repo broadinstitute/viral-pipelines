@@ -184,6 +184,7 @@ task check_terra_env {
     else 
       echo "Not running on Terra+GCP"
     fi
+    ls -1 /sys/fs/cgroup/memory
     echo -n'' "MEM_BYTES: "; { if [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } | tee MEM_BYTES
   >>>
   output {
