@@ -153,7 +153,7 @@ task check_terra_env {
 
       # === obtain info on job submission inputs (table name, row ID) ===
       touch submission_metadata.json
-      curl -s -X 'GET' \
+      curl -s 'GET' \
       "https://api.firecloud.org/api/workspaces/${WORKSPACE_NAMESPACE}/${WORKSPACE_NAME_URL_ENCODED}/submissions/${TOP_LEVEL_SUBMISSION_ID}" \
       -H 'accept: application/json' \
       -H "Authorization: Bearer $GCLOUD_OAUTH_BEARER_TOKEN" > submission_metadata.json
@@ -184,7 +184,10 @@ task check_terra_env {
     else 
       echo "Not running on Terra+GCP"
     fi
-    ls -1 /sys/fs/cgroup/memory
+    ls -1 /sys
+    ls -1 /sys/fs
+    ls -1 /sys/fs/cgroup
+    #ls -1 /sys/fs/cgroup/memory
     echo -n'' "MEM_BYTES: "; { if [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } | tee MEM_BYTES
   >>>
   output {
