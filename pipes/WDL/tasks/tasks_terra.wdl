@@ -87,7 +87,7 @@ task check_terra_env {
       echo "false" > RUNNING_ON_GCP
     fi
 
-    if grep "true" RUNNING_ON_GCP && grep "true" RUNNING_ON_TERRA; then
+    if grep --quiet "true" RUNNING_ON_GCP && grep --quiet "true" RUNNING_ON_TERRA; then
       echo "Running on Terra+GCP"
 
       # === Determine Terra workspace ID and submission ID for the workspace responsible for this job
@@ -95,7 +95,7 @@ task check_terra_env {
       # Scrape various workflow / workspace info from the localization and delocalization scripts.
       #   from: https://github.com/broadinstitute/gatk/blob/ah_var_store/scripts/variantstore/wdl/GvsUtils.wdl#L35-L40
       WORKSPACE_ID="$(sed -n -E 's!.*gs://fc-(secure-)?([^\/]+).*!\2!p' /cromwell_root/gcs_delocalization.sh | sort -u | tee workspace_id.txt)"
-      echo "WORKSPACE_ID: ${WORKSPACE_ID}"
+      echo "WORKSPACE_ID:            ${WORKSPACE_ID}"
 
       # bucket path prefix
       #BUCKET_PREFIX="$(sed -n -E 's!.*(gs://(fc-(secure-)?[^\/]+)).*!\1!p' /cromwell_root/gcs_delocalization.sh | sort -u | tee bucket_prefix.txt)"
@@ -121,14 +121,14 @@ task check_terra_env {
         -H "Authorization: Bearer $GCLOUD_OAUTH_BEARER_TOKEN" > workspace_info.json
 
 
-      WORKSPACE_NAME="$(jq -cr '.workspace.name | select (.!=null)' workspace_info.json)"
+      WORKSPACE_NAME="$(jq -cr '.workspace.name | select (.!=null)' workspace_info.json | tee workspace_name.txt)"
       WORKSPACE_NAME_URL_ENCODED="$(jq -rn --arg x "${WORKSPACE_NAME}" '$x|@uri')"
-      WORKSPACE_NAMESPACE="$(jq -cr '.workspace.namespace | select (.!=null)' workspace_info.json)"
-      WORKSPACE_BUCKET="gs://${WORKSPACE_ID}"
+      WORKSPACE_NAMESPACE="$(jq -cr '.workspace.namespace | select (.!=null)' workspace_info.json | tee workspace_namespace.txt)"
+      WORKSPACE_BUCKET="$(echo gs://${WORKSPACE_ID} | tee workspace_bucket_path.txt)"
 
-      echo "${WORKSPACE_NAME}" | tee workspace_name.txt
-      echo "${WORKSPACE_NAMESPACE}" | tee workspace_namespace.txt
-      echo "${WORKSPACE_BUCKET}" | tee workspace_bucket_path.txt
+      echo "WORKSPACE_NAME:      ${WORKSPACE_NAME}"
+      echo "WORKSPACE_NAMESPACE: ${WORKSPACE_NAMESPACE}"
+      echo "WORKSPACE_BUCKET:    ${WORKSPACE_BUCKET}"
 
           # --- less direct way of obtaining workspace info by matching Terra project ID --
           #     preserved here for potential utility in obtaining workspace info for other projects/workspaces
@@ -158,11 +158,11 @@ task check_terra_env {
       -H 'accept: application/json' \
       -H "Authorization: Bearer $GCLOUD_OAUTH_BEARER_TOKEN" > submission_metadata.json
 
-      INPUT_TABLE_NAME="$(jq -cr 'if .submissionEntity == null then "" elif (.workflows | length)==1 then .submissionEntity.entityType else [.workflows[].workflowEntity.entityType] | join(",") end' submission_metadata.json)"
-      INPUT_ROW_ID="$(jq -cr 'if .submissionEntity == null then "" elif (.workflows | length)==1 then .submissionEntity.entityName else [.workflows[].workflowEntity.entityName] | join(",") end' submission_metadata.json)"
+      INPUT_TABLE_NAME="$(jq -cr 'if .submissionEntity == null then "" elif (.workflows | length)==1 then .submissionEntity.entityType else [.workflows[].workflowEntity.entityType] | join(",") end' submission_metadata.json  | tee input_table_name.txt)"
+      INPUT_ROW_ID="$(jq -cr 'if .submissionEntity == null then "" elif (.workflows | length)==1 then .submissionEntity.entityName else [.workflows[].workflowEntity.entityName] | join(",") end' submission_metadata.json | tee input_row_id.txt)"
 
-      echo "$INPUT_TABLE_NAME" | tee input_table_name.txt
-      echo "$INPUT_ROW_ID" | tee input_row_id.txt
+      echo "INPUT_TABLE_NAME: $INPUT_TABLE_NAME"
+      echo "INPUT_ROW_ID:     $INPUT_ROW_ID"
       # =======================================
 
       # === obtain info on workflow version (branch/tag) and source (dockstore, etc.) ===
@@ -173,13 +173,13 @@ task check_terra_env {
 
       # .methodConfigVersion corresponds to snapshot of input/output config (or a method version stored in Broad methods repo?)
       #jq -cr .methodConfigVersion workflow_version_info.json
-      METHOD_VERSION="$(jq -cr '.methodRepoMethod.methodVersion | select (.!=null)' workflow_version_info.json)"
-      METHOD_SOURCE="$(jq -cr '.methodRepoMethod.sourceRepo | select (.!=null)' workflow_version_info.json)"
-      METHOD_PATH="$(jq -cr '.methodRepoMethod.methodPath | select (.!=null)' workflow_version_info.json)"
+      METHOD_VERSION="$(jq -cr '.methodRepoMethod.methodVersion | select (.!=null)' workflow_version_info.json | tee method_version.txt)"
+      METHOD_SOURCE="$(jq -cr '.methodRepoMethod.sourceRepo | select (.!=null)' workflow_version_info.json | tee method_source.txt)"
+      METHOD_PATH="$(jq -cr '.methodRepoMethod.methodPath | select (.!=null)' workflow_version_info.json | tee method_path.txt)"
 
-      echo "$METHOD_VERSION" | tee method_version.txt
-      echo "$METHOD_SOURCE" | tee method_source.txt
-      echo "$METHOD_PATH" | tee method_path.txt
+      echo "METHOD_VERSION: $METHOD_VERSION"
+      echo "METHOD_SOURCE:  $METHOD_SOURCE"
+      echo "METHOD_PATH:    $METHOD_PATH"
       # =======================================
     else 
       echo "Not running on Terra+GCP"
