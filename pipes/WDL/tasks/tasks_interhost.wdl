@@ -562,7 +562,7 @@ task reconstructr {
     cp ~{sep=' ' lofreq_vcfs} input_data/vcf
 
     # run reconstructR
-    Rscript<<CODE
+    R --no-save<<CODE
       library(reconstructR)
       results <- run_mcmc(~{n_iters})
       p <- visualize(results)
