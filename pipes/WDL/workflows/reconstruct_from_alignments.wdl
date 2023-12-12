@@ -23,7 +23,7 @@ workflow reconstruct_from_alignments {
     # create multiple sequence alignment of fastas
     call nextstrain.mafft_one_chr as mafft {
         input:
-            sequences = assembly_fasta,
+            sequences = assembly_fastas,
             ref_fasta = ref_fasta,
             basename  = "all_samples_aligned.fasta"
     }
