@@ -21,11 +21,16 @@ workflow reconstruct_from_alignments {
     }
 
     # create multiple sequence alignment of fastas
+    call utils.zcat {
+        input:
+            infiles     = assembly_fastas,
+            output_name = "all_assemblies.fasta.gz"
+    }
     call nextstrain.mafft_one_chr as mafft {
         input:
-            sequences = assembly_fastas,
+            sequences = zcat.combined,
             ref_fasta = ref_fasta,
-            basename  = "all_samples_aligned.fasta"
+            basename  = "mafft_msa.fasta"
     }
 
     # call iSNVs with lofreq and calculate coverage depths
