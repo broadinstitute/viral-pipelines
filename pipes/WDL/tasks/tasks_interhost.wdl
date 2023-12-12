@@ -534,32 +534,30 @@ task merge_vcfs_gatk {
 
 task reconstructr {
   input {
-    File        msa_fasta
-    File        ref_fasta
-    File        date_csv
-    File        depth_csv
-    Array[File] lofreq_vcfs
-    Int         n_iters
+    File         msa_fasta
+    File         ref_fasta
+    File         date_csv
+    File         depth_csv
+    Array[File]+ lofreq_vcfs
+    Int          n_iters
 
-    String      out_basename = "reconstructR"
+    String       out_basename = "reconstructR"
 
-    Int         cpus = 8
-    Int         machine_mem_gb = 15
-    String      docker = "ghcr.io/broadinstitute/reconstructr:main"
+    Int          cpus = 8
+    Int          machine_mem_gb = 15
+    String       docker = "ghcr.io/broadinstitute/reconstructr:main"
   }
 
   command <<<
     set -e -o pipefail
 
-    # TO DO: auto-decompress (gz or zstd) all input files (fasta, csv, vcf)
-
     # stage input files
     mkdir -p input_data input_data/vcf
-    cp "~{msa_fasta}" input_data/aligned.fasta
-    cp "~{ref_fasta}" input_data/ref.fasta
-    cp "~{date_csv}" input_data/date.csv
-    cp "~{depth_csv}" input_data/depth.csv
-    cp ~{sep=' ' lofreq_vcfs} input_data/vcf
+    /opt/reconstructR/scripts/cp_and_decompress.sh "~{msa_fasta}" input_data/aligned.fasta
+    /opt/reconstructR/scripts/cp_and_decompress.sh "~{ref_fasta}" input_data/ref.fasta
+    /opt/reconstructR/scripts/cp_and_decompress.sh "~{date_csv}" input_data/date.csv
+    /opt/reconstructR/scripts/cp_and_decompress.sh "~{depth_csv}" input_data/depth.csv
+    /opt/reconstructR/scripts/mcp_and_decompress.sh "~{sep='" "' lofreq_vcfs}" input_data/vcf
 
     # run reconstructR
     R --no-save<<CODE
@@ -574,7 +572,7 @@ task reconstructr {
     CODE
 
     # compress outputs
-    gzip -9 "~{out_basename}-tabulate.tsv" "~{out_basename}-decipher.tsv" "~{out_basename}-states.Rdata"
+    pigz -9 -p $(nproc) "~{out_basename}-tabulate.tsv" "~{out_basename}-decipher.tsv" "~{out_basename}-states.Rdata"
   >>>
 
   output {
