@@ -34,6 +34,7 @@ workflow CreateEntericsQCViz {
 
     output {
         File    viz_pdf     =   create_viz.vizualizations
+        File    color_chart =   create_viz.color_chart
     }
 }
 
@@ -47,7 +48,7 @@ task create_viz {
         String          grouping_column_name    = "gambit_predicted_taxon"
         String          output_filename         = "QC_vizualizations.pdf"
 
-        String  docker                          =   "broadinstitute/horsefish:pgs_visualizations_dev"        
+        String  docker                          =   "broadinstitute/horsefish:pgs_visualizations"        
     }
 
     command {
@@ -65,5 +66,6 @@ task create_viz {
 
     output {
         File vizualizations = "~{output_filename}"
+        File color_chart    = "Colorized_Scores.xlsx"
     }
 }
