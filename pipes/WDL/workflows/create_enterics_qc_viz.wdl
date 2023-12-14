@@ -1,6 +1,6 @@
 version 1.0
 
-workflow CreateEntericsWCViz {
+workflow CreateEntericsQCViz {
 
     parameter_meta {
         sample_ids: {description: "selected rows of data from data table which will be used for plotting"}
