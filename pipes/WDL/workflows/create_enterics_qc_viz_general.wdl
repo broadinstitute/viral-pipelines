@@ -47,7 +47,7 @@ task create_viz {
         String          grouping_column_name    = "gambit_predicted_taxon"
         String          output_filename         = "QC_vizualizations.pdf"
 
-        String  docker                          =   "broadinstitute/horsefish:pgs_visualizations_dev"        
+        String  docker                          =   "broadinstitute/horsefish:pgs_visualizations"        
     }
 
     command {
