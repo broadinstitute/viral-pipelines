@@ -1,6 +1,6 @@
 version 1.0
 
-workflow CreateEntericsQCViz {
+workflow CreateEntericsQCVizGeneral {
 
     parameter_meta {
         sample_ids: {description: "selected rows of data from data table which will be used for plotting"}
@@ -34,7 +34,6 @@ workflow CreateEntericsQCViz {
 
     output {
         File    viz_pdf     =   create_viz.vizualizations
-        File    color_chart =   create_viz.color_chart
     }
 }
 
@@ -52,7 +51,7 @@ task create_viz {
     }
 
     command {
-        python3 /scripts/create_visualizations.py -s ~{sep=' ' sample_ids} \
+        python3 /scripts/general_create_visualizations.py -s ~{sep=' ' sample_ids} \
                                                   -t ~{input_table_name} \
                                                   -w ~{workspace_name} \
                                                   -p ~{workspace_project} \
@@ -66,6 +65,5 @@ task create_viz {
 
     output {
         File vizualizations = "~{output_filename}"
-        File color_chart    = "Colorized_Scores.xlsx"
     }
 }
