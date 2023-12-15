@@ -1,107 +1,5 @@
 version 1.0
 
-task nextclade_one_sample {
-    meta {
-        description: "Nextclade classification of one sample. Leaving optional inputs unspecified will use SARS-CoV-2 defaults."
-    }
-    input {
-        File  genome_fasta
-        File? root_sequence
-        File? auspice_reference_tree_json
-        File? qc_config_json
-        File? gene_annotations_json
-        File? pcr_primers_csv
-        String docker = "neherlab/nextclade:0.14.4"
-    }
-    String basename = basename(genome_fasta, ".fasta")
-    command {
-        set -e
-        nextclade.js --version > VERSION
-        nextclade.js \
-            --input-fasta "~{genome_fasta}" \
-            ~{"--input-root-seq " + root_sequence} \
-            ~{"--input-tree " + auspice_reference_tree_json} \
-            ~{"--input-qc-config " + qc_config_json} \
-            ~{"--input-gene-map " + gene_annotations_json} \
-            ~{"--input-pcr-primers " + pcr_primers_csv} \
-            --output-json "~{basename}".nextclade.json \
-            --output-tsv  "~{basename}".nextclade.tsv \
-            --output-tree "~{basename}".nextclade.auspice.json
-        cp "~{basename}".nextclade.tsv input.tsv
-        python3 <<CODE
-        # transpose table
-        import codecs
-        with codecs.open('input.tsv', 'r', encoding='utf-8') as inf:
-            with codecs.open('transposed.tsv', 'w', encoding='utf-8') as outf:
-                for c in zip(*(l.rstrip().split('\t') for l in inf)):
-                    outf.write('\t'.join(c)+'\n')
-        CODE
-        grep ^clade transposed.tsv | cut -f 2 | grep -v clade > NEXTCLADE_CLADE
-        grep ^aaSubstitutions transposed.tsv | cut -f 2 | grep -v aaSubstitutions > NEXTCLADE_AASUBS
-        grep ^aaDeletions transposed.tsv | cut -f 2 | grep -v aaDeletions > NEXTCLADE_AADELS
-    }
-    runtime {
-        docker: docker
-        memory: "3 GB"
-        cpu:    2
-        disks: "local-disk 50 HDD"
-        dx_instance_type: "mem1_ssd1_v2_x2"
-    }
-    output {
-        String nextclade_version = read_string("VERSION")
-        File   nextclade_json    = "~{basename}.nextclade.json"
-        File   auspice_json      = "~{basename}.nextclade.auspice.json"
-        File   nextclade_tsv     = "~{basename}.nextclade.tsv"
-        String nextclade_clade   = read_string("NEXTCLADE_CLADE")
-        String aa_subs_csv       = read_string("NEXTCLADE_AASUBS")
-        String aa_dels_csv       = read_string("NEXTCLADE_AADELS")
-    }
-}
-
-task nextclade_many_samples {
-    meta {
-        description: "Nextclade classification of many samples. Leaving optional inputs unspecified will use SARS-CoV-2 defaults."
-    }
-    input {
-        Array[File]+ genome_fastas
-        File?        root_sequence
-        File?        auspice_reference_tree_json
-        File?        qc_config_json
-        File?        gene_annotations_json
-        File?        pcr_primers_csv
-        String       basename
-        String       docker = "neherlab/nextclade:0.14.4"
-    }
-    command {
-        set -e
-        nextclade.js --version > VERSION
-        cat ~{sep=" " genome_fastas} > genomes.fasta
-        nextclade.js \
-            --input-fasta genomes.fasta \
-            ~{"--input-root-seq " + root_sequence} \
-            ~{"--input-tree " + auspice_reference_tree_json} \
-            ~{"--input-qc-config " + qc_config_json} \
-            ~{"--input-gene-map " + gene_annotations_json} \
-            ~{"--input-pcr-primers " + pcr_primers_csv} \
-            --output-json "~{basename}".nextclade.json \
-            --output-tsv  "~{basename}".nextclade.tsv \
-            --output-tree "~{basename}".nextclade.auspice.json
-    }
-    runtime {
-        docker: docker
-        memory: "14 GB"
-        cpu:    16
-        disks: "local-disk 100 HDD"
-        dx_instance_type: "mem1_ssd1_v2_x16"
-    }
-    output {
-        String nextclade_version = read_string("VERSION")
-        File   nextclade_json    = "~{basename}.nextclade.json"
-        File   auspice_json      = "~{basename}.nextclade.auspice.json"
-        File   nextclade_tsv     = "~{basename}.nextclade.tsv"
-    }
-}
-
 task pangolin_one_sample {
     meta {
         description: "Pangolin classification of one SARS-CoV-2 sample."
@@ -110,32 +8,40 @@ task pangolin_one_sample {
         File    genome_fasta
         Int?    min_length
         Float?  max_ambig
-        Boolean inference_usher=false
-        String  docker = "quay.io/staphb/pangolin:3.1.7-pangolearn-2021-07-09"
+        String? analysis_mode
+        Boolean update_dbs_now=false
+        String  docker = "quay.io/staphb/pangolin:4.3.1-pdata-1.22"
     }
     String basename = basename(genome_fasta, ".fasta")
+    Int disk_size = 50
     command <<<
-        date | tee DATE
-        conda list -n pangolin | grep "usher" | awk -F ' +' '{print$1, $2}' | tee VERSION_PANGO_USHER
         set -ex
-        pangolin -v | tee VERSION_PANGOLIN
-        pangolin -pv | tee VERSION_PANGOLEARN
+
+        if [ -n "~{true='UPDATE' false='' update_dbs_now}" ]; then
+            set +e
+            # ignore failure of this step
+            pangolin --update-data
+            set -e
+        fi
+        date | tee DATE
+        { pangolin --all-versions && usher --version; } | grep -v '\*\*\*\*' | grep -v "Pangolin running in" | tr '\n' ';'  | cut -f -6 -d ';' | tee VERSION_PANGOLIN_ALL
 
         pangolin "~{genome_fasta}" \
-            ~{true='--usher' false='' inference_usher} \
+            ~{'--analysis-mode ' + analysis_mode} \
             --outfile "~{basename}.pangolin_report.csv" \
             ~{"--min-length " + min_length} \
             ~{"--max-ambig " + max_ambig} \
             --alignment \
+            --threads $(nproc) \
             --verbose
 
-        cp sequences.aln.fasta "~{basename}.pangolin_msa.fasta"
+        cp alignment.fasta "~{basename}.pangolin_msa.fasta"
         python3 <<CODE
         import csv
         #grab output values by column header
         with open("~{basename}.pangolin_report.csv", 'rt') as csv_file:
             for line in csv.DictReader(csv_file):
-                with open("VERSION", 'wt') as outf:
+                with open("PANGO_ASSIGNMENT_VERSION", 'wt') as outf:
                     pangolin_version=line["pangolin_version"]
                     version=line["version"]
                     outf.write(f"pangolin {pangolin_version}; {version}")
@@ -145,6 +51,10 @@ task pangolin_one_sample {
                     outf.write(line["conflict"])
                 with open("PANGOLIN_NOTES", 'wt') as outf:
                     outf.write(line["note"])
+                with open("SCORPIO_CALL", 'wt') as outf:
+                    outf.write(line["scorpio_call"])
+                with open("SCORPIO_NOTES", 'wt') as outf:
+                    outf.write(line["scorpio_notes"])
                 break
         CODE
     >>>
@@ -152,24 +62,123 @@ task pangolin_one_sample {
         docker: docker
         memory: "3 GB"
         cpu:    2
-        disks: "local-disk 50 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         String     date                   = read_string("DATE")
-        String     version                = read_string("VERSION")
         String     pango_lineage          = read_string("PANGO_LINEAGE")
         String     pangolin_conflicts     = read_string("PANGOLIN_CONFLICTS")
         String     pangolin_notes         = read_string("PANGOLIN_NOTES")
-        String     pangolin_usher_version = read_string("VERSION_PANGO_USHER")
-        String     pangolin_version       = read_string("VERSION_PANGOLIN")
-        String     pangolearn_version     = read_string("VERSION_PANGOLEARN")
+        String     scorpio_call           = read_string("SCORPIO_CALL")
+        String     scorpio_notes          = read_string("SCORPIO_NOTES")
         String     pangolin_docker        = docker
+        String     pangolin_versions      = read_string("VERSION_PANGOLIN_ALL")
+        String     pangolin_assignment_version = read_string("PANGO_ASSIGNMENT_VERSION")
         File       pango_lineage_report   = "${basename}.pangolin_report.csv"
         File       msa_fasta              = "~{basename}.pangolin_msa.fasta"
     }
 }
 
+task pangolin_many_samples {
+    meta {
+        description: "Pangolin classification of multiple SARS-CoV-2 samples."
+    }
+    input {
+        Array[File]+ genome_fastas
+        Int?         min_length
+        Float?       max_ambig
+        String?      analysis_mode
+        Boolean      update_dbs_now=false
+        String       basename
+        String       docker = "quay.io/staphb/pangolin:4.3.1-pdata-1.22"
+    }
+    Int disk_size = 100
+    command <<<
+        set -ex
+
+        if [ -n "~{true='UPDATE' false='' update_dbs_now}" ]; then
+            set +e
+            # ignore failure of this step
+            pangolin --update-data
+            set -e
+        fi
+        date | tee DATE
+        { pangolin --all-versions && usher --version; } | grep -v '\*\*\*\*' | grep -v "Pangolin running in" | tr '\n' ';'  | cut -f -6 -d ';' | tee VERSION_PANGOLIN_ALL
+
+        cat ~{sep=" " genome_fastas} > unaligned.fasta
+        pangolin unaligned.fasta \
+            --use-assignment-cache \
+            ~{'--analysis-mode ' + analysis_mode} \
+            --outfile "~{basename}.pangolin_report.csv" \
+            ~{"--min-length " + min_length} \
+            ~{"--max-ambig " + max_ambig} \
+            --alignment \
+            --threads $(nproc) \
+            --verbose
+
+        cp alignment.fasta "~{basename}.pangolin_msa.fasta"
+        python3 <<CODE
+        import csv, json
+        #grab output values by column header
+        with open("~{basename}.pangolin_report.csv", 'rt') as csv_file:
+            for line in csv.DictReader(csv_file):
+                with open("PANGO_ASSIGNMENT_VERSION", 'wt') as outf:
+                    pangolin_version=line["pangolin_version"]
+                    version=line["version"]
+                    outf.write(f"pangolin {pangolin_version}; {version}")
+                break
+        out_maps = {'lineage':{}, 'conflict':{}, 'note':{}, 'scorpio_call':{}, 'scorpio_notes':{}}
+        with open("~{basename}.pangolin_report.csv", 'rt') as csv_file:
+            with open('IDLIST', 'wt') as outf_ids:
+                for row in csv.DictReader(csv_file):
+                    for k in ('lineage','conflict','note','scorpio_call','scorpio_notes'):
+                        out_maps[k][row['taxon']] = row[k]
+                    outf_ids.write(row['taxon']+'\n')
+        with open('PANGO_LINEAGE.json', 'wt') as outf:
+            json.dump(out_maps['lineage'], outf)
+        with open('PANGOLIN_CONFLICTS.json', 'wt') as outf:
+            json.dump(out_maps['conflict'], outf)
+        with open('PANGOLIN_NOTES.json', 'wt') as outf:
+            json.dump(out_maps['note'], outf)
+        with open('SCORPIO_CALL.json', 'wt') as outf:
+            json.dump(out_maps['scorpio_call'], outf)
+        with open('SCORPIO_NOTES.json', 'wt') as outf:
+            json.dump(out_maps['scorpio_notes'], outf)
+        CODE
+
+        # gather runtime metrics
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg > CPU_LOAD
+    >>>
+    runtime {
+        docker: docker
+        memory: "14 GB"
+        cpu:    16
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
+        dx_instance_type: "mem1_ssd1_v2_x16"
+        maxRetries: 2
+    }
+    output {
+        Map[String,String] pango_lineage          = read_json("PANGO_LINEAGE.json")
+        Map[String,String] pangolin_conflicts     = read_json("PANGOLIN_CONFLICTS.json")
+        Map[String,String] pangolin_notes         = read_json("PANGOLIN_NOTES.json")
+        Map[String,String] scorpio_call           = read_json("SCORPIO_CALL.json")
+        Map[String,String] scorpio_notes          = read_json("SCORPIO_NOTES.json")
+        Array[String]      genome_ids             = read_lines("IDLIST")
+        String             date                   = read_string("DATE")
+        String             pangolin_assignment_version = read_string("PANGO_ASSIGNMENT_VERSION")
+        String             pangolin_docker        = docker
+        String             pangolin_versions      = read_string("VERSION_PANGOLIN_ALL")
+        File               pango_lineage_report   = "${basename}.pangolin_report.csv"
+        File               msa_fasta              = "~{basename}.pangolin_msa.fasta"
+        Int                runtime_sec            = ceil(read_float("UPTIME_SEC"))
+        String             cpu_load               = read_string("CPU_LOAD")
+    }
+}
 
 task sequencing_report {
     meta {
@@ -179,16 +188,18 @@ task sequencing_report {
         File    assembly_stats_tsv
         File?   collab_ids_tsv
 
-        String? sequencing_lab = "Broad Institute"
-        String? intro_blurb = "The Broad Institute Viral Genomics group, in partnership with the Genomics Platform and Data Sciences Platform, has been engaged in viral sequencing of COVID-19 patients since March 2020."
+        String  sequencing_lab = "Broad Institute"
+        String  intro_blurb = "The Broad Institute Viral Genomics group, in partnership with the Genomics Platform and Data Sciences Platform, has been engaged in viral sequencing of COVID-19 patients since March 2020."
         String? max_date
         String? min_date
         Int?    min_unambig
         String? voc_list
         String? voi_list
 
-        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.23"
+        Int     machine_mem_gb = 7
+        String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.25"
     }
+    Int disk_size = 250
     command {
         set -e
         /docker/reports.py \
@@ -205,10 +216,12 @@ task sequencing_report {
     }
     runtime {
         docker: docker
-        memory: "2 GB"
+        memory: "~{machine_mem_gb} GB"
         cpu:    2
-        disks: "local-disk 50 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         Array[File] reports = glob("*.pdf")
@@ -233,14 +246,18 @@ task sc2_meta_final {
 
         String?       max_date
         String?       min_date
-        Int?          min_unambig=24000
+        Int           min_unambig=24000
         Boolean       drop_file_cols=false
+
+        String        address_map = '{}'
+        String        authors_map = '{}'
 
         File?         filter_to_ids
 
         String        docker = "quay.io/broadinstitute/py3-bio:0.1.2"
     }
     String out_basename = basename(basename(assembly_stats_tsv, '.txt'), '.tsv')
+    Int disk_size = 50
     command <<<
         set -e
         python3<<CODE
@@ -267,6 +284,8 @@ task sc2_meta_final {
             genome_status = json.load(inf)
         else:
           genome_status = {}
+        address_map = json.loads('~{address_map}')
+        authors_map = json.loads('~{authors_map}')
 
         # read input files
         df_assemblies = pd.read_csv(assemblies_tsv, sep='\t').dropna(how='all')
@@ -345,6 +364,10 @@ task sc2_meta_final {
         # join column: collaborator_id
         df_assemblies = df_assemblies.merge(collab_ids, on='sample', how='left', validate='one_to_one')
 
+        # derived columns: authors, orig_lab_addr
+        df_assemblies.loc[:,'authors']       = list(authors_map.get(cby) if not pd.isna(cby) else cby for cby in df_assemblies.loc[:,'collected_by'])
+        df_assemblies.loc[:,'orig_lab_addr'] = list(address_map.get(cby) if not pd.isna(cby) else cby for cby in df_assemblies.loc[:,'collected_by'])
+
         # write final output
         df_assemblies.to_csv("~{out_basename}.final.tsv", sep='\t', index=False)
         CODE
@@ -353,8 +376,10 @@ task sc2_meta_final {
         docker: docker
         memory: "2 GB"
         cpu:    2
-        disks: "local-disk 50 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         File meta_tsv = "~{out_basename}.final.tsv"
@@ -372,13 +397,17 @@ task crsp_meta_etl {
         String        bioproject
 
         String        country = 'USA'
-        String        collected_by = 'Broad Institute Clinical Research Sequencing Platform'
         String        ontology_map_states = '{"AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California", "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "DC": "District of Columbia", "FL": "Florida", "GA": "Georgia", "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois", "IN": "Indiana", "IA": "Iowa", "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine", "MD": "Maryland", "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi", "MO": "Missouri", "MT": "Montana", "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire", "NJ": "New Jersey", "NM": "New Mexico", "NY": "New York", "NC": "North Carolina", "ND": "North Dakota", "OH": "Ohio", "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania", "RI": "Rhode Island", "SC": "South Carolina", "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah", "VT": "Vermont", "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"}'
-        String        ontology_map_body_part = '{"AN SWAB": "Anterior Nares", "AN Swab": "Anterior Nares", "Swab": "Upper respiratory tract", "Viral": "Upper respiratory tract", "Null": "Anterior Nares", "NP Swab": "Nasopharynx (NP)"}'
+        String        ontology_map_body_part = '{"AN SWAB": "Anterior Nares", "AN Swab": "Anterior Nares", "Anterior Nares": "Anterior Nares", "Swab": "Upper respiratory tract", "Viral": "Upper respiratory tract", "Null": "Anterior Nares", "NP Swab": "Nasopharynx (NP)", "Nasopharynx (NP)": "Nasopharynx (NP)", "Oropharynx (OP)": "Oropharynx (OP)", "Other": "Not Provided"}'
+        String        prefix_map = '{"Broad Institute Clinical Research Sequencing Platform": "CRSP_", "Massachusetts General Hospital": "MGH_", "Rhode Island Department of Health": "RIDOH_", "Biobot Analytics": "Biobot_", "Flow Health":"FlowHealth_", "Colorado Mesa University":"CMU_", "Capture Diagnostics Hawaii":"Capture_", "Boston Medical Center":"BMC_", "University of Central Florida":"UCF_"}'
+        String        org_name_map = '{"Broad Institute Clinical Research Sequencing Platform": "Broad Institute Clinical Research Sequencing Platform", "Massachusetts General Hospital": "Massachusetts General Hospital", "RIDOH": "Rhode Island Department of Health", "BIOBOT": "Biobot Analytics", "FLOW":"Flow Health", "MESA":"Colorado Mesa University", "CAPTURE":"Capture Diagnostics Hawaii", "BUBMC":"Boston Medical Center", "UCF":"University of Central Florida"}'
+        String        allowed_purposes = '["Baseline surveillance (random sampling)", "Targeted surveillance (non-random sampling)", "Screening for Variants of Concern (VOC)", "Longitudinal surveillance (repeat sampling of individuals)", "Vaccine escape surveillance", "Cluster/Outbreak investigation"]'
+        String        sequencing_lab_prefix = 'CDCBI'
 
         String        docker = "quay.io/broadinstitute/py3-bio:0.1.2"
     }
     String out_basename = basename(basename(basename(sample_meta_crsp, '.txt'), '.tsv'), '.metadata')
+    Int disk_size = 50
     command <<<
         set -e
         python3<<CODE
@@ -393,26 +422,49 @@ task crsp_meta_etl {
         salt = '~{salt}'.strip()
         ontology_map_states = json.loads('~{ontology_map_states}')
         ontology_map_body_part = json.loads('~{ontology_map_body_part}')
+        prefix_map = json.loads('~{prefix_map}')
+        org_name_map = json.loads('~{org_name_map}')
+        allowed_purposes = json.loads('~{allowed_purposes}')
 
         # read input files
-        sample_meta = pd.read_csv('~{sample_meta_crsp}', sep='\t')
+        sample_meta = pd.read_csv('~{sample_meta_crsp}', sep='\t',
+            dtype={'matrix_id':str, 'internal_id':str, 'hl7_message_id':str})
 
         # clean collection_date
         sample_meta = sample_meta.astype({'collection_date':'datetime64[D]'})
         sample_meta.loc[:,'collection_year'] = list(d.year for d in sample_meta.loc[:,'collection_date'])
 
-        # validation checks
-        assert sample_meta.geo_loc_name.isna().sum() == 0, "error: some samples missing geo_loc_name"
-        assert sample_meta.collection_date.isna().sum() == 0, "error: some samples missing collection_date"
-        assert sample_meta.collected_by.isna().sum() == 0, "error: some samples missing collected_by"
-        assert all(sample_meta.collected_by == '~{collected_by}'), "error: not all samples collected by same lab"
-        assert sample_meta.anatomical_part.isna().sum() == 0, "error: some samples missing anatomical_part"
-        assert sample_meta.hl7_message_id.isna().sum() == 0, "error: some samples missing hl7_message_id"
-        assert sample_meta.internal_id.isna().sum() == 0, "error: some samples missing internal_id"
+        # clean purpose_of_sequencing
+        if 'research_purpose' not in sample_meta.columns:
+            sample_meta['research_purpose'] = np.nan
+        sample_meta['purpose_of_sequencing'] = sample_meta['research_purpose'].fillna('Baseline surveillance (random sampling)').replace('Not Provided', 'Baseline surveillance (random sampling)')
 
         # stub matrix_id if it doesn't exist
         if 'matrix_id' not in sample_meta.columns:
             sample_meta['matrix_id'] = np.nan
+
+        # stub test_ordered if it doesn't exist
+        if 'test_ordered' not in sample_meta.columns:
+            sample_meta['test_ordered'] = np.nan
+        sample_meta['test_ordered'].fillna('covid19_diagnostic')
+
+        # validation checks
+        assert sample_meta.geo_loc_name.isna().sum() == 0, "error: some samples missing geo_loc_name"
+        assert sample_meta.collection_date.isna().sum() == 0, "error: some samples missing collection_date"
+        assert sample_meta.collected_by.isna().sum() == 0, "error: some samples missing collected_by"
+        assert sample_meta.anatomical_part.isna().sum() == 0, "error: some samples missing anatomical_part"
+        assert (sample_meta.hl7_message_id.isna() & sample_meta.matrix_id.isna()).sum() == 0, "error: some samples missing hl7_message_id and matrix_id (at least one must be defined per sample)"
+        assert sample_meta.internal_id.isna().sum() == 0, "error: some samples missing internal_id"
+        assert sample_meta.purpose_of_sequencing.isna().sum() == 0, "error: fillna didnt work on purpose_of_sequencing"
+        bad_purposes = set(x for x in sample_meta.purpose_of_sequencing if x not in allowed_purposes)
+        assert not bad_purposes, f"error: some samples have invalid research_purpose values: {str(bad_purposes)}"
+        bad_orgs = set(x for x in sample_meta.collected_by if x not in org_name_map)
+        assert not bad_orgs, f"error: some samples have invalid collected_by values: {str(bad_orgs)}"
+
+        # clean collected_by
+        sample_meta.loc[:,'collected_by'] = [org_name_map[x] for x in sample_meta.loc[:,'collected_by']]
+        bad_orgs = set(x for x in sample_meta.collected_by if x not in prefix_map)
+        assert not bad_orgs, f"error: some samples have invalid remapped collected_by values: {str(bad_orgs)}"
 
         # clean geoloc
         sample_meta.loc[:,'geo_loc_state_abbr'] = sample_meta.loc[:,'geo_loc_name']
@@ -437,14 +489,20 @@ task crsp_meta_etl {
             information available to them (e.g. hl7_message_id).
             3: The hashes should not collide across the range of
             hl7_message_id inputs.
+
+            Update: when hl7_message_id is not present, use matrix_id
+            as the input to the hash, but otherwise do the same thing.
         '''
+        hash_input_ids = sample_meta.apply(lambda row:
+            row['hl7_message_id'] if not pd.isna(row['hl7_message_id']) else row['matrix_id']
+            , axis=1)
         sample_meta.loc[:,'hl7_hashed'] = [
             base64.b32encode(hashlib.pbkdf2_hmac('sha256', id.encode('UTF-8'), salt.encode('UTF-8'), 20000, dklen=10)).decode('UTF-8')
-            for id in sample_meta.loc[:,'hl7_message_id']
+            for id in hash_input_ids
         ]
-        sample_meta['host_subject_id'] = [
-            f'CDCBI-CRSP_{id}' for id
-            in sample_meta['hl7_hashed']]
+        sample_meta['host_subject_id'] = sample_meta.apply(lambda row:
+            '~{sequencing_lab_prefix}' + '-' + prefix_map[row['collected_by']] + row['hl7_hashed']
+            , axis=1)
         sample_meta['sample_name'] = [
             f'{country}/{state}-{id}/{year}'
             for country, state, id, year
@@ -453,7 +511,8 @@ task crsp_meta_etl {
             for id in sample_meta['sample_name']]
 
         # prep biosample submission table
-        biosample = sample_meta[['sample_name', 'isolate', 'collected_by', 'collection_date', 'geo_loc_name', 'host_subject_id', 'anatomical_part', 'body_product']]
+        biosample = sample_meta[sample_meta.test_ordered == 'covid19_diagnostic'] ## until we sort with NCBI how to submit pooled BioSamples
+        biosample = biosample[['sample_name', 'isolate', 'collected_by', 'collection_date', 'geo_loc_name', 'host_subject_id', 'anatomical_part', 'body_product']]
         biosample = biosample.assign(
             bioproject_accession = '~{bioproject}',
             attribute_package = 'Pathogen.cl',
@@ -462,9 +521,9 @@ task crsp_meta_etl {
             lat_lon = 'missing',
             host = 'Homo sapiens',
             host_disease = 'COVID-19',
-            purpose_of_sampling = 'Diagnostic Testing',
-            purpose_of_sequencing = 'Baseline surveillance (random sampling)'
+            purpose_of_sampling = 'Diagnostic Testing'
         )
+        biosample['purpose_of_sequencing'] = sample_meta['purpose_of_sequencing']
         biosample = biosample.reindex(columns= biosample.columns.tolist() + [
             'host_health_state',' host_disease_outcome', 'host_age', 'host_sex',
             'anatomical_material', 'collection_device', 'collection_method',
@@ -488,8 +547,10 @@ task crsp_meta_etl {
         docker: docker
         memory: "2 GB"
         cpu:    2
-        disks: "local-disk 50 HDD"
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
     output {
         File          biosample_submit_tsv = "biosample_meta_submit-~{out_basename}.tsv"
@@ -505,22 +566,32 @@ task gisaid_uploader {
     File    gisaid_sequences_fasta
     File    gisaid_meta_csv
     File    cli_auth_token
+    String  database="EpiCoV"
+    String  frameshift="catch_novel"
   }
+  Int disk_size = 100
   command {
     set -e
-    cp "~{cli_auth_token}" gisaid_uploader.authtoken
-    gisaid_uploader CoV upload \
+    cli3 upload \
+        --database "~{database}" \
+        --token "~{cli_auth_token}" \
         --fasta "~{gisaid_sequences_fasta}" \
-        --csv "~{gisaid_meta_csv}" \
-        --failedout failed_metadata.csv
+        --metadata "~{gisaid_meta_csv}" \
+        --failed failed_metadata.csv \
+        --frameshift "~{frameshift}" \
+        --log logs.txt
+    # the following grep statement will exit 1 if anything failed
+    grep "submissions failed: 0" logs.txt > /dev/null
   }
   output {
     File  failed_metadata = "failed_metadata.csv"
   }
   runtime {
-    docker: "quay.io/broadinstitute/gisaid-cli:1.0"
+    docker: "quay.io/broadinstitute/gisaid-cli:3.0"
     memory: "2 GB"
     cpu: 2
-    disks: "local-disk 100 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
+    maxRetries: 1
   }
 }

@@ -7,6 +7,17 @@ workflow align_and_count_report {
         description: "Align reads to reference with minimap2 and count the number of hits. Results are returned in the format of 'samtools idxstats'."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
+    }
+    parameter_meta {
+        reads_unmapped_bams: {
+            description: "Unaligned reads in BAM format",
+            patterns: ["*.bam"]
+        }
+        ref_db: {
+            description: "File containing sequences against which reads should me aligned and counted",
+            patterns: ["*.fasta","*.fa"]
+        }
     }
 
     call reports.align_and_count

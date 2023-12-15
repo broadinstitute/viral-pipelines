@@ -10,6 +10,7 @@ workflow demux_deplete {
         description: "Picard-based demultiplexing and basecalling from a tarball of a raw BCL directory, followed by QC metrics, depletion, and SRA submission prep."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     input {
@@ -38,19 +39,76 @@ workflow demux_deplete {
     parameter_meta {
         flowcell_tgz: {
             description: "Illumina BCL directory compressed as tarball. Must contain RunInfo.xml, SampleSheet.csv, RTAComplete.txt, and Data/Intensities/BaseCalls/*",
-            patterns: ["*.tar.gz", ".tar.zst", ".tar.bz2", ".tar.lz4", ".tgz"]
+            patterns: ["*.tar.gz", ".tar.zst", ".tar.bz2", ".tar.lz4", ".tgz", ".tar"],
+            category: "required"
+            
         }
         samplesheets: {
             description: "Custom formatted 'extended' format tsv samplesheets that will override any SampleSheet.csv in the illumina BCL directory. Must supply one file per lane of the flowcell, and must provide them in lane order. Required tsv column headings are: sample, library_id_per_sample, barcode_1, barcode_2 (if paired reads, omit if single-end), library_strategy, library_source, library_selection, design_description. 'sample' must correspond to a biological sample. 'sample' x 'library_id_per_sample' must be unique within a samplesheet and correspond to independent libraries from the same original sample. barcode_1 and barcode_2 must correspond to the actual index sequence. Remaining columns must follow strict ontology: see 3rd tab of https://www.ncbi.nlm.nih.gov/core/assets/sra/files/SRA_metadata_acc_example.xlsx for controlled vocabulary and term definitions.",
-            patterns: ["*.txt", "*.tsv"]
+            patterns: ["*.txt", "*.tsv"],
+            category: "required"
         }
         sample_rename_map: {
             description: "If 'samples' need to be renamed, provide a two-column tsv that contains at least the following columns: internal_id, external_id. All samples will be renamed prior to analysis. Any samples described in the samplesheets that are not present in sample_rename_map will be unaltered. If this is omitted, no samples will be renamed.",
-            patterns: ["*.txt", "*.tsv"]
+            patterns: ["*.txt", "*.tsv"],
+            category: "advanced"
         }
         biosample_map: {
             description: "A two-column tsv that contains at least the following columns: sample_name, accession. sample_name refers to the external sample id, accession is the NCBI BioSample accession number (SAMNxxx). If this file is omitted, SRA submission prep will be skipped.",
-            patterns: ["*.txt", "*.tsv"]
+            patterns: ["*.txt", "*.tsv"],
+            category: "advanced"
+        }
+        spikein_db: {
+            description: "Synthetic sequences (e.g. ERCC, SDSI) that are used to track potential contamination within sequencing plate processing.",
+            category: "advanced"
+        }
+        read_structure: { 
+            description: "Details how the bases should be organized into logical reads.",
+            category: "advanced"
+        }
+        sort_reads: {
+            description: "Output bam files will be sorted by read name.",
+            category: "advanced"
+        }
+        bmtaggerDbs: {
+            description: "Tool that can discriminate between human and bacterial reads and other reads by using short fragments. Databases must be provided to onset depletion.Sequences in fasta format will be indexed on the fly, pre-bmtagger-indexed databases may be provided as tarballs.",
+            category: "advanced"
+        }
+        cleaned_bams_tiny: {
+            description: "cleaned BAM files that contain less than min_reads_per_bam will be included here and omitted from cleaned_reads_unaligned_bams and cleaned_bam_uris",
+            category: "other"
+        }
+        cleaned_bam_uris: {
+            description: "A text file containing a string-serialized version of each File in cleaned_reads_unaligned_bams on a separate line.",
+            category: "other"
+        }
+        cleaned_reads_unaligned_bams: {
+            description: "Unaligned reads without human reads or PCR duplicates in BAM format. This will not include any bams that contain less than min_reads_per_bam reads.",
+            category: "other"
+        }
+        demux_commonBarcodes: {
+            description: "a TSV report of all barcode counts, in descending order.",
+            category: "other"
+        }
+        demux_metrics: { 
+            description: "Output ExtractIlluminaBarcodes metrics file.",
+            category: "other"
+        }
+        multiqc_report_cleaned: {
+            description: "Aggregate results from QC analyses across many samples into a single report.",
+            category: "other"
+        }
+        multiqc_report: {
+            description: "Aggregation of QC metrics for all indexed samples.",
+            category: "other"
+        }
+        raw_reads_unaligned_bams : { 
+            description: "Unaligned reads in BAM format.",
+            category: "other"
+        }
+        read_counts_raw: {
+            description: "A list of the read counts of each file in raw_reads_unaligned_bams",
+            category: "other"
         }
     }
 

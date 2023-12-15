@@ -6,8 +6,10 @@ task merge_tarballs {
     String       out_filename
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-core:2.1.32"
+    String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
+
+  Int disk_size = 2625
 
   command {
     set -ex -o pipefail
@@ -32,8 +34,10 @@ task merge_tarballs {
     docker: docker
     memory: select_first([machine_mem_gb, 7]) + " GB"
     cpu: 16
-    disks: "local-disk 2625 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x16"
+    maxRetries: 2
     preemptible: 0
   }
 }
@@ -45,11 +49,21 @@ task samplesheet_rename_ids {
     String old_id_col = 'internal_id'
     String new_id_col = 'external_id'
   }
+  parameter_meta { 
+    old_sheet: {
+      description: "Illumina file with old sample names.",
+      category: "required"
+    }
+    rename_map: {
+      description: "New sample name sheet.",
+      category: "required"
+    }
+  }
   String new_base = basename(old_sheet, '.txt')
+  Int disk_size = 50
   command <<<
     python3 << CODE
     import csv
-
     # read in the rename_map file
     old_to_new = {}
     with open('~{default="/dev/null" rename_map}', 'rt') as inf:
@@ -74,8 +88,10 @@ task samplesheet_rename_ids {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
-    disks: "local-disk 50 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -86,6 +102,7 @@ task revcomp_i5 {
     String  docker = "quay.io/broadinstitute/py3-bio:0.1.2"
   }
   String new_base = basename(basename(old_sheet, '.txt'), '.tsv')
+  Int disk_size = 50
   command <<<
     python3 << CODE
     import csv
@@ -94,13 +111,13 @@ task revcomp_i5 {
     revcomp = ~{true="True" false="False" revcomp}
 
     with open(old_sheet, "rt") as inf:
-      with open(new_base+'.tsv', 'wt') as outf:
+      with open('~{new_base}'+'.revcompi5.tsv', 'wt') as outf:
         if revcomp:
           sheet = csv.DictReader(inf, delimiter='\t')
           writer = csv.DictWriter(outf, sheet.fieldnames, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
           writer.writeheader()
           for row in sheet:
-            if row.get('barcode_2')
+            if row.get('barcode_2') \
               and all(s in 'ATGC' for s in row['barcode_2']):
               row['barcode_2'] = str(Bio.Seq.Seq(row['barcode_2']).reverse_complement())
             writer.writerow(row)
@@ -116,8 +133,10 @@ task revcomp_i5 {
     docker: docker
     memory: "1 GB"
     cpu:    1
-    disks: "local-disk 50 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -140,14 +159,25 @@ task illumina_demux {
     Int?    threads
     String? runStartDate
     Int?    maxRecordsInRam
+    Int?    numberOfNegativeControls
 
     Int?    machine_mem_gb
-    String  docker = "quay.io/broadinstitute/viral-core:2.1.32"
+    Int     disk_size = 2625
+    String  docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
+
   parameter_meta {
       flowcell_tgz: {
           description: "Illumina BCL directory compressed as tarball. Must contain RunInfo.xml (unless overridden by runinfo), SampleSheet.csv (unless overridden by samplesheet), RTAComplete.txt, and Data/Intensities/BaseCalls/*",
           patterns: ["*.tar.gz", ".tar.zst", ".tar.bz2", ".tar.lz4", ".tgz"]
+      }
+      samplesheet: {
+        description: "CSV file with the library chemistry, sample names and the index tag used for each sample, in addition to some other metrics describing the run.",
+        category: "required"
+      }
+      runinfo: { 
+        description: "if we are overriding the RunInfo file, use the path of the file provided. Otherwise the default will be RunInfo.xml. ",
+        category: "advanced"
       }
   }
 
@@ -248,8 +278,8 @@ task illumina_demux {
         demux_threads=32 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
         mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 80)
         # max_reads_in_ram_per_tile=600000 # deprecared in newer versions of picard, to be removed
-        max_records_in_ram=2000000
-        echo "Detected $total_tile_count tiles, interpreting as NovaSeq run."
+        max_records_in_ram=10000000
+        echo "Detected $total_tile_count tiles, interpreting as NovaSeq S2 run."
         echo "  **Note: Q20 threshold used since NovaSeq with RTA3 writes only four Q-score values: 2, 12, 23, and 37.**"
         echo "    See: https://www.illumina.com/content/dam/illumina-marketing/documents/products/appnotes/novaseq-hiseq-q30-app-note-770-2017-010.pdf"
     elif [ "$total_tile_count" -le 3744 ]; then
@@ -308,7 +338,7 @@ task illumina_demux {
       --out_runinfo runinfo.json \
       --loglevel=DEBUG
 
-    illumina.py guess_barcodes --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
+    illumina.py guess_barcodes ~{'--number_of_negative_controls ' + numberOfNegativeControls} --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
 
     illumina.py flowcell_metadata --inDir $FLOWCELL_DIR flowcellMetadataFile.tsv
 
@@ -358,7 +388,8 @@ task illumina_demux {
 
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
-    cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes > MEM_BYTES
+    set +o pipefail
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
   >>>
 
   output {
@@ -390,9 +421,11 @@ task illumina_demux {
     docker: docker
     memory: select_first([machine_mem_gb, 200]) + " GB"
     cpu: 32
-    disks: "local-disk 2625 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem3_ssd2_v2_x32"
     dx_timeout: "20H"
+    maxRetries: 2
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
   }
 }
@@ -402,6 +435,7 @@ task map_map_setdefault {
     File          map_map_json
     Array[String] sub_keys
   }
+  Int disk_size = 20
   command <<<
     python3 << CODE
     import json
@@ -422,8 +456,10 @@ task map_map_setdefault {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
-    disks: "local-disk 20 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }
 
@@ -431,6 +467,7 @@ task merge_maps {
   input {
     Array[File] maps_jsons
   }
+  Int disk_size = 20
   command <<<
     python3 << CODE
     import json
@@ -451,7 +488,9 @@ task merge_maps {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
-    disks: "local-disk 20 HDD"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }

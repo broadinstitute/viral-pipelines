@@ -1,4 +1,5 @@
 version 1.0
+#DX_SKIP_WORKFLOW
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_utils.wdl" as utils
@@ -8,16 +9,19 @@ workflow sarscov2_nextstrain_aligned_input {
         description: "Take aligned assemblies, build trees, and convert to json representation suitable for Nextstrain visualization. See https://nextstrain.org/docs/getting-started/ and https://nextstrain-augur.readthedocs.io/en/stable/"
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     input {
-        Array[File]+    aligned_sequences_fasta=["gs://nextstrain-data/files/ncov/open/aligned.fasta.xz"]
+        Array[File]+    aligned_sequences_fasta=["gs://nextstrain-data/files/ncov/open/aligned.fasta.zst"]
         Array[File]+    sample_metadata_tsvs=["gs://nextstrain-data/files/ncov/open/metadata.tsv.gz"]
 
         String          build_name
         File            builds_yaml
 
         Array[String]?  ancestral_traits_to_infer
+
+        String?         tree_root_seq_id="Wuhan-Hu-1/2019"
 
         File?           auspice_config
         File?           ref_fasta
@@ -53,7 +57,7 @@ workflow sarscov2_nextstrain_aligned_input {
     call utils.zcat {
         input:
             infiles     = aligned_sequences_fasta,
-            output_name = "all_samples_combined_assembly.fasta"
+            output_name = "all_samples_combined_assembly.fasta.zst"
     }
 
     #### merge metadata, compute derived cols
@@ -62,7 +66,8 @@ workflow sarscov2_nextstrain_aligned_input {
             input:
                 input_tsvs   = sample_metadata_tsvs,
                 id_col       = 'strain',
-                out_basename = "metadata-merged"
+                out_basename = "metadata-merged",
+                machine_mem_gb = 30
         }
     }
     call nextstrain.derived_cols {
@@ -71,10 +76,15 @@ workflow sarscov2_nextstrain_aligned_input {
     }
 
 
+    call nextstrain.nextstrain_deduplicate_sequences as dedup_seqs {
+        input:
+            sequences_fasta = zcat.combined
+    }
+
     #### subsample sequences with nextstrain yaml file
     call nextstrain.nextstrain_build_subsample as subsample {
         input:
-            alignment_msa_fasta = zcat.combined,
+            alignment_msa_fasta = dedup_seqs.sequences_deduplicated_fasta,
             sample_metadata_tsv = derived_cols.derived_metadata,
             build_name          = build_name,
             builds_yaml         = builds_yaml
@@ -104,8 +114,9 @@ workflow sarscov2_nextstrain_aligned_input {
     call nextstrain.refine_augur_tree {
         input:
             raw_tree   = draft_augur_tree.aligned_tree,
-            msa_or_vcf = subsample.subsampled_msa,
-            metadata   = derived_cols.derived_metadata
+            msa_or_vcf = augur_mask_sites.masked_sequences,
+            metadata   = derived_cols.derived_metadata,
+            root       = tree_root_seq_id
     }
 
     if(defined(ancestral_traits_to_infer) && length(select_first([ancestral_traits_to_infer,[]]))>0) {
@@ -132,7 +143,7 @@ workflow sarscov2_nextstrain_aligned_input {
     call nextstrain.ancestral_tree {
         input:
             tree       = refine_augur_tree.tree_refined,
-            msa_or_vcf = subsample.subsampled_msa
+            msa_or_vcf = augur_mask_sites.masked_sequences
     }
 
     call nextstrain.translate_augur_tree {
@@ -173,6 +184,7 @@ workflow sarscov2_nextstrain_aligned_input {
       File             metadata_merged      = derived_cols.derived_metadata
       File             keep_list            = fasta_to_ids.ids_txt
       File             subsampled_sequences = subsample.subsampled_msa
+      File             masked_alignment     = augur_mask_sites.masked_sequences
       Int              sequences_kept       = subsample.sequences_out
       Map[String, Int] counts_by_group      = subsample.counts_by_group
       

@@ -1,5 +1,7 @@
 version 1.0
 
+#DX_SKIP_WORKFLOW
+
 import "../tasks/tasks_terra.wdl" as terra
 
 workflow update_data_tables {
@@ -9,9 +11,9 @@ workflow update_data_tables {
         email:  "viral-ngs@broadinstitute.org"
     }
 
-    call terra.upload_entities_tsv
+    call terra.upload_reads_assemblies_entities_tsv
 
     output {
-        Array[String] tables = upload_entities_tsv.tables
+        Array[String] tables = upload_reads_assemblies_entities_tsv.tables
     }
 }

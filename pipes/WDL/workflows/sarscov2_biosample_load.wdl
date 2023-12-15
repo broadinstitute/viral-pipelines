@@ -10,6 +10,7 @@ workflow sarscov2_biosample_load {
         description: "Load Broad CRSP metadata and register samples with NCBI BioSample. Return attributes table, id map, etc."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     input {
@@ -32,7 +33,6 @@ workflow sarscov2_biosample_load {
 
     File meta_submit_tsv = select_first([biosample_submit_tsv, crsp_meta_etl.biosample_submit_tsv])
 
-    call utils.today
     call utils.md5sum {
         input:
             in_file = meta_submit_tsv
@@ -51,7 +51,7 @@ workflow sarscov2_biosample_load {
             input:
                 meta_submit_tsv = biosample_tsv_filter_preexisting.meta_unsubmitted_tsv,
                 config_js = ftp_config_js,
-                target_path = "/~{prod_test}/~{today.date}_~{md5sum.md5}/biosample"
+                target_path = "/~{prod_test}/biosample/~{basename(meta_submit_tsv, '.tsv')}/~{md5sum.md5}"
         }
     }
 

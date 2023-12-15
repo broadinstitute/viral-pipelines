@@ -7,6 +7,7 @@ workflow align_and_count_multiple_report {
         description: "Count the number of times reads map to provided reference sequences. Useful for counting spike-ins, etc."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     input {

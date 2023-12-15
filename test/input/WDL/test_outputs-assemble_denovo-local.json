@@ -2,12 +2,11 @@
     "assemble_denovo.subsample_read_count": 18624,
     "assemble_denovo.assembly_preimpute_length_unambiguous": 18889,
     "assemble_denovo.assembly_preimpute_length": 18889,
-    "assemble_denovo.bases_aligned": 1696396,
-    "assemble_denovo.read_pairs_aligned": 16800,
-    "assemble_denovo.reads_aligned": 16796,
-    "assemble_denovo.assembly_length_unambiguous": 18831,
-    "assemble_denovo.assembly_length": 18831,
+    "assemble_denovo.bases_aligned": 1695386,
+    "assemble_denovo.read_pairs_aligned": 16786,
+    "assemble_denovo.reads_aligned": 16786,
+    "assemble_denovo.assembly_length_unambiguous": 18843,
+    "assemble_denovo.assembly_length": 18843,
     "assemble_denovo.filter_read_count_post": 18710,
-    "assemble_denovo.depletion_read_count_post": 18710,
-    "assemble_denovo.depletion_read_count_pre": 18710
+    "assemble_denovo.depletion_read_count_post": 18710
 }

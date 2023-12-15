@@ -1,30 +1,39 @@
 version 1.0
 
-task detect_cross_contamination {
+task polyphonia_detect_cross_contamination {
   input {
-    Array[File] lofreq_vcfs
-    Array[File] genome_fastas
-    File        reference_fasta
+    Array[File]  lofreq_vcfs
+    Array[File]  genome_fastas
+    File         reference_fasta
 
-    Int         min_readcount       = 10
-    Float       min_maf             = 0.03
-    Float       min_genome_coverage = 0.98
-    Int         max_mismatches      = 1
+    Int          min_readcount       = 10
+    Float        min_maf             = 0.03
+    Float        min_genome_coverage = 0.95
+    Int          min_read_depth      = 100
+    Array[File]? read_depths
+    Int          max_mismatches      = 1
+    String?      masked_positions
+    File?        masked_positions_file
 
     Array[File]? plate_maps
-    Int?        plate_size                 = 96
-    Int?        plate_columns
-    Int?        plate_rows
-    Boolean?    compare_direct_neighbors   = true
-    Boolean?    compare_diagonal_neighbors = false
-    Boolean?    compare_full_row           = false
-    Boolean?    compare_full_column        = false
-    Boolean?    compare_full_plate         = false
+    Int?         plate_size                 = 96
+    Int?         plate_columns
+    Int?         plate_rows
+    Boolean?     compare_direct_neighbors   = true
+    Boolean?     compare_diagonal_neighbors = false
+    Boolean?     compare_full_row           = false
+    Boolean?     compare_full_column        = false
+    Boolean?     compare_full_plate         = false
+    
+    Boolean?     print_all_isnvs     = true
+    Boolean?     print_all           = false
 
-    String         out_basename = "potential_cross_contamination"
+    String       out_basename = "potential_cross_contamination"
 
-    String         docker = "quay.io/broadinstitute/polyphonia:latest"
+    String       docker = "quay.io/broadinstitute/polyphonia:latest"
   }
+
+  Int disk_size = 100
 
   parameter_meta {
     lofreq_vcfs:         { description: "VCF file(s) output by LoFreq or GATK; must use reference provided by reference_fasta" }
@@ -33,10 +42,14 @@ task detect_cross_contamination {
     
     min_readcount:       { description: "Minimum minor allele readcount for position to be considered heterozygous" }
     min_maf:             { description: "Minimum minor allele frequency for position to be considered heterozygous" }
+    min_read_depth:      { description: "Minimum read depth for a position to be used for comparison" }
+    read_depths:         { description: "Read depth tables (tab-separated, no header: reference name, position, read depth); provide alongside vcf files or heterozygosity tables if min-depth>0" }
     min_genome_coverage: { description: "Minimum proportion genome covered for a sample to be included" }
     max_mismatches:      { description: "Maximum allowed bases in contaminating sample consensus not matching contaminated sample alleles" }
+    masked_positions:    { description: "1-indexed positions to mask (e.g., 1-10,50,55-70)" }
+    masked_positions_file: { description: "1-indexed positions to mask, one per line" }
     
-    plate_maps:           { description: "Optional plate map(s) (tab-separated, no header: sample name, plate position (e.g., A8))" }
+    plate_maps:          { description: "Optional plate map(s) (tab-separated, no header: sample name, plate position (e.g., A8))" }
     plate_size:          { description: "Standard plate size (6-well, 12-well, 24, 48, 96, 384, 1536, 3456)" }
     plate_columns:       { description: "Number columns in plate (e.g., 1, 2, 3, 4)" }
     plate_rows:          { description: "Number rows in plate (e.g., A, B, C, D)" }
@@ -46,6 +59,8 @@ task detect_cross_contamination {
     compare_full_column: { description: "Compare samples in the same column (e.g., column 8)" }
     compare_full_plate:  { description: "Compare all samples in the same plate map" }
     
+    print_all_isnvs:     { description: "Include all threshold-passing samples in iSNVs visualizations, including samples without plate neighbors" }
+    print_all:           { description: "Output outcomes of all comparisons (all comparisons are marked as potential cross-contamination)" }
   }
 
   command <<<
@@ -66,10 +81,14 @@ task detect_cross_contamination {
       --ref ~{reference_fasta} \
       --vcf ~{sep=' ' lofreq_vcfs} \
       --consensus ~{sep=' ' genome_fastas} \
+      --read-depths ~{sep=' ' read_depths} \
       ~{'--min-covered ' + min_genome_coverage} \
+      ~{'--min-depth ' + min_read_depth} \
       ~{'--min-readcount ' + min_readcount} \
       ~{'--max-mismatches ' + max_mismatches} \
       ~{'--min-maf ' + min_maf} \
+      ~{'--masked-positions ' + masked_positions} \
+      ~{'--masked-positions-file ' + masked_positions_file} \
       $PLATE_MAPS_INPUT \
       ~{'--plate-size ' + plate_size} \
       ~{'--plate-columns ' + plate_columns} \
@@ -83,7 +102,9 @@ task detect_cross_contamination {
       --out-figures figs \
       --cores `nproc` \
       --verbose TRUE \
-      --overwrite TRUE
+      --overwrite TRUE \
+      --print-all-iSNVs ~{true="TRUE" false="FALSE" print_all_isnvs} \
+      --print-all ~{true="TRUE" false="FALSE" print_all}
   >>>
 
   output {
@@ -96,8 +117,10 @@ task detect_cross_contamination {
     docker: docker
     cpu:    4
     memory: "13 GB"
-    disks:  "local-disk 100 HDD"
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
+    maxRetries: 2
   }
 }
 
@@ -110,20 +133,33 @@ task lofreq {
     String    out_basename = basename(aligned_bam, '.bam')
     String    docker = "quay.io/biocontainers/lofreq:2.1.5--py38h588ecb2_4"
   }
+  Int disk_size = 200
   command <<<
     set -e -o pipefail
 
     lofreq version | grep version | sed 's/.* \(.*\)/\1/g' | tee LOFREQ_VERSION
 
-    samtools faidx "~{reference_fasta}"
-    samtools index "~{aligned_bam}"
+    # make local copies because CWD is writeable but localization dir isn't always
+    cp "~{reference_fasta}" reference.fasta
+    cp "~{aligned_bam}" aligned.bam
+    
+    # samtools faidx fails if fasta is empty
+    if [ $(grep -v '^>' reference.fasta | tr -d '\nNn' | wc -c) == "0" ]; then
+      touch "~{out_basename}.vcf"
+      touch "~{out_basename}.unfiltered.vcf.gz"
+      exit 0
+    fi
+    
+    # index for lofreq
+    samtools faidx reference.fasta
+    samtools index aligned.bam
 
     OUTPUT_ALL_POS="~{true='output_all' false='' output_all_positions}"
     if [ -n "$OUTPUT_ALL_POS" ]; then
       lofreq call-parallel --pp-threads $(nproc --all) --no-default-filter --bonf 1 --sig 1 \
-      -f "~{reference_fasta}" \
+      -f "reference.fasta" \
       -o "~{out_basename}.unfiltered.vcf.gz" \
-      "~{aligned_bam}"
+      "aligned.bam"
       lofreq filter --print-all \
       --cov-min 10 \
       --af-min 0.01 \
@@ -138,15 +174,15 @@ task lofreq {
       --out "~{out_basename}.vcf"
     else
       lofreq call-parallel --pp-threads $(nproc --all) \
-        -f "~{reference_fasta}" \
+        -f "reference.fasta" \
         -o "~{out_basename}.vcf" \
-        "~{aligned_bam}"
+        "aligned.bam"
     fi
   >>>
-
   output {
-    File   report_vcf     = "~{out_basename}.vcf"
-    String lofreq_version = read_string("LOFREQ_VERSION")
+    File   report_vcf            = "~{out_basename}.vcf"
+    File   report_vcf_unfiltered = "~{out_basename}.unfiltered.vcf.gz"
+    String lofreq_version        = read_string("LOFREQ_VERSION")
   }
   runtime {
     docker: docker
@@ -154,6 +190,7 @@ task lofreq {
     memory: "30 GB"
     disks:  "local-disk 200 HDD"
     dx_instance_type: "mem2_ssd1_v2_x8"
+    maxRetries: 2
   }
 }
 
@@ -168,10 +205,11 @@ task isnvs_per_sample {
     Boolean removeDoublyMappedReads = true
 
     Int?    machine_mem_gb
-    String  docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String  docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
 
     String  sample_name = basename(basename(basename(mapped_bam, ".bam"), ".all"), ".mapped")
   }
+  
 
   command {
     intrahost.py --version | tee VERSION
@@ -193,6 +231,7 @@ task isnvs_per_sample {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 7]) + " GB"
     dx_instance_type: "mem1_ssd1_v2_x8"
+    maxRetries: 2
   }
 }
 
@@ -209,7 +248,7 @@ task isnvs_vcf {
     Boolean        naiveFilter = false
 
     Int?           machine_mem_gb
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
   }
 
   parameter_meta {
@@ -270,6 +309,7 @@ task isnvs_vcf {
     docker: "${docker}"
     memory: select_first([machine_mem_gb, 4]) + " GB"
     dx_instance_type: "mem1_ssd1_v2_x4"
+    maxRetries: 2
   }
 }
 
@@ -282,10 +322,13 @@ task annotate_vcf_snpeff {
     String?        emailAddress
 
     Int?           machine_mem_gb
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.19.1"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
 
     String         output_basename = basename(basename(in_vcf, ".gz"), ".vcf")
   }
+
+  Int disk_size = 375
+
 
   parameter_meta {
     in_vcf:             { description: "input VCF to annotate with snpEff", patterns: ["*.vcf","*.vcf.gz"]}
@@ -359,7 +402,9 @@ task annotate_vcf_snpeff {
   runtime {
     docker: docker
     memory: select_first([machine_mem_gb, 4]) + " GB"
-    disks:  "local-disk 375 LOCAL"
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
+    maxRetries: 2
   }
 }
