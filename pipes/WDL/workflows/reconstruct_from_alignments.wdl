@@ -8,7 +8,7 @@ import "../tasks/tasks_utils.wdl" as utils
 
 workflow reconstruct_from_alignments {
     meta {
-        description: "TO DO"
+        description: "Infer disease transmission events from sequence (consensus + intrahost variation) data using the reconstructR tool"
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
         allowNestedInputs: true
@@ -46,21 +46,25 @@ workflow reconstruct_from_alignments {
                 sample_name       = basename(bam, '.bam')
         }
     }
-
-    # TO DO: create depth_csv from plot_ref_coverage.coverage_tsv
+    call reports.merge_coverage_per_position {
+        input:
+            coverage_tsvs = plot_ref_coverage.coverage_tsv,
+            ref_fasta = ref_fasta
+    }
 
     # call reconstructR
     call interhost.reconstructr {
         input:
             ref_fasta = ref_fasta,
             lofreq_vcfs = isnvs_ref.report_vcf,
-            msa_fasta = mafft.aligned_sequences
-        # TO DO: depth_csv = something computed above
+            msa_fasta = mafft.aligned_sequences,
+            depth_csv = merge_coverage_per_position.coverage_multi_sample_per_position_csv
     }
 
     output {
       File         msa_fasta                      = mafft.aligned_sequences
       Array[File]  lofreq_isnvs                   = isnvs_ref.report_vcf
+      File         depth_csv                      = merge_coverage_per_position.coverage_multi_sample_per_position_csv
       File         reconstructr_tabulated_tsv_gz  = reconstructr.tabulated_tsv_gz
       File         reconstructr_deciphered_tsv_gz = reconstructr.deciphered_tsv_gz
     }

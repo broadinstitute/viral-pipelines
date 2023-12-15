@@ -545,6 +545,7 @@ task reconstructr {
 
     Int          cpus = 8
     Int          machine_mem_gb = 15
+    Int          disk_size = 375
     String       docker = "ghcr.io/broadinstitute/reconstructr:main"
   }
 
@@ -552,7 +553,7 @@ task reconstructr {
     set -e -o pipefail
 
     # stage input files
-    mkdir -p input_data input_data/vcf
+    mkdir -p input_data input_data/vcf input_data/coverage
     /opt/reconstructR/scripts/cp_and_decompress.sh "~{msa_fasta}" input_data/aligned.fasta
     /opt/reconstructR/scripts/cp_and_decompress.sh "~{ref_fasta}" input_data/ref.fasta
     /opt/reconstructR/scripts/cp_and_decompress.sh "~{date_csv}" input_data/date.csv
@@ -585,6 +586,8 @@ task reconstructr {
     docker: docker
     memory: machine_mem_gb + " GB"
     cpu: cpus
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 1
   }
