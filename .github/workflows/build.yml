@@ -2,6 +2,7 @@ name: "viral-pipelines CI"
 
 on:
   push:
+  merge_group:
   pull_request:
     branches:
       - master
