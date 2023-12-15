@@ -172,7 +172,7 @@ task nextclade_many_samples {
         # gather runtime metrics
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -450,7 +450,7 @@ task nextstrain_build_subsample {
         File?  drop_list
 
         Int    machine_mem_gb = 50
-        String docker = "nextstrain/base:build-20211012T204409Z"
+        String docker = "nextstrain/base:build-20230905T192825Z"
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
         Int    disk_size = 750
     }
@@ -566,7 +566,7 @@ task nextstrain_build_subsample {
         cd ..
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -594,7 +594,7 @@ task nextstrain_build_subsample {
 task nextstrain_ncov_defaults {
     input {
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
-        String docker                      = "nextstrain/base:build-20211012T204409Z"
+        String docker                      = "nextstrain/base:build-20230905T192825Z"
         Int    disk_size = 50
     }
     command {
@@ -632,7 +632,7 @@ task nextstrain_deduplicate_sequences {
         Boolean error_on_seq_diff = false
 
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
-        String docker                      = "nextstrain/base:build-20211012T204409Z"
+        String docker                      = "nextstrain/base:build-20230905T192825Z"
         Int disk_size = 750
     }
 
@@ -686,7 +686,7 @@ task nextstrain_ncov_sanitize_gisaid_data {
         String? prefix_to_strip
 
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
-        String docker                      = "nextstrain/base:build-20211012T204409Z"
+        String docker                      = "nextstrain/base:build-20230905T192825Z"
         Int    disk_size = 750
     }
 
@@ -762,7 +762,7 @@ task filter_subsample_sequences {
         Array[String]? exclude_where
         Array[String]? include_where
 
-        String         docker = "nextstrain/base:build-20211012T204409Z"
+        String         docker = "nextstrain/base:build-20230905T192825Z"
         Int            disk_size = 750
     }
     parameter_meta {
@@ -815,7 +815,7 @@ task filter_subsample_sequences {
         grep "strains passed all filters" STDOUT | cut -f 1 -d ' ' > OUT_COUNT
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -846,14 +846,15 @@ task filter_sequences_to_list {
         File         sequences
         Array[File]? keep_list
 
-        String       out_fname = sub(sub(basename(sequences), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
-        String       docker = "nextstrain/base:build-20211012T204409Z"
+        String       out_fname = sub(sub(basename(sequences, ".zst"), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
+        # Prior docker image: "nextstrain/base:build-20211012T204409Z"
+        String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
         Int          disk_size = 750
     }
     parameter_meta {
         sequences: {
           description: "Set of sequences (unaligned fasta or aligned fasta -- one sequence per genome) or variants (vcf format) to subsample using augur filter.",
-          patterns: ["*.fasta", "*.fa", "*.vcf", "*.vcf.gz"]
+          patterns: ["*.fasta", "*.fa", "*.fasta.zst", "*.vcf", "*.vcf.gz"]
         }
         keep_list: {
           description: "List of strain ids.",
@@ -876,13 +877,14 @@ task filter_sequences_to_list {
                 echo filtering fasta file
     python3 <<CODE
     import Bio.SeqIO
+    import util.file
     keep_list = set()
     with open('keep_list.txt', 'rt') as inf:
         keep_list = set(line.strip() for line in inf)
     n_total = 0
     n_kept = 0
-    with open('~{sequences}', 'rt') as inf:
-        with open('~{out_fname}', 'wt') as outf:
+    with util.file.open_or_gzopen('~{sequences}', 'rt') as inf:
+        with util.file.open_or_gzopen('~{out_fname}', 'wt') as outf:
             for seq in Bio.SeqIO.parse(inf, 'fasta'):
                 n_total += 1
                 if seq.id in keep_list:
@@ -911,7 +913,7 @@ task filter_sequences_to_list {
 
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1002,7 +1004,7 @@ task mafft_one_chr {
         # profiling and stats
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1110,7 +1112,7 @@ task mafft_one_chr_chunked {
         # profiling and stats
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1143,7 +1145,7 @@ task augur_mafft_align {
         Boolean fill_gaps = true
         Boolean remove_reference = true
 
-        String  docker = "nextstrain/base:build-20211012T204409Z"
+        String  docker = "nextstrain/base:build-20230905T192825Z"
         Int     disk_size = 750
     }
     command <<<
@@ -1159,7 +1161,7 @@ task augur_mafft_align {
             --nthreads auto
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1216,7 +1218,7 @@ task augur_mask_sites {
         File   sequences
         File?  mask_bed
 
-        String docker = "nextstrain/base:build-20211012T204409Z"
+        String docker = "nextstrain/base:build-20230905T192825Z"
         Int    disk_size = 750
     }
     parameter_meta {
@@ -1239,7 +1241,7 @@ task augur_mask_sites {
         fi
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1275,7 +1277,7 @@ task draft_augur_tree {
 
         Int     cpus = 64
         Int     machine_mem_gb = 32
-        String  docker = "nextstrain/base:build-20211012T204409Z"
+        String  docker = "nextstrain/base:build-20230905T192825Z"
         Int     disk_size = 1250
     }
     parameter_meta {
@@ -1288,7 +1290,7 @@ task draft_augur_tree {
     command <<<
         set -e
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur tree --alignment "~{msa_or_vcf}" \
+        AUGUR_RECURSION_LIMIT=100000 augur tree --alignment "~{msa_or_vcf}" \
             --output "~{out_basename}_~{method}.nwk" \
             --method "~{method}" \
             --substitution-model ~{default="GTR" substitution_model} \
@@ -1298,7 +1300,7 @@ task draft_augur_tree {
             --nthreads auto
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1344,7 +1346,7 @@ task refine_augur_tree {
         String?  divergence_units = "mutations"
         File?    vcf_reference
 
-        String   docker = "nextstrain/base:build-20211012T204409Z"
+        String   docker = "nextstrain/base:build-20230905T192825Z"
         Int      disk_size = 750
         Int      machine_mem_gb = 75
     }
@@ -1358,7 +1360,7 @@ task refine_augur_tree {
     command <<<
         set -e
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur refine \
+        AUGUR_RECURSION_LIMIT=100000 augur refine \
             --tree "~{raw_tree}" \
             --alignment "~{msa_or_vcf}" \
             --metadata "~{metadata}" \
@@ -1382,7 +1384,7 @@ task refine_augur_tree {
             ~{"--vcf-reference " + vcf_reference}
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1418,14 +1420,14 @@ task ancestral_traits {
         Float?        sampling_bias_correction
 
         Int           machine_mem_gb = 32
-        String        docker = "nextstrain/base:build-20211012T204409Z"
+        String        docker = "nextstrain/base:build-20230905T192825Z"
         Int           disk_size = 750
     }
     String out_basename = basename(tree, '.nwk')
     command <<<
         set -e
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur traits \
+        AUGUR_RECURSION_LIMIT=100000 augur traits \
             --tree "~{tree}" \
             --metadata "~{metadata}" \
             --columns ~{sep=" " columns} \
@@ -1435,7 +1437,7 @@ task ancestral_traits {
             ~{true="--confidence" false="" confidence}
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1471,7 +1473,7 @@ task ancestral_tree {
         File?    vcf_reference
         File?    output_vcf
 
-        String   docker = "nextstrain/base:build-20211012T204409Z"
+        String   docker = "nextstrain/base:build-20230905T192825Z"
         Int      disk_size = 300
     }
     parameter_meta {
@@ -1484,7 +1486,7 @@ task ancestral_tree {
     command <<<
         set -e
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur ancestral \
+        AUGUR_RECURSION_LIMIT=100000 augur ancestral \
             --tree "~{tree}" \
             --alignment "~{msa_or_vcf}" \
             --output-node-data "~{out_basename}_nt_muts.json" \
@@ -1497,7 +1499,7 @@ task ancestral_tree {
             ~{true="--infer-ambiguous" false="" infer_ambiguous}
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1532,21 +1534,21 @@ task translate_augur_tree {
         File?  vcf_reference_output
         File?  vcf_reference
 
-        String docker = "nextstrain/base:build-20211012T204409Z"
+        String docker = "nextstrain/base:build-20230905T192825Z"
         Int    disk_size = 300
     }
     String out_basename = basename(tree, '.nwk')
     command <<<
         set -e
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur translate --tree "~{tree}" \
+        AUGUR_RECURSION_LIMIT=500000 augur translate --tree "~{tree}" \
             --ancestral-sequences "~{nt_muts}" \
             --reference-sequence "~{genbank_gb}" \
             ~{"--vcf-reference-output " + vcf_reference_output} \
             ~{"--vcf-reference " + vcf_reference} \
             ~{"--genes " + genes} \
             --output-node-data ~{out_basename}_aa_muts.json
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1589,14 +1591,14 @@ task tip_frequencies {
         Boolean  include_internal_nodes = false
 
         Int      machine_mem_gb = 64
-        String   docker = "nextstrain/base:build-20211012T204409Z"
+        String   docker = "nextstrain/base:build-20230905T192825Z"
         String   out_basename = basename(tree, '.nwk')
         Int      disk_size = 200
     }
     command <<<
         set -e
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur frequencies \
+        AUGUR_RECURSION_LIMIT=100000 augur frequencies \
             --method "~{method}" \
             --tree "~{tree}" \
             --metadata "~{metadata}" \
@@ -1617,7 +1619,7 @@ task tip_frequencies {
 
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1645,24 +1647,24 @@ task assign_clades_to_nodes {
     input {
         File tree_nwk
         File nt_muts_json
-        File aa_muts_json
+        File? aa_muts_json
         File ref_fasta
         File clades_tsv
 
-        String docker = "nextstrain/base:build-20211012T204409Z"
+        String docker = "nextstrain/base:build-20230905T192825Z"
         Int    disk_size = 300
     }
     String out_basename = basename(basename(tree_nwk, ".nwk"), "_timetree")
     command <<<
         set -e
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur clades \
+        AUGUR_RECURSION_LIMIT=100000 augur clades \
         --tree "~{tree_nwk}" \
-        --mutations "~{nt_muts_json}" "~{aa_muts_json}" \
+        --mutations "~{nt_muts_json}" ~{'"' + aa_muts_json + '"'} \
         --reference "~{ref_fasta}" \
         --clades "~{clades_tsv}" \
         --output-node-data "~{out_basename}_clades.json"
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1694,14 +1696,14 @@ task augur_import_beast {
         String? tip_date_delimiter
 
         Int     machine_mem_gb = 3
-        String  docker = "nextstrain/base:build-20211012T204409Z"
+        String  docker = "nextstrain/base:build-20230905T192825Z"
         Int     disk_size = 150
     }
     String tree_basename = basename(beast_mcc_tree, ".tree")
     command <<<
         set -e
         augur version > VERSION
-        AUGUR_RECURSION_LIMIT=10000 augur import beast \
+        AUGUR_RECURSION_LIMIT=100000 augur import beast \
             --mcc "~{beast_mcc_tree}" \
             --output-tree "~{tree_basename}.nwk" \
             --output-node-data "~{tree_basename}.json" \
@@ -1711,7 +1713,7 @@ task augur_import_beast {
             ~{"--tip-date-delimeter " + tip_date_delimiter}
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1755,7 +1757,7 @@ task export_auspice_json {
         String out_basename = basename(basename(tree, ".nwk"), "_timetree")
 
         Int    machine_mem_gb = 64
-        String docker = "nextstrain/base:build-20211012T204409Z"
+        String docker = "nextstrain/base:build-20230905T192825Z"
         Int    disk_size = 300
     }
     
@@ -1803,7 +1805,7 @@ task export_auspice_json {
         echo --auspice-config >> exportargs
         echo "~{auspice_config}" >> exportargs
 
-        (export AUGUR_RECURSION_LIMIT=15000; cat exportargs | grep . | tr '\n' '\0' | xargs -0 -t augur export v2 \
+        (export AUGUR_RECURSION_LIMIT=100000; cat exportargs | grep . | tr '\n' '\0' | xargs -0 -t augur export v2 \
             ~{"--metadata " + sample_metadata} \
             ~{"--lat-longs " + lat_longs_tsv} \
             ~{"--colors " + colors_tsv} \
@@ -1814,7 +1816,7 @@ task export_auspice_json {
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
         set +o pipefail
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker

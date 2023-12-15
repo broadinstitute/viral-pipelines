@@ -14,7 +14,7 @@ app_basename=os.path.splitext(os.path.basename(app_yaml_path))[0]
 output_json_filename=app_basename+'.json'
 
 with open(app_yaml_path) as infile:
-    data = yaml.load(infile)
+    data = yaml.safe_load(infile)
     data["00COMMENT"] = "This {}.json has been generated from {} automatically using dx-yml-build".format(app_basename,app_yaml_path)
     with open(output_json_filename, 'w') as outfile:
         json.dump(data, outfile, sort_keys=True, indent=2)

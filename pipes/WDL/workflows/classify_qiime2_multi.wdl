@@ -1,5 +1,7 @@
 version 1.0
 
+#DX_SKIP_WORKFLOW
+
 import "../tasks/tasks_16S_amplicon.wdl" as qiime 
 
 workflow amplicon16S_analysis {

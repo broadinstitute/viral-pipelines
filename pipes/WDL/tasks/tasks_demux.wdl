@@ -159,6 +159,7 @@ task illumina_demux {
     Int?    threads
     String? runStartDate
     Int?    maxRecordsInRam
+    Int?    numberOfNegativeControls
 
     Int?    machine_mem_gb
     Int     disk_size = 2625
@@ -337,7 +338,7 @@ task illumina_demux {
       --out_runinfo runinfo.json \
       --loglevel=DEBUG
 
-    illumina.py guess_barcodes --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
+    illumina.py guess_barcodes ~{'--number_of_negative_controls ' + numberOfNegativeControls} --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
 
     illumina.py flowcell_metadata --inDir $FLOWCELL_DIR flowcellMetadataFile.tsv
 
@@ -388,7 +389,7 @@ task illumina_demux {
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
     set +o pipefail
-    { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
   >>>
 
   output {
