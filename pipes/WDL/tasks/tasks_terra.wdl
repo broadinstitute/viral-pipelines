@@ -185,10 +185,15 @@ task check_terra_env {
       echo "Not running on Terra+GCP"
     fi
     ls -1 /sys
+    echo "--"
     ls -1 /sys/fs
+    echo "--"
     ls -1 /sys/fs/cgroup
+    echo "-- memory.peak:"
+    cat /sys/fs/cgroup/memory.peak
+    echo "--"
     #ls -1 /sys/fs/cgroup/memory
-    echo -n'' "MEM_BYTES: "; { if [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } | tee MEM_BYTES
+    echo -n'' "MEM_BYTES: "; { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } | tee MEM_BYTES
   >>>
   output {
     Boolean is_running_on_terra    = read_boolean("RUNNING_ON_TERRA")
@@ -550,7 +555,7 @@ task create_or_update_sample_tables {
             print("Upload complete. Check your workspace for new table!")
 
     CODE
-    { if [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
   >>>
   runtime {
     docker: docker
