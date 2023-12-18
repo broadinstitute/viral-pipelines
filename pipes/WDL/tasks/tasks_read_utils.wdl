@@ -86,7 +86,7 @@ task get_bam_samplename {
     File    bam
     String  docker = "quay.io/broadinstitute/viral-core:2.1.33"
   }
-  Int   disk_size = size(bam) + 50
+  Int   disk_size = round(size(bam, "GB")) + 50
   command <<<
     set -e -o pipefail
     samtools view -H "~{bam}" | \
