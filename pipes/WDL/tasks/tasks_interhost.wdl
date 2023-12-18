@@ -588,6 +588,7 @@ task reconstructr {
     cpu: cpus
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
+    bootDiskSizeGb: "50 GB"
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 1
   }
