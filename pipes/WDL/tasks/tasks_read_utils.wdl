@@ -103,7 +103,7 @@ task get_bam_samplename {
     maxRetries: 2
   }
   output {
-    String sample_name = read_string(SAMPLE_NAME)
+    String sample_name = read_string("SAMPLE_NAME")
   }
 }
 
