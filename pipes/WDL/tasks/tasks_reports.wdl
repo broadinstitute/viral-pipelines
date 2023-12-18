@@ -238,7 +238,7 @@ task merge_coverage_per_position {
     # Loop through a list of file paths and read in each depth.tsv generated as part of assemble_refbased
     depths_dfs = []
     for in_tsv in ("~{sep='", "' coverage_tsvs}"):
-        sample_name = '.'.join(os.path.basename(in_tsv).split('.')[:-1])
+        sample_name = '.'.join(os.path.basename(in_tsv).split('.')[:-2])
         sample_depths_df = pd.read_csv(in_tsv, sep='\t', header=None
             ).rename(columns={0:'Ref',1:'Position',2:sample_name})
         depths_dfs.append(sample_depths_df)

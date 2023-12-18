@@ -4,6 +4,7 @@ import "../tasks/tasks_interhost.wdl" as interhost
 import "../tasks/tasks_intrahost.wdl" as intrahost
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_reports.wdl" as reports
+import "../tasks/tasks_read_utils.wdl" as read_utils
 import "../tasks/tasks_utils.wdl" as utils
 
 workflow reconstruct_from_alignments {
@@ -30,20 +31,26 @@ workflow reconstruct_from_alignments {
         input:
             sequences = zcat.combined,
             ref_fasta = ref_fasta,
+            remove_reference = true,
             basename  = "mafft_msa.fasta"
     }
 
     # call iSNVs with lofreq and calculate coverage depths
     scatter(bam in aligned_trimmed_bams) {
+        call read_utils.get_bam_samplename {
+            input:
+                bam = bam
+        }
         call intrahost.lofreq as isnvs_ref {
             input:
                 reference_fasta = ref_fasta,
-                aligned_bam     = bam
+                aligned_bam     = bam,
+                out_basename    = get_bam_samplename.sample_name
         }
         call reports.plot_coverage as plot_ref_coverage {
             input:
                 aligned_reads_bam = bam,
-                sample_name       = basename(bam, '.bam')
+                sample_name       = get_bam_samplename.sample_name
         }
     }
     call reports.merge_coverage_per_position {
