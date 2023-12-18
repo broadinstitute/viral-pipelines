@@ -232,7 +232,7 @@ task merge_coverage_per_position {
     # get genome length
     genome_length = 0
     with open('~{ref_fasta}', 'rt') as inf:
-      for seq in Bio.SeqIO.parse(inf, 'fasta')
+      for seq in Bio.SeqIO.parse(inf, 'fasta'):
         genome_length += len(seq.seq.ungap())
 
     # Loop through a list of file paths and read in each depth.tsv generated as part of assemble_refbased
