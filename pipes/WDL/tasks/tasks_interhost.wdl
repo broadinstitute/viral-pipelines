@@ -574,12 +574,20 @@ task reconstructr {
 
     # compress outputs
     pigz -9 -p $(nproc) "~{out_basename}-tabulate.tsv" "~{out_basename}-decipher.tsv" "~{out_basename}-states.Rdata"
+
+    # profiling and stats
+    cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+    cat /proc/loadavg > CPU_LOAD
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
   >>>
 
   output {
-    File tabulated_tsv_gz     = "~{out_basename}-tabulate.tsv.gz"
-    File deciphered_tsv_gz    = "~{out_basename}-decipher.tsv.gz"
-    File mcmc_states_Rdata_gz = "~{out_basename}-states.Rdata.gz"
+    File   tabulated_tsv_gz      = "~{out_basename}-tabulate.tsv.gz"
+    File   deciphered_tsv_gz     = "~{out_basename}-decipher.tsv.gz"
+    File   mcmc_states_Rdata_gz  = "~{out_basename}-states.Rdata.gz"
+    Int    max_ram_gb            = ceil(read_float("MEM_BYTES")/1000000000)
+    Int    runtime_sec           = ceil(read_float("UPTIME_SEC"))
+    String cpu_load              = read_string("CPU_LOAD")
   }
 
   runtime {
