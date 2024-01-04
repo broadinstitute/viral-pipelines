@@ -112,7 +112,6 @@ task lca_megablast {
 
     # Run LCA
     retrieve_top_blast_hits_LCA_for_each_sequence.pl results/"~{fasta_basename}.fasta_megablast_nt.out" taxdump/nodes.dmp 10 > "results/~{fasta_basename}.fasta_megablast_nt.out_LCA.txt"
-    ​
     # Done
 >>>
 
