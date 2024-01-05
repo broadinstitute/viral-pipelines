@@ -192,7 +192,7 @@ task structured_comments {
 
     File?  filter_to_ids
 
-    String docker = "quay.io/broadinstitute/viral-core:2.1.33"
+    String docker = "quay.io/broadinstitute/viral-core:2.2.4"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -272,7 +272,7 @@ task rename_fasta_header {
 
     String out_basename = basename(genome_fasta, ".fasta")
 
-    String docker = "quay.io/broadinstitute/viral-core:2.1.33"
+    String docker = "quay.io/broadinstitute/viral-core:2.2.4"
   }
   command {
     set -e
@@ -437,7 +437,7 @@ task sra_meta_prep {
     Boolean     paired
 
     String      out_name = "sra_metadata.tsv"
-    String      docker="quay.io/broadinstitute/viral-core:2.1.33"
+    String      docker="quay.io/broadinstitute/viral-core:2.2.4"
   }
   Int disk_size = 100
   parameter_meta {
@@ -896,7 +896,7 @@ task package_sc2_genbank_ftp_submission {
     String spuid_namespace
     String account_name
 
-    String  docker = "quay.io/broadinstitute/viral-baseimage:0.1.20"
+    String  docker = "quay.io/broadinstitute/viral-baseimage:0.2.0"
   }
   command <<<
     set -e
@@ -960,7 +960,7 @@ task vadr {
     File   genome_fasta
     String vadr_opts = "--glsearch -s -r --nomisc --mkey sarscov2 --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn"
 
-    String docker = "quay.io/staphb/vadr:1.5.1"
+    String docker = "quay.io/staphb/vadr:1.6.3"
     Int    minlen = 50
     Int    maxlen = 30000
     Int    mem_size = 4
