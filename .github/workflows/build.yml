@@ -182,6 +182,17 @@ jobs:
     needs: validate_wdl_womtool
     runs-on: ubuntu-20.04
     steps:
+      # hacky action to clear additional space on GitHub Actions runner
+      # https://github.com/easimon/maximize-build-space
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 512
+          swap-size-mb: 1024
+          remove-dotnet: 'true'
+          remove-codeql: 'true'
+          remove-android: 'true'
+          #remove-haskell: 'true'
       - name: checkout repository
         uses: actions/checkout@v3
       # fetch git tags (tagged releases) because 
@@ -230,6 +241,17 @@ jobs:
     needs: validate_wdl_miniwdl
     runs-on: ubuntu-20.04
     steps:
+      # hacky action to clear additional space on GitHub Actions runner
+      # https://github.com/easimon/maximize-build-space
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 512
+          swap-size-mb: 1024
+          remove-dotnet: 'true'
+          remove-codeql: 'true'
+          remove-android: 'true'
+          #remove-haskell: 'true'
       - name: checkout repository
         uses: actions/checkout@v3
       # fetch git tags (tagged releases) because 
