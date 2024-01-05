@@ -213,7 +213,7 @@ task kraken2 {
     Int?   min_base_qual
 
     Int    machine_mem_gb = 72
-    String docker = "quay.io/broadinstitute/viral-classify:2.1.33.0"
+    String docker = "quay.io/broadinstitute/viral-classify:2.2.3.0"
   }
 
   parameter_meta {
@@ -348,7 +348,7 @@ task build_kraken2_db {
     Int?          zstd_compression_level
 
     Int?          machine_mem_gb
-    String        docker = "quay.io/broadinstitute/viral-classify:2.1.33.0"
+    String        docker = "quay.io/broadinstitute/viral-classify:2.2.3.0"
   }
 
   Int disk_size = 750
@@ -490,7 +490,7 @@ task blastx {
     File   krona_taxonomy_db_tgz
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-classify:2.1.33.0"
+    String docker = "quay.io/broadinstitute/viral-classify:2.2.3.0"
   }
 
   parameter_meta {
@@ -580,7 +580,7 @@ task krona {
     Int?         magnitude_column
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-classify:2.1.33.0"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.2.3.0"
   }
 
   Int disk_size = 50
@@ -687,7 +687,7 @@ task filter_bam_to_taxa {
     String         out_filename_suffix = "filtered"
 
     Int?           machine_mem_gb
-    String         docker = "quay.io/broadinstitute/viral-classify:2.1.33.0"
+    String         docker = "quay.io/broadinstitute/viral-classify:2.2.3.0"
   }
 
   String out_basename = basename(classified_bam, ".bam") + "." + out_filename_suffix
@@ -774,7 +774,7 @@ task kaiju {
     File   krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-classify:2.1.33.0"
+    String docker = "quay.io/broadinstitute/viral-classify:2.2.3.0"
   }
 
   String   input_basename = basename(reads_unmapped_bam, ".bam")
