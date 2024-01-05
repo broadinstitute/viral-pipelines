@@ -210,6 +210,68 @@ task plot_coverage {
   }
 }
 
+task merge_coverage_per_position {
+  input {
+    Array[File]+ coverage_tsvs
+    File         ref_fasta
+
+    String       out_report_name = "coverage_report.csv"
+    Int          disk_size = 100
+    String       docker = "quay.io/broadinstitute/py3-bio:0.1.2"
+  }
+
+  command <<<
+    set -e
+
+    python3<<CODE
+    import os
+    import pandas as pd
+    from functools import reduce
+    import Bio.SeqIO
+
+    # get genome length
+    genome_length = 0
+    with open('~{ref_fasta}', 'rt') as inf:
+      for seq in Bio.SeqIO.parse(inf, 'fasta'):
+        genome_length += len(seq.seq.ungap())
+
+    # Loop through a list of file paths and read in each depth.tsv generated as part of assemble_refbased
+    depths_dfs = []
+    for in_tsv in ("~{sep='", "' coverage_tsvs}"):
+        sample_name = '.'.join(os.path.basename(in_tsv).split('.')[:-2])
+        sample_depths_df = pd.read_csv(in_tsv, sep='\t', header=None
+            ).rename(columns={0:'Ref',1:'Position',2:sample_name})
+        depths_dfs.append(sample_depths_df)
+
+    # Condense all depths into a single dataframe
+    df_merged = reduce(lambda left,right:
+        pd.merge(left,right,on=['Ref','Position'],how='outer'),
+        depths_dfs)
+    df_merged = df_merged.fillna(0)
+
+    #Create dummy df that contains all positions along the genome
+    dummy_df = pd.DataFrame([range(1,genome_length)]).T.rename(columns={0:'Position'})
+    df_merged = df_merged.merge(dummy_df, on='Position', how='right').fillna(0)
+    df_merged = df_merged.drop(['Ref'], axis=1)
+    df_merged.to_csv("~{out_report_name}", index=False)
+    CODE
+  >>>
+
+  output {
+    File   coverage_multi_sample_per_position_csv  = out_report_name
+  }
+
+  runtime {
+    docker: "${docker}"
+    memory: "2 GB"
+    cpu: 2
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd2_v2_x4"
+    maxRetries: 2
+  }
+}
+
 task coverage_report {
   input {
     Array[File]+ mapped_bams
@@ -580,7 +642,7 @@ task compare_two_genomes {
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     cat /proc/loadavg > CPU_LOAD
     set +o pipefail
-    { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
   >>>
 
   output {

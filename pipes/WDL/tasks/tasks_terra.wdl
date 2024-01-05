@@ -30,6 +30,163 @@ task gcs_copy {
   }
 }
 
+task check_terra_env {
+  input {
+    String docker = "quay.io/broadinstitute/viral-core:2.2.2" #skip-global-version-pin
+  }
+  meta {
+    description: "task for inspection of backend to determine whether the task is running on Terra and/or GCP"
+  }
+  command <<<
+    set -ex
+
+    # create gcloud-related output file
+    touch gcloud_config_info.log
+    touch google_project_id.txt
+
+    # create Terra-related output files
+    touch workspace_name.txt
+    touch workspace_namespace.txt
+    touch workspace_bucket_path.txt
+    touch input_table_name.txt
+    touch input_row_id.txt
+
+    # write system environment variables to output file
+    env | tee -a env_info.log
+
+    GOOGLE_PROJECT_ID="$(gcloud config list --format='value(core.project)')"
+    echo "$GOOGLE_PROJECT_ID" > google_project_id.txt
+
+    # check whether gcloud project has a "terra-" prefix
+    # to determine if running on Terra
+    if case ${GOOGLE_PROJECT_ID} in terra-*) ;; *) false;; esac; then
+      # (shell-portable regex conditional)
+      echo "Job appears to be running on Terra (GCP project ID: ${GOOGLE_PROJECT_ID})"
+      echo "true" > RUNNING_ON_TERRA
+    else
+      echo "NOT running on Terra"
+      echo "false" > RUNNING_ON_TERRA
+    fi
+
+    # check if running on GCP
+    if curl -s metadata.google.internal -i | grep -E 'Metadata-Flavor:\s+Google'; then 
+      echo "Cloud platform appears to be GCP"; 
+      echo "true" > RUNNING_ON_GCP
+
+      # write gcloud env info to output files
+      gcloud info | tee -a gcloud_config_info.log
+    else 
+      echo "NOT running on GCP";
+      echo "false" > RUNNING_ON_GCP
+    fi
+
+    if grep "true" RUNNING_ON_GCP && grep "true" RUNNING_ON_TERRA; then 
+      echo "Running on Terra+GCP"
+
+      # === Determine Terra workspace ID and submission ID for the workspace responsible for this job
+
+      # Scrape various workflow / workspace info from the localization and delocalization scripts.
+      #   from: https://github.com/broadinstitute/gatk/blob/ah_var_store/scripts/variantstore/wdl/GvsUtils.wdl#L35-L40
+      WORKSPACE_ID="$(sed -n -E 's!.*gs://fc-(secure-)?([^\/]+).*!\2!p' /cromwell_root/gcs_delocalization.sh | sort -u | tee workspace_id.txt)"
+      echo "WORKSPACE_ID: ${WORKSPACE_ID}"
+
+      # bucket path prefix
+      #BUCKET_PREFIX="$(sed -n -E 's!.*(gs://(fc-(secure-)?[^\/]+)).*!\1!p' /cromwell_root/gcs_delocalization.sh | sort -u | tee bucket_prefix.txt)"
+      #echo "BUCKET_PREFIX: ${BUCKET_PREFIX}"
+
+      # top-level submission ID
+      TOP_LEVEL_SUBMISSION_ID="$(sed -n -E 's!.*gs://fc-(secure-)?([^\/]+)/submissions/([^\/]+).*!\3!p' /cromwell_root/gcs_delocalization.sh | sort -u | tee top_level_submission_id.txt)"
+      echo "TOP_LEVEL_SUBMISSION_ID: ${TOP_LEVEL_SUBMISSION_ID}"
+
+      # workflow job ID within submission
+      #WORKFLOW_ID="$(sed -n -E 's!.*gs://fc-(secure-)?([^\/]+)/submissions/([^\/]+)/([^\/]+)/([^\/]+).*!\5!p' /cromwell_root/gcs_delocalization.sh | sort -u)"
+      
+      # other way to obtain Terra project ID, via scraping rather than from gcloud call used above
+      #GOOGLE_PROJECT_ID="$(sed -n -E 's!.*(terra-[0-9a-f]+).*# project to use if requester pays$!\1!p' /cromwell_root/gcs_localization.sh | sort -u)"
+      # =======================================
+
+      # === request workspace name AND namespace from API, based on bucket path / ID ===
+      curl -s -X 'GET' \
+        "https://api.firecloud.org/api/workspaces/id/${WORKSPACE_ID}?fields=workspace.name%2Cworkspace.namespace%2Cworkspace.googleProject" \
+        -H 'accept: application/json' \
+        -H "Authorization: Bearer $(gcloud auth print-access-token)" > workspace_info.json
+
+
+      WORKSPACE_NAME="$(jq -cr '.workspace.name | select (.!=null)' workspace_info.json)"
+      WORKSPACE_NAME_URL_ENCODED="$(jq -rn --arg x "${WORKSPACE_NAME}" '$x|@uri')"
+      WORKSPACE_NAMESPACE="$(jq -cr '.workspace.namespace | select (.!=null)' workspace_info.json)"
+      WORKSPACE_BUCKET="gs://${WORKSPACE_ID}"
+
+      echo "${WORKSPACE_NAME}" | tee workspace_name.txt
+      echo "${WORKSPACE_NAMESPACE}" | tee workspace_namespace.txt
+      echo "${WORKSPACE_BUCKET}" | tee workspace_bucket_path.txt
+
+          # --- less direct way of obtaining workspace info by matching Terra project ID --
+          #     preserved here for potential utility in obtaining workspace info for other projects/workspaces
+          # get list of workspaces, limiting the output to only the fields we need
+          #curl -s -X 'GET' \
+          #'https://api.firecloud.org/api/workspaces?fields=workspace.name%2Cworkspace.namespace%2Cworkspace.bucketName%2Cworkspace.googleProject' \
+          #-H 'accept: application/json' \
+          #-H "Authorization: Bearer $(gcloud auth print-access-token)" > workspace_list.json
+
+          # extract workspace name
+          #WORKSPACE_NAME=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .name' workspace_list.json)
+          
+          # extract workspace namespace
+          #WORKSPACE_NAMESPACE=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .namespace' workspace_list.json)
+          #WORKSPACE_NAME_URL_ENCODED="$(jq -rn --arg x "${WORKSPACE_NAME}" '$x|@uri')"
+
+          # extract workspace bucket
+          #WORKSPACE_BUCKET=$(jq -cr '.[] | select( .workspace.googleProject == "'${GOOGLE_PROJECT_ID}'" ).workspace | .bucketName' workspace_list.json)
+          # --- end less direct way of obtaining workspace info ---
+      # =======================================
+
+
+      # === obtain info on job submission inputs (table name, row ID)===
+      touch submission_metadata.json
+      curl -s -X 'GET' \
+      "https://api.firecloud.org/api/workspaces/${WORKSPACE_NAMESPACE}/${WORKSPACE_NAME_URL_ENCODED}/submissions/${TOP_LEVEL_SUBMISSION_ID}" \
+      -H 'accept: application/json' \
+      -H "Authorization: Bearer $(gcloud auth print-access-token)" > submission_metadata.json
+
+      INPUT_TABLE_NAME="$(jq -cr 'if .submissionEntity == null then "" elif (.workflows | length)==1 then .submissionEntity.entityType else [.workflows[].workflowEntity.entityType] | join(",") end' submission_metadata.json)"
+      INPUT_ROW_ID="$(jq -cr 'if .submissionEntity == null then "" elif (.workflows | length)==1 then .submissionEntity.entityName else [.workflows[].workflowEntity.entityName] | join(",") end' submission_metadata.json)"
+
+      echo "$INPUT_TABLE_NAME" | tee input_table_name.txt
+      echo "$INPUT_ROW_ID" | tee input_row_id.txt
+      # =======================================
+    else 
+      echo "Not running on Terra+GCP"
+    fi
+
+  >>>
+  output {
+    Boolean is_running_on_terra    = read_boolean("RUNNING_ON_TERRA")
+    Boolean is_backed_by_gcp       = read_boolean("RUNNING_ON_GCP")
+
+    String google_project_id       = read_string("google_project_id.txt")
+
+    String workspace_id            = read_string("workspace_id.txt")
+    String workspace_name          = read_string("workspace_name.txt")
+    String workspace_namespace     = read_string("workspace_namespace.txt")
+    String workspace_bucket_path   = read_string("workspace_bucket_path.txt")    
+
+    String input_table_name        = read_string("input_table_name.txt")
+    String input_row_id            = read_string("input_row_id.txt")
+
+    String top_level_submission_id = read_string("top_level_submission_id.txt")
+
+    File env_info                  = "env_info.log"
+    File gcloud_config_info        = "gcloud_config_info.log"
+  }
+  runtime {
+    docker: docker
+    memory: "1 GB"
+    cpu: 1
+    maxRetries: 1
+  }
+}
+
 task upload_reads_assemblies_entities_tsv {
   input {
     String        workspace_name
@@ -158,5 +315,42 @@ task download_entities_tsv {
   }
   output {
     File tsv_file = '~{outname}'
+  }
+}
+
+task create_or_update_sample_tables {
+  input {
+    String flowcell_run_id
+
+    String workspace_namespace
+    String workspace_name
+    String workspace_bucket
+
+    String  docker = "quay.io/broadinstitute/viral-core:2.2.2" #skip-global-version-pin
+  }
+
+  meta {
+    volatile: true
+  }
+
+  command <<<
+    python3<<CODE
+
+    workspace_project = '~{workspace_namespace}'
+    workspace_name    = '~{workspace_name}'
+    workspace_bucket  = '~{workspace_bucket}'
+    table_name        = ''
+
+    CODE
+  >>>
+  runtime {
+    docker: docker
+    memory: "2 GB"
+    cpu: 1
+    maxRetries: 2
+  }
+  output {
+    File stdout_log = stdout()
+    File stderr_log = stderr()
   }
 }
