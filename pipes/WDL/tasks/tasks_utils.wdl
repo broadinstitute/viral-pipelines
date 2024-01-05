@@ -668,7 +668,7 @@ task today {
   runtime {
     memory: "1 GB"
     cpu: 1
-    docker: "quay.io/broadinstitute/viral-baseimage:0.1.20"
+    docker: "quay.io/broadinstitute/viral-baseimage:0.2.0"
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -703,7 +703,7 @@ task s3_copy {
     Array[String] out_uris = read_lines("OUT_URIS")
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-baseimage:0.1.20"
+    docker: "quay.io/broadinstitute/viral-baseimage:0.2.0"
     memory: "2 GB"
     cpu: cpus
     disks: "local-disk ~{disk_gb} SSD"

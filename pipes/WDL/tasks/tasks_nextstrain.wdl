@@ -847,7 +847,7 @@ task filter_sequences_to_list {
         Array[File]? keep_list
 
         String       out_fname = sub(sub(basename(sequences, ".zst"), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
-        # Prior docker image: "nextstrain/base:build-20211012T204409Z"
+        # Prior docker image: "nextstrain/base:build-20211012T204409Z" #skip-global-version-pin
         String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
         Int          disk_size = 750
     }

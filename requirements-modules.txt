@@ -1,3 +1,4 @@
+broadinstitute/viral-baseimage=0.2.0
 broadinstitute/viral-core=2.1.33
 broadinstitute/viral-assemble=2.1.33.0
 broadinstitute/viral-classify=2.1.33.0
