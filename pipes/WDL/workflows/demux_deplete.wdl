@@ -4,6 +4,7 @@ import "../tasks/tasks_demux.wdl" as demux
 import "../tasks/tasks_taxon_filter.wdl" as taxon_filter
 import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_ncbi.wdl" as ncbi
+import "../tasks/tasks_read_utils.wdl" as read_utils
 
 workflow demux_deplete {
     meta {
@@ -138,6 +139,7 @@ workflow demux_deplete {
                 sub_keys     = default_filename_keys
         }
     }
+
     call demux.merge_maps as meta_sample {
         input: maps_jsons = meta_default_sample.out_json
     }
@@ -166,6 +168,13 @@ workflow demux_deplete {
             File empty_bam = raw_reads
         }
     }
+
+    call read_utils.group_bams_by_sample as grouped_passing {
+        input:
+            bam_filepaths = select_all(cleaned_bam_passing)
+    }
+
+    #scatter(name_reads in zip(group_bams_by_sample.sample_names, group_bams_by_sample.grouped_bam_filepaths)) {    
 
     #### SRA submission prep
     if(defined(biosample_map)) {
@@ -199,6 +208,18 @@ workflow demux_deplete {
             counts_txt = spikein.report
     }
 
+    scatter(name_reads in zip(grouped_passing.sample_names, grouped_passing.grouped_bam_filepaths)) {
+        Boolean ampseq   = (meta_sample.merged[name_reads.left]["amplicon_set"] != "")
+        String orig_name = meta_sample.merged[name_reads.left]["sample_original"]
+
+        call read_utils.merge_and_reheader_bams {
+            input:
+                in_bams      = name_reads.right,
+                sample_name  = orig_name,
+                out_basename = "${orig_name}.merged"
+        }
+    }
+
     # TO DO: flag all libraries where highest spike-in is not what was expected in extended samplesheet
 
     output {
@@ -211,6 +232,7 @@ workflow demux_deplete {
         File                           meta_by_sample_json   = meta_sample.merged_json
         
         Array[File] cleaned_reads_unaligned_bams             = select_all(cleaned_bam_passing)
+        Array[File] cleaned_reads_unaligned_merged_bams      = select_all(merge_and_reheader_bams.out_bam)
         Array[File] cleaned_bams_tiny                        = select_all(empty_bam)
         Array[Int]  read_counts_depleted                     = deplete.depletion_read_count_post
         
