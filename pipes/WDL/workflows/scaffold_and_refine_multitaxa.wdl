@@ -36,7 +36,7 @@ workflow scaffold_and_refine_multitaxa {
 
     Array[String] assembly_header = ["sample_id", "taxid", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned"]
 
-    scatter(taxon in reference_genome_fastas) {
+    scatter(taxon in taxid_to_ref_accessions) {
         call ncbi.download_annotations {
             input:
                 accessions = taxon.right,
