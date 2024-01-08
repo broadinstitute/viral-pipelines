@@ -105,7 +105,7 @@ workflow scaffold_and_refine_multitaxa {
         Int    num_libraries                         = refine.num_libraries[0]
 
         String assembly_method = "viral-ngs/scaffold_and_refine_multitaxa"
-        String scaffold_viral_assemble_version       = scaffold.viralngs_version
-        String refine_viral_assemble_version         = refine.viral_assemble_version
+        String scaffold_viral_assemble_version       = scaffold.viralngs_version[0]
+        String refine_viral_assemble_version         = refine.viral_assemble_version[0]
     }
 }
