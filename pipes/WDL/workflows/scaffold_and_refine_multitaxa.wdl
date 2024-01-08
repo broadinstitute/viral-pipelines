@@ -45,7 +45,7 @@ workflow scaffold_and_refine_multitaxa {
         call assembly.scaffold {
             input:
                 reads_bam = reads_unmapped_bam,
-                reference_genome_fasta = download_annotations.combined_fasta,
+                reference_genome_fasta = [download_annotations.combined_fasta],
                 min_length_fraction = 0,
                 min_unambig = 0
         }
