@@ -38,8 +38,9 @@ workflow scaffold_and_refine_multitaxa {
 
     scatter(taxon in reference_genome_fastas) {
         call ncbi.download_annotations {
-            accessions = taxon.right,
-            combined_out_prefix = taxon.left
+            input:
+                accessions = taxon.right,
+                combined_out_prefix = taxon.left
         }
         call assembly.scaffold {
             input:
