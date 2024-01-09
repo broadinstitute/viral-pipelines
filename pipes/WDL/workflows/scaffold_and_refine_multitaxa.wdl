@@ -47,7 +47,8 @@ workflow scaffold_and_refine_multitaxa {
                 reads_bam = reads_unmapped_bam,
                 reference_genome_fasta = [download_annotations.combined_fasta],
                 min_length_fraction = 0,
-                min_unambig = 0
+                min_unambig = 0,
+                allow_incomplete_output = true
         }
         call assemble_refbased.assemble_refbased as refine {
             input:

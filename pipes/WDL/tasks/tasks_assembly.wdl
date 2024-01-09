@@ -113,6 +113,7 @@ task scaffold {
       Float?       min_length_fraction
       Float?       min_unambig
       Int          replace_length=55
+      Boolean      allow_incomplete_output = false
 
       Int?         nucmer_max_gap
       Int?         nucmer_min_match
@@ -168,7 +169,7 @@ task scaffold {
         description: "When scaffolding contigs to the reference via nucmer, this specifies the -l parameter to nucmer (the minimal size of a maximal exact match). Our default is 10 (down from nucmer default of 20) to allow for more divergence.",
         category: "advanced"
       }
-        nucmer_min_cluster:{
+      nucmer_min_cluster:{
         description: "When scaffolding contigs to the reference via nucmer, this specifies the -c parameter to nucmer (minimum cluster length). Our default is the nucmer default of 65 bp.",
         category: "advanced"
       }
@@ -214,6 +215,7 @@ task scaffold {
           --outReference ~{sample_name}.scaffolding_chosen_ref.fasta \
           --outStats ~{sample_name}.scaffolding_stats.txt \
           --outAlternateContigs ~{sample_name}.scaffolding_alt_contigs.fasta \
+          ~{true='--allow_incomplete_output' false="" allow_incomplete_output} \
           --loglevel=DEBUG
 
         grep '^>' ~{sample_name}.scaffolding_chosen_ref.fasta | cut -c 2- | cut -f 1 -d ' ' > ~{sample_name}.scaffolding_chosen_refs.txt
@@ -428,7 +430,7 @@ task align_reads {
 
     String   aligner = "minimap2"
     String?  aligner_options
-    Boolean? skip_mark_dupes = false
+    Boolean  skip_mark_dupes = false
 
     Int?     machine_mem_gb
     String   docker = "quay.io/broadinstitute/viral-core:2.2.4"
