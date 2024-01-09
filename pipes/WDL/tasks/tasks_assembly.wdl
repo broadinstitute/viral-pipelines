@@ -228,8 +228,10 @@ task scaffold {
           --maskErrors \
           --loglevel=DEBUG
 
+        set +e +o pipefail
         grep -v '^>' ~{sample_name}.intermediate_gapfill.fasta | tr -d '\n' | wc -c | tee assembly_preimpute_length
         grep -v '^>' ~{sample_name}.intermediate_gapfill.fasta | tr -d '\nNn' | wc -c | tee assembly_preimpute_length_unambiguous
+        set -e -o pipefail
 
         #Input assembly/contigs, FASTA, already ordered oriented and merged with the reference gneome (FASTA)
         assembly.py impute_from_reference \
