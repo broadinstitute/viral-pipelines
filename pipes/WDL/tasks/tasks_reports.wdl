@@ -11,10 +11,10 @@ task alignment_metrics {
     File?  primers_bed
     String? amplicon_set
     Int?   min_coverage
-    Int?   max_amp_len=5000
-    Int?   max_amplicons=500
+    Int    max_amp_len=5000
+    Int    max_amplicons=500
 
-    Int?   machine_mem_gb
+    Int    machine_mem_gb=13
     String docker = "quay.io/broadinstitute/viral-core:2.2.4"
   }
 
@@ -100,8 +100,8 @@ task alignment_metrics {
   }
 
   runtime {
-    docker: "~{docker}"
-    memory: select_first([machine_mem_gb, 13]) + " GB"
+    docker: docker
+    memory: machine_mem_gb + " GB"
     cpu: 2
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
