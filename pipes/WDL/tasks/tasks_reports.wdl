@@ -31,25 +31,30 @@ task alignment_metrics {
     cp "~{ref_fasta}" reference.fasta
     picard $XMX CreateSequenceDictionary -R reference.fasta
 
-    # get Picard metrics and clean up the junky outputs
-    picard $XMX CollectRawWgsMetrics \
-      -R reference.fasta \
-      -I "~{aligned_bam}" \
-      -O picard_raw.raw_wgs_metrics.txt
-    grep -v \# picard_raw.raw_wgs_metrics.txt | grep . | head -2 > picard_clean.raw_wgs_metrics.txt
+    if [ -s "~{ref_fasta}" ]; then
+      # get Picard metrics and clean up the junky outputs
+      picard $XMX CollectRawWgsMetrics \
+        -R reference.fasta \
+        -I "~{aligned_bam}" \
+        -O picard_raw.raw_wgs_metrics.txt
+      grep -v \# picard_raw.raw_wgs_metrics.txt | grep . | head -2 > picard_clean.raw_wgs_metrics.txt
 
-    picard $XMX CollectAlignmentSummaryMetrics \
-      -R reference.fasta \
-      -I "~{aligned_bam}" \
-      -O picard_raw.alignment_metrics.txt
-    grep -v \# picard_raw.alignment_metrics.txt | grep . | head -4 > picard_clean.alignment_metrics.txt 
+      picard $XMX CollectAlignmentSummaryMetrics \
+        -R reference.fasta \
+        -I "~{aligned_bam}" \
+        -O picard_raw.alignment_metrics.txt
+      grep -v \# picard_raw.alignment_metrics.txt | grep . | head -4 > picard_clean.alignment_metrics.txt
 
-    picard $XMX CollectInsertSizeMetrics \
-      -I "~{aligned_bam}" \
-      -O picard_raw.insert_size_metrics.txt \
-      -H picard_raw.insert_size_metrics.pdf \
-      --INCLUDE_DUPLICATES true
-    grep -v \# picard_raw.insert_size_metrics.txt | grep . | head -2 > picard_clean.insert_size_metrics.txt
+      picard $XMX CollectInsertSizeMetrics \
+        -I "~{aligned_bam}" \
+        -O picard_raw.insert_size_metrics.txt \
+        -H picard_raw.insert_size_metrics.pdf \
+        --INCLUDE_DUPLICATES true
+      grep -v \# picard_raw.insert_size_metrics.txt | grep . | head -2 > picard_clean.insert_size_metrics.txt
+    else
+      # ref_fasta is empty -> Picard will fail
+      touch picard_clean.raw_wgs_metrics.txt picard_clean.alignment_metrics.txt picard_clean.insert_size_metrics.txt
+    fi
 
     # prepend the sample name in order to facilitate tsv joining later
     SAMPLE=$(samtools view -H "~{aligned_bam}" | grep ^@RG | perl -lape 's/^@RG.*SM:(\S+).*$/$1/' | sort | uniq)
