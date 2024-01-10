@@ -874,13 +874,18 @@ task run_discordance {
         # detect empty fasta situation and manually create empty VCF
         import os.path
         if (os.path.getsize('~{reference_fasta}') == 0):
+          sample_name = [[x[3:] for x in h if x.startswith('SM:')][0] for h in header if h[0]=='@RG'][0]
           with open('everything.vcf', 'wt') as outf:
               outf.write('##fileformat=VCFv4.3')
-              outf.write('\t'.join(('#CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT'))+'\n')
+              outf.write('##ALT=<ID=*,Description="Represents allele(s) other than observed.">')
+              outf.write('##INFO=<ID=DP,Number=1,Type=Integer,Description="Raw read depth">')
+              outf.write('##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">')
+              outf.write('##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Number of high-quality bases">')
+              outf.write('\t'.join(('#CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT',sample_name))+'\n')
         CODE
 
-        # bcftools call snps while treating each RG as a separate sample
         if [ ! -f everything.vcf ]; then
+          # bcftools call snps while treating each RG as a separate sample
           bcftools mpileup \
             -G readgroups.txt -d 10000 -a "FORMAT/DP,FORMAT/AD" \
             -q 1 -m 2 -Ou \
@@ -889,16 +894,23 @@ task run_discordance {
             -P 0 -m --ploidy 1 \
             --threads $(nproc) \
             -Ov -o everything.vcf
+
+          # mask all GT calls when less than 3 reads
+          cat everything.vcf | bcftools filter -e "FMT/DP<~{min_coverage}" -S . > filtered.vcf
+          cat filtered.vcf | bcftools filter -i "MAC>0" > "~{out_basename}.discordant.vcf"
+
+          # tally outputs
+          bcftools filter -i 'MAC=0' filtered.vcf | bcftools query -f '%POS\n' | wc -l | tee num_concordant
+          bcftools filter -i 'TYPE="snp"'  "~{out_basename}.discordant.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_discordant_snps
+          bcftools filter -i 'TYPE!="snp"' "~{out_basename}.discordant.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_discordant_indels
+
+        else
+          # handle empty case
+          cp everything.vcf "~{out_basename}.discordant.vcf"
+          echo 0 > num_concordant
+          echo 0 > num_discordant_snps
+          echo 0 > num_discordant_indels
         fi
-
-        # mask all GT calls when less than 3 reads
-        cat everything.vcf | bcftools filter -e "FMT/DP<~{min_coverage}" -S . > filtered.vcf
-        cat filtered.vcf | bcftools filter -i "MAC>0" > "~{out_basename}.discordant.vcf"
-
-        # tally outputs
-        bcftools filter -i 'MAC=0' filtered.vcf | bcftools query -f '%POS\n' | wc -l | tee num_concordant
-        bcftools filter -i 'TYPE="snp"'  "~{out_basename}.discordant.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_discordant_snps
-        bcftools filter -i 'TYPE!="snp"' "~{out_basename}.discordant.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_discordant_indels
     }
 
     output {
