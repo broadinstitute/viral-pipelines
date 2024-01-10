@@ -856,8 +856,8 @@ task run_discordance {
 
         read_utils.py --version | tee VERSION
 
-        # create 2-col table with read group ids in both cols
         python3 <<CODE
+        # create 2-col table with read group ids in both cols
         import tools.samtools
         header = tools.samtools.SamtoolsTool().getHeader("~{reads_aligned_bam}")
         rgids = [[x[3:] for x in h if x.startswith('ID:')][0] for h in header if h[0]=='@RG']
@@ -870,17 +870,26 @@ task run_discordance {
           outf.write(str(n_rgs)+'\n')
         with open('num_libraries', 'wt') as outf:
           outf.write(str(n_lbs)+'\n')
+
+        # detect empty fasta situation and manually create empty VCF
+        import os.path
+        if (os.path.getsize('~{reference_fasta}') == 0):
+          with open('everything.vcf', 'wt') as outf:
+              outf.write('##fileformat=VCFv4.3')
+              outf.write('\t'.join(('#CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT'))+'\n')
         CODE
 
         # bcftools call snps while treating each RG as a separate sample
-        bcftools mpileup \
-          -G readgroups.txt -d 10000 -a "FORMAT/DP,FORMAT/AD" \
-          -q 1 -m 2 -Ou \
-          -f "~{reference_fasta}" "~{reads_aligned_bam}" \
-          | bcftools call \
-          -P 0 -m --ploidy 1 \
-          --threads $(nproc) \
-          -Ov -o everything.vcf
+        if [ ! -f everything.vcf ]; then
+          bcftools mpileup \
+            -G readgroups.txt -d 10000 -a "FORMAT/DP,FORMAT/AD" \
+            -q 1 -m 2 -Ou \
+            -f "~{reference_fasta}" "~{reads_aligned_bam}" \
+            | bcftools call \
+            -P 0 -m --ploidy 1 \
+            --threads $(nproc) \
+            -Ov -o everything.vcf
+        fi
 
         # mask all GT calls when less than 3 reads
         cat everything.vcf | bcftools filter -e "FMT/DP<~{min_coverage}" -S . > filtered.vcf
