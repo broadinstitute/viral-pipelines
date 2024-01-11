@@ -104,17 +104,17 @@ task lca_megablast {
       --loglevel=DEBUG
 
     # Run megablast against nt
-    blastn -task megablast -query ~{trimmed_fasta} -db blastdb/~{db_name} -max_target_seqs 50 1 -num_threads -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" -out "~{fasta_basename}.fasta_megablast_nt.out"
+    blastn -task megablast -query ~{trimmed_fasta} -db blastdb/~{db_name} -max_target_seqs 50 -num_threads -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" -out "~{fasta_basename}.fasta_megablast_nt.out"
     
     
 
     # Run LCA
-    retrieve_top_blast_hits_LCA_for_each_sequence.pl results/"~{fasta_basename}.fasta_megablast_nt.out" taxdump/nodes.dmp 10 > "~{fasta_basename}.fasta_megablast_nt.out_LCA.txt"
+    retrieve_top_blast_hits_LCA_for_each_sequence.pl "~{fasta_basename}.fasta_megablast_nt.out" taxdump/nodes.dmp 10 > "~{fasta_basename}.fasta_megablast_nt.out_LCA.txt"
     # Done
 >>>
 
 output {
-    File    LCA_output = "results/~{fasta_basename}.fasta_megablast_nt.out_LCA.txt"
+    File    LCA_output = "~{fasta_basename}.fasta_megablast_nt.out_LCA.txt"
 }
 runtime {
     docker:docker
