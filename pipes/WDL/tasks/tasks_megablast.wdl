@@ -104,7 +104,7 @@ task lca_megablast {
       --loglevel=DEBUG
 
     # Run megablast against nt
-    blastn -task megablast -query ~{trimmed_fasta} -db "blastdb/*" -max_target_seqs 50 -num_threads 8 -outfmt 6 -out "~{fasta_basename}.fasta_megablast_nt.out"
+    blastn -task megablast -query ~{trimmed_fasta} -db "blastdb/" -max_target_seqs 50 -num_threads 8 -outfmt 6 -out "~{fasta_basename}.fasta_megablast_nt.out"
     #"qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue"
     
     # Run LCA
