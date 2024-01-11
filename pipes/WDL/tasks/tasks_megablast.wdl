@@ -98,15 +98,13 @@ task lca_megablast {
       ~{blast_db_tgz} blastdb \
       --loglevel=DEBUG
 
-    # Download nodes.dmp into taxdump directory, remove this since user input and unpack
+    # Unpack taxonomy.dmp
     read_utils.py extract_tarball \
       ~{taxonomy_db_tgz} taxdump \
       --loglevel=DEBUG
 
     # Run megablast against nt
-    blastn -task megablast -query ~{trimmed_fasta} -db blastdb/~{db_name} -max_target_seqs 50 -nproc -ignore 1 -num_threads `nproc` \
-    -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" \
-    -out results/"~{fasta_basename}.fasta_megablast_nt.out"
+    blastn -task megablast -query ~{trimmed_fasta} -db blastdb/~{db_name} -max_target_seqs 50 -nproc -ignore 1 -num_threads -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" -out results/"~{fasta_basename}.fasta_megablast_nt.out"
     
     
 
