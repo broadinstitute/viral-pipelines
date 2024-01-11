@@ -14,7 +14,7 @@ task nextclade_one_sample {
         File? virus_properties
         String? dataset_name
         Int    disk_size = 50
-        String docker = "nextstrain/nextclade:2.12.0"
+        String docker = "nextstrain/nextclade:2.14.0"
     }
     String basename = basename(genome_fasta, ".fasta")
     command {
@@ -101,7 +101,7 @@ task nextclade_many_samples {
         String       basename
         File?        genome_ids_setdefault_blank
         Int          disk_size = 150
-        String       docker = "nextstrain/nextclade:2.12.0"
+        String       docker = "nextstrain/nextclade:2.14.0"
     }
     command <<<
         set -e
@@ -280,7 +280,7 @@ task derived_cols {
         String?       lab_highlight_loc
         Array[File]   table_map = []
 
-        String        docker = "quay.io/broadinstitute/viral-core:2.1.33"
+        String        docker = "quay.io/broadinstitute/viral-core:2.2.4"
         Int           disk_size = 50
     }
     parameter_meta {
@@ -848,7 +848,7 @@ task filter_sequences_to_list {
 
         String       out_fname = sub(sub(basename(sequences, ".zst"), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
         # Prior docker image: "nextstrain/base:build-20211012T204409Z"
-        String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
+        String       docker = "quay.io/broadinstitute/viral-core:2.2.4"
         Int          disk_size = 750
     }
     parameter_meta {

@@ -81,11 +81,37 @@ task group_bams_by_sample {
   }
 }
 
+task get_bam_samplename {
+  input {
+    File    bam
+    String  docker = "quay.io/broadinstitute/viral-core:2.2.4"
+  }
+  Int   disk_size = round(size(bam, "GB")) + 50
+  command <<<
+    set -e -o pipefail
+    samtools view -H "~{bam}" | \
+      perl -lane 'if (/^\@RG\t.*SM:(\S+)/) { print "$1" }' | \
+      sort | uniq > SAMPLE_NAME
+  >>>
+  runtime {
+    docker: docker
+    memory: "1 GB"
+    cpu: 1
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+  output {
+    String sample_name = read_string("SAMPLE_NAME")
+  }
+}
+
 task get_sample_meta {
   input {
     Array[File] samplesheets_extended
 
-    String      docker = "quay.io/broadinstitute/viral-core:2.1.33"
+    String      docker = "quay.io/broadinstitute/viral-core:2.2.4"
   }
   Int disk_size = 50
   command <<<
@@ -146,7 +172,7 @@ task merge_and_reheader_bams {
       File?        reheader_table
       String       out_basename = basename(in_bams[0], ".bam")
 
-      String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
+      String       docker = "quay.io/broadinstitute/viral-core:2.2.4"
     }
     
     Int disk_size = 750
@@ -218,7 +244,7 @@ task rmdup_ubam {
     String  method = "mvicuna"
 
     Int?    machine_mem_gb
-    String  docker = "quay.io/broadinstitute/viral-core:2.1.33"
+    String  docker = "quay.io/broadinstitute/viral-core:2.2.4"
   }
 
   Int disk_size = 375
@@ -277,7 +303,7 @@ task downsample_bams {
     Boolean?     deduplicateAfter = false
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
+    String       docker = "quay.io/broadinstitute/viral-core:2.2.4"
   }
 
   Int disk_size = 750
@@ -340,7 +366,7 @@ task FastqToUBAM {
     String  platform_name
     String? sequencing_center
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.1.33"
+    String  docker = "quay.io/broadinstitute/viral-core:2.2.4"
   }
   Int disk_size = 375
   parameter_meta {
@@ -390,7 +416,7 @@ task read_depths {
     File      aligned_bam
 
     String    out_basename = basename(aligned_bam, '.bam')
-    String    docker = "quay.io/broadinstitute/viral-core:2.1.33"
+    String    docker = "quay.io/broadinstitute/viral-core:2.2.4"
   }
   Int disk_size = 200
   command <<<

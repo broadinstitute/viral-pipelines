@@ -15,7 +15,7 @@ task alignment_metrics {
     Int?   max_amplicons=500
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.1.33"
+    String docker = "quay.io/broadinstitute/viral-core:2.2.4"
   }
 
   String out_basename = basename(aligned_bam, ".bam")
@@ -131,7 +131,7 @@ task plot_coverage {
     String? plotXLimits # of the form "min max" (ints, space between)
     String? plotYLimits # of the form "min max" (ints, space between)
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.1.33"
+    String  docker = "quay.io/broadinstitute/viral-core:2.2.4"
   }
 
   Int disk_size = 375
@@ -210,13 +210,75 @@ task plot_coverage {
   }
 }
 
+task merge_coverage_per_position {
+  input {
+    Array[File]+ coverage_tsvs
+    File         ref_fasta
+
+    String       out_report_name = "coverage_report.csv"
+    Int          disk_size = 100
+    String       docker = "quay.io/broadinstitute/py3-bio:0.1.2"
+  }
+
+  command <<<
+    set -e
+
+    python3<<CODE
+    import os
+    import pandas as pd
+    from functools import reduce
+    import Bio.SeqIO
+
+    # get genome length
+    genome_length = 0
+    with open('~{ref_fasta}', 'rt') as inf:
+      for seq in Bio.SeqIO.parse(inf, 'fasta'):
+        genome_length += len(seq.seq.ungap())
+
+    # Loop through a list of file paths and read in each depth.tsv generated as part of assemble_refbased
+    depths_dfs = []
+    for in_tsv in ("~{sep='", "' coverage_tsvs}"):
+        sample_name = '.'.join(os.path.basename(in_tsv).split('.')[:-2])
+        sample_depths_df = pd.read_csv(in_tsv, sep='\t', header=None
+            ).rename(columns={0:'Ref',1:'Position',2:sample_name})
+        depths_dfs.append(sample_depths_df)
+
+    # Condense all depths into a single dataframe
+    df_merged = reduce(lambda left,right:
+        pd.merge(left,right,on=['Ref','Position'],how='outer'),
+        depths_dfs)
+    df_merged = df_merged.fillna(0)
+
+    #Create dummy df that contains all positions along the genome
+    dummy_df = pd.DataFrame([range(1,genome_length)]).T.rename(columns={0:'Position'})
+    df_merged = df_merged.merge(dummy_df, on='Position', how='right').fillna(0)
+    df_merged = df_merged.drop(['Ref'], axis=1)
+    df_merged.to_csv("~{out_report_name}", index=False)
+    CODE
+  >>>
+
+  output {
+    File   coverage_multi_sample_per_position_csv  = out_report_name
+  }
+
+  runtime {
+    docker: "${docker}"
+    memory: "2 GB"
+    cpu: 2
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd2_v2_x4"
+    maxRetries: 2
+  }
+}
+
 task coverage_report {
   input {
     Array[File]+ mapped_bams
     Array[File]  mapped_bam_idx # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name = "coverage_report.txt"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
+    String       docker = "quay.io/broadinstitute/viral-core:2.2.4"
   }
 
   Int disk_size = 375
@@ -283,7 +345,7 @@ task fastqc {
   input {
     File   reads_bam
 
-    String docker = "quay.io/broadinstitute/viral-core:2.1.33"
+    String docker = "quay.io/broadinstitute/viral-core:2.2.4"
   }
   parameter_meta {
     reads_bam:{ 
@@ -326,7 +388,7 @@ task align_and_count {
     Int    topNHits = 3
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.1.33"
+    String docker = "quay.io/broadinstitute/viral-core:2.2.4"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
@@ -386,7 +448,7 @@ task align_and_count_summary {
 
     String       output_prefix = "count_summary"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
+    String       docker = "quay.io/broadinstitute/viral-core:2.2.4"
   }
 
   Int disk_size = 100
@@ -421,7 +483,7 @@ task aggregate_metagenomics_reports {
     String       aggregate_taxlevel_focus                 = "species"
     Int          aggregate_top_N_hits                     = 5
 
-    String       docker = "quay.io/broadinstitute/viral-classify:2.1.33.0"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.2.3.0"
   }
 
   parameter_meta {
