@@ -104,8 +104,8 @@ task lca_megablast {
       --loglevel=DEBUG
 
     # Run megablast against nt
-    blastn -task megablast -query ~{trimmed_fasta} -db blastdb/nt -max_target_seqs 50 -num_threads `nproc` -outfmt 6 -out "~{fasta_basename}.fasta_megablast_nt.out"
-    #"qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue"
+    blastn -task megablast -query ~{trimmed_fasta} -db blastdb/nt -max_target_seqs 50 -num_threads `nproc` -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue"-out "~{fasta_basename}.fasta_megablast_nt.out"
+    #""
     
     # Run LCA
     retrieve_top_blast_hits_LCA_for_each_sequence.pl "~{fasta_basename}.fasta_megablast_nt.out" taxdump/nodes.dmp 10 > "~{fasta_basename}.fasta_megablast_nt.out_LCA.txt"
