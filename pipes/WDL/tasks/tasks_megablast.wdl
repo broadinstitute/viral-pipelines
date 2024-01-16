@@ -92,7 +92,7 @@ task lca_megablast {
         }
     }
     command <<<
-    BLAST_DB="blastdb/"
+    BLASTDB="blastdb/"
     # Make directories
     mkdir -p blastdb results taxdump
     read_utils.py extract_tarball \
