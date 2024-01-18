@@ -98,7 +98,7 @@ task lca_megablast {
     read_utils.py extract_tarball \
       ~{blast_db_tgz} blastdb \
       --loglevel=DEBUG
-    ls blastdb\ 
+    ls .
     # Unpack taxonomy.dmp
     read_utils.py extract_tarball \
       ~{taxonomy_db_tgz} taxdump \
