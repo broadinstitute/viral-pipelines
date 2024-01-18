@@ -92,7 +92,6 @@ task lca_megablast {
         }
     }
     command <<<
-    BLASTDB="blastdb/"
     # Make directories
     mkdir -p blastdb results taxdump
     read_utils.py extract_tarball \
@@ -103,7 +102,7 @@ task lca_megablast {
     read_utils.py extract_tarball \
       ~{taxonomy_db_tgz} taxdump \
       --loglevel=DEBUG
-
+    BLASTDB="blastdb/"
     # Run megablast against nt
     blastn -task megablast -query "~{trimmed_fasta}" -db "~{db_name}" -max_target_seqs 50 -num_threads `nproc` -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" -out "~{fasta_basename}.fasta_megablast_nt.tsv"
     
