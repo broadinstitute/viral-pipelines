@@ -70,6 +70,11 @@ workflow demux_deplete_and_table_insert {
             workspace_name      = check_terra_env.workspace_name,
             workspace_namespace = check_terra_env.workspace_namespace,
             workspace_bucket    = check_terra_env.workspace_bucket_path
+            
+            raw_reads_unaligned_bams     = demux_deplete.raw_reads_unaligned_bams,
+            cleaned_reads_unaligned_bams = demux_deplete.cleaned_reads_unaligned_bams,
+            meta_by_filename_json        = demux_deplete.meta_by_filename_json,
+            meta_by_sample_json          = demux_deplete.meta_by_sample_json
         }
     }
 
