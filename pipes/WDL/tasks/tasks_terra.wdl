@@ -367,6 +367,14 @@ task create_or_update_sample_tables {
     String workspace_name
     String workspace_bucket
 
+    Array[File]? raw_reads_unaligned_bams
+    Array[File]? cleaned_reads_unaligned_bams
+
+    #Map[String,Map[String,String]]? meta_by_filename
+    #Map[String,Map[String,String]]? meta_by_sample
+    File?                           meta_by_filename_json
+    File?                           meta_by_sample_json
+
     String  docker = "quay.io/broadinstitute/viral-core:2.2.4" #skip-global-version-pin
   }
 
@@ -375,13 +383,19 @@ task create_or_update_sample_tables {
   }
 
   command <<<
-    python3<<CODE
 
-    flowcell_data_id   = '~{flowcell_run_id}'
+    raw_reads_unaligned_bams_list_filepath="${write_lines(select_first([raw_reads_unaligned_bams, []]))}"
+
+
+    python3<<CODE
+    flowcell_data_id  = '~{flowcell_run_id}'
     
     workspace_project = '~{workspace_namespace}'
     workspace_name    = '~{workspace_name}'
     workspace_bucket  = '~{workspace_bucket}'
+
+    raw_reads_unaligned_bams_list_filepath     = "~{write_lines(select_first([raw_reads_unaligned_bams, []]))}"
+    cleaned_reads_unaligned_bams_list_filepath = "~{write_lines(select_first([cleaned_reads_unaligned_bams, []]))}"
 
     # import required packages.
     import os
@@ -415,27 +429,31 @@ task create_or_update_sample_tables {
     # # populate sample table from run outputs
     # In particular, popualte the raw_bam and cleaned_bam columns
 
-    def create_tsvs(project, workspace, runID):
+    def get_bam_lists_for_flowcell_from_live_table(project, workspace, runID):
         # API call to get flowcell_data table
         response = fapi.get_entities_tsv(project, workspace, "flowcell", model="flexible")
 
         # read API response into data frame
         df = pd.read_csv(StringIO(response.text), sep="\t", index_col="entity:flowcell_id")
 
-        # create sample.tsv data frame (entity:sample_set_id)
-        cleaned_bams_list = literal_eval(df.cleaned_reads_unaligned_bams[runID])
+        # create library.tsv data frame (entity:library_id)
+        cleaned_bams_list       = literal_eval(df.cleaned_reads_unaligned_bams[runID])
+        raw_bams_list           = literal_eval(df.raw_reads_unaligned_bams[runID])
+
+        return (cleaned_bams_list,raw_bams_list)
+
+    def create_library_to_bam_tsvs(cleaned_bams_list, raw_bams_list, runID):
         cleaned_library_id_list = [bam.split("/")[-1].replace(".bam", "").replace(".cleaned", "") for bam in cleaned_bams_list]
-        df_library_table = pd.DataFrame({"entity:library_id" : cleaned_library_id_list,
+        df_library_table        = pd.DataFrame({"entity:library_id" : cleaned_library_id_list,
                                         "cleaned_bam" : cleaned_bams_list})
-        cleaned_library_fname = runID + "_cleaned_bams.tsv"
+        cleaned_library_fname   = runID + "_cleaned_bams.tsv"
         df_library_table.to_csv(cleaned_library_fname, sep="\t", index=False)
 
-        # create sample.tsv data frame (entity:sample_set_id)
-        raw_bams_list = literal_eval(df.raw_reads_unaligned_bams[runID])
-        raw_library_id_list = [bam.split("/")[-1].replace(".bam", "") for bam in raw_bams_list]
-        df_library_table = pd.DataFrame({"entity:library_id" : raw_library_id_list,
+        # create library.tsv data frame (entity:library_id)
+        raw_library_id_list     = [bam.split("/")[-1].replace(".bam", "") for bam in raw_bams_list]
+        df_library_table        = pd.DataFrame({"entity:library_id" : raw_library_id_list,
                                         "raw_bam" : raw_bams_list})
-        raw_library_fname = runID + "_raw_bams.tsv"
+        raw_library_fname       = runID + "_raw_bams.tsv"
         df_library_table.to_csv(raw_library_fname, sep="\t", index=False)
 
         ## create sample_set.tsv data frame (membership:sample_set_id)
@@ -447,12 +465,24 @@ task create_or_update_sample_tables {
         
         return (cleaned_library_fname, raw_library_fname)
 
+    #   IF optional input bam file lists passed in 
+    #      create tsvs for row insertion based on them
+    #   ELSE
+    #      create tsvs based on data from API
+    #
+    if ( os.path.getsize(raw_reads_unaligned_bams_list_filepath) > 0 and
+         os.path.getsize(cleaned_reads_unaligned_bams_list_filepath) > 0 ):
+        cleaned_bams_list,raw_bams_list = (raw_reads_unaligned_bams_list_filepath, cleaned_reads_unaligned_bams_list_filepath)
+    else:
+        cleaned_bams_list,raw_bams_list = get_bam_lists_for_flowcell_from_live_table(workspace_project, workspace_name, flowcell_data_id)
+
     # call the create_tsv function and save files to data tables
-    tsv_list = create_tsvs(workspace_project, workspace_name, flowcell_data_id)
+    tsv_list = create_library_to_bam_tsvs(cleaned_bams_list, raw_bams_list, flowcell_data_id)
 
     print (f"wrote outputs to {tsv_list}")
 
     for tsv in tsv_list:
+        # ToDo: check whether subject to race condition (and if so, implement via async/promises)
         response = fapi.upload_entities_tsv(workspace_project, workspace_name, tsv, model="flexible")
         if response.status_code != 200:
             print('ERROR UPLOADING: See full error message:')
@@ -473,19 +503,33 @@ task create_or_update_sample_tables {
     header, rows = get_entities_to_table(workspace_project, workspace_name, "library")
     df_library = pd.DataFrame.from_records(rows, columns=header, index="library_id")
 
-    # API call to get flowcell_data table
-    header, rows = get_entities_to_table(workspace_project, workspace_name, "flowcell")
-    df_flowcell = pd.DataFrame.from_records(rows, columns=header, index="flowcell_id")
+
+    # ToDo:
+    #   if meta_by_filename_json specified and size>0 bytes
+    #       parse as json, pass to for loop below
+    #   else
+    #       get data from live table 
+    if ( len('~{default="" meta_by_filename_json}')>0 and 
+        os.path.getsize('~{meta_by_filename_json}') > 0 ):
+
+        library_meta_dict = {}
+        with open('~{meta_by_filename_json}',"r") as meta_fp:
+            library_meta_dict = json.load(meta_fp)
+    else:
+        # API call to get flowcell_data table
+        header, rows = get_entities_to_table(workspace_project, workspace_name, "flowcell")
+        df_flowcell = pd.DataFrame.from_records(rows, columns=header, index="flowcell_id")
+        library_meta_dict = df_flowcell.meta_by_filename[flowcell_data_id]
 
     # grab the meta_by_filename values to create new sample->library (sample_set->sample) mappings
     sample_to_libraries = {}
-    for library_id, data in df_flowcell.meta_by_filename[flowcell_data_id].items():
+    for library_id, data in library_meta_dict.items():
         sample_id = data['sample']
         sample_to_libraries.setdefault(sample_id, [])
         if library_id in df_library.index:
             sample_to_libraries[sample_id].append(library_id)
         else:
-            print (f"missing {library_id} from sample table")
+            print (f"missing {library_id} from library table")
 
     # merge in new sample->library mappings with any pre-existing sample->library mappings
     if len(df_sample)>0:
@@ -521,8 +565,25 @@ task create_or_update_sample_tables {
             #for library_id in sorted(libraries):
             outf.write(f'{sample_id}\t{json.dumps([{"entityType":"library","entityName":library_name} for library_name in libraries])}\n')
 
-    # grab the meta_by_sample values from one row in the flowcell_data table
-    meta_by_library_all = df_flowcell.meta_by_sample[flowcell_data_id]
+    # ToDo:
+    #   if meta_by_filename_json specified and size>0 bytes
+    #       parse as json, pass to for loop below
+    #   else
+    #       get data from live table 
+    if ( len('~{default="" meta_by_sample_json}')>0 and 
+        os.path.getsize('~{meta_by_sample_json}') > 0 ):
+        
+        sample = {}
+        with open('~{meta_by_sample_json}',"r") as meta_fp:
+            meta_by_library_all = json.load(meta_fp)
+    else:
+        # API call to get flowcell_data table
+        header, rows = get_entities_to_table(workspace_project, workspace_name, "flowcell")
+        df_flowcell = pd.DataFrame.from_records(rows, columns=header, index="flowcell_id")
+        # grab the meta_by_sample values from one row in the flowcell_data table
+        meta_by_library_all = df_flowcell.meta_by_sample[flowcell_data_id]
+
+    
 
     # grab all the library IDs
     header, rows = get_entities_to_table(workspace_project, workspace_name, "library")
