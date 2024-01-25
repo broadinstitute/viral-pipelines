@@ -384,7 +384,7 @@ task create_or_update_sample_tables {
 
   command <<<
 
-    raw_reads_unaligned_bams_list_filepath="${write_lines(select_first([raw_reads_unaligned_bams, []]))}"
+    raw_reads_unaligned_bams_list_filepath="~{write_lines(  select_first([raw_reads_unaligned_bams, []])  )}"
 
 
     python3<<CODE
