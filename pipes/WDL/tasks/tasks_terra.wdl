@@ -384,8 +384,9 @@ task create_or_update_sample_tables {
 
   command <<<
 
-    raw_reads_unaligned_bams_list_filepath="~{write_lines(  select_first([raw_reads_unaligned_bams, []])  )}"
-
+    # debugging
+    #raw_reads_unaligned_bams_list_filepath="~{write_lines(  select_first([raw_reads_unaligned_bams, []])  )}"
+    #cleaned_reads_unaligned_bams_list_filepath="~{write_lines(select_first([cleaned_reads_unaligned_bams, []]))}"
 
     python3<<CODE
     flowcell_data_id  = '~{flowcell_run_id}'
@@ -472,8 +473,12 @@ task create_or_update_sample_tables {
     #
     if ( os.path.getsize(raw_reads_unaligned_bams_list_filepath) > 0 and
          os.path.getsize(cleaned_reads_unaligned_bams_list_filepath) > 0 ):
-        cleaned_bams_list,raw_bams_list = (raw_reads_unaligned_bams_list_filepath, cleaned_reads_unaligned_bams_list_filepath)
+        print(f"creating library->bam mapping tsv files from file input")
+        with open(raw_reads_unaligned_bams_list_filepath) as raw_reads_unaligned_bams_list_fp, open(cleaned_reads_unaligned_bams_list_filepath) as cleaned_reads_unaligned_bams_list_fp:
+            cleaned_bams_list,raw_bams_list = ( raw_reads_unaligned_bams_list_fp.read().splitlines(),
+                                                cleaned_reads_unaligned_bams_list_fp.read().splitlines() )
     else:
+        print(f"creating library->bam mapping tsv files from live table data (no file lists passed in to task)")
         cleaned_bams_list,raw_bams_list = get_bam_lists_for_flowcell_from_live_table(workspace_project, workspace_name, flowcell_data_id)
 
     # call the create_tsv function and save files to data tables
@@ -482,6 +487,14 @@ task create_or_update_sample_tables {
     print (f"wrote outputs to {tsv_list}")
 
     for tsv in tsv_list:
+
+        # debugging file content
+        with open(tsv) as tsv_fp:
+            for lin_num,line in enumerate(tsv_fp):
+                print(line, end="")
+                if lin_num>=5:
+                    break
+
         # ToDo: check whether subject to race condition (and if so, implement via async/promises)
         response = fapi.upload_entities_tsv(workspace_project, workspace_name, tsv, model="flexible")
         if response.status_code != 200:
