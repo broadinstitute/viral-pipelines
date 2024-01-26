@@ -1,11 +1,7 @@
 version 1.0
 
 import "../tasks/tasks_read_utils.wdl" as read_utils
-import "../tasks/tasks_ncbi.wdl" as ncbi
-import "../tasks/tasks_nextstrain.wdl" as nextstrain
-import "../tasks/tasks_sarscov2.wdl" as sarscov2
 import "../tasks/tasks_terra.wdl" as terra
-import "../tasks/tasks_assembly.wdl" as assembly
 import "../tasks/tasks_utils.wdl" as utils
 
 import "demux_deplete.wdl"
@@ -13,7 +9,7 @@ import "demux_deplete.wdl"
 
 workflow demux_deplete_and_table_insert {
     meta {
-        description: "Demultiplex data from a sequencing run into outputs organized in per-library-lane and per-sample tables."
+        description: "Terra only: Demultiplex data from a sequencing run into outputs organized in per-library-lane and per-sample tables."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
         allowNestedInputs: true

@@ -383,11 +383,6 @@ task create_or_update_sample_tables {
   }
 
   command <<<
-
-    # debugging
-    #raw_reads_unaligned_bams_list_filepath="~{write_lines(  select_first([raw_reads_unaligned_bams, []])  )}"
-    #cleaned_reads_unaligned_bams_list_filepath="~{write_lines(select_first([cleaned_reads_unaligned_bams, []]))}"
-
     python3<<CODE
     flowcell_data_id  = '~{flowcell_run_id}'
     
@@ -469,7 +464,7 @@ task create_or_update_sample_tables {
     #   IF optional input bam file lists passed in 
     #      create tsvs for row insertion based on them
     #   ELSE
-    #      create tsvs based on data from API
+    #      create tsvs based on data from live data table
     #
     if ( os.path.getsize(raw_reads_unaligned_bams_list_filepath) > 0 and
          os.path.getsize(cleaned_reads_unaligned_bams_list_filepath) > 0 ):
@@ -488,12 +483,12 @@ task create_or_update_sample_tables {
 
     for tsv in tsv_list:
 
-        # debugging file content
-        with open(tsv) as tsv_fp:
-            for lin_num,line in enumerate(tsv_fp):
-                print(line, end="")
-                if lin_num>=5:
-                    break
+        # for troubleshooting tsv file content
+        #with open(tsv) as tsv_fp:
+        #    for lin_num,line in enumerate(tsv_fp):
+        #        print(line, end="")
+        #        if lin_num>=5:
+        #            break
 
         # ToDo: check whether subject to race condition (and if so, implement via async/promises)
         response = fapi.upload_entities_tsv(workspace_project, workspace_name, tsv, model="flexible")
@@ -516,8 +511,6 @@ task create_or_update_sample_tables {
     header, rows = get_entities_to_table(workspace_project, workspace_name, "library")
     df_library = pd.DataFrame.from_records(rows, columns=header, index="library_id")
 
-
-    # ToDo:
     #   if meta_by_filename_json specified and size>0 bytes
     #       parse as json, pass to for loop below
     #   else
@@ -578,7 +571,6 @@ task create_or_update_sample_tables {
             #for library_id in sorted(libraries):
             outf.write(f'{sample_id}\t{json.dumps([{"entityType":"library","entityName":library_name} for library_name in libraries])}\n')
 
-    # ToDo:
     #   if meta_by_filename_json specified and size>0 bytes
     #       parse as json, pass to for loop below
     #   else
@@ -595,8 +587,6 @@ task create_or_update_sample_tables {
         df_flowcell = pd.DataFrame.from_records(rows, columns=header, index="flowcell_id")
         # grab the meta_by_sample values from one row in the flowcell_data table
         meta_by_library_all = df_flowcell.meta_by_sample[flowcell_data_id]
-
-    
 
     # grab all the library IDs
     header, rows = get_entities_to_table(workspace_project, workspace_name, "library")

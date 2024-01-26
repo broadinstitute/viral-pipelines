@@ -264,6 +264,11 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/nextclade_single.wdl
     testParameterFiles:
       - empty.json
+  - name: populate_library_and_sample_tables_from_flowcell
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/populate_library_and_sample_tables_from_flowcell.wdl
+    testParameterFiles:
+      - empty.json
   - name: reconstruct_from_alignments
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/reconstruct_from_alignments.wdl
