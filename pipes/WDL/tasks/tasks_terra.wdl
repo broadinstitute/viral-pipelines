@@ -390,8 +390,10 @@ task create_or_update_sample_tables {
     workspace_name    = '~{workspace_name}'
     workspace_bucket  = '~{workspace_bucket}'
 
-    raw_reads_unaligned_bams_list_filepath     = "~{write_lines(select_first([raw_reads_unaligned_bams, []]))}"
-    cleaned_reads_unaligned_bams_list_filepath = "~{write_lines(select_first([cleaned_reads_unaligned_bams, []]))}"
+    #raw_reads_unaligned_bams_list_filepath     = "~{write_lines(select_first([raw_reads_unaligned_bams, []]))}"
+    raw_reads_unaligned_bams_list_filepath     = '~{if defined(raw_reads_unaligned_bams) then write_lines(select_first([raw_reads_unaligned_bams, []])) else ""}'
+    #cleaned_reads_unaligned_bams_list_filepath = "~{write_lines(select_first([cleaned_reads_unaligned_bams, []]))}"
+    cleaned_reads_unaligned_bams_list_filepath = '~{if defined(cleaned_reads_unaligned_bams) then write_lines(select_first([cleaned_reads_unaligned_bams, []])) else ""}'
 
     # import required packages.
     import os
@@ -461,13 +463,16 @@ task create_or_update_sample_tables {
         
         return (cleaned_library_fname, raw_library_fname)
 
+    #print(f"os.path.getsize(raw_reads_unaligned_bams_list_filepath) {os.path.getsize(raw_reads_unaligned_bams_list_filepath)}")
+    #print(f"os.path.getsize(cleaned_reads_unaligned_bams_list_filepath) {os.path.getsize(cleaned_reads_unaligned_bams_list_filepath)}")
+
     #   IF optional input bam file lists passed in 
     #      create tsvs for row insertion based on them
     #   ELSE
     #      create tsvs based on data from live data table
     #
-    if ( os.path.getsize(raw_reads_unaligned_bams_list_filepath) > 0 and
-         os.path.getsize(cleaned_reads_unaligned_bams_list_filepath) > 0 ):
+    if ( (os.path.exists(raw_reads_unaligned_bams_list_filepath) and os.path.getsize(raw_reads_unaligned_bams_list_filepath)) > 0 and
+         (os.path.exists(cleaned_reads_unaligned_bams_list_filepath) and os.path.getsize(cleaned_reads_unaligned_bams_list_filepath)) > 0 ):
         print(f"creating library->bam mapping tsv files from file input")
         with open(raw_reads_unaligned_bams_list_filepath) as raw_reads_unaligned_bams_list_fp, open(cleaned_reads_unaligned_bams_list_filepath) as cleaned_reads_unaligned_bams_list_fp:
             cleaned_bams_list,raw_bams_list = ( cleaned_reads_unaligned_bams_list_fp.read().splitlines(),
