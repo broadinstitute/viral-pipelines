@@ -19,7 +19,6 @@ workflow demux_deplete_and_table_insert {
         File          flowcell_tgz
         String?       read_structure
 
-        #Array[File]? biosample_attributes
         String?       instrument_model
         String?       sra_title
 
@@ -27,19 +26,6 @@ workflow demux_deplete_and_table_insert {
 
         File?         collab_ids_tsv
     }
-
-    # merge biosample attributes tables
-    #call utils.tsv_join as biosample_merge {
-    #    input:
-    #        input_tsvs   = select_all(flatten([biosample_attributes])),
-    #        id_col       = 'accession',
-    #        out_basename = "biosample_attributes-merged"
-    #}
-    #call utils.fetch_col_from_tsv as accessioned_samples {
-    #  input:
-    #    tsv = biosample_merge.out_tsv,
-    #    col = 'sample_name'
-    #}
 
     call demux_deplete.demux_deplete {
         input:
@@ -49,13 +35,6 @@ workflow demux_deplete_and_table_insert {
             read_structure                  = read_structure,
             sample_rename_map               = sample_rename_map
     }
-    #String  flowcell_id = demux_deplete.run_id
-
-    ### gather data by biosample
-    #call read_utils.group_bams_by_sample {
-    #    input:
-    #        bam_filepaths = demux_deplete.cleaned_reads_unaligned_bams
-    #}
 
     call terra.check_terra_env
 
