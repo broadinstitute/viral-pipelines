@@ -370,8 +370,6 @@ task create_or_update_sample_tables {
     Array[String]? raw_reads_unaligned_bams
     Array[String]? cleaned_reads_unaligned_bams
 
-    #Map[String,Map[String,String]]? meta_by_filename
-    #Map[String,Map[String,String]]? meta_by_sample
     File?                           meta_by_filename_json
     File?                           meta_by_sample_json
 
