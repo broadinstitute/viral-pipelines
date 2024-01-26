@@ -475,8 +475,8 @@ task create_or_update_sample_tables {
          os.path.getsize(cleaned_reads_unaligned_bams_list_filepath) > 0 ):
         print(f"creating library->bam mapping tsv files from file input")
         with open(raw_reads_unaligned_bams_list_filepath) as raw_reads_unaligned_bams_list_fp, open(cleaned_reads_unaligned_bams_list_filepath) as cleaned_reads_unaligned_bams_list_fp:
-            cleaned_bams_list,raw_bams_list = ( raw_reads_unaligned_bams_list_fp.read().splitlines(),
-                                                cleaned_reads_unaligned_bams_list_fp.read().splitlines() )
+            cleaned_bams_list,raw_bams_list = ( cleaned_reads_unaligned_bams_list_fp.read().splitlines(),
+                                                raw_reads_unaligned_bams_list_fp.read().splitlines() )
     else:
         print(f"creating library->bam mapping tsv files from live table data (no file lists passed in to task)")
         cleaned_bams_list,raw_bams_list = get_bam_lists_for_flowcell_from_live_table(workspace_project, workspace_name, flowcell_data_id)
