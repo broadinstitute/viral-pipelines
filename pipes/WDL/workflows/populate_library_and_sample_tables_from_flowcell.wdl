@@ -2,7 +2,7 @@ version 1.0
 
 import "../tasks/tasks_terra.wdl" as terra
 
-workflow demux_deplete_and_table_insert {
+workflow populate_library_and_sample_tables_from_flowcell {
     meta {
         description: "Terra only: Populate per-library-lane and per-sample tables from existing demultiplexed flowcell output"
         author: "Broad Viral Genomics"
