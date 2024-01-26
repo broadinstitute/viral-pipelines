@@ -390,9 +390,7 @@ task create_or_update_sample_tables {
     workspace_name    = '~{workspace_name}'
     workspace_bucket  = '~{workspace_bucket}'
 
-    #raw_reads_unaligned_bams_list_filepath     = "~{write_lines(select_first([raw_reads_unaligned_bams, []]))}"
     raw_reads_unaligned_bams_list_filepath     = '~{if defined(raw_reads_unaligned_bams) then write_lines(select_first([raw_reads_unaligned_bams, []])) else ""}'
-    #cleaned_reads_unaligned_bams_list_filepath = "~{write_lines(select_first([cleaned_reads_unaligned_bams, []]))}"
     cleaned_reads_unaligned_bams_list_filepath = '~{if defined(cleaned_reads_unaligned_bams) then write_lines(select_first([cleaned_reads_unaligned_bams, []])) else ""}'
 
     # import required packages.
@@ -453,18 +451,8 @@ task create_or_update_sample_tables {
                                         "raw_bam" : raw_bams_list})
         raw_library_fname       = runID + "_raw_bams.tsv"
         df_library_table.to_csv(raw_library_fname, sep="\t", index=False)
-
-        ## create sample_set.tsv data frame (membership:sample_set_id)
-        #participant_id_list = [sample_id.split(".")[0] for sample_id in raw_bams_list]
-        #df_sample_set_table = pd.DataFrame({"membership:sample_set_id" : participant_id_list,
-        #                                    "sample" : sample_id_list})
-        #set_fname = runID + "_sample_set_table.tsv"
-        #df_sample_set_table.to_csv(set_fname, sep="\t", index=False)
         
         return (cleaned_library_fname, raw_library_fname)
-
-    #print(f"os.path.getsize(raw_reads_unaligned_bams_list_filepath) {os.path.getsize(raw_reads_unaligned_bams_list_filepath)}")
-    #print(f"os.path.getsize(cleaned_reads_unaligned_bams_list_filepath) {os.path.getsize(cleaned_reads_unaligned_bams_list_filepath)}")
 
     #   IF optional input bam file lists passed in 
     #      create tsvs for row insertion based on them
@@ -487,14 +475,6 @@ task create_or_update_sample_tables {
     print (f"wrote outputs to {tsv_list}")
 
     for tsv in tsv_list:
-
-        # for troubleshooting tsv file content
-        #with open(tsv) as tsv_fp:
-        #    for lin_num,line in enumerate(tsv_fp):
-        #        print(line, end="")
-        #        if lin_num>=5:
-        #            break
-
         # ToDo: check whether subject to race condition (and if so, implement via async/promises)
         response = fapi.upload_entities_tsv(workspace_project, workspace_name, tsv, model="flexible")
         if response.status_code != 200:
@@ -556,18 +536,7 @@ task create_or_update_sample_tables {
                 continue
                 sample_to_libraries[sample_id].extend(already_associated_libraries)
                 # collapse duplicate sample IDs
-                #sample_to_libraries[sample_id] = list([json.dumps({"entityType":"library","entityName":library_name}) for library_name in set(sample_to_libraries[sample_id])])
                 sample_to_libraries[sample_id] = list(set(sample_to_libraries[sample_id]))
-                #sample_to_libraries[sample_id] = list({"entityType":"library","entityName":library_name}set(sample_to_libraries[sample_id]))
-
-    # create sample_membership.tsv describing sample:library (ie sample-to-library) many-to-one mappings
-    # sample_fname = 'sample_membership.tsv'
-    # with open(sample_fname, 'wt') as outf:
-    #     outf.write('membership:sample_id\tlibrary\n')
-    #     for sample_id, libraries in sample_to_libraries.items():
-    #         for library_id in sorted(libraries):
-    #             outf.write(f'{sample_id}\t{library_id}\n')
-    # !cat $sample_fname
 
     sample_fname = 'sample_membership.tsv'
     with open(sample_fname, 'wt') as outf:
