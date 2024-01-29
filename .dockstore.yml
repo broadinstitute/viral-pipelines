@@ -115,6 +115,11 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/demux_deplete.wdl
     testParameterFiles:
       - empty.json
+  - name: demux_deplete_and_table_insert
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/demux_deplete_and_table_insert.wdl
+    testParameterFiles:
+      - empty.json
   - name: demux_plus
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/demux_plus.wdl
@@ -257,6 +262,11 @@ workflows:
   - name: nextclade_single
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/nextclade_single.wdl
+    testParameterFiles:
+      - empty.json
+  - name: populate_library_and_sample_tables_from_flowcell
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/populate_library_and_sample_tables_from_flowcell.wdl
     testParameterFiles:
       - empty.json
   - name: reconstruct_from_alignments

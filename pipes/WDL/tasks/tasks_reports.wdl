@@ -530,12 +530,10 @@ task MultiQC {
   input {
     Array[File]    input_files
 
-    Boolean        force = false
-    Boolean        full_names = false
     String?        title
     String?        comment
     String?        file_name
-    String         out_dir = "./multiqc-output"
+    String         out_dir       = "./multiqc-output"
     String?        template
     String?        tag
     String?        ignore_analysis_files
@@ -543,15 +541,17 @@ task MultiQC {
     File?          sample_names
     Array[String]? exclude_modules
     Array[String]? module_to_use
-    Boolean        data_dir = false
-    Boolean        no_data_dir = false
     String?        output_data_format
-    Boolean        zip_data_dir = false
-    Boolean        export = false
-    Boolean        flat = false
-    Boolean        interactive = true
-    Boolean        lint = false
-    Boolean        pdf = false
+    Boolean        force         = false
+    Boolean        full_names    = false
+    Boolean        data_dir      = false
+    Boolean        no_data_dir   = false
+    Boolean        zip_data_dir  = false
+    Boolean        export        = false
+    Boolean        flat          = false
+    Boolean        interactive   = true
+    Boolean        lint          = false
+    Boolean        pdf           = false
     Boolean        megaQC_upload = false # Upload generated report to MegaQC if MegaQC options are found
     File?          config  # directory
     String?        config_yaml

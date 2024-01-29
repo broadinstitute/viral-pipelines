@@ -383,7 +383,7 @@ task illumina_demux {
         --threads $num_fastqc_threads" \
       ::: $(cat $OUT_BASENAMES)
 
-    mv metrics.txt "~{out_base}-demux_metrics.txt"
+    mv metrics.txt  "~{out_base}-demux_metrics.txt"
     mv runinfo.json "~{out_base}-runinfo.json"
 
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
