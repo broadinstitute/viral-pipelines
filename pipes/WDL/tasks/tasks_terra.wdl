@@ -46,6 +46,7 @@ task check_terra_env {
     touch google_project_id.txt
 
     # create Terra-related output files
+    touch user_email.txt
     touch workspace_name.txt
     touch workspace_namespace.txt
     touch workspace_bucket_path.txt
@@ -70,6 +71,14 @@ task check_terra_env {
       # (shell-portable regex conditional)
       echo "Job appears to be running on Terra (GCP project ID: ${GOOGLE_PROJECT_ID})"
       echo "true" > RUNNING_ON_TERRA
+
+      # get user e-mail for Terra account via firecloud API
+      curl -s -X 'GET' \
+        'https://api.firecloud.org/me?userDetailsOnly=true' \
+        -H 'accept: application/json' \
+        -H "Authorization: Bearer $GCLOUD_OAUTH_BEARER_TOKEN" > user_info.json
+
+        USER_EMAIL="$(jq -cr '.userEmail' user_info.json | tee user_email.txt)"
     else
       echo "NOT running on Terra"
       echo "false" > RUNNING_ON_TERRA
@@ -200,6 +209,8 @@ task check_terra_env {
     Boolean is_backed_by_gcp       = read_boolean("RUNNING_ON_GCP")
 
     String google_project_id       = read_string("google_project_id.txt")
+
+    String user_email              = read_string("user_email.txt")
 
     String workspace_id            = read_string("workspace_id.txt")
     String workspace_name          = read_string("workspace_name.txt")
