@@ -62,6 +62,20 @@ task check_terra_env {
     # write system environment variables to output file
     env | tee -a env_info.log
 
+    # check if running on GCP
+    if curl -s metadata.google.internal -i | grep -E 'Metadata-Flavor:\s+Google'; then 
+      echo "Cloud platform appears to be GCP"; 
+      echo "true" > RUNNING_ON_GCP
+
+      GCLOUD_OAUTH_BEARER_TOKEN="$(gcloud auth print-access-token)"
+
+      # write gcloud env info to output files
+      gcloud info | tee -a gcloud_config_info.log
+    else 
+      echo "NOT running on GCP";
+      echo "false" > RUNNING_ON_GCP
+    fi
+
     GOOGLE_PROJECT_ID="$(gcloud config list --format='value(core.project)')"
     echo "$GOOGLE_PROJECT_ID" > google_project_id.txt
 
@@ -82,18 +96,6 @@ task check_terra_env {
     else
       echo "NOT running on Terra"
       echo "false" > RUNNING_ON_TERRA
-    fi
-
-    # check if running on GCP
-    if curl -s metadata.google.internal -i | grep -E 'Metadata-Flavor:\s+Google'; then 
-      echo "Cloud platform appears to be GCP"; 
-      echo "true" > RUNNING_ON_GCP
-
-      # write gcloud env info to output files
-      gcloud info | tee -a gcloud_config_info.log
-    else 
-      echo "NOT running on GCP";
-      echo "false" > RUNNING_ON_GCP
     fi
 
     if grep --quiet "true" RUNNING_ON_GCP && grep --quiet "true" RUNNING_ON_TERRA; then
@@ -120,8 +122,6 @@ task check_terra_env {
       # other way to obtain Terra project ID, via scraping rather than from gcloud call used above
       #GOOGLE_PROJECT_ID="$(sed -n -E 's!.*(terra-[0-9a-f]+).*# project to use if requester pays$!\1!p' /cromwell_root/gcs_localization.sh | sort -u)"
       # =======================================
-
-      GCLOUD_OAUTH_BEARER_TOKEN="$(gcloud auth print-access-token)"
 
       # === request workspace name AND namespace from API, based on bucket path / ID ===
       curl -s -X 'GET' \
