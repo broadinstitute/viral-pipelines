@@ -349,6 +349,11 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/scaffold_and_refine.wdl
     testParameterFiles:
       - empty.json
+  - name: scaffold_and_refine_multitaxa
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/scaffold_and_refine_multitaxa.wdl
+    testParameterFiles:
+      - empty.json
   - name: subsample_by_casecounts
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/subsample_by_casecounts.wdl

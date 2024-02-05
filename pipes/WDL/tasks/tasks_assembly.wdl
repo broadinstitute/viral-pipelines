@@ -15,7 +15,7 @@ task assemble {
       String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
       
       Int?     machine_mem_gb
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.1.33.0"
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.2.4.0"
     }
     parameter_meta{
       reads_unmapped_bam: {
@@ -113,6 +113,7 @@ task scaffold {
       Float?       min_length_fraction
       Float?       min_unambig
       Int          replace_length=55
+      Boolean      allow_incomplete_output = false
 
       Int?         nucmer_max_gap
       Int?         nucmer_min_match
@@ -121,7 +122,7 @@ task scaffold {
       Float?       scaffold_min_pct_contig_aligned
 
       Int?         machine_mem_gb
-      String       docker="quay.io/broadinstitute/viral-assemble:2.1.33.0"
+      String       docker="quay.io/broadinstitute/viral-assemble:2.2.4.0"
 
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
@@ -168,7 +169,7 @@ task scaffold {
         description: "When scaffolding contigs to the reference via nucmer, this specifies the -l parameter to nucmer (the minimal size of a maximal exact match). Our default is 10 (down from nucmer default of 20) to allow for more divergence.",
         category: "advanced"
       }
-        nucmer_min_cluster:{
+      nucmer_min_cluster:{
         description: "When scaffolding contigs to the reference via nucmer, this specifies the -c parameter to nucmer (minimum cluster length). Our default is the nucmer default of 65 bp.",
         category: "advanced"
       }
@@ -214,6 +215,7 @@ task scaffold {
           --outReference ~{sample_name}.scaffolding_chosen_ref.fasta \
           --outStats ~{sample_name}.scaffolding_stats.txt \
           --outAlternateContigs ~{sample_name}.scaffolding_alt_contigs.fasta \
+          ~{true='--allow_incomplete_output' false="" allow_incomplete_output} \
           --loglevel=DEBUG
 
         grep '^>' ~{sample_name}.scaffolding_chosen_ref.fasta | cut -c 2- | cut -f 1 -d ' ' > ~{sample_name}.scaffolding_chosen_refs.txt
@@ -226,8 +228,10 @@ task scaffold {
           --maskErrors \
           --loglevel=DEBUG
 
+        set +e +o pipefail
         grep -v '^>' ~{sample_name}.intermediate_gapfill.fasta | tr -d '\n' | wc -c | tee assembly_preimpute_length
         grep -v '^>' ~{sample_name}.intermediate_gapfill.fasta | tr -d '\nNn' | wc -c | tee assembly_preimpute_length_unambiguous
+        set -e -o pipefail
 
         #Input assembly/contigs, FASTA, already ordered oriented and merged with the reference gneome (FASTA)
         assembly.py impute_from_reference \
@@ -428,7 +432,7 @@ task align_reads {
 
     String   aligner = "minimap2"
     String?  aligner_options
-    Boolean? skip_mark_dupes = false
+    Boolean  skip_mark_dupes = false
 
     Int?     machine_mem_gb
     String   docker = "quay.io/broadinstitute/viral-core:2.2.4"
@@ -566,7 +570,7 @@ task refine_assembly_with_aligned_reads {
       Int      min_coverage = 3
 
       Int?     machine_mem_gb
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.1.33.0"
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.2.4.0"
     }
 
     Int disk_size = 375
@@ -691,7 +695,7 @@ task refine_2x_and_plot {
       String? plot_coverage_novoalign_options = "-r Random -l 40 -g 40 -x 20 -t 100 -k"
 
       Int?    machine_mem_gb
-      String  docker = "quay.io/broadinstitute/viral-assemble:2.1.33.0"
+      String  docker = "quay.io/broadinstitute/viral-assemble:2.2.4.0"
 
       # do this in two steps in case the input doesn't actually have "cleaned" in the name
       String  sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
@@ -852,8 +856,8 @@ task run_discordance {
 
         read_utils.py --version | tee VERSION
 
-        # create 2-col table with read group ids in both cols
         python3 <<CODE
+        # create 2-col table with read group ids in both cols
         import tools.samtools
         header = tools.samtools.SamtoolsTool().getHeader("~{reads_aligned_bam}")
         rgids = [[x[3:] for x in h if x.startswith('ID:')][0] for h in header if h[0]=='@RG']
@@ -866,26 +870,47 @@ task run_discordance {
           outf.write(str(n_rgs)+'\n')
         with open('num_libraries', 'wt') as outf:
           outf.write(str(n_lbs)+'\n')
+
+        # detect empty fasta situation and manually create empty VCF
+        import os.path
+        if (os.path.getsize('~{reference_fasta}') == 0):
+          sample_name = [[x[3:] for x in h if x.startswith('SM:')][0] for h in header if h[0]=='@RG'][0]
+          with open('everything.vcf', 'wt') as outf:
+              outf.write('##fileformat=VCFv4.3')
+              outf.write('##ALT=<ID=*,Description="Represents allele(s) other than observed.">')
+              outf.write('##INFO=<ID=DP,Number=1,Type=Integer,Description="Raw read depth">')
+              outf.write('##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">')
+              outf.write('##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Number of high-quality bases">')
+              outf.write('\t'.join(('#CHROM','POS','ID','REF','ALT','QUAL','FILTER','INFO','FORMAT',sample_name))+'\n')
         CODE
 
-        # bcftools call snps while treating each RG as a separate sample
-        bcftools mpileup \
-          -G readgroups.txt -d 10000 -a "FORMAT/DP,FORMAT/AD" \
-          -q 1 -m 2 -Ou \
-          -f "~{reference_fasta}" "~{reads_aligned_bam}" \
-          | bcftools call \
-          -P 0 -m --ploidy 1 \
-          --threads $(nproc) \
-          -Ov -o everything.vcf
+        if [ ! -f everything.vcf ]; then
+          # bcftools call snps while treating each RG as a separate sample
+          bcftools mpileup \
+            -G readgroups.txt -d 10000 -a "FORMAT/DP,FORMAT/AD" \
+            -q 1 -m 2 -Ou \
+            -f "~{reference_fasta}" "~{reads_aligned_bam}" \
+            | bcftools call \
+            -P 0 -m --ploidy 1 \
+            --threads $(nproc) \
+            -Ov -o everything.vcf
 
-        # mask all GT calls when less than 3 reads
-        cat everything.vcf | bcftools filter -e "FMT/DP<~{min_coverage}" -S . > filtered.vcf
-        cat filtered.vcf | bcftools filter -i "MAC>0" > "~{out_basename}.discordant.vcf"
+          # mask all GT calls when less than 3 reads
+          cat everything.vcf | bcftools filter -e "FMT/DP<~{min_coverage}" -S . > filtered.vcf
+          cat filtered.vcf | bcftools filter -i "MAC>0" > "~{out_basename}.discordant.vcf"
 
-        # tally outputs
-        bcftools filter -i 'MAC=0' filtered.vcf | bcftools query -f '%POS\n' | wc -l | tee num_concordant
-        bcftools filter -i 'TYPE="snp"'  "~{out_basename}.discordant.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_discordant_snps
-        bcftools filter -i 'TYPE!="snp"' "~{out_basename}.discordant.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_discordant_indels
+          # tally outputs
+          bcftools filter -i 'MAC=0' filtered.vcf | bcftools query -f '%POS\n' | wc -l | tee num_concordant
+          bcftools filter -i 'TYPE="snp"'  "~{out_basename}.discordant.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_discordant_snps
+          bcftools filter -i 'TYPE!="snp"' "~{out_basename}.discordant.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_discordant_indels
+
+        else
+          # handle empty case
+          cp everything.vcf "~{out_basename}.discordant.vcf"
+          echo 0 > num_concordant
+          echo 0 > num_discordant_snps
+          echo 0 > num_discordant_indels
+        fi
     }
 
     output {
