@@ -68,6 +68,10 @@ workflow scaffold_and_refine_multitaxa {
         # to do: if percent_reference_covered > some threshold, run ncbi.rename_fasta_header and ncbi.align_and_annot_transfer_single
         # to do: if biosample attributes file provided, run ncbi.biosample_to_genbank
 
+        if (refine.reference_genome_length > 0) {
+            Float percent_reference_covered = 1.0 * refine.assembly_length_unambiguous / refine.reference_genome_length
+        }
+
         Map[String, String] stats_by_taxon = {
             "sample_id" : sample_id,
             "taxid" : taxon.left,
@@ -79,6 +83,7 @@ workflow scaffold_and_refine_multitaxa {
             "assembly_length_unambiguous" : refine.assembly_length_unambiguous,
             "reads_aligned" : refine.align_to_self_merged_reads_aligned,
             "mean_coverage" : refine.align_to_self_merged_mean_coverage,
+            "percent_reference_covered" : select_first([percent_reference_covered, 0.0]),
 
             "intermediate_gapfill_fasta" : scaffold.intermediate_gapfill_fasta,
             "assembly_preimpute_length_unambiguous" : scaffold.assembly_preimpute_length_unambiguous,
@@ -95,12 +100,6 @@ workflow scaffold_and_refine_multitaxa {
             "bases_aligned" : refine.align_to_self_merged_bases_aligned
         }
 
-        if (refine.reference_genome_length > 0) {
-            stats_by_taxon["percent_reference_covered"] = 1.0 * refine.assembly_length_unambiguous / refine.reference_genome_length
-        }
-        if (refine.reference_genome_length <= 0) {
-            stats_by_taxon["percent_reference_covered"] = 0.0
-        }
 
         scatter(h in assembly_header) {
             String stat_by_taxon = stats_by_taxon[h]
