@@ -79,7 +79,6 @@ workflow scaffold_and_refine_multitaxa {
             "assembly_length_unambiguous" : refine.assembly_length_unambiguous,
             "reads_aligned" : refine.align_to_self_merged_reads_aligned,
             "mean_coverage" : refine.align_to_self_merged_mean_coverage,
-            "percent_reference_covered" : 1.0 * refine.assembly_length_unambiguous / refine.reference_genome_length,
 
             "intermediate_gapfill_fasta" : scaffold.intermediate_gapfill_fasta,
             "assembly_preimpute_length_unambiguous" : scaffold.assembly_preimpute_length_unambiguous,
@@ -94,6 +93,13 @@ workflow scaffold_and_refine_multitaxa {
             "coverage_tsv" : refine.align_to_self_merged_coverage_tsv,
             "read_pairs_aligned" : refine.align_to_self_merged_read_pairs_aligned,
             "bases_aligned" : refine.align_to_self_merged_bases_aligned
+        }
+
+        if (refine.reference_genome_length > 0) {
+            stats_by_taxon["percent_reference_covered"] = 1.0 * refine.assembly_length_unambiguous / refine.reference_genome_length
+        }
+        if (refine.reference_genome_length <= 0) {
+            stats_by_taxon["percent_reference_covered"] = 0.0
         }
 
         scatter(h in assembly_header) {
