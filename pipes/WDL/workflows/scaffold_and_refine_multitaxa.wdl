@@ -32,9 +32,11 @@ workflow scaffold_and_refine_multitaxa {
             (12730,   ["NC_003461.1"]), # paraflu 1
             (11216,   ["NC_001796.2"])  # paraflu 3
         ]
+
+        # Float    min_pct_reference_covered = 0.1
     }
 
-    Array[String] assembly_header = ["sample_id", "taxid", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned"]
+    Array[String] assembly_header = ["sample_id", "taxid", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned"]
 
     scatter(taxon in taxid_to_ref_accessions) {
         call ncbi.download_annotations {
@@ -56,7 +58,7 @@ workflow scaffold_and_refine_multitaxa {
                 reference_fasta     = scaffold.scaffold_fasta,
                 sample_name         = sample_id
         }
-        # to do: if pre-impute unambig length > some fraction of ref genome, run ncbi.rename_fasta_header and ncbi.align_and_annot_transfer_single
+        # to do: if percent_reference_covered > some threshold, run ncbi.rename_fasta_header and ncbi.align_and_annot_transfer_single
         # to do: if biosample attributes file provided, run ncbi.biosample_to_genbank
 
         Map[String, String] stats_by_taxon = {
@@ -70,6 +72,7 @@ workflow scaffold_and_refine_multitaxa {
             "assembly_length_unambiguous" : refine.assembly_length_unambiguous,
             "reads_aligned" : refine.align_to_self_merged_reads_aligned,
             "mean_coverage" : refine.align_to_self_merged_mean_coverage,
+            "percent_reference_covered" : 1.0 * refine.assembly_length_unambiguous / refine.reference_genome_length,
 
             "intermediate_gapfill_fasta" : scaffold.intermediate_gapfill_fasta,
             "assembly_preimpute_length_unambiguous" : scaffold.assembly_preimpute_length_unambiguous,
