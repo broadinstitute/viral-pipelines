@@ -15,7 +15,7 @@ task polyphonia_detect_cross_contamination {
     File?        masked_positions_file
     Int          max_mismatches      = 0
     Int          min_matches         = 5
-    Int          min_matches_proportion = 0.5
+    Float        min_matches_proportion = 0.5
 
     Array[File]? plate_maps
     Int?         plate_size                 = 96
