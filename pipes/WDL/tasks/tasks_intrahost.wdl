@@ -6,14 +6,16 @@ task polyphonia_detect_cross_contamination {
     Array[File]  genome_fastas
     File         reference_fasta
 
-    Int          min_readcount       = 10
-    Float        min_maf             = 0.03
+    Int          min_readcount       = 0
+    Float        min_maf             = 0
     Float        min_genome_coverage = 0.95
     Int          min_read_depth      = 100
     Array[File]? read_depths
-    Int          max_mismatches      = 1
     String?      masked_positions
     File?        masked_positions_file
+    Int          max_mismatches      = 0
+    Int          min_matches         = 5
+    Int          min_matches_proportion = 0.5
 
     Array[File]? plate_maps
     Int?         plate_size                 = 96
@@ -45,9 +47,11 @@ task polyphonia_detect_cross_contamination {
     min_read_depth:      { description: "Minimum read depth for a position to be used for comparison" }
     read_depths:         { description: "Read depth tables (tab-separated, no header: reference name, position, read depth); provide alongside vcf files or heterozygosity tables if min-depth>0" }
     min_genome_coverage: { description: "Minimum proportion genome covered for a sample to be included" }
-    max_mismatches:      { description: "Maximum allowed bases in contaminating sample consensus not matching contaminated sample alleles" }
     masked_positions:    { description: "1-indexed positions to mask (e.g., 1-10,50,55-70)" }
     masked_positions_file: { description: "1-indexed positions to mask, one per line" }
+    min_matches:         { description: "Of positions at which the two consensus genomes differ, the minimum number of positions at which contamination is detected as a minor allele" }
+    min_matches_proportion: { description: "Of positions at which the two consensus genomes differ, the minimum proportion of positions at which contamination is detected as a minor allele" }
+    max_mismatches:      { description: "Maximum allowed bases in contaminating sample consensus not matching contaminated sample alleles" }
     
     plate_maps:          { description: "Optional plate map(s) (tab-separated, no header: sample name, plate position (e.g., A8))" }
     plate_size:          { description: "Standard plate size (6-well, 12-well, 24, 48, 96, 384, 1536, 3456)" }
@@ -86,6 +90,8 @@ task polyphonia_detect_cross_contamination {
       ~{'--min-depth ' + min_read_depth} \
       ~{'--min-readcount ' + min_readcount} \
       ~{'--max-mismatches ' + max_mismatches} \
+      ~{'--min-matches ' + min_matches} \
+      ~{'--min-matches-proportion ' + min_matches_proportion} \
       ~{'--min-maf ' + min_maf} \
       ~{'--masked-positions ' + masked_positions} \
       ~{'--masked-positions-file ' + masked_positions_file} \
