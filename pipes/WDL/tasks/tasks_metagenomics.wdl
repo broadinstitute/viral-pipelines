@@ -326,6 +326,52 @@ task kraken2 {
   }
 }
 
+task report_primary_kraken_taxa {
+  meta {
+    description: "Interprets a kraken (or kraken2 or krakenuniq) summary report file and emits the primary contributing taxa under a focal taxon of interest."
+  }
+  input {
+    File          kraken_summary_report
+    String        focal_taxon = "Viruses"
+
+    String        docker = "quay.io/broadinstitute/viral-classify:dp-ksummary" #skip-global-version-pin
+  }
+  String out_basename = basename(kraken_summary_report, '.txt')
+  Int disk_size = 50
+  Int machine_mem_gb = 2
+
+  command <<<
+    set -e
+    metagenomics.py taxlevel_plurality "~{kraken_summary_report}" "~{focal_taxon}" "~{out_basename}.ranked_focal_report.tsv"
+    cat "~{out_basename}.ranked_focal_report.tsv" | head -2 | tail +2 > TOPROW
+    cut -f 4 TOPROW > PCT_OF_FOCAL
+    cut -f 7 TOPROW > NUM_READS
+    cut -f 8 TOPROW > TAX_RANK
+    cut -f 9 TOPROW > TAX_ID
+    cut -f 10 TOPROW > TAX_NAME
+  >>>
+
+  output {
+    File   ranked_focal_report = "~{out_basename}.ranked_focal_report.tsv"
+    Float  percent_of_focal = read_float("PCT_OF_FOCAL")
+    Int    num_reads = read_int("NUM_READS")
+    String tax_rank = read_string("TAX_RANK")
+    String tax_id = read_string("TAX_ID")
+    String tax_name = read_string("TAX_NAME")
+  }
+
+  runtime {
+    docker: docker
+    memory: machine_mem_gb + " GB"
+    cpu: 1
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TESs
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
+
 task build_kraken2_db {
   meta {
     description: "Builds a custom kraken2 database. Outputs tar.zst tarballs of kraken2 database, associated krona taxonomy db, and an ncbi taxdump.tar.gz. Requires live internet access if any standard_libraries are specified or if taxonomy_db_tgz is absent."
