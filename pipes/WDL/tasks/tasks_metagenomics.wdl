@@ -344,6 +344,7 @@ task report_primary_kraken_taxa {
     set -e
     metagenomics.py taxlevel_plurality "~{kraken_summary_report}" "~{focal_taxon}" "~{out_basename}.ranked_focal_report.tsv"
     cat "~{out_basename}.ranked_focal_report.tsv" | head -2 | tail +2 > TOPROW
+    cut -f 2 TOPROW > NUM_FOCAL
     cut -f 4 TOPROW > PCT_OF_FOCAL
     cut -f 7 TOPROW > NUM_READS
     cut -f 8 TOPROW > TAX_RANK
@@ -352,7 +353,9 @@ task report_primary_kraken_taxa {
   >>>
 
   output {
+    String focal_tax_name = focal_taxon
     File   ranked_focal_report = "~{out_basename}.ranked_focal_report.tsv"
+    Int    total_focal_reads = read_int("NUM_FOCAL")
     Float  percent_of_focal = read_float("PCT_OF_FOCAL")
     Int    num_reads = read_int("NUM_READS")
     String tax_rank = read_string("TAX_RANK")
