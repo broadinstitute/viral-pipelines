@@ -1,4 +1,4 @@
-version 1.1
+version development
 
 import "../tasks/tasks_assembly.wdl" as assembly
 import "../tasks/tasks_ncbi.wdl" as ncbi
