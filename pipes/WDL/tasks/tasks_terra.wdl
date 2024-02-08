@@ -36,6 +36,7 @@ task check_terra_env {
   }
   meta {
     description: "task for inspection of backend to determine whether the task is running on Terra and/or GCP"
+    volatile: true
   }
   command <<<
     # set -x # echo commands upon execution [commented out to avoid leaking the gcloud auth token]
