@@ -69,7 +69,7 @@ task create_viz {
     }
 
     command {
-        python3 /scripts/create_visualizations.py -s ~{sep=' ' sample_ids} \
+        python3 /scripts/create_enterics_visualizations_html.py -s ~{sep=' ' sample_ids} \
                                                   -dt ~{input_table_name} \
                                                   -w ~{workspace_name} \
                                                   -bp ~{workspace_project} \
