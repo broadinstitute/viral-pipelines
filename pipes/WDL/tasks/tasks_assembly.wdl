@@ -235,7 +235,7 @@ task scaffold {
         grep '^>' ~{sample_name}.scaffolding_chosen_ref.fasta | wc -l | tee reference_num_segments_required
         set -e -o pipefail
 
-        if [[ ~{true='1' false='0' allow_incomplete_output} && (cmp -s assembly_num_segments_recovered reference_num_segments_required) ]]; then
+        if [[ ~{true='1' false='0' allow_incomplete_output} && $(cmp -s assembly_num_segments_recovered reference_num_segments_required) ]]; then
           # draft assembly does not have enough segments--and that's okay
           file_utils.py rename_fasta_sequences \
             ~{sample_name}.intermediate_gapfill.fasta \
