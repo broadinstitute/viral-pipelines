@@ -231,19 +231,29 @@ task scaffold {
         set +e +o pipefail
         grep -v '^>' ~{sample_name}.intermediate_gapfill.fasta | tr -d '\n' | wc -c | tee assembly_preimpute_length
         grep -v '^>' ~{sample_name}.intermediate_gapfill.fasta | tr -d '\nNn' | wc -c | tee assembly_preimpute_length_unambiguous
+        grep '^>' ~{sample_name}.intermediate_gapfill.fasta | wc -l | tee assembly_num_segments_recovered
+        grep '^>' ~{sample_name}.scaffolding_chosen_ref.fasta | wc -l | tee reference_num_segments_required
         set -e -o pipefail
 
-        #Input assembly/contigs, FASTA, already ordered oriented and merged with the reference gneome (FASTA)
-        assembly.py impute_from_reference \
-          ~{sample_name}.intermediate_gapfill.fasta \
-          ~{sample_name}.scaffolding_chosen_ref.fasta \
-          ~{sample_name}.scaffolded_imputed.fasta \
-          --newName ~{sample_name} \
-          ~{'--replaceLength=' + replace_length} \
-          ~{'--minLengthFraction=' + min_length_fraction} \
-          ~{'--minUnambig=' + min_unambig} \
-          ~{'--aligner=' + aligner} \
-          --loglevel=DEBUG
+        if [[ ~{true='1' false='0' allow_incomplete_output} && (cmp -s assembly_num_segments_recovered reference_num_segments_required) ]]; then
+          # draft assembly does not have enough segments--and that's okay
+          file_utils.py rename_fasta_sequences \
+            ~{sample_name}.intermediate_gapfill.fasta \
+            ~{sample_name}.scaffolded_imputed.fasta \
+            "~{sample_name}" --suffix_always --loglevel=DEBUG
+        else
+          # draft assembly must have the right number of segments (fail if not)
+          assembly.py impute_from_reference \
+            ~{sample_name}.intermediate_gapfill.fasta \
+            ~{sample_name}.scaffolding_chosen_ref.fasta \
+            ~{sample_name}.scaffolded_imputed.fasta \
+            --newName ~{sample_name} \
+            ~{'--replaceLength=' + replace_length} \
+            ~{'--minLengthFraction=' + min_length_fraction} \
+            ~{'--minUnambig=' + min_unambig} \
+            ~{'--aligner=' + aligner} \
+            --loglevel=DEBUG
+        fi
     }
 
     output {
@@ -252,6 +262,8 @@ task scaffold {
         File   intermediate_gapfill_fasta            = "~{sample_name}.intermediate_gapfill.fasta"
         Int    assembly_preimpute_length             = read_int("assembly_preimpute_length")
         Int    assembly_preimpute_length_unambiguous = read_int("assembly_preimpute_length_unambiguous")
+        Int    assembly_num_segments_recovered       = read_int("assembly_num_segments_recovered")
+        Int    reference_num_segments_required       = read_int("reference_num_segments_required")
         Array[String] scaffolding_chosen_ref_names   = read_lines("~{sample_name}.scaffolding_chosen_refs.txt")
         File   scaffolding_chosen_ref                = "~{sample_name}.scaffolding_chosen_ref.fasta"
         File   scaffolding_stats                     = "~{sample_name}.scaffolding_stats.txt"
