@@ -87,7 +87,6 @@ workflow scaffold_and_refine_multitaxa {
             "bases_aligned" : refine.align_to_self_merged_bases_aligned
         }
 
-
         scatter(h in assembly_header) {
             String stat_by_taxon = stats_by_taxon[h]
         }
