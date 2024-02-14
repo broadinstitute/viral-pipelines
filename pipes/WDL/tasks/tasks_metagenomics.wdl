@@ -393,7 +393,9 @@ task filter_refs_to_found_taxa {
 
   command <<<
     set -e
-    metagenomics.py filter_taxids_to_focal_hits "~{taxid_to_ref_accessions_tsv}" "~{focal_report_tsv}" "~{taxdump_tgz}" ~{min_read_count} "~{ref_basename}-~{hits_basename}.tsv"
+    mkdir -p taxdump
+    read_utils.py extract_tarball "~{taxdump_tgz}" taxdump
+    metagenomics.py filter_taxids_to_focal_hits "~{taxid_to_ref_accessions_tsv}" "~{focal_report_tsv}" taxdump ~{min_read_count} "~{ref_basename}-~{hits_basename}.tsv"
   >>>
 
   output {
