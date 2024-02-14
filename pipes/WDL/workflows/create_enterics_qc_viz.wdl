@@ -65,7 +65,7 @@ task create_viz {
         String?         custom_assembly_thresholds
         String?         custom_mean_q_thresholds
 
-        String          docker                          =   "broadinstitute/horsefish:pgs_visualizations"        
+        String          docker                          =   "us-central1-docker.pkg.dev/pgs-automation/enterics-visualizations/create_visualization_html:v1"       
     }
 
     command {
