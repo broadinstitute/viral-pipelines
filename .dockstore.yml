@@ -399,7 +399,7 @@ workflows:
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/create_enterics_qc_viz.wdl
     testParameterFiles:
-      - empty.json
+      - /pipes/WDL/workflows/empty.json
 
   - name: create_enterics_qc_viz_general
     subclass: WDL
