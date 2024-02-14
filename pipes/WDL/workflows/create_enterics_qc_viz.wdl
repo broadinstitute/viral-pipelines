@@ -2,6 +2,10 @@ version 1.0
 
 workflow CreateEntericsQCViz {
 
+    meta {
+        allowNestedInputs: true
+    }
+
     parameter_meta {
         sample_ids: {description: "selected rows of data from data table which will be used for plotting"}
         input_table_name: {description: "name of the Terra data table - root entity type - from where input data is selected"}
@@ -9,10 +13,10 @@ workflow CreateEntericsQCViz {
         workspace_project: {description: "name of Terra project associated with Terra workspace"}
         grouping_column_name: {description: "name of column to be used for grouping/coloring - ex. gambit_predicted_taxon (organism)"}
         output_filename: {description: "name of output file containing visualizations"}
-        custom_est_coverage_thresholds: {description: ""}
-        custom_contig_thresholds: {description: ""}
-        custom_assembly_thresholds: {description: ""}
-        custom_mean_q_thresholds: {description: ""}
+        custom_est_coverage_thresholds: {description: "json string with custom estimated coverage threshlds"}
+        custom_contig_thresholds: {description: ""json string with custom number contig thresholds"}
+        custom_assembly_thresholds: {description: ""json string with custom assembly length thresholds"}
+        custom_mean_q_thresholds: {description: ""json string with custom mean q thresholds"}
     }
 
     input {
@@ -31,19 +35,7 @@ workflow CreateEntericsQCViz {
         String?         custom_mean_q_thresholds
     }
 
-    call create_viz {
-        input:
-            sample_ids                      =   sample_ids,
-            workspace_name                  =   workspace_name,
-            workspace_project               =   workspace_project,
-            input_table_name                =   input_table_name,
-            grouping_column_name            =   grouping_column_name,
-            output_filename                 =   output_filename,
-            custom_est_coverage_thresholds  =   custom_est_coverage_thresholds,
-            custom_contig_thresholds        =   custom_contig_thresholds,
-            custom_assembly_thresholds      =   custom_assembly_thresholds,
-            custom_mean_q_thresholds        =   custom_mean_q_thresholds
-    }
+    call create_viz
 
     output {
         File    vizualization_html     =   create_viz.html
