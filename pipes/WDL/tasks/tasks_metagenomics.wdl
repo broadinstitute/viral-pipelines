@@ -375,6 +375,43 @@ task report_primary_kraken_taxa {
   }
 }
 
+task filter_refs_to_found_taxa {
+  meta {
+    description: "Filters a taxid_to_ref_accessions_tsv to the set of taxa found in a focal_report."
+  }
+  input {
+    File          taxid_to_ref_accessions_tsv
+    File          focal_report_tsv
+    File          taxdump_tgz
+    Int           min_read_count = 100
+
+    String        docker = "quay.io/broadinstitute/viral-classify:dp-ksummary" #skip-global-version-pin
+  }
+  String ref_basename = basename(taxid_to_ref_accessions_tsv, '.tsv')
+  String hits_basename = basename(focal_report_tsv, '.tsv')
+  Int disk_size = 50
+
+  command <<<
+    set -e
+    metagenomics.py filter_taxids_to_focal_hits "~{taxid_to_ref_accessions_tsv}" "~{focal_report_tsv}" "~{taxdump_tgz}" ~{min_read_count} "~{ref_basename}-~{hits_basename}.tsv"
+  >>>
+
+  output {
+    File   filtered_taxid_to_ref_accessions_tsv = "~{ref_basename}-~{hits_basename}.tsv"
+  }
+
+  runtime {
+    docker: docker
+    memory: "2 GB"
+    cpu: 1
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TESs
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
+
 task build_kraken2_db {
   meta {
     description: "Builds a custom kraken2 database. Outputs tar.zst tarballs of kraken2 database, associated krona taxonomy db, and an ncbi taxdump.tar.gz. Requires live internet access if any standard_libraries are specified or if taxonomy_db_tgz is absent."
