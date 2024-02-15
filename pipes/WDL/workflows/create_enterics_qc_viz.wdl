@@ -2,6 +2,10 @@ version 1.0
 
 workflow CreateEntericsQCViz {
 
+    meta {
+        allowNestedInputs: true
+    }
+
     parameter_meta {
         sample_ids: {description: "selected rows of data from data table which will be used for plotting"}
         input_table_name: {description: "name of the Terra data table - root entity type - from where input data is selected"}
@@ -9,6 +13,10 @@ workflow CreateEntericsQCViz {
         workspace_project: {description: "name of Terra project associated with Terra workspace"}
         grouping_column_name: {description: "name of column to be used for grouping/coloring - ex. gambit_predicted_taxon (organism)"}
         output_filename: {description: "name of output file containing visualizations"}
+        custom_est_coverage_thresholds: {description: "json string with custom estimated coverage threshlds"}
+        custom_contig_thresholds: {description: "json string with custom number contig thresholds"}
+        custom_assembly_thresholds: {description: "json string with custom assembly length thresholds"}
+        custom_mean_q_thresholds: {description: "json string with custom mean q thresholds"}
     }
 
     input {
@@ -20,21 +28,17 @@ workflow CreateEntericsQCViz {
 
         String?         grouping_column_name
         String?         output_filename
+
+        String?         custom_est_coverage_thresholds
+        String?         custom_contig_thresholds
+        String?         custom_assembly_thresholds
+        String?         custom_mean_q_thresholds
     }
 
-    call create_viz {
-        input:
-            sample_ids              =   sample_ids,
-            workspace_name          =   workspace_name,
-            workspace_project       =   workspace_project,
-            input_table_name        =   input_table_name,
-            grouping_column_name    =   grouping_column_name,
-            output_filename         =   output_filename
-    }
+    call create_viz
 
     output {
-        File    viz_pdf     =   create_viz.vizualizations
-        File    color_chart =   create_viz.color_chart
+        File    visualization_html     =   create_viz.html
     }
 }
 
@@ -45,19 +49,28 @@ task create_viz {
         String          workspace_project
         String          input_table_name
 
-        String          grouping_column_name    = "gambit_predicted_taxon"
-        String          output_filename         = "QC_vizualizations.pdf"
+        String           grouping_column_name            =   "gambit_predicted_taxon"
+        String           output_filename                 =   "QC_visualizations.pdf"
 
-        String  docker                          =   "broadinstitute/horsefish:pgs_visualizations"        
+        String?         custom_est_coverage_thresholds
+        String?         custom_contig_thresholds
+        String?         custom_assembly_thresholds
+        String?         custom_mean_q_thresholds
+
+        String          docker                          =   "us-central1-docker.pkg.dev/pgs-automation/enterics-visualizations/create_visualization_html:v1"       
     }
 
     command {
-        python3 /scripts/create_visualizations.py -s ~{sep=' ' sample_ids} \
-                                                  -t ~{input_table_name} \
-                                                  -w ~{workspace_name} \
-                                                  -p ~{workspace_project} \
-                                                  ~{"-g" + grouping_column_name} \
-                                                  ~{"-o" + output_filename}
+        python3 /scripts/create_enterics_visualizations_html.py -s ~{sep=' ' sample_ids} \
+                                                                -dt ~{input_table_name} \
+                                                                -w ~{workspace_name} \
+                                                                -bp ~{workspace_project} \
+                                                                ~{"-g" + grouping_column_name} \
+                                                                ~{"-o" + output_filename} \
+                                                                ~{"-ect" + custom_est_coverage_thresholds} \
+                                                                ~{"-cnt" + custom_contig_thresholds} \
+                                                                ~{"-at" + custom_assembly_thresholds} \
+                                                                ~{"-mqt" + custom_mean_q_thresholds} \
     }
 
     runtime {
@@ -65,7 +78,6 @@ task create_viz {
     }
 
     output {
-        File vizualizations = "~{output_filename}"
-        File color_chart    = "Colorized_Scores.xlsx"
+        File html = "~{output_filename}"
     }
 }
