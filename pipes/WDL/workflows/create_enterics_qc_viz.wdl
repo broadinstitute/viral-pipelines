@@ -38,7 +38,7 @@ workflow CreateEntericsQCViz {
     call create_viz
 
     output {
-        File    vizualization_html     =   create_viz.html
+        File    visualization_html     =   create_viz.html
     }
 }
 
