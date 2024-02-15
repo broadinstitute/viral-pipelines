@@ -62,15 +62,15 @@ task create_viz {
 
     command {
         python3 /scripts/create_enterics_visualizations_html.py -s ~{sep=' ' sample_ids} \
-                                                  -dt ~{input_table_name} \
-                                                  -w ~{workspace_name} \
-                                                  -bp ~{workspace_project} \
-                                                  ~{"-g" + grouping_column_name} \
-                                                  ~{"-o" + output_filename} \
-                                                  ~{"-ect" + custom_est_coverage_thresholds} \
-                                                  ~{"-cnt" + custom_contig_thresholds} \
-                                                  ~{"-at" + custom_assembly_thresholds} \
-                                                  ~{"-mqt" + custom_mean_q_thresholds} \
+                                                                -dt ~{input_table_name} \
+                                                                -w ~{workspace_name} \
+                                                                -bp ~{workspace_project} \
+                                                                ~{"-g" + grouping_column_name} \
+                                                                ~{"-o" + output_filename} \
+                                                                ~{"-ect" + custom_est_coverage_thresholds} \
+                                                                ~{"-cnt" + custom_contig_thresholds} \
+                                                                ~{"-at" + custom_assembly_thresholds} \
+                                                                ~{"-mqt" + custom_mean_q_thresholds} \
     }
 
     runtime {
