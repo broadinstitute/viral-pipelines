@@ -14,9 +14,9 @@ workflow CreateEntericsQCViz {
         grouping_column_name: {description: "name of column to be used for grouping/coloring - ex. gambit_predicted_taxon (organism)"}
         output_filename: {description: "name of output file containing visualizations"}
         custom_est_coverage_thresholds: {description: "json string with custom estimated coverage threshlds"}
-        custom_contig_thresholds: {description: ""json string with custom number contig thresholds"}
-        custom_assembly_thresholds: {description: ""json string with custom assembly length thresholds"}
-        custom_mean_q_thresholds: {description: ""json string with custom mean q thresholds"}
+        custom_contig_thresholds: {description: "json string with custom number contig thresholds"}
+        custom_assembly_thresholds: {description: "json string with custom assembly length thresholds"}
+        custom_mean_q_thresholds: {description: "json string with custom mean q thresholds"}
     }
 
     input {
