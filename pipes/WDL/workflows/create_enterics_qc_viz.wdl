@@ -6,35 +6,6 @@ workflow CreateEntericsQCViz {
         allowNestedInputs: true
     }
 
-    parameter_meta {
-        sample_ids: {description: "selected rows of data from data table which will be used for plotting"}
-        input_table_name: {description: "name of the Terra data table - root entity type - from where input data is selected"}
-        workspace_name: {description: "name of Terra workspace where data lives"}
-        workspace_project: {description: "name of Terra project associated with Terra workspace"}
-        grouping_column_name: {description: "name of column to be used for grouping/coloring - ex. gambit_predicted_taxon (organism)"}
-        output_filename: {description: "name of output file containing visualizations"}
-        custom_est_coverage_thresholds: {description: "json string with custom estimated coverage threshlds"}
-        custom_contig_thresholds: {description: "json string with custom number contig thresholds"}
-        custom_assembly_thresholds: {description: "json string with custom assembly length thresholds"}
-        custom_mean_q_thresholds: {description: "json string with custom mean q thresholds"}
-    }
-
-    input {
-
-        Array[String]   sample_ids
-        String          input_table_name
-        String          workspace_name
-        String          workspace_project
-
-        String?         grouping_column_name
-        String?         output_filename
-
-        String?         custom_est_coverage_thresholds
-        String?         custom_contig_thresholds
-        String?         custom_assembly_thresholds
-        String?         custom_mean_q_thresholds
-    }
-
     call create_viz
 
     output {
@@ -49,15 +20,28 @@ task create_viz {
         String          workspace_project
         String          input_table_name
 
-        String           grouping_column_name            =   "gambit_predicted_taxon"
-        String           output_filename                 =   "QC_visualizations.pdf"
+        String          grouping_column_name            =   "gambit_predicted_taxon"
+        String          output_filename                 =   "QC_visualizations.html"
 
         String?         custom_est_coverage_thresholds
         String?         custom_contig_thresholds
         String?         custom_assembly_thresholds
         String?         custom_mean_q_thresholds
 
-        String          docker                          =   "us-central1-docker.pkg.dev/pgs-automation/enterics-visualizations/create_visualization_html:v1"       
+        String          docker                           =   "us-central1-docker.pkg.dev/pgs-automation/enterics-visualizations/create_visualization_html:v1"       
+    }
+
+    parameter_meta {
+        sample_ids: {description: "selected rows of data from data table which will be used for plotting"}
+        input_table_name: {description: "name of the Terra data table - root entity type - from where input data is selected"}
+        workspace_name: {description: "name of Terra workspace where data lives"}
+        workspace_project: {description: "name of Terra project associated with Terra workspace"}
+        grouping_column_name: {description: "name of column to be used for grouping/coloring - ex. gambit_predicted_taxon (organism)"}
+        output_filename: {description: "name of output file containing visualizations"}
+        custom_est_coverage_thresholds: {description: "json string with custom estimated coverage threshlds"}
+        custom_contig_thresholds: {description: "json string with custom number contig thresholds"}
+        custom_assembly_thresholds: {description: "json string with custom assembly length thresholds"}
+        custom_mean_q_thresholds: {description: "json string with custom mean q thresholds"}
     }
 
     command {
@@ -78,6 +62,6 @@ task create_viz {
     }
 
     output {
-        File html = "~{output_filename}"
+        File html = output_filename
     }
 }
