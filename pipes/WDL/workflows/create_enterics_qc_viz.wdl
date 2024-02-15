@@ -62,7 +62,7 @@ task create_viz {
         String           input_table_name
 
         String           grouping_column_name            =   "gambit_predicted_taxon"
-        String           output_filename                 =   "QC_visualizations.pdf"
+        String           output_filename                 =   "QC_visualizations.html"
 
         String?          custom_est_coverage_thresholds
         String?          custom_contig_thresholds
