@@ -1,6 +1,6 @@
 broadinstitute/viral-core=2.2.4
 broadinstitute/viral-assemble=2.2.4.0
-broadinstitute/viral-classify=2.2.3.0
+broadinstitute/viral-classify=2.2.4.1
 broadinstitute/viral-phylo=2.1.20.2
 broadinstitute/py3-bio=0.1.2
 broadinstitute/beast-beagle-cuda=1.10.5pre
