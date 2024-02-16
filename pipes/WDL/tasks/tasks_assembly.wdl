@@ -233,6 +233,7 @@ task scaffold {
         grep -v '^>' ~{sample_name}.intermediate_gapfill.fasta | tr -d '\nNn' | wc -c | tee assembly_preimpute_length_unambiguous
         grep '^>' ~{sample_name}.intermediate_gapfill.fasta | wc -l | tee assembly_num_segments_recovered
         grep '^>' ~{sample_name}.scaffolding_chosen_ref.fasta | wc -l | tee reference_num_segments_required
+        grep -v '^>' ~{sample_name}.scaffolding_chosen_ref.fasta | tr -d '\n' | wc -c | tee reference_length
         set -e -o pipefail
 
         if ~{true='true' false='false' allow_incomplete_output} && ! cmp -s assembly_num_segments_recovered reference_num_segments_required
@@ -265,6 +266,7 @@ task scaffold {
         Int    assembly_preimpute_length_unambiguous = read_int("assembly_preimpute_length_unambiguous")
         Int    assembly_num_segments_recovered       = read_int("assembly_num_segments_recovered")
         Int    reference_num_segments_required       = read_int("reference_num_segments_required")
+        Int    reference_length                      = read_int("reference_length")
         Array[String] scaffolding_chosen_ref_names   = read_lines("~{sample_name}.scaffolding_chosen_refs.txt")
         File   scaffolding_chosen_ref                = "~{sample_name}.scaffolding_chosen_ref.fasta"
         File   scaffolding_stats                     = "~{sample_name}.scaffolding_stats.txt"
