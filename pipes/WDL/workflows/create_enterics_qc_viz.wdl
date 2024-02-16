@@ -23,12 +23,9 @@ task create_viz {
         String          grouping_column_name            =   "gambit_predicted_taxon"
         String          output_filename                 =   "QC_visualizations.html"
 
-        String?         custom_est_coverage_thresholds
-        String?         custom_contig_thresholds
-        String?         custom_assembly_thresholds
-        String?         custom_mean_q_thresholds
+        File?           thresholds_file
 
-        String          docker                           =   "us-central1-docker.pkg.dev/pgs-automation/enterics-visualizations/create_visualization_html:v1"       
+        String          docker                           =   "us-central1-docker.pkg.dev/pgs-automation/enterics-visualizations/create_visualization_html:v2"       
     }
 
     parameter_meta {
@@ -38,10 +35,7 @@ task create_viz {
         workspace_project: {description: "name of Terra project associated with Terra workspace"}
         grouping_column_name: {description: "name of column to be used for grouping/coloring - ex. gambit_predicted_taxon (organism)"}
         output_filename: {description: "name of output file containing visualizations"}
-        custom_est_coverage_thresholds: {description: "json string with custom estimated coverage threshlds"}
-        custom_contig_thresholds: {description: "json string with custom number contig thresholds"}
-        custom_assembly_thresholds: {description: "json string with custom assembly length thresholds"}
-        custom_mean_q_thresholds: {description: "json string with custom mean q thresholds"}
+        thresholds_file: {description: "JSON file containing custom thresholds"}
     }
 
     command {
@@ -51,10 +45,7 @@ task create_viz {
                                                                 -bp ~{workspace_project} \
                                                                 ~{"-g" + grouping_column_name} \
                                                                 ~{"-o" + output_filename} \
-                                                                ~{"-ect" + custom_est_coverage_thresholds} \
-                                                                ~{"-cnt" + custom_contig_thresholds} \
-                                                                ~{"-at" + custom_assembly_thresholds} \
-                                                                ~{"-mqt" + custom_mean_q_thresholds} \
+                                                                ~{"-t" + thresholds_file}
     }
 
     runtime {
