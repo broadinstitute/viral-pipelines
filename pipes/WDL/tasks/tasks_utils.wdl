@@ -712,6 +712,35 @@ task s3_copy {
   }
 }
 
+task string_split {
+  meta {
+    description: "split a string by a delimiter"
+  }
+  input {
+    String   joined_string
+    String   delimiter
+  }
+  command <<<
+    set -e
+    python3<<CODE
+    with open('TOKENS', 'wt') as outf:
+      for token in "~{joined_string}".split("~{delimiter}"):
+        outf.write(token + '\n')
+    CODE
+  >>>
+  output {
+    Array[String] tokens = read_lines("TOKENS")
+  }
+  runtime {
+    docker: "python:slim"
+    memory: "1 GB"
+    cpu: 1
+    disks: "local-disk 50 SSD"
+    disk: "50 GB" # TES
+    maxRetries: 2
+  }
+}
+
 task filter_sequences_by_length {
     meta {
         description: "Filter sequences in a fasta file to enforce a minimum count of non-N bases."

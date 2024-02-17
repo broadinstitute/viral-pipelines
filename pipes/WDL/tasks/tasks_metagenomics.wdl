@@ -11,7 +11,7 @@ task krakenuniq {
     File        krona_taxonomy_db_tgz  # taxonomy.tab
 
     Int?        machine_mem_gb
-    String      docker = "quay.io/broadinstitute/viral-classify:2.2.3.0" #skip-global-version-pin
+    String      docker = "quay.io/broadinstitute/viral-classify:2.2.4.0" #skip-global-version-pin
   }
 
   Int disk_size = 750
@@ -143,7 +143,7 @@ task build_krakenuniq_db {
     Int?     zstd_compression_level
 
     Int?     machine_mem_gb
-    String   docker = "quay.io/broadinstitute/viral-classify:2.2.3.0" #skip-global-version-pin
+    String   docker = "quay.io/broadinstitute/viral-classify:2.2.4.0" #skip-global-version-pin
   }
 
   Int disk_size = 750
@@ -213,7 +213,7 @@ task kraken2 {
     Int?   min_base_qual
 
     Int    machine_mem_gb = 72
-    String docker = "quay.io/broadinstitute/viral-classify:2.2.3.0"
+    String docker = "quay.io/broadinstitute/viral-classify:2.2.4.0"
   }
 
   parameter_meta {
@@ -326,6 +326,94 @@ task kraken2 {
   }
 }
 
+task report_primary_kraken_taxa {
+  meta {
+    description: "Interprets a kraken (or kraken2 or krakenuniq) summary report file and emits the primary contributing taxa under a focal taxon of interest."
+  }
+  input {
+    File          kraken_summary_report
+    String        focal_taxon = "Viruses"
+
+    String        docker = "quay.io/broadinstitute/viral-classify:2.2.4.0"
+  }
+  String out_basename = basename(kraken_summary_report, '.txt')
+  Int disk_size = 50
+  Int machine_mem_gb = 2
+
+  command <<<
+    set -e
+    metagenomics.py taxlevel_plurality "~{kraken_summary_report}" "~{focal_taxon}" "~{out_basename}.ranked_focal_report.tsv"
+    cat "~{out_basename}.ranked_focal_report.tsv" | head -2 | tail +2 > TOPROW
+    cut -f 2 TOPROW > NUM_FOCAL
+    cut -f 4 TOPROW > PCT_OF_FOCAL
+    cut -f 7 TOPROW > NUM_READS
+    cut -f 8 TOPROW > TAX_RANK
+    cut -f 9 TOPROW > TAX_ID
+    cut -f 10 TOPROW > TAX_NAME
+  >>>
+
+  output {
+    String focal_tax_name = focal_taxon
+    File   ranked_focal_report = "~{out_basename}.ranked_focal_report.tsv"
+    Int    total_focal_reads = read_int("NUM_FOCAL")
+    Float  percent_of_focal = read_float("PCT_OF_FOCAL")
+    Int    num_reads = read_int("NUM_READS")
+    String tax_rank = read_string("TAX_RANK")
+    String tax_id = read_string("TAX_ID")
+    String tax_name = read_string("TAX_NAME")
+  }
+
+  runtime {
+    docker: docker
+    memory: machine_mem_gb + " GB"
+    cpu: 1
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TESs
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
+
+task filter_refs_to_found_taxa {
+  meta {
+    description: "Filters a taxid_to_ref_accessions_tsv to the set of taxa found in a focal_report."
+  }
+  input {
+    File          taxid_to_ref_accessions_tsv
+    File          focal_report_tsv
+    File          taxdump_tgz
+    Int           min_read_count = 100
+
+    String        docker = "quay.io/broadinstitute/viral-classify:2.2.4.0"
+  }
+  String ref_basename = basename(taxid_to_ref_accessions_tsv, '.tsv')
+  String hits_basename = basename(focal_report_tsv, '.tsv')
+  Int disk_size = 50
+
+  command <<<
+    set -e
+    mkdir -p taxdump
+    read_utils.py extract_tarball "~{taxdump_tgz}" taxdump
+    metagenomics.py filter_taxids_to_focal_hits "~{taxid_to_ref_accessions_tsv}" "~{focal_report_tsv}" taxdump ~{min_read_count} "~{ref_basename}-~{hits_basename}.tsv"
+  >>>
+
+  output {
+    File   filtered_taxid_to_ref_accessions_tsv = "~{ref_basename}-~{hits_basename}.tsv"
+  }
+
+  runtime {
+    docker: docker
+    memory: "2 GB"
+    cpu: 1
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TESs
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
+
 task build_kraken2_db {
   meta {
     description: "Builds a custom kraken2 database. Outputs tar.zst tarballs of kraken2 database, associated krona taxonomy db, and an ncbi taxdump.tar.gz. Requires live internet access if any standard_libraries are specified or if taxonomy_db_tgz is absent."
@@ -348,7 +436,7 @@ task build_kraken2_db {
     Int?          zstd_compression_level
 
     Int?          machine_mem_gb
-    String        docker = "quay.io/broadinstitute/viral-classify:2.2.3.0"
+    String        docker = "quay.io/broadinstitute/viral-classify:2.2.4.0"
   }
 
   Int disk_size = 750
@@ -490,7 +578,7 @@ task blastx {
     File   krona_taxonomy_db_tgz
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-classify:2.2.3.0"
+    String docker = "quay.io/broadinstitute/viral-classify:2.2.4.0"
   }
 
   parameter_meta {
@@ -580,7 +668,7 @@ task krona {
     Int?         magnitude_column
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-classify:2.2.3.0"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.2.4.0"
   }
 
   Int disk_size = 50
@@ -687,7 +775,7 @@ task filter_bam_to_taxa {
     String         out_filename_suffix = "filtered"
 
     Int?           machine_mem_gb
-    String         docker = "quay.io/broadinstitute/viral-classify:2.2.3.0"
+    String         docker = "quay.io/broadinstitute/viral-classify:2.2.4.0"
   }
 
   String out_basename = basename(classified_bam, ".bam") + "." + out_filename_suffix
@@ -774,7 +862,7 @@ task kaiju {
     File   krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-classify:2.2.3.0"
+    String docker = "quay.io/broadinstitute/viral-classify:2.2.4.0"
   }
 
   String   input_basename = basename(reads_unmapped_bam, ".bam")

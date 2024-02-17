@@ -121,6 +121,10 @@ workflow classify_single {
             trim_clip_db       = trim_clip_db,
             always_succeed     = true
     }
+    call metagenomics.report_primary_kraken_taxa {
+        input:
+            kraken_summary_report = kraken2.kraken2_summary_report
+    }
 
     output {
         File   cleaned_reads_unaligned_bam     = deplete.bam_filtered_to_taxa
@@ -134,6 +138,15 @@ workflow classify_single {
         
         File   kraken2_summary_report          = kraken2.kraken2_summary_report
         File   kraken2_krona_plot              = kraken2.krona_report_html
+        File   kraken2_top_taxa_report         = report_primary_kraken_taxa.ranked_focal_report
+        String kraken2_focal_taxon_name        = report_primary_kraken_taxa.focal_tax_name
+        Int    kraken2_focal_total_reads       = report_primary_kraken_taxa.total_focal_reads
+        String kraken2_top_taxon_id            = report_primary_kraken_taxa.tax_id
+        String kraken2_top_taxon_name          = report_primary_kraken_taxa.tax_name
+        String kraken2_top_taxon_rank          = report_primary_kraken_taxa.tax_rank
+        Int    kraken2_top_taxon_num_reads     = report_primary_kraken_taxa.num_reads
+        Float  kraken2_top_taxon_pct_of_focal  = report_primary_kraken_taxa.percent_of_focal
+
         File   raw_fastqc                      = merge_raw_reads.fastqc
         File   cleaned_fastqc                  = fastqc_cleaned.fastqc_html
         File   spikein_report                  = spikein.report
