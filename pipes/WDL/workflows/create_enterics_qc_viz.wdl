@@ -25,7 +25,7 @@ task create_viz {
 
         File?           thresholds_file
 
-        String          docker                           =   "us-central1-docker.pkg.dev/pgs-automation/enterics-visualizations/create_visualization_html:v3"       
+        String          docker                           =   "us-central1-docker.pkg.dev/pgs-automation/enterics-visualizations/create_visualization_html:v4"       
     }
 
     parameter_meta {
