@@ -39,13 +39,13 @@ task create_viz {
     }
 
     command {
-        python3 /scripts/create_enterics_visualizations_html.py -s ~{sep=' ' sample_ids} \
-                                                                -dt ~{input_table_name} \
-                                                                -w ~{workspace_name} \
-                                                                -bp ~{workspace_project} \
-                                                                ~{"-g" + grouping_column_name} \
-                                                                ~{"-o" + output_filename} \
-                                                                ~{"-t" + thresholds_file}
+        python3 /scripts/create_enterics_visualizations_html.py -s "~{sep='" "' sample_ids}" \
+                                                                -dt "~{input_table_name}" \
+                                                                -w "~{workspace_name}" \
+                                                                -bp "~{workspace_project}" \
+                                                                ~{'-g "' + grouping_column_name + '"'} \
+                                                                ~{'-o "' + output_filename + '"'} \
+                                                                ~{'-t "' + thresholds_file + '"'}
     }
 
     runtime {
