@@ -1,12 +1,19 @@
 version 1.0
 
+import "../tasks/tasks_terra.wdl" as terra
+
 workflow CreateEntericsQCViz {
 
     meta {
         allowNestedInputs: true
     }
 
-    call create_viz
+    call terra.check_terra_env
+    call create_viz {
+        input:
+            workspace_name = check_terra_env.workspace_name,
+            workspace_project = check_terra_env.workspace_namespace
+    }
 
     output {
         File    visualization_html     =   create_viz.html
@@ -39,13 +46,13 @@ task create_viz {
     }
 
     command {
-        python3 /scripts/create_enterics_visualizations_html.py -s ~{sep=' ' sample_ids} \
-                                                                -dt ~{input_table_name} \
-                                                                -w ~{workspace_name} \
-                                                                -bp ~{workspace_project} \
-                                                                ~{"-g" + grouping_column_name} \
-                                                                ~{"-o" + output_filename} \
-                                                                ~{"-t" + thresholds_file}
+        python3 /scripts/create_enterics_visualizations_html.py -s "~{sep='" "' sample_ids}" \
+                                                                -dt "~{input_table_name}" \
+                                                                -w "~{workspace_name}" \
+                                                                -bp "~{workspace_project}" \
+                                                                ~{'-g "' + grouping_column_name + '"'} \
+                                                                ~{'-o "' + output_filename + '"'} \
+                                                                ~{'-t "' + thresholds_file + '"'}
     }
 
     runtime {
