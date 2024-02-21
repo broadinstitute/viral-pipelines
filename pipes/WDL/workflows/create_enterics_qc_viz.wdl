@@ -1,12 +1,19 @@
 version 1.0
 
+import "../tasks/tasks_terra.wdl" as terra
+
 workflow CreateEntericsQCViz {
 
     meta {
         allowNestedInputs: true
     }
 
-    call create_viz
+    call terra.check_terra_env
+    call create_viz {
+        input:
+            workspace_name = check_terra_env.workspace_name,
+            workspace_project = check_terra_env.workspace_namespace
+    }
 
     output {
         File    visualization_html     =   create_viz.html
