@@ -65,6 +65,7 @@ task lca_megablast {
     input {
         File    trimmed_fasta
         File    blast_db_tgz
+        File    taxdb
         String  db_name = "copy"
         File    taxonomy_db_tgz
         String  fasta_basename = basename(trimmed_fasta, ".fasta")
@@ -102,7 +103,10 @@ task lca_megablast {
     read_utils.py extract_tarball \
       ~{taxonomy_db_tgz} . \
       --loglevel=DEBUG
-
+    #unpack taxdb and put it in the same folder as blast indexes
+    read_utils.py extract_tarball \
+        ~{taxdb} blastdb \
+        --loglevel=DEBUG
     BLASTDB="blastdb/"
     # Run megablast against nt
     #miniwdl run worked when the Title DB was same as called under db. Remade DB, make sure to note title of DB. 
