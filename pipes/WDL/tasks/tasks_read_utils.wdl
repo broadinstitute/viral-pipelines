@@ -365,6 +365,7 @@ task FastqToUBAM {
     String? run_date
     String  platform_name
     String? sequencing_center
+    String? additional_picard_option_string
 
     String  docker = "quay.io/broadinstitute/viral-core:2.2.4"
   }
@@ -375,6 +376,7 @@ task FastqToUBAM {
     sample_name: { description: "Sample name. This is required and will populate the 'SM' read group value and will be used as the output filename (must be filename-friendly)." }
     library_name: { description: "Library name. This is required and will populate the 'LB' read group value. SM & LB combinations must be identical for any sequencing reads generated from the same sequencing library, and must be distinct for any reads generated from different libraries." }
     platform_name: { description: "Sequencing platform. This is required and will populate the 'PL' read group value. Must be one of CAPILLARY, DNBSEQ, HELICOS, ILLUMINA, IONTORRENT, LS454, ONT, PACBIO, or SOLID." }
+    additional_picard_option_string: { description: "A string containing additional options to pass to picard FastqToSam beyond those made explicitly available as inputs to this task. For valid values, see: https://broadinstitute.github.io/picard/command-line-overview.html#FastqToSam" }
   }
   command {
       set -ex -o pipefail
@@ -395,7 +397,7 @@ task FastqToUBAM {
         ${"PLATFORM_UNIT=" + platform_unit} \
         ${"RUN_DATE=" + run_date} \
         ${"PLATFORM=" + platform_name} \
-        ${"SEQUENCING_CENTER=" + sequencing_center}
+        ${"SEQUENCING_CENTER=" + sequencing_center} ${additional_picard_option_string}
   }
   runtime {
     docker: docker
