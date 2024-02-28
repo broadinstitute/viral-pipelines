@@ -15,6 +15,7 @@ workflow CreateEntericsQCViz {
 }
 
 task create_viz {
+    
     input {
         Array[String]   sample_ids
         Array[String]   gambit_predicted_taxon
@@ -40,7 +41,6 @@ task create_viz {
     }
 
     command {
-
         python3 /scripts/create_enterics_visualizations_html.py -s "~{sep='" "' sample_ids}" \
                                                                 -g "~{sep='" "' gambit_predicted_taxon}" \
                                                                 -ecc ~{sep=' ' est_coverage_clean} \
