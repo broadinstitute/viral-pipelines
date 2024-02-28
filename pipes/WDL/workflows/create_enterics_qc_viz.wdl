@@ -1,18 +1,12 @@
 version 1.0
 
-import "../tasks/tasks_terra.wdl" as terra
-
 workflow CreateEntericsQCViz {
 
     meta {
         allowNestedInputs: true
     }
 
-    call terra.check_terra_env
     call create_viz {
-        input:
-            workspace_name = check_terra_env.workspace_name,
-            workspace_project = check_terra_env.workspace_namespace
     }
 
     output {
@@ -21,36 +15,37 @@ workflow CreateEntericsQCViz {
 }
 
 task create_viz {
+    
     input {
         Array[String]   sample_ids
-        String          workspace_name
-        String          workspace_project
-        String          input_table_name
-
-        String          grouping_column_name            =   "gambit_predicted_taxon"
-        String          output_filename                 =   "QC_visualizations.html"
+        Array[String]   gambit_predicted_taxon
+        Array[String]   est_coverage_clean
+        Array[String]   number_contigs
+        Array[String]   assembly_length
 
         File?           thresholds_file
 
-        String          docker                           =   "us-central1-docker.pkg.dev/pgs-automation/enterics-visualizations/create_visualization_html:v4"       
+        String          output_filename                  =   "QC_visualizations.html"
+
+        String          docker                           =   "us-central1-docker.pkg.dev/pgs-automation/enterics-visualizations/create_visualization_html:v5"       
     }
 
     parameter_meta {
-        sample_ids: {description: "selected rows of data from data table which will be used for plotting"}
-        input_table_name: {description: "name of the Terra data table - root entity type - from where input data is selected"}
-        workspace_name: {description: "name of Terra workspace where data lives"}
-        workspace_project: {description: "name of Terra project associated with Terra workspace"}
-        grouping_column_name: {description: "name of column to be used for grouping/coloring - ex. gambit_predicted_taxon (organism)"}
+        sample_ids: {description: "selected samples of data"}
+        gambit_predicted_taxon: {description: "predicted gambits for selected samples"}
+        est_coverage_clean: {description: "estimated coverage metrics for selected samples"}
+        number_contigs: {description: "number contigs metrics for selected samples"}
+        assembly_length: {description: "assembly length metrics for selected samples"}
         output_filename: {description: "name of output file containing visualizations"}
         thresholds_file: {description: "JSON file containing custom thresholds"}
     }
 
     command {
         python3 /scripts/create_enterics_visualizations_html.py -s "~{sep='" "' sample_ids}" \
-                                                                -dt "~{input_table_name}" \
-                                                                -w "~{workspace_name}" \
-                                                                -bp "~{workspace_project}" \
-                                                                ~{'-g "' + grouping_column_name + '"'} \
+                                                                -g "~{sep='" "' gambit_predicted_taxon}" \
+                                                                -ecc ~{sep=' ' est_coverage_clean} \
+                                                                -nc ~{sep=' ' number_contigs} \
+                                                                -al ~{sep=' ' assembly_length} \
                                                                 ~{'-o "' + output_filename + '"'} \
                                                                 ~{'-t "' + thresholds_file + '"'}
     }
