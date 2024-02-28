@@ -40,6 +40,13 @@ task create_viz {
     }
 
     command {
+
+        echo "Length of sample_ids: ${#sample_ids[@]}"
+        echo "Length of gambit_predicted_taxon: ${#gambit_predicted_taxon[@]}"
+        echo "Length of est_coverage_clean: ${#est_coverage_clean[@]}"
+        echo "Length of number_contigs: ${#number_contigs[@]}"
+        echo "Length of assembly_length: ${#assembly_length[@]}"
+        
         python3 /scripts/create_enterics_visualizations_html.py -s "~{sep='" "' sample_ids}" \
                                                                 -g "~{sep='" "' gambit_predicted_taxon}" \
                                                                 -ecc ~{sep=' ' est_coverage_clean} \
