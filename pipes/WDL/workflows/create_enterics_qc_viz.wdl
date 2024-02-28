@@ -39,14 +39,8 @@ task create_viz {
         thresholds_file: {description: "JSON file containing custom thresholds"}
     }
 
-    command <<<
+    command {
 
-        python3 -c "print('Length of sample_ids:', len('${sep=' ' sample_ids}'.split()))"
-        python3 -c "print('Length of gambit_predicted_taxon:', len('${sep=' ' gambit_predicted_taxon}'.split()))"
-        python3 -c "print('Length of est_coverage_clean:', len('${sep=' ' est_coverage_clean}'.split()))"
-        python3 -c "print('Length of number_contigs:', len('${sep=' ' number_contigs}'.split()))"
-        python3 -c "print('Length of assembly_length:', len('${sep=' ' assembly_length}'.split()))"
-        
         python3 /scripts/create_enterics_visualizations_html.py -s "~{sep='" "' sample_ids}" \
                                                                 -g "~{sep='" "' gambit_predicted_taxon}" \
                                                                 -ecc ~{sep=' ' est_coverage_clean} \
@@ -54,7 +48,7 @@ task create_viz {
                                                                 -al ~{sep=' ' assembly_length} \
                                                                 ~{'-o "' + output_filename + '"'} \
                                                                 ~{'-t "' + thresholds_file + '"'}
-    >>>
+    }
 
     runtime {
         docker: docker
