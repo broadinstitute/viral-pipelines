@@ -15,7 +15,7 @@ workflow CreateEntericsQCViz {
 }
 
 task create_viz {
-    
+
     input {
         Array[String]   sample_ids
         Array[String]   gambit_predicted_taxon
@@ -27,7 +27,7 @@ task create_viz {
 
         String          output_filename                  =   "QC_visualizations.html"
 
-        String          docker                           =   "us-central1-docker.pkg.dev/pgs-automation/enterics-visualizations/create_visualization_html:v5"       
+        String          docker                           =   "us-central1-docker.pkg.dev/pgs-automation/enterics-visualizations/create_visualization_html:v6"       
     }
 
     parameter_meta {
