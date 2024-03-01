@@ -39,6 +39,7 @@ task merge_tarballs {
     dx_instance_type: "mem1_ssd2_v2_x16"
     maxRetries: 2
     preemptible: 0
+    cpuPlatform: "Intel Ice Lake"
   }
 }
 
@@ -427,6 +428,7 @@ task illumina_demux {
     dx_timeout: "20H"
     maxRetries: 2
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
+    cpuPlatform: "Intel Ice Lake"
   }
 }
 

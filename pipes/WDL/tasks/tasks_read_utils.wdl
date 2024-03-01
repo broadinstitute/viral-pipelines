@@ -231,6 +231,7 @@ task merge_and_reheader_bams {
         dx_instance_type: "mem1_ssd2_v2_x4"
         preemptible: 0
         maxRetries: 2
+        cpuPlatform: "Intel Ice Lake"
     }
 }
 
@@ -287,6 +288,7 @@ task rmdup_ubam {
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x2"
     maxRetries: 2
+    cpuPlatform: "Intel Ice Lake"
   }
 }
 
@@ -348,6 +350,7 @@ task downsample_bams {
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
+    cpuPlatform: "Intel Ice Lake"
   }
 }
 
@@ -407,6 +410,7 @@ task FastqToUBAM {
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
+    cpuPlatform: "Intel Ice Lake"
   }
   output {
     File unmapped_bam = "~{sample_name}.bam"

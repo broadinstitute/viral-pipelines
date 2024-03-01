@@ -21,6 +21,7 @@ task concatenate {
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
+        cpuPlatform: "Intel Ice Lake"
     }
     output {
         File combined = "${output_name}"
@@ -111,6 +112,7 @@ task zcat {
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
+        cpuPlatform: "Intel Ice Lake"
     }
     output {
         File    combined     = "${output_name}"
