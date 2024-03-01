@@ -1147,6 +1147,8 @@ task augur_mafft_align {
 
         String  docker = "nextstrain/base:build-20230905T192825Z"
         Int     disk_size = 750
+        Int     mem_size = 180
+        Int     cpus = 64
     }
     command <<<
         set -e
@@ -1165,8 +1167,8 @@ task augur_mafft_align {
     >>>
     runtime {
         docker: docker
-        memory: "180 GB"
-        cpu :   64
+        memory: mem_size + " GB"
+        cpu :   cpus
         disks:  "local-disk " + disk_size + " LOCAL"
         disk: disk_size + " GB" # TES
         preemptible: 0
