@@ -231,7 +231,6 @@ task merge_and_reheader_bams {
         dx_instance_type: "mem1_ssd2_v2_x4"
         preemptible: 0
         maxRetries: 2
-        cpuPlatform: "Intel Ice Lake"
     }
 }
 
@@ -244,7 +243,7 @@ task rmdup_ubam {
     File    reads_unmapped_bam
     String  method = "mvicuna"
 
-    Int?    machine_mem_gb
+    Int     machine_mem_gb = 7
     String  docker = "quay.io/broadinstitute/viral-core:2.2.4"
   }
 
@@ -257,38 +256,37 @@ task rmdup_ubam {
 
   String reads_basename = basename(reads_unmapped_bam, ".bam")
   
-  command {
+  command <<<
     set -ex -o pipefail
     mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
     read_utils.py --version | tee VERSION
 
-    read_utils.py rmdup_"${method}"_bam \
-      "${reads_unmapped_bam}" \
-      "${reads_basename}".dedup.bam \
+    read_utils.py rmdup_"~{method}"_bam \
+      "~{reads_unmapped_bam}" \
+      "~{reads_basename}".dedup.bam \
       --JVMmemory "$mem_in_mb"m \
       --loglevel=DEBUG
 
-    samtools view -c ${reads_basename}.dedup.bam | tee dedup_read_count_post
-    reports.py fastqc ${reads_basename}.dedup.bam ${reads_basename}.dedup_fastqc.html --out_zip ${reads_basename}.dedup_fastqc.zip
-  }
+    samtools view -c "~{reads_basename}.dedup.bam" | tee dedup_read_count_post
+    reports.py fastqc "~{reads_basename}.dedup.bam" "~{reads_basename}.dedup_fastqc.html" --out_zip "~{reads_basename}.dedup_fastqc.zip"
+  >>>
 
   output {
-    File   dedup_bam             = "${reads_basename}.dedup.bam"
-    File   dedup_fastqc          = "${reads_basename}.dedup_fastqc.html"
-    File   dedup_fastqc_zip      = "${reads_basename}.dedup_fastqc.zip"
+    File   dedup_bam             = "~{reads_basename}.dedup.bam"
+    File   dedup_fastqc          = "~{reads_basename}.dedup_fastqc.html"
+    File   dedup_fastqc_zip      = "~{reads_basename}.dedup_fastqc.zip"
     Int    dedup_read_count_post = read_int("dedup_read_count_post")
     String viralngs_version      = read_string("VERSION")
   }
 
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 7]) + " GB"
+    memory: machine_mem_gb + " GB"
     cpu:    2
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x2"
     maxRetries: 2
-    cpuPlatform: "Intel Ice Lake"
   }
 }
 
@@ -301,8 +299,8 @@ task downsample_bams {
   input {
     Array[File]+ reads_bam
     Int?         readCount
-    Boolean?     deduplicateBefore = false
-    Boolean?     deduplicateAfter = false
+    Boolean      deduplicateBefore = false
+    Boolean      deduplicateAfter = false
 
     Int?         machine_mem_gb
     String       docker = "quay.io/broadinstitute/viral-core:2.2.4"
@@ -350,7 +348,6 @@ task downsample_bams {
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
-    cpuPlatform: "Intel Ice Lake"
   }
 }
 
@@ -410,7 +407,6 @@ task FastqToUBAM {
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
-    cpuPlatform: "Intel Ice Lake"
   }
   output {
     File unmapped_bam = "~{sample_name}.bam"

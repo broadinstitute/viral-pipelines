@@ -576,7 +576,6 @@ task nextstrain_build_subsample {
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem3_ssd1_v2_x8"
         maxRetries: 2
-        cpuPlatform: "Intel Ice Lake"
     }
     output {
         File            subsampled_msa  = "ncov/results/~{build_name}/~{build_name}_subsampled_sequences.fasta"
@@ -669,7 +668,6 @@ task nextstrain_deduplicate_sequences {
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         maxRetries: 2
-        cpuPlatform: "Intel Ice Lake"
     }
     output {
         File sequences_deduplicated_fasta = "~{out_filename}"
@@ -828,7 +826,6 @@ task filter_subsample_sequences {
         dx_instance_type: "mem1_ssd1_v2_x4"
         preemptible: 1
         maxRetries: 2
-        cpuPlatform: "Intel Ice Lake"
     }
     output {
         File   filtered_fasta    = out_fname
@@ -927,7 +924,6 @@ task filter_sequences_to_list {
         dx_instance_type: "mem1_ssd1_v2_x4"
         preemptible: 1
         maxRetries: 2
-        cpuPlatform: "Intel Ice Lake"
     }
     output {
         File   filtered_fasta    = out_fname
@@ -1176,7 +1172,6 @@ task augur_mafft_align {
         preemptible: 0
         dx_instance_type: "mem3_ssd2_v2_x32"
         maxRetries: 2
-        cpuPlatform: "Intel Ice Lake"
     }
     output {
         File   aligned_sequences = "~{basename}_aligned.fasta"

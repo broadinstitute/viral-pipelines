@@ -99,7 +99,6 @@ task deplete_taxa {
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: 1
     maxRetries: 2
-    cpuPlatform: "Intel Ice Lake"
   }
 }
 
@@ -165,7 +164,6 @@ task filter_to_taxon {
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     maxRetries: 2
-    cpuPlatform: "Intel Ice Lake"
   }
 }
 
@@ -255,6 +253,5 @@ task merge_one_per_sample {
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x4"
     maxRetries: 2
-    cpuPlatform: "Intel Ice Lake"
   }
 }

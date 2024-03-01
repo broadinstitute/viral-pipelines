@@ -127,7 +127,6 @@ task krakenuniq {
     dx_instance_type: "mem3_ssd1_v2_x48"
     preemptible: 0
     maxRetries: 2
-    cpuPlatform: "Intel Ice Lake"
   }
 }
 
@@ -198,7 +197,6 @@ task build_krakenuniq_db {
     dx_instance_type: "mem3_ssd1_v2_x32"
     preemptible: 0
     maxRetries: 2
-    cpuPlatform: "Intel Ice Lake"
   }
 }
 
@@ -319,13 +317,12 @@ task kraken2 {
   runtime {
     docker: docker
     memory: machine_mem_gb + " GB"
-    cpu: 8
+    cpu: 16
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TESs
     dx_instance_type: "mem3_ssd1_v2_x8"
     preemptible: 2
     maxRetries: 2
-    cpuPlatform: "Intel Ice Lake"
   }
 }
 
@@ -567,7 +564,6 @@ task build_kraken2_db {
     dx_instance_type: "mem3_ssd1_v2_x16"
     preemptible: 0
     maxRetries: 2
-    cpuPlatform: "Intel Ice Lake"
   }
 }
 
@@ -656,7 +652,6 @@ task blastx {
     dx_instance_type: "mem1_ssd1_v2_x36"
     preemptible: 1
     maxRetries: 2
-    cpuPlatform: "Intel Ice Lake"
   }
 }
 
@@ -856,7 +851,6 @@ task filter_bam_to_taxa {
     cpu: 8
     dx_instance_type: "mem3_ssd1_v2_x4"
     maxRetries: 2
-    cpuPlatform: "Intel Ice Lake"
   }
 }
 
@@ -933,6 +927,5 @@ task kaiju {
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x16"
     maxRetries: 2
-    cpuPlatform: "Intel Ice Lake"
   }
 }
