@@ -128,6 +128,7 @@ task lofreq {
   input {
     File      aligned_bam
     File      reference_fasta
+    Boolean?  output_all_positions = false # note that this may not output *all* positions (i.e. gVCF) as lofreq does not currently support full output
 
     String    out_basename = basename(aligned_bam, '.bam')
     String    docker = "quay.io/biocontainers/lofreq:2.1.5--py38h588ecb2_4"
@@ -141,35 +142,54 @@ task lofreq {
     # make local copies because CWD is writeable but localization dir isn't always
     cp "~{reference_fasta}" reference.fasta
     cp "~{aligned_bam}" aligned.bam
-
+    
     # samtools faidx fails if fasta is empty
     if [ $(grep -v '^>' reference.fasta | tr -d '\nNn' | wc -c) == "0" ]; then
       touch "~{out_basename}.vcf"
+      touch "~{out_basename}.unfiltered.vcf.gz"
       exit 0
     fi
-
+    
     # index for lofreq
     samtools faidx reference.fasta
     samtools index aligned.bam
 
-    # lofreq
-    lofreq call \
-      -f reference.fasta \
-      -o "~{out_basename}.vcf" \
-      aligned.bam
+    OUTPUT_ALL_POS="~{true='output_all' false='' output_all_positions}"
+    if [ -n "$OUTPUT_ALL_POS" ]; then
+      lofreq call-parallel --pp-threads $(nproc --all) --no-default-filter --bonf 1 --sig 1 \
+      -f "reference.fasta" \
+      -o "~{out_basename}.unfiltered.vcf.gz" \
+      "aligned.bam"
+      lofreq filter --print-all \
+      --cov-min 10 \
+      --af-min 0.01 \
+      --sb-mtc bonf \
+      --sb-no-compound \
+      --sb-incl-indels \
+      --indelqual-mtc bonf \
+      --snvqual-ntests 0.5 \
+      --indelqual-mtc bonf \
+      --indelqual-ntests 0.5 \
+      --in "~{out_basename}.unfiltered.vcf.gz" \
+      --out "~{out_basename}.vcf"
+    else
+      lofreq call-parallel --pp-threads $(nproc --all) \
+        -f "reference.fasta" \
+        -o "~{out_basename}.vcf" \
+        "aligned.bam"
+    fi
   >>>
-
   output {
-    File   report_vcf     = "~{out_basename}.vcf"
-    String lofreq_version = read_string("LOFREQ_VERSION")
+    File   report_vcf            = "~{out_basename}.vcf"
+    File   report_vcf_unfiltered = "~{out_basename}.unfiltered.vcf.gz"
+    String lofreq_version        = read_string("LOFREQ_VERSION")
   }
   runtime {
     docker: docker
-    cpu:    2
-    memory: "3 GB"
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
-    dx_instance_type: "mem1_ssd1_v2_x2"
+    cpu:    8
+    memory: "30 GB"
+    disks:  "local-disk 200 HDD"
+    dx_instance_type: "mem2_ssd1_v2_x8"
     maxRetries: 2
   }
 }
