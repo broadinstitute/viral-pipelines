@@ -392,6 +392,10 @@ task align_and_count {
     File   ref_db
     Int    topNHits = 3
 
+    Boolean? filter_bam_to_proper_primary_mapped_reads         = true
+    Boolean? do_not_require_proper_mapped_pairs_when_filtering = false
+    Boolean? keep_singletons_when_filtering                    = false
+
     Int?   machine_mem_gb
     String docker = "quay.io/broadinstitute/viral-core:2.2.4"
   }
@@ -411,6 +415,18 @@ task align_and_count {
       pattern: ["*.FASTA"],
       category: "required"
     }
+    filter_bam_to_proper_primary_mapped_reads: {
+      description: "If specified, reads till be filtered after alignment to include only those flagged as properly paired.",
+      category: "optional"
+    }
+    do_not_require_proper_mapped_pairs_when_filtering: {
+      description: "Do not require reads to be properly paired when filtering",
+      category: "optional"
+    }
+    keep_singletons_when_filtering: {
+      description: "Keep singletons when filtering",
+      category: "optional"
+    }
   }
   command {
     set -ex -o pipefail
@@ -422,6 +438,9 @@ task align_and_count {
       "${reads_basename}.bam" \
       "${ref_db}" \
       --outStats "${reads_basename}.count.${ref_basename}.txt.unsorted" \
+      ${true="--filterReadsAfterAlignment"   false="" filter_bam_to_proper_primary_mapped_reads} \
+      ${true="--doNotRequirePairsToBeProper" false="" do_not_require_proper_mapped_pairs_when_filtering} \
+      ${true="--keepSingletons"              false="" keep_singletons_when_filtering} \
       --loglevel=DEBUG
 
     sort -b -r -n -k3 "${reads_basename}.count.${ref_basename}.txt.unsorted" > "${reads_basename}.count.${ref_basename}.txt"
