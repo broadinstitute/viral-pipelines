@@ -149,7 +149,7 @@ workflow scaffold_and_refine_multitaxa {
         }
 
         scatter(h in assembly_header) {
-            String stat_by_taxon = stat[h]
+            String stat_by_taxon = stats_by_taxon[h]
         }
     }
 
