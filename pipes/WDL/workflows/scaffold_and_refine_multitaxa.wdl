@@ -148,22 +148,16 @@ workflow scaffold_and_refine_multitaxa {
             "sample":              '{"entityType":"sample","entityName":"' + sample_id + '"}'
         }
 
-        if (assembly_length_unambiguous > 0) {
-            Map[String, String] stats_by_taxon_nonzero = stats_by_taxon
-        }
-    }
-
-    scatter(stat in select_all(stats_by_taxon_nonzero)) {
         scatter(h in assembly_header) {
             String stat_by_taxon = stat[h]
         }
     }
- 
+
     ### summary stats
     call utils.concatenate {
       input:
         infiles     = [write_tsv([assembly_header]), write_tsv(stat_by_taxon)],
-        output_name = "assembly_metadata-~{sample_id}.tsv"
+        output_name = "assembly_metadata-~{sample_id}-~{taxid}.tsv"
     }
 
     output {
