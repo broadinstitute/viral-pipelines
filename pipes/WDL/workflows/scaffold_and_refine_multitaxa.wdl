@@ -40,8 +40,7 @@ workflow scaffold_and_refine_multitaxa {
         }
     }
 
-    #Array[String] assembly_header = ["entity:assembly_id", "assembly_name", "sample_id", "sample_name", "taxid", "tax_name", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "scaffolding_num_segments_recovered", "reference_num_segments_required", "reference_length", "reference_accessions", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned", "coverage_genbank", "assembly_method", "sample"]
-    Array[String] assembly_header = ["entity:assembly_id", "assembly_name", "sample_id", "sample_name", "taxid", "tax_name", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "scaffolding_num_segments_recovered", "reference_num_segments_required", "reference_length", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned", "coverage_genbank", "assembly_method"]
+    Array[String] assembly_header = ["entity:assembly_id", "assembly_name", "sample_id", "sample_name", "taxid", "tax_name", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "scaffolding_num_segments_recovered", "reference_num_segments_required", "reference_length", "reference_accessions", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned", "coverage_genbank", "assembly_method", "sample"]
     Array[Array[String]] taxid_to_ref_accessions = read_tsv(select_first([filter_refs_to_found_taxa.filtered_taxid_to_ref_accessions_tsv, taxid_to_ref_accessions_tsv]))
     scatter(taxon in taxid_to_ref_accessions) {
         # cromwell's read_tsv emits [[""]] on empty (0-byte) file input, turn it into []
@@ -131,7 +130,7 @@ workflow scaffold_and_refine_multitaxa {
             "scaffolding_num_segments_recovered" : scaffold.assembly_num_segments_recovered,
             "reference_num_segments_required" : scaffold.reference_num_segments_required,
             "reference_length" :            scaffold.reference_length,
-            #"reference_accessions" :        string_split.tokens,
+            "reference_accessions" :        taxon[2],
 
             "intermediate_gapfill_fasta" :            scaffold.intermediate_gapfill_fasta,
             "assembly_preimpute_length_unambiguous" : scaffold.assembly_preimpute_length_unambiguous,
@@ -148,9 +147,9 @@ workflow scaffold_and_refine_multitaxa {
             "bases_aligned" :      select_first([refine.align_to_self_merged_bases_aligned, ref_based.align_to_self_merged_bases_aligned]),
             "coverage_genbank" :   select_first([coverage_two_col.out_tsv, ""]),
 
-            "assembly_method" :    select_first([assembly_method_denovo, assembly_method_refbased])
+            "assembly_method" :    select_first([assembly_method_denovo, assembly_method_refbased]),
 
-            #"sample":              '{"entityType":"sample","entityName":"' + sample_id + '"}'
+            "sample":              '{"entityType":"sample","entityName":"' + sample_id + '"}'
         }
 
         scatter(h in assembly_header) {
