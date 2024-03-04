@@ -157,7 +157,7 @@ workflow scaffold_and_refine_multitaxa {
     call utils.concatenate {
       input:
         infiles     = [write_tsv([assembly_header]), write_tsv(stat_by_taxon)],
-        output_name = "assembly_metadata-~{sample_id}-~{taxid}.tsv"
+        output_name = "assembly_metadata-~{sample_id}.tsv"
     }
 
     output {
