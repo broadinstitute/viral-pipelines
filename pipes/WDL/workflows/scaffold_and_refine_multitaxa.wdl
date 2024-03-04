@@ -84,9 +84,10 @@ workflow scaffold_and_refine_multitaxa {
             # fall back to refbased assembly if de novo fails
             call assemble_refbased.assemble_refbased as ref_based {
                 input:
-                    reads_unmapped_bams = [reads_unmapped_bam],
-                    reference_fasta     = download_annotations.combined_fasta,
-                    sample_name         = sample_id
+                    reads_unmapped_bams  = [reads_unmapped_bam],
+                    reference_fasta      = download_annotations.combined_fasta,
+                    sample_name          = sample_id,
+                    sample_original_name = sample_original_name
             }
             String assembly_method_refbased = "viral-ngs/assemble_refbased"
         }
