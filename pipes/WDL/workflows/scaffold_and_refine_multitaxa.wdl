@@ -149,16 +149,20 @@ workflow scaffold_and_refine_multitaxa {
         }
 
         if (assembly_length_unambiguous > 0) {
-            scatter(h in assembly_header) {
-                String stat_by_taxon = stats_by_taxon[h]
-            }
+            Map[String, String] stats_by_taxon_nonzero = stats_by_taxon
+        }
+    }
+
+    scatter(stat in select_all(stats_by_taxon_nonzero)) {
+        scatter(h in assembly_header) {
+            String stat_by_taxon = stat[h]
         }
     }
  
     ### summary stats
     call utils.concatenate {
       input:
-        infiles     = [write_tsv([assembly_header]), write_tsv(select_all(stat_by_taxon))],
+        infiles     = [write_tsv([assembly_header]), write_tsv(stat_by_taxon)],
         output_name = "assembly_metadata-~{sample_id}.tsv"
     }
 
