@@ -15,7 +15,7 @@ task alignment_metrics {
     Int    max_amplicons=500
 
     Int    machine_mem_gb=13
-    String docker = "quay.io/broadinstitute/viral-core:2.3.0"
+    String docker = "quay.io/broadinstitute/viral-core:2.3.1"
   }
 
   String out_basename = basename(aligned_bam, ".bam")
@@ -136,7 +136,7 @@ task plot_coverage {
     String? plotXLimits # of the form "min max" (ints, space between)
     String? plotYLimits # of the form "min max" (ints, space between)
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.3.0"
+    String  docker = "quay.io/broadinstitute/viral-core:2.3.1"
   }
 
   Int disk_size = 375
@@ -283,7 +283,7 @@ task coverage_report {
     Array[File]  mapped_bam_idx # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name = "coverage_report.txt"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.3.0"
+    String       docker = "quay.io/broadinstitute/viral-core:2.3.1"
   }
 
   Int disk_size = 375
@@ -350,7 +350,7 @@ task fastqc {
   input {
     File   reads_bam
 
-    String docker = "quay.io/broadinstitute/viral-core:2.3.0"
+    String docker = "quay.io/broadinstitute/viral-core:2.3.1"
   }
   parameter_meta {
     reads_bam:{ 
@@ -397,7 +397,7 @@ task align_and_count {
     Boolean? keep_singletons_when_filtering                    = false
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.3.0"
+    String docker = "quay.io/broadinstitute/viral-core:2.3.1"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
@@ -472,7 +472,7 @@ task align_and_count_summary {
 
     String       output_prefix = "count_summary"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.3.0"
+    String       docker = "quay.io/broadinstitute/viral-core:2.3.1"
   }
 
   Int disk_size = 100
