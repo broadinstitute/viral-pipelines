@@ -578,13 +578,14 @@ task refine_assembly_with_aligned_reads {
     input {
       File     reference_fasta
       File     reads_aligned_bam
-      String   sample_name
+      String   out_basename = basename(reads_aligned_bam, '.bam')
+      String   sample_name = out_basename
 
       Boolean  mark_duplicates = false
       Float    major_cutoff = 0.5
       Int      min_coverage = 3
 
-      Int?     machine_mem_gb
+      Int      machine_mem_gb = 15
       String   docker = "quay.io/broadinstitute/viral-assemble:2.2.4.0"
     }
 
@@ -614,7 +615,7 @@ task refine_assembly_with_aligned_reads {
       }
     }
 
-    command {
+    command <<<
         set -ex -o pipefail
 
         # find 90% memory
@@ -639,36 +640,36 @@ task refine_assembly_with_aligned_reads {
           temp_markdup.bam \
           refined.fasta \
           --already_realigned_bam=temp_markdup.bam \
-          --outVcf ~{sample_name}.sites.vcf.gz \
+          --outVcf "~{out_basename}.sites.vcf.gz" \
           --min_coverage ~{min_coverage} \
           --major_cutoff ~{major_cutoff} \
           --JVMmemory "$mem_in_mb"m \
           --loglevel=DEBUG
 
         file_utils.py rename_fasta_sequences \
-          refined.fasta "${sample_name}.fasta" "${sample_name}"
+          refined.fasta "~{out_basename}.fasta" "~{sample_name}"
 
         # collect variant counts
         if (( $(cat refined.fasta | wc -l) > 1 )); then
-          bcftools filter -e "FMT/DP<${min_coverage}" -S . "${sample_name}.sites.vcf.gz" -Ou | bcftools filter -i "AC>1" -Ou > "${sample_name}.diffs.vcf"
-          bcftools filter -i 'TYPE="snp"'  "${sample_name}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_snps
-          bcftools filter -i 'TYPE!="snp"' "${sample_name}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_indels
+          bcftools filter -e "FMT/DP<~{min_coverage}" -S . "~{out_basename}.sites.vcf.gz" -Ou | bcftools filter -i "AC>1" -Ou > "~{out_basename}.diffs.vcf"
+          bcftools filter -i 'TYPE="snp"'  "~{out_basename}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_snps
+          bcftools filter -i 'TYPE!="snp"' "~{out_basename}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_indels
         else
           # empty output
           echo "0" > num_snps
           echo "0" > num_indels
-          cp "${sample_name}.sites.vcf.gz" "${sample_name}.diffs.vcf"
+          cp "~{out_basename}.sites.vcf.gz" "~{out_basename}.diffs.vcf"
         fi
 
         # collect figures of merit
         set +o pipefail # grep will exit 1 if it fails to find the pattern
         grep -v '^>' refined.fasta | tr -d '\n' | wc -c | tee assembly_length
         grep -v '^>' refined.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
-    }
+    >>>
 
     output {
-        File   refined_assembly_fasta      = "${sample_name}.fasta"
-        File   sites_vcf_gz                = "${sample_name}.sites.vcf.gz"
+        File   refined_assembly_fasta      = "~{out_basename}.fasta"
+        File   sites_vcf_gz                = "~{out_basename}.sites.vcf.gz"
         Int    assembly_length             = read_int("assembly_length")
         Int    assembly_length_unambiguous = read_int("assembly_length_unambiguous")
         Int    dist_to_ref_snps            = read_int("num_snps")
@@ -678,7 +679,7 @@ task refine_assembly_with_aligned_reads {
 
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 15]) + " GB"
+        memory: machine_mem_gb + " GB"
         cpu: 8
         disks:  "local-disk " + disk_size + " LOCAL"
         disk: disk_size + " GB" # TES

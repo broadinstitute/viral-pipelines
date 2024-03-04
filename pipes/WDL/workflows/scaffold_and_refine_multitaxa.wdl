@@ -3,6 +3,7 @@ version 1.0
 import "../tasks/tasks_assembly.wdl" as assembly
 import "../tasks/tasks_metagenomics.wdl" as metagenomics
 import "../tasks/tasks_ncbi.wdl" as ncbi
+import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_utils.wdl" as utils
 import "assemble_refbased.wdl" as assemble_refbased
 
@@ -16,6 +17,7 @@ workflow scaffold_and_refine_multitaxa {
 
     input {
         String  sample_id
+        Array[String] sample_names
         File    reads_unmapped_bam
 
         File    taxid_to_ref_accessions_tsv
@@ -25,7 +27,8 @@ workflow scaffold_and_refine_multitaxa {
         # Float    min_pct_reference_covered = 0.1
     }
 
-    Int  min_scaffold_unambig = 10
+    Int    min_scaffold_unambig = 10
+    String sample_original_name = flatten([sample_names, [sample_id]])[0]
 
     # if kraken reports are available, filter scaffold list to observed hits (output might be empty!)
     if(defined(focal_report_tsv) && defined(ncbi_taxdump_tgz)) {
@@ -37,7 +40,7 @@ workflow scaffold_and_refine_multitaxa {
         }
     }
 
-    Array[String] assembly_header = ["sample_id", "taxid", "tax_name", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned"]
+    Array[String] assembly_header = ["entity:assembly_id", "assembly_name", "sample_id", "sample_name", "taxid", "tax_name", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "scaffolding_num_segments_recovered", "reference_num_segments_required", "reference_length", "reference_accessions", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned", "coverage_genbank", "sample"]
     Array[Array[String]] taxid_to_ref_accessions = read_tsv(select_first([filter_refs_to_found_taxa.filtered_taxid_to_ref_accessions_tsv, taxid_to_ref_accessions_tsv]))
     scatter(taxon in taxid_to_ref_accessions) {
         # cromwell's read_tsv emits [[""]] on empty (0-byte) file input, turn it into []
@@ -70,9 +73,10 @@ workflow scaffold_and_refine_multitaxa {
             # polish de novo assembly with reads
             call assemble_refbased.assemble_refbased as refine {
                 input:
-                    reads_unmapped_bams = [reads_unmapped_bam],
-                    reference_fasta     = scaffold.scaffold_fasta,
-                    sample_name         = sample_id
+                    reads_unmapped_bams  = [reads_unmapped_bam],
+                    reference_fasta      = scaffold.scaffold_fasta,
+                    sample_name          = sample_id,
+                    sample_original_name = sample_original_name
             }
             String assembly_method_denovo = "viral-ngs/assemble_denovo"
         }
@@ -87,8 +91,16 @@ workflow scaffold_and_refine_multitaxa {
             String assembly_method_refbased = "viral-ngs/assemble_refbased"
         }
 
-        # TO DO: if percent_reference_covered > some threshold, run ncbi.rename_fasta_header and ncbi.align_and_annot_transfer_single
-        # TO DO: if biosample attributes file provided, run ncbi.biosample_to_genbank
+        call reports.coverage_report as coverage_self {
+            input:
+                mapped_bams = select_all([refine.align_to_self_merged_aligned_only_bam, ref_based.align_to_self_merged_aligned_only_bam]),
+                mapped_bam_idx = []
+        }
+        call utils.tsv_drop_cols as coverage_two_col {
+            input:
+                in_tsv = coverage_self.coverage_report,
+                drop_cols = ["aln2self_cov_median", "aln2self_cov_mean_non0", "aln2self_cov_1X", "aln2self_cov_5X", "aln2self_cov_20X", "aln2self_cov_100X"]
+        }
 
         String taxid = taxon[0]
         String tax_name = taxon[1]
@@ -96,9 +108,12 @@ workflow scaffold_and_refine_multitaxa {
         Float  percent_reference_covered = 1.0 * assembly_length_unambiguous / scaffold.reference_length
         File   assembly_fasta = select_first([refine.assembly_fasta, ref_based.assembly_fasta])
         Map[String, String] stats_by_taxon = {
-            "sample_id" : sample_id,
-            "taxid" : taxid,
-            "tax_name" : tax_name,
+            "entity:assembly_id" : sample_id + ":" + taxid,
+            "assembly_name" :      tax_name + ": " + sample_original_name,
+            "sample_id" :          sample_id,
+            "sample_name" :        sample_original_name,
+            "taxid" :              taxid,
+            "tax_name" :           tax_name,
 
             "assembly_fasta" :              assembly_fasta,
             "aligned_only_reads_bam" :      select_first([refine.align_to_self_merged_aligned_only_bam, ref_based.align_to_self_merged_aligned_only_bam]),
@@ -108,6 +123,10 @@ workflow scaffold_and_refine_multitaxa {
             "reads_aligned" :               select_first([refine.align_to_self_merged_reads_aligned, ref_based.align_to_self_merged_reads_aligned]),
             "mean_coverage" :               select_first([refine.align_to_self_merged_mean_coverage, ref_based.align_to_self_merged_mean_coverage]),
             "percent_reference_covered" :   percent_reference_covered,
+            "scaffolding_num_segments_recovered" : scaffold.assembly_num_segments_recovered,
+            "reference_num_segments_required" : scaffold.reference_num_segments_required,
+            "reference_length" :            scaffold.reference_length,
+            "reference_accessions" :        string_split.tokens,
 
             "intermediate_gapfill_fasta" :            scaffold.intermediate_gapfill_fasta,
             "assembly_preimpute_length_unambiguous" : scaffold.assembly_preimpute_length_unambiguous,
@@ -122,19 +141,24 @@ workflow scaffold_and_refine_multitaxa {
             "coverage_tsv" :       select_first([refine.align_to_self_merged_coverage_tsv, ref_based.align_to_self_merged_coverage_tsv]),
             "read_pairs_aligned" : select_first([refine.align_to_self_merged_read_pairs_aligned, ref_based.align_to_self_merged_read_pairs_aligned]),
             "bases_aligned" :      select_first([refine.align_to_self_merged_bases_aligned, ref_based.align_to_self_merged_bases_aligned]),
+            "coverage_genbank" :   coverage_two_col.out_tsv,
 
-            "assembly_method" :    select_first([assembly_method_denovo, assembly_method_refbased])
+            "assembly_method" :    select_first([assembly_method_denovo, assembly_method_refbased]),
+
+            "sample":              '{"entityType":"sample","entityName":"' + sample_id + '"}'
         }
 
-        scatter(h in assembly_header) {
-            String stat_by_taxon = stats_by_taxon[h]
+        if (assembly_length_unambiguous > 0) {
+            scatter(h in assembly_header) {
+                String stat_by_taxon = stats_by_taxon[h]
+            }
         }
     }
  
     ### summary stats
     call utils.concatenate {
       input:
-        infiles     = [write_tsv([assembly_header]), write_tsv(stat_by_taxon)],
+        infiles     = [write_tsv([assembly_header]), write_tsv(select_all(stat_by_taxon))],
         output_name = "assembly_metadata-~{sample_id}.tsv"
     }
 
