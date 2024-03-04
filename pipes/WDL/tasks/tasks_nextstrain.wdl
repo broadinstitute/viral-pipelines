@@ -280,7 +280,7 @@ task derived_cols {
         String?       lab_highlight_loc
         Array[File]   table_map = []
 
-        String        docker = "quay.io/broadinstitute/viral-core:2.2.4"
+        String        docker = "quay.io/broadinstitute/viral-core:2.3.0"
         Int           disk_size = 50
     }
     parameter_meta {
@@ -848,7 +848,6 @@ task filter_sequences_to_list {
 
         String       out_fname = sub(sub(basename(sequences, ".zst"), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
         # Prior docker image: "nextstrain/base:build-20211012T204409Z"
-        String       docker = "quay.io/broadinstitute/viral-core:2.2.4"
         Int          disk_size = 750
     }
     parameter_meta {
