@@ -105,13 +105,13 @@ task lca_megablast {
       --loglevel=DEBUG
     #unpack taxdb and put it in the same folder as blast indexes
     read_utils.py extract_tarball \
-        ~{taxdb} blastdb \
+        ~{taxdb} . \
         --loglevel=DEBUG
         
-    BLASTDB="blastdb/"
+    export BLASTDB="./"
     # Run megablast against nt
     #miniwdl run worked when the Title DB was same as called under db. Remade DB, make sure to note title of DB. 
-    blastn -task megablast -query "~{trimmed_fasta}" -db "blastdb/2nt" -max_target_seqs 50 -num_threads `nproc` -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" -out "~{fasta_basename}.fasta_megablast_nt.tsv"
+    blastn -task megablast -query "~{trimmed_fasta}" -db "./2nt" -max_target_seqs 50 -num_threads `nproc` -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" -out "~{fasta_basename}.fasta_megablast_nt.tsv"
     
     # Run LCA
     retrieve_top_blast_hits_LCA_for_each_sequence.pl "~{fasta_basename}.fasta_megablast_nt.tsv" nodes.dmp 10 > "~{fasta_basename}.fasta_megablast_nt.tsv_LCA.txt"
