@@ -96,7 +96,7 @@ task lca_megablast {
     # Make directories
     mkdir -p blastdb results
     read_utils.py extract_tarball \
-      ~{blast_db_tgz} blastdb \
+      ~{blast_db_tgz} . \
       --loglevel=DEBUG
     
     # Unpack taxonomy.dmp
