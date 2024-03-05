@@ -108,7 +108,7 @@ task lca_megablast {
         ~{taxdb} blastdb \
         --loglevel=DEBUG
         
-    export BLASTDB="blastdb/"
+    BLASTDB="blastdb/"
     # Run megablast against nt
     #miniwdl run worked when the Title DB was same as called under db. Remade DB, make sure to note title of DB. 
     blastn -task megablast -query "~{trimmed_fasta}" -db "blastdb/2nt" -max_target_seqs 50 -num_threads `nproc` -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" -out "~{fasta_basename}.fasta_megablast_nt.tsv"
