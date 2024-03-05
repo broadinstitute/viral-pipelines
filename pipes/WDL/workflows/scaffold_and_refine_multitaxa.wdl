@@ -155,16 +155,12 @@ workflow scaffold_and_refine_multitaxa {
         scatter(h in assembly_header) {
             String stat_by_taxon = stats_by_taxon[h]
         }
-
-        if(assembly_length_unambiguous > 0) {
-            File stat_by_taxon_tsv = write_tsv([stat_by_taxon])
-        }
     }
 
     ### summary stats
     call utils.concatenate {
       input:
-        infiles     = flatten([[write_tsv([assembly_header])], select_all(stat_by_taxon_tsv)]),
+        infiles     = [write_tsv([assembly_header]), write_tsv(stat_by_taxon)],
         output_name = "assembly_metadata-~{sample_id}.tsv"
     }
 
