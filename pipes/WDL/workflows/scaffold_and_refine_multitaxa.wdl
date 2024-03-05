@@ -155,6 +155,10 @@ workflow scaffold_and_refine_multitaxa {
         scatter(h in assembly_header) {
             String stat_by_taxon = stats_by_taxon[h]
         }
+
+        if(assembly_length_unambiguous > 0) {
+            File tsv = write_tsv([stat_by_taxon])
+        }
     }
 
     ### summary stats
