@@ -280,7 +280,7 @@ task derived_cols {
         String?       lab_highlight_loc
         Array[File]   table_map = []
 
-        String        docker = "quay.io/broadinstitute/viral-core:2.3.1"
+        String        docker = "quay.io/broadinstitute/viral-core:2.3.0"
         Int           disk_size = 50
     }
     parameter_meta {
