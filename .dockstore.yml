@@ -374,6 +374,11 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/terra_table_to_tsv.wdl
     testParameterFiles:
       - /empty.json
+  - name: terra_tsv_to_table
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/terra_tsv_to_table.wdl
+    testParameterFiles:
+      - /empty.json
   - name: terra_update_assemblies
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/terra_update_assemblies.wdl
@@ -394,13 +399,11 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/bam_to_qiime.wdl
     testParameterFiles:
       - /empty.json
-
   - name: create_enterics_qc_viz
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/create_enterics_qc_viz.wdl
     testParameterFiles:
       - /empty.json
-
   - name: create_enterics_qc_viz_general
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/create_enterics_qc_viz_general.wdl
