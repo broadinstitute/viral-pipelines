@@ -848,7 +848,7 @@ task filter_sequences_to_list {
 
         String       out_fname = sub(sub(basename(sequences, ".zst"), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
         # Prior docker image: "nextstrain/base:build-20211012T204409Z"
-        String       docker = "quay.io/broadinstitute/viral-core:2.3.1"
+        String       docker = "quay.io/broadinstitute/viral-core:2.3.0"
         Int          disk_size = 750
     }
     parameter_meta {
