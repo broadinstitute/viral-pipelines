@@ -108,7 +108,7 @@ workflow scaffold_and_refine_multitaxa {
         Float  percent_reference_covered = 1.0 * assembly_length_unambiguous / scaffold.reference_length
         File   assembly_fasta = select_first([refine.assembly_fasta, ref_based.assembly_fasta])
         Map[String, String] stats_by_taxon = {
-            "entity:assembly_id" : sample_id + ":" + taxid,
+            "entity:assembly_id" : sample_id + "-" + taxid,
             "assembly_name" :      tax_name + ": " + sample_original_name,
             "sample_id" :          sample_id,
             "sample_name" :        sample_original_name,
