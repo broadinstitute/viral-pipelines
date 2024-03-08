@@ -255,6 +255,9 @@ workflow metagenomic_denovo {
     Float   bases_aligned                         = refine.align_to_self_merged_bases_aligned
 
     File?   spikein_hits                          = spikein.report
+    String  spikein_tophit                        = spikein.top_hit_id
+    String  spikein_pct_of_total_reads            = spikein.pct_total_reads_mapped
+    String  spikein_pct_lesser_hits               = spikein.pct_lesser_hits_of_mapped
 
     String  viral_classify_version                = kraken2.viralngs_version
     String  viral_assemble_version                = assemble.viralngs_version

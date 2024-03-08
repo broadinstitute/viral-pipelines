@@ -151,6 +151,8 @@ workflow classify_single {
         File   cleaned_fastqc                  = fastqc_cleaned.fastqc_html
         File   spikein_report                  = spikein.report
         String spikein_tophit                  = spikein.top_hit_id
+        String spikein_pct_of_total_reads      = spikein.pct_total_reads_mapped
+        String spikein_pct_lesser_hits         = spikein.pct_lesser_hits_of_mapped
         
         String kraken2_viral_classify_version  = kraken2.viralngs_version
         String deplete_viral_classify_version  = deplete.viralngs_version

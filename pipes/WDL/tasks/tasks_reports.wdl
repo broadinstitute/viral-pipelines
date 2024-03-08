@@ -395,6 +395,7 @@ task align_and_count {
     Boolean? filter_bam_to_proper_primary_mapped_reads         = true
     Boolean? do_not_require_proper_mapped_pairs_when_filtering = false
     Boolean? keep_singletons_when_filtering                    = false
+    Boolean? keep_duplicates_when_filtering                    = false
 
     Int?   machine_mem_gb
     String docker = "quay.io/broadinstitute/viral-core:2.3.0"
@@ -441,17 +442,30 @@ task align_and_count {
       ${true="--filterReadsAfterAlignment"   false="" filter_bam_to_proper_primary_mapped_reads} \
       ${true="--doNotRequirePairsToBeProper" false="" do_not_require_proper_mapped_pairs_when_filtering} \
       ${true="--keepSingletons"              false="" keep_singletons_when_filtering} \
+      ${true="--keepDuplicates"              false="" keep_duplicates_when_filtering} \
       --loglevel=DEBUG
 
     sort -b -r -n -k3 "${reads_basename}.count.${ref_basename}.txt.unsorted" > "${reads_basename}.count.${ref_basename}.txt"
     head -n ${topNHits} "${reads_basename}.count.${ref_basename}.txt" > "${reads_basename}.count.${ref_basename}.top_${topNHits}_hits.txt"
-    head -1 "${reads_basename}.count.${ref_basename}.txt" | cut -f 1 > "${reads_basename}.count.${ref_basename}.top.txt"
+    TOP_HIT="$(head -1 '${reads_basename}.count.${ref_basename}.txt' | cut -f 1 | tee '${reads_basename}.count.${ref_basename}.top.txt'"
+
+    TOTAL_COUNT_OF_TOP_HIT=$(grep -E "^($TOP_HIT)" "${reads_basename}.count.${ref_basename}.txt" | cut -f3 )
+    TOTAL_COUNT_OF_LESSER_HITS=$(grep -vE "^(\*|$TOP_HIT)" "${reads_basename}.count.${ref_basename}.txt" | cut -f3 | paste -sd+ - | bc -l)
+    PCT_MAPPING_TO_LESSER_HITS=$(echo "scale=3; 100 * $TOTAL_COUNT_OF_LESSER_HITS / ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT)" | bc -l | awk '{printf "%.3f\n", $0}' | tee '${reads_basename}.count.${ref_basename}.pct_lesser_hits_of_mapped.txt')
+
+    TOTAL_READS_IN_INPUT=$(samtools view -c "${reads_basename}.bam")
+    PCT_OF_INPUT_READS_MAPPED=$(echo "scale=3; 100 * ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT) / $TOTAL_READS_IN_INPUT" | bc -l | awk '{printf "%.3f\n", $0}' | tee '${reads_basename}.count.${ref_basename}.pct_total_reads_mapped.txt')
   }
 
   output {
     File   report           = "${reads_basename}.count.${ref_basename}.txt"
+    
     File   report_top_hits  = "${reads_basename}.count.${ref_basename}.top_${topNHits}_hits.txt"
     String top_hit_id       = read_string("${reads_basename}.count.${ref_basename}.top.txt")
+    
+    String pct_total_reads_mapped    = read_string('${reads_basename}.count.${ref_basename}.pct_total_reads_mapped.txt')
+    String pct_lesser_hits_of_mapped = read_string('${reads_basename}.count.${ref_basename}.pct_lesser_hits_of_mapped.txt')
+    
     String viralngs_version = read_string("VERSION")
   }
 
