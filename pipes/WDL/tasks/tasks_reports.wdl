@@ -451,7 +451,7 @@ task align_and_count {
 
     sort -b -r -n -k3 "${reads_basename}.count.${ref_basename}.txt.unsorted" > "${reads_basename}.count.${ref_basename}.txt"
     head -n ${topNHits} "${reads_basename}.count.${ref_basename}.txt" > "${reads_basename}.count.${ref_basename}.top_${topNHits}_hits.txt"
-    TOP_HIT="$(head -1 '${reads_basename}.count.${ref_basename}.txt' | cut -f 1 | tee '${reads_basename}.count.${ref_basename}.top.txt'"
+    TOP_HIT="$(head -1 '${reads_basename}.count.${ref_basename}.txt' | cut -f 1 | tee '${reads_basename}.count.${ref_basename}.top.txt')"
 
     TOTAL_COUNT_OF_TOP_HIT=$(grep -E "^($TOP_HIT)" "${reads_basename}.count.${ref_basename}.txt" | cut -f3 )
     TOTAL_COUNT_OF_LESSER_HITS=$(grep -vE "^(\*|$TOP_HIT)" "${reads_basename}.count.${ref_basename}.txt" | cut -f3 | paste -sd+ - | bc -l)
