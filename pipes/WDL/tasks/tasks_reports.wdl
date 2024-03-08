@@ -392,7 +392,7 @@ task align_and_count {
     File   ref_db
     Int    topNHits = 3
 
-    Boolean? filter_bam_to_proper_primary_mapped_reads         = true
+    Boolean? filter_bam_to_proper_primary_mapped_reads         = false
     Boolean? do_not_require_proper_mapped_pairs_when_filtering = false
     Boolean? keep_singletons_when_filtering                    = false
     Boolean? keep_duplicates_when_filtering                    = false
@@ -426,6 +426,10 @@ task align_and_count {
     }
     keep_singletons_when_filtering: {
       description: "Keep singletons when filtering",
+      category: "optional"
+    }
+    keep_duplicates_when_filtering: {
+      description: "Do not exclude reads marked as duplicates when filtering",
       category: "optional"
     }
   }
