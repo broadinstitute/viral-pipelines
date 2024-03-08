@@ -453,12 +453,12 @@ task align_and_count {
     head -n ${topNHits} "${reads_basename}.count.${ref_basename}.txt" > "${reads_basename}.count.${ref_basename}.top_${topNHits}_hits.txt"
     TOP_HIT="$(head -1 '${reads_basename}.count.${ref_basename}.txt' | cut -f 1 | tee '${reads_basename}.count.${ref_basename}.top.txt')"
 
-    TOTAL_COUNT_OF_TOP_HIT=$(grep -E "^($TOP_HIT)" "${reads_basename}.count.${ref_basename}.txt" | cut -f3 )
+    TOTAL_COUNT_OF_TOP_HIT=$(grep -E "^($TOP_HIT)" "${reads_basename}.count.${ref_basename}.txt" | cut -f3)
     TOTAL_COUNT_OF_LESSER_HITS=$(grep -vE "^(\*|$TOP_HIT)" "${reads_basename}.count.${ref_basename}.txt" | cut -f3 | paste -sd+ - | bc -l)
-    PCT_MAPPING_TO_LESSER_HITS=$(echo "scale=3; 100 * $TOTAL_COUNT_OF_LESSER_HITS / ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT)" | bc -l | awk '{printf "%.3f\n", $0}' | tee '${reads_basename}.count.${ref_basename}.pct_lesser_hits_of_mapped.txt')
+    PCT_MAPPING_TO_LESSER_HITS=$(echo "scale=3; 100 * $TOTAL_COUNT_OF_LESSER_HITS / ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT)" | bc -l | awk '{printf "%.3f\n", $0}' | tee ${reads_basename}.count.${ref_basename}.pct_lesser_hits_of_mapped.txt)
 
     TOTAL_READS_IN_INPUT=$(samtools view -c "${reads_basename}.bam")
-    PCT_OF_INPUT_READS_MAPPED=$(echo "scale=3; 100 * ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT) / $TOTAL_READS_IN_INPUT" | bc -l | awk '{printf "%.3f\n", $0}' | tee '${reads_basename}.count.${ref_basename}.pct_total_reads_mapped.txt')
+    PCT_OF_INPUT_READS_MAPPED=$(echo "scale=3; 100 * ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT) / $TOTAL_READS_IN_INPUT"        | bc -l | awk '{printf "%.3f\n", $0}' | tee ${reads_basename}.count.${ref_basename}.pct_total_reads_mapped.txt)
   }
 
   output {
