@@ -11,5 +11,11 @@ workflow terra_tsv_to_table {
         email:  "viral-ngs@broadinstitute.org"
     }
 
-    call terra.upload_entities_tsv
+    call terra.check_terra_env
+
+    call terra.upload_entities_tsv {
+        input:
+            workspace_name   = check_terra_env.workspace_name,
+            terra_project    = check_terra_env.workspace_namespace
+    }
 }
