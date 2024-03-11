@@ -35,9 +35,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       # fetch git tags (tagged releases) because 
-      # actions/checkout@v3 does either a full checkout or a shallow checkout without tags
+      # actions/checkout@v4 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags      
       - name: Programmatic environment setup
@@ -67,7 +67,7 @@ jobs:
         run: |
           env
       - name: install python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.8'
       - name: install system dependencies
@@ -88,9 +88,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       # fetch git tags (tagged releases) because 
-      # actions/checkout@v3 does either a full checkout or a shallow checkout without tags
+      # actions/checkout@v4 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
@@ -138,9 +138,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       # fetch git tags (tagged releases) because 
-      # actions/checkout@v3 does either a full checkout or a shallow checkout without tags
+      # actions/checkout@v4 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
@@ -166,7 +166,7 @@ jobs:
           echo "GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_BRANCH"
           echo "GITHUB_ACTIONS_BRANCH=$GITHUB_ACTIONS_BRANCH" >> $GITHUB_ENV
       - name: install python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with: 
           python-version: '3.8'
       - name: install docs dependencies
@@ -183,9 +183,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       # fetch git tags (tagged releases) because 
-      # actions/checkout@v3 does either a full checkout or a shallow checkout without tags
+      # actions/checkout@v4 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
@@ -238,9 +238,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       # fetch git tags (tagged releases) because 
-      # actions/checkout@v3 does either a full checkout or a shallow checkout without tags
+      # actions/checkout@v4 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
@@ -273,7 +273,7 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
       - name: install python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.8'
       - name: install system dependencies
@@ -304,9 +304,9 @@ jobs:
       DX_PROJECT: project-F8PQ6380xf5bK0Qk0YPjB17P
     steps:
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       # fetch git tags (tagged releases) because 
-      # actions/checkout@v3 does either a full checkout or a shallow checkout without tags
+      # actions/checkout@v4 does either a full checkout or a shallow checkout without tags
       - name: fetch tags
         run: git fetch --prune --unshallow --tags
       - name: Programmatic environment setup
@@ -337,7 +337,7 @@ jobs:
           echo "${{ github.event.action }}"
           echo "${{ github.event.pull_request.merged }}"
       - name: install python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with: 
           python-version: '3.8'
       - name: install java

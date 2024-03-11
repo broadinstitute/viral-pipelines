@@ -22,8 +22,13 @@ workflow align_and_count_report {
 
     call reports.align_and_count
     output {
-        File   report             = align_and_count.report
-        File   report_top_hits    = align_and_count.report_top_hits
-        String viral_core_version = align_and_count.viralngs_version
+        File   report                    = align_and_count.report
+        File   report_top_hits           = align_and_count.report_top_hits
+        String tophit                    = align_and_count.top_hit_id
+        
+        String pct_mapped_of_total_reads = align_and_count.pct_total_reads_mapped
+        String pct_mapped_to_lesser_hits = align_and_count.pct_lesser_hits_of_mapped
+        
+        String viral_core_version        = align_and_count.viralngs_version
     }
 }
