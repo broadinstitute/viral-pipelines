@@ -59,6 +59,7 @@ runtime {
 }
 
 task lca_megablast {
+    meta {
         description: "Runs megablast followed by LCA for taxon identification."
     }
     input {
