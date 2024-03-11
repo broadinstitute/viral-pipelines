@@ -27,7 +27,7 @@ workflow megablast {
             trimmed_fasta = trim_rmdup_subsamp.trimmed_fasta, 
             blast_db_tgz = blast_db_tgz,
             taxonomy_db_tgz = taxonomy_db_tgz,
-            taxid_map_file = taxdb
+            taxdb = taxid_map_file
 
     }
 
