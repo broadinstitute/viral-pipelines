@@ -14,6 +14,7 @@ workflow megablast {
         File    clipDb
         File    blast_db_tgz
         File    taxonomy_db_tgz
+        File    taxid_map_file
     }
     call tools.trim_rmdup_subsamp {
         input: 
@@ -25,9 +26,11 @@ workflow megablast {
         input:
             trimmed_fasta = trim_rmdup_subsamp.trimmed_fasta, 
             blast_db_tgz = blast_db_tgz,
-            taxonomy_db_tgz = taxonomy_db_tgz
+            taxonomy_db_tgz = taxonomy_db_tgz,
+            taxid_map_file = taxdb
+
     }
-    
+
     output {
         File    LCA_output = lca_megablast.LCA_output
     }
