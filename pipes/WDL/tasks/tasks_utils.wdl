@@ -773,7 +773,7 @@ task filter_sequences_by_length {
         with open_or_gzopen('~{out_fname}', 'wt') as outf:
             for seq in Bio.SeqIO.parse(inf, 'fasta'):
                 n_total += 1
-                ungapseq = seq.seq.ungap().upper()
+                ungapseq = seq.seq.replace("-","").upper()
                 if (len(ungapseq) - ungapseq.count('N')) >= ~{min_non_N}:
                     n_kept += 1
                     Bio.SeqIO.write(seq, outf, 'fasta')
