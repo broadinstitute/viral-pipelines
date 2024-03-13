@@ -69,7 +69,7 @@ jobs:
       - name: install python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.8'
+          python-version: '3.10'
       - name: install system dependencies
         run: |
           sudo apt-get update
@@ -168,7 +168,7 @@ jobs:
       - name: install python
         uses: actions/setup-python@v5
         with: 
-          python-version: '3.8'
+          python-version: '3.10'
       - name: install docs dependencies
         shell: bash
         run: |
@@ -339,7 +339,7 @@ jobs:
       - name: install python
         uses: actions/setup-python@v5
         with: 
-          python-version: '3.8'
+          python-version: '3.10'
       - name: install java
         uses: actions/setup-java@v4
         with:
