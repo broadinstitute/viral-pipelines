@@ -16,19 +16,19 @@ task trim_rmdup_subsamp {
     }
     parameter_meta {
         inBam: {
-            description: "Input BAM file"
+            description: "Input BAM file",
             category: "required"
         }
         clipDb: {
-            description: "FASTA file that has a list of sequences to trim from the end of reads. These includes various sequencing adapters and primer sequences that may be on the ends of reads, including those for most of the Illumina kits we use."
+            description: "FASTA file that has a list of sequences to trim from the end of reads. These includes various sequencing adapters and primer sequences that may be on the ends of reads, including those for most of the Illumina kits we use.",
             category: "required"
         }
         outBam: {
-            description: "Cleaned BAM files (default=outbam.bam)"
+            description: "Cleaned BAM files (default=outbam.bam)",
             category: "other"
         }
         n_reads: {
-            description: "Maximum number of reads set to 10000000 by default."
+            description: "Maximum number of reads set to 10000000 by default.",
             category: "required"
         }
     }
@@ -76,19 +76,19 @@ task lca_megablast {
     }
     parameter_meta {
         trimmed_fasta: {
-            description: "Input sequence FASTA file with clean bam reads."
+            description: "Input sequence FASTA file with clean bam reads.",
             category: "required"
         }
         blast_db_tgz: {
-            description: "Compressed BLAST database."
+            description: "Compressed BLAST database.",
             category: 'required'
         }
         db_name: {
-            description: "BLAST database name (default = nt)."
+            description: "BLAST database name (default = nt).",
             category: "other"
         }
         taxonomy_db_tgz: {
-            description: "Compressed taxnonomy dataset."
+            description: "Compressed taxnonomy dataset.",
             category: "required"
         }
     }
