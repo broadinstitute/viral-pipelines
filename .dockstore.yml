@@ -382,6 +382,6 @@ workflows:
       - empty.json
  - name: blastoff
     subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/megablast.wdl
+    primaryDescriptorPath: /pipes/WDL/workflows/blastoff.wdl
     testParameterFiles:
       - empty.json
