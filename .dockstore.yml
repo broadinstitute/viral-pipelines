@@ -380,3 +380,8 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/create_enterics_qc_viz.wdl
     testParameterFiles:
       - empty.json
+ - name: blastoff
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/megablast.wdl
+    testParameterFiles:
+      - empty.json
