@@ -241,7 +241,7 @@ task kraken2 {
   Int disk_size = 750
 
   command <<<
-    set -ex #-o pipefail
+    set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
       export TMPDIR=$(pwd)
