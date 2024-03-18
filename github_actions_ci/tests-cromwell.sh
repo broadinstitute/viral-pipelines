@@ -24,9 +24,9 @@ for workflow in ../pipes/WDL/workflows/*.wdl; do
 				ls -lah $(dirname $log)
 
 				echo "contents of stderr ($log):"
-				cat `dirname $log`/stderr | sed "s/^/[STDERR] /"
+				cat `dirname $log`/stderr* | sed "s/^/[STDERR] /"
 				echo "contents of stdout ($log):"
-				cat `dirname $log`/stdout | sed "s/^/[STDOUT] /"
+				cat `dirname $log`/stdout* | sed "s/^/[STDOUT] /"
 			done
 			sync; sleep 20; exit 1
 		fi
