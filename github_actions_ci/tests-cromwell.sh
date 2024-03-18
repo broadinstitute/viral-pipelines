@@ -21,6 +21,8 @@ for workflow in ../pipes/WDL/workflows/*.wdl; do
 			echo "error running $workflow_name"
 			error_logs=$(grep stderr cromwell.out | perl -lape 's/.*\s(\S+)$/$1/g')
 			for log in $error_logs; do
+				ls -lah $(dirname $log)
+
 				echo "contents of stderr ($log):"
 				cat `dirname $log`/stderr | sed "s/^/[STDERR] /"
 				echo "contents of stdout ($log):"
