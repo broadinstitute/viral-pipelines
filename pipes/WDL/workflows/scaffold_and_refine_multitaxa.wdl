@@ -125,7 +125,7 @@ workflow scaffold_and_refine_multitaxa {
             "skani_this_cluster_num_refs" : length(ref_cluster),
             "skani_dist_tsv" :              scaffold.scaffolding_stats,
             "scaffolding_ani" :             scaffold.skani_ani,
-            "scaffolding_pct_ref_cov" :     scaffold.skani_ref_af,
+            "scaffolding_pct_ref_cov" :     scaffold.skani_ref_aligned_frac,
 
             "intermediate_gapfill_fasta" :            scaffold.intermediate_gapfill_fasta,
             "assembly_preimpute_length_unambiguous" : scaffold.assembly_preimpute_length_unambiguous,
