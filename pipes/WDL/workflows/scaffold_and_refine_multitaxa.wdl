@@ -162,7 +162,7 @@ workflow scaffold_and_refine_multitaxa {
         File   assembly_stats_by_taxon_tsv                 = concatenate.combined
         String assembly_method                             = "viral-ngs/scaffold_and_refine_multitaxa"
 
-        String assembly_top_taxon_id               = select_references.top_matches_per_cluster_basenames[0]
+        #String assembly_top_taxon_id               = select_references.top_matches_per_cluster_basenames[0]
         Int    skani_num_ref_clusters              = length(select_references.matched_reference_clusters_basenames)
         File   skani_contigs_to_refs_dist_tsv      = select_references.skani_dist_full_tsv
 
