@@ -137,7 +137,8 @@ task select_references {
       with open("~{contigs_basename}.ref_clusters.basenames.tsv", 'w') as outf:
         for line in inf:
           fnames = line.strip().split('\t')
-          outf.write('\t'.join(os.path.basename(f, '.fasta') for f in fnames) + '\n')
+          fnames = list([f[:-6] if f.endswith('.fasta') else f for f in map(os.path.basename, fnames)])
+          outf.write('\t'.join(fnames) + '\n')
     CODE
 
     # create top-hits output files
