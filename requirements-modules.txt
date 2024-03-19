@@ -1,5 +1,5 @@
 broadinstitute/viral-core=2.3.1
-broadinstitute/viral-assemble=2.3.1.0
+broadinstitute/viral-assemble=2.3.1.1
 broadinstitute/viral-classify=2.2.4.0
 broadinstitute/viral-phylo=2.1.20.2
 broadinstitute/py3-bio=0.1.2
