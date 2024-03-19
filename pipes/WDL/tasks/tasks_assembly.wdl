@@ -141,7 +141,7 @@ task select_references {
     CODE
 
     # create top-hits output files
-    cut -f 1 "~{contigs_basename}.skani_dist.top.tsv" | tail +2 > TOP_FASTAS
+    cut -f 1 "~{contigs_basename}.refs_skani_dist.top.tsv" | tail +2 > TOP_FASTAS
     for f in $(cat TOP_FASTAS); do basename "$f" .fasta; done > TOP_FASTAS_BASENAMES
   >>>
 
@@ -266,53 +266,63 @@ task scaffold {
 
         assembly.py --version | tee VERSION
 
+        # use skani to choose top hit
+        assembly.py skani_contigs_to_refs \
+          "~{contigs_fasta}" \
+          "~{sep='" "' reference_genome_fasta}" \
+          "~{sample_name}.refs_skani_dist.full.tsv" \
+          "~{sample_name}.refs_skani_dist.top.tsv" \
+          "~{sample_name}.ref_clusters.tsv" \
+          --loglevel=DEBUG
+        CHOSEN_REF_FASTA=$(cut -f 1 "~{sample_name}.refs_skani_dist.top.tsv" | tail +2)
+
         assembly.py order_and_orient \
-          ~{contigs_fasta} \
-          ~{sep=' ' reference_genome_fasta} \
-          ~{sample_name}.intermediate_scaffold.fasta \
+          "~{contigs_fasta}" \
+          "$CHOSEN_REF_FASTA" \
+          "~{sample_name}".intermediate_scaffold.fasta \
           ~{'--min_contig_len=' + scaffold_min_contig_len} \
           ~{'--maxgap=' + nucmer_max_gap} \
           ~{'--minmatch=' + nucmer_min_match} \
           ~{'--mincluster=' + nucmer_min_cluster} \
           ~{'--min_pct_contig_aligned=' + scaffold_min_pct_contig_aligned} \
-          --outReference ~{sample_name}.scaffolding_chosen_ref.fasta \
-          --outStats ~{sample_name}.scaffolding_stats.txt \
+          --outReference "~{sample_name}".scaffolding_chosen_ref.fasta \
+          --outStats "~{sample_name}".scaffolding_stats.txt \
           --outAlternateContigs ~{sample_name}.scaffolding_alt_contigs.fasta \
           ~{true='--allow_incomplete_output' false="" allow_incomplete_output} \
           --loglevel=DEBUG
 
-        grep '^>' ~{sample_name}.scaffolding_chosen_ref.fasta | cut -c 2- | cut -f 1 -d ' ' > ~{sample_name}.scaffolding_chosen_refs.txt
+        grep '^>' "~{sample_name}".scaffolding_chosen_ref.fasta | cut -c 2- | cut -f 1 -d ' ' > "~{sample_name}".scaffolding_chosen_refs.txt
 
         assembly.py gapfill_gap2seq \
-          ~{sample_name}.intermediate_scaffold.fasta \
-          ~{reads_bam} \
-          ~{sample_name}.intermediate_gapfill.fasta \
+          "~{sample_name}".intermediate_scaffold.fasta \
+          "~{reads_bam}" \
+          "~{sample_name}".intermediate_gapfill.fasta \
           --memLimitGb $mem_in_gb \
           --maskErrors \
           --loglevel=DEBUG
 
         set +e +o pipefail
-        grep -v '^>' ~{sample_name}.intermediate_gapfill.fasta | tr -d '\n' | wc -c | tee assembly_preimpute_length
-        grep -v '^>' ~{sample_name}.intermediate_gapfill.fasta | tr -d '\nNn' | wc -c | tee assembly_preimpute_length_unambiguous
-        grep '^>' ~{sample_name}.intermediate_gapfill.fasta | wc -l | tee assembly_num_segments_recovered
-        grep '^>' ~{sample_name}.scaffolding_chosen_ref.fasta | wc -l | tee reference_num_segments_required
-        grep -v '^>' ~{sample_name}.scaffolding_chosen_ref.fasta | tr -d '\n' | wc -c | tee reference_length
+        grep -v '^>' "~{sample_name}".intermediate_gapfill.fasta | tr -d '\n' | wc -c | tee assembly_preimpute_length
+        grep -v '^>' "~{sample_name}".intermediate_gapfill.fasta | tr -d '\nNn' | wc -c | tee assembly_preimpute_length_unambiguous
+        grep '^>' "~{sample_name}".intermediate_gapfill.fasta | wc -l | tee assembly_num_segments_recovered
+        grep '^>' "~{sample_name}".scaffolding_chosen_ref.fasta | wc -l | tee reference_num_segments_required
+        grep -v '^>' "~{sample_name}".scaffolding_chosen_ref.fasta | tr -d '\n' | wc -c | tee reference_length
         set -e -o pipefail
 
         if ~{true='true' false='false' allow_incomplete_output} && ! cmp -s assembly_num_segments_recovered reference_num_segments_required
         then
           # draft assembly does not have enough segments--and that's okay (allow_incomplete_output=true)
           file_utils.py rename_fasta_sequences \
-            ~{sample_name}.intermediate_gapfill.fasta \
-            ~{sample_name}.scaffolded_imputed.fasta \
+            "~{sample_name}".intermediate_gapfill.fasta \
+            "~{sample_name}".scaffolded_imputed.fasta \
             "~{sample_name}" --suffix_always --loglevel=DEBUG
         else
           # draft assembly must have the right number of segments (fail if not)
           assembly.py impute_from_reference \
-            ~{sample_name}.intermediate_gapfill.fasta \
-            ~{sample_name}.scaffolding_chosen_ref.fasta \
-            ~{sample_name}.scaffolded_imputed.fasta \
-            --newName ~{sample_name} \
+            "~{sample_name}".intermediate_gapfill.fasta \
+            "~{sample_name}".scaffolding_chosen_ref.fasta \
+            "~{sample_name}".scaffolded_imputed.fasta \
+            --newName "~{sample_name}" \
             ~{'--replaceLength=' + replace_length} \
             ~{'--minLengthFraction=' + min_length_fraction} \
             ~{'--minUnambig=' + min_unambig} \
@@ -332,7 +342,7 @@ task scaffold {
         Int    reference_length                      = read_int("reference_length")
         Array[String] scaffolding_chosen_ref_names   = read_lines("~{sample_name}.scaffolding_chosen_refs.txt")
         File   scaffolding_chosen_ref                = "~{sample_name}.scaffolding_chosen_ref.fasta"
-        File   scaffolding_stats                     = "~{sample_name}.scaffolding_stats.txt"
+        File   scaffolding_stats                     = "~{sample_name}.refs_skani_dist.full.tsv"
         File   scaffolding_alt_contigs               = "~{sample_name}.scaffolding_alt_contigs.fasta"
         String viralngs_version                      = read_string("VERSION")
     }
