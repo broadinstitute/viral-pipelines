@@ -54,7 +54,7 @@ workflow scaffold_and_refine_multitaxa {
 
     # assemble and produce stats for every reference cluster
     Array[String] assembly_header = ["entity:assembly_id", "assembly_name", "sample_id", "sample_name", "taxid", "tax_name", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "scaffolding_num_segments_recovered", "reference_num_segments_required", "reference_length", "reference_accessions", "skani_num_ref_clusters", "skani_this_cluster_num_refs", "skani_dist_tsv", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned", "coverage_genbank", "assembly_method", "sample"]
-    scatter(ref_cluster in select_references.matched_reference_clusters_fastas)
+    scatter(ref_cluster in select_references.matched_reference_clusters_fastas) {
         call assembly.scaffold {
             input:
                 reads_bam = reads_unmapped_bam,
