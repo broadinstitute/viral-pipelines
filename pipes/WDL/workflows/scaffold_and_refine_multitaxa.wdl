@@ -93,10 +93,11 @@ workflow scaffold_and_refine_multitaxa {
 
         String taxid = basename(scaffold.scaffolding_chosen_ref, ".fasta")
         call utils.fetch_row_from_tsv as tax_lookup {
-            tsv = taxid_to_ref_accessions_tsv,
-            idx_col = "taxid",
-            idx_val = taxid,
-            add_header = ["taxid", "taxname", "accessions"]
+            input:
+                tsv = taxid_to_ref_accessions_tsv,
+                idx_col = "taxid",
+                idx_val = taxid,
+                add_header = ["taxid", "taxname", "accessions"]
         }
         String tax_name = tax_lookup.map["taxname"]
         Map[String, String] stats_by_taxon = {
@@ -161,11 +162,10 @@ workflow scaffold_and_refine_multitaxa {
         File   assembly_stats_by_taxon_tsv                 = concatenate.combined
         String assembly_method                             = "viral-ngs/scaffold_and_refine_multitaxa"
 
-        ## TO DO: some summary stats on stats_by_taxon: how many rows, numbers from the best row, etc
-        #String assembly_top_taxon_id               = 
-        #String assembly_top_length_unambiguous     = 
-        #Float  assembly_top_pct_ref_cov            = 
-        #File   assembly_top_fasta                  = 
+        String assembly_top_taxon_id               = select_references.top_matches_per_cluster_basenames[0]
+        Int    skani_num_ref_clusters              = length(select_references.matched_reference_clusters_basenames)
+        File   skani_contigs_to_refs_dist_tsv      = select_references.skani_dist_full_tsv
+
         Array[String] assembly_all_taxids          = taxid
         Array[String] assembly_all_taxnames        = tax_name
         Array[Int]    assembly_all_lengths_unambig = assembly_length_unambiguous
