@@ -275,6 +275,9 @@ task scaffold {
           "~{sample_name}.ref_clusters.tsv" \
           --loglevel=DEBUG
         CHOSEN_REF_FASTA=$(cut -f 1 "~{sample_name}.refs_skani_dist.top.tsv" | tail +2)
+        cut -f 3 "~{sample_name}.refs_skani_dist.top.tsv" | tail +2 > SKANI_ANI
+        cut -f 4 "~{sample_name}.refs_skani_dist.top.tsv" | tail +2 > SKANI_REF_AF
+        cut -f 5 "~{sample_name}.refs_skani_dist.top.tsv" | tail +2 > SKANI_CONTIGS_AF
 
         assembly.py order_and_orient \
           "~{contigs_fasta}" \
@@ -344,6 +347,9 @@ task scaffold {
         File   scaffolding_chosen_ref                = "~{sample_name}.scaffolding_chosen_ref.fasta"
         File   scaffolding_stats                     = "~{sample_name}.refs_skani_dist.full.tsv"
         File   scaffolding_alt_contigs               = "~{sample_name}.scaffolding_alt_contigs.fasta"
+        Float  skani_ani                             = read_float("SKANI_ANI")
+        Float  skani_ref_aligned_frac                = read_float("SKANI_REF_AF")
+        Float  skani_contigs_aligned_frac            = read_float("SKANI_CONTIGS_AF")
         String viralngs_version                      = read_string("VERSION")
     }
 
