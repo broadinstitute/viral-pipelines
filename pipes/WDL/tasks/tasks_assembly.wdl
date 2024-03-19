@@ -15,7 +15,7 @@ task assemble {
       String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
       
       Int?     machine_mem_gb
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.3.1.1"
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.3.1.2"
     }
     parameter_meta{
       reads_unmapped_bam: {
@@ -111,7 +111,7 @@ task select_references {
     Array[File]   reference_genomes_fastas
     File          contigs_fasta
 
-    String        docker = "quay.io/broadinstitute/viral-assemble:2.3.1.1"
+    String        docker = "quay.io/broadinstitute/viral-assemble:2.3.1.2"
     Int           machine_mem_gb = 4
     Int           cpu = 2
     Int           disk_size = 100
@@ -186,7 +186,7 @@ task scaffold {
       Float?       scaffold_min_pct_contig_aligned
 
       Int?         machine_mem_gb
-      String       docker="quay.io/broadinstitute/viral-assemble:2.3.1.1"
+      String       docker="quay.io/broadinstitute/viral-assemble:2.3.1.2"
 
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
@@ -666,7 +666,7 @@ task refine_assembly_with_aligned_reads {
       Int      min_coverage = 3
 
       Int      machine_mem_gb = 15
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.3.1.1"
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.3.1.2"
     }
 
     Int disk_size = 375
@@ -791,7 +791,7 @@ task refine_2x_and_plot {
       String? plot_coverage_novoalign_options = "-r Random -l 40 -g 40 -x 20 -t 100 -k"
 
       Int?    machine_mem_gb
-      String  docker = "quay.io/broadinstitute/viral-assemble:2.3.1.1"
+      String  docker = "quay.io/broadinstitute/viral-assemble:2.3.1.2"
 
       # do this in two steps in case the input doesn't actually have "cleaned" in the name
       String  sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
