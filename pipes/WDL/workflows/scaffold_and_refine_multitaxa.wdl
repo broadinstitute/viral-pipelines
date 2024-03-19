@@ -21,10 +21,6 @@ workflow scaffold_and_refine_multitaxa {
         File    reads_unmapped_bam
 
         File    taxid_to_ref_accessions_tsv
-        File?   focal_report_tsv
-        File?   ncbi_taxdump_tgz
-
-        # Float    min_pct_reference_covered = 0.1
     }
 
     Int    min_scaffold_unambig = 10
