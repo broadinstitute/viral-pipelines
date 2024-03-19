@@ -19,6 +19,7 @@ workflow scaffold_and_refine_multitaxa {
         String  sample_id
         Array[String] sample_names
         File    reads_unmapped_bam
+        File    contigs_fasta
 
         File    taxid_to_ref_accessions_tsv
     }
@@ -44,8 +45,8 @@ workflow scaffold_and_refine_multitaxa {
     # subset references to those with ANI hits to contigs and cluster reference hits by any ANI similarity to each other
     call assembly.select_references {
         input:
-            reference_genomes_fastas = download_annotations.combined_fasta
-            # user must specify contigs_fasta
+            reference_genomes_fastas = download_annotations.combined_fasta,
+            contigs_fasta = contigs_fasta
     }
 
     # assemble and produce stats for every reference cluster
@@ -54,6 +55,7 @@ workflow scaffold_and_refine_multitaxa {
         call assembly.scaffold {
             input:
                 reads_bam = reads_unmapped_bam,
+                contigs_fasta = contigs_fasta,
                 reference_genome_fasta = ref_cluster,
                 min_length_fraction = 0,
                 min_unambig = 0,
