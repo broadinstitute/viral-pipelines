@@ -202,6 +202,7 @@ task fetch_row_from_tsv {
     String        idx_col
     String        idx_val
     Array[String] set_default_keys = []
+    Array[String] add_header = []
   }
   Int disk_size = 50
   command <<<
@@ -209,8 +210,11 @@ task fetch_row_from_tsv {
     import csv, gzip, json
     open_or_gzopen = lambda *args, **kwargs: gzip.open(*args, **kwargs) if args[0].endswith('.gz') else open(*args, **kwargs)
     out_dict = {}
+    fieldnames = "~{sep='*' add_header}".split("*")
+    if not fieldnames:
+      fieldnames = None
     with open_or_gzopen('~{tsv}', 'rt') as inf:
-      for row in csv.DictReader(inf, delimiter='\t'):
+      for row in csv.DictReader(inf, delimiter='\t', fieldnames=fieldnames):
         if row.get('~{idx_col}') == '~{idx_val}':
           out_dict = row
           break

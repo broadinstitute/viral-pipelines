@@ -103,6 +103,69 @@ task assemble {
 
 }
 
+task select_references {
+  meta {
+    description: "Evaluate reference genomes based on ANI similarity to provided contigs. This will emit an ANI-rank-ordered table of references and will also cluster reference genomes based on ANI similarity to each other, picking only the top hit (based on ANI similairty to contigs) of each cluster. Default parameters for skani are tuned for viral genomes (-m 50 -s 85 --no-learned-ani --slow --robust --no-marker-index). This tool can tolerate a large number of reference genomes as input."
+  }
+  input {
+    Array[File]   reference_genomes_fastas
+    File          contigs_fasta
+
+    String        docker = "quay.io/broadinstitute/viral-assemble:2.3.1.0"
+    Int           machine_mem_gb = 4
+    Int           cpu = 2
+    Int           disk_size = 100
+  }
+  String contigs_basename = basename(basename(contigs_fasta, '.fasta'), '.assembly1-spades')
+
+  command <<<
+    set -e
+
+    # run skani, find top hits, cluster references
+    assembly.py skani_contigs_to_refs \
+      "~{contigs_fasta}" \
+      "~{sep='" "' reference_genomes_fastas}" \
+      "~{contigs_basename}.refs_skani_dist.full.tsv" \
+      "~{contigs_basename}.refs_skani_dist.top.tsv" \
+      "~{contigs_basename}.ref_clusters.tsv" \
+      --loglevel=DEBUG
+
+    # create basename-only version of ref_clusters output file
+    python3 <<CODE
+    import os.path
+    with open("~{contigs_basename}.ref_clusters.tsv", 'r') as inf:
+      with open("~{contigs_basename}.ref_clusters.basenames.tsv", 'w') as outf:
+        for line in inf:
+          fnames = line.strip().split('\t')
+          outf.write('\t'.join(os.path.basename(f, '.fasta') for f in fnames) + '\n')
+    CODE
+
+    # create top-hits output files
+    cut -f 1 "~{contigs_basename}.skani_dist.top.tsv" | tail +2 > TOP_FASTAS
+    for f in $(cat TOP_FASTAS); do basename "$f" .fasta; done > TOP_FASTAS_BASENAMES
+  >>>
+
+  output {
+    Array[Array[File]]   matched_reference_clusters_fastas = read_tsv("~{contigs_basename}.ref_clusters.tsv")
+    Array[Array[String]] matched_reference_clusters_basenames = read_tsv("~{contigs_basename}.ref_clusters.basenames.tsv")
+    Array[String]        top_matches_per_cluster_basenames = read_lines("TOP_FASTAS_BASENAMES")
+    Array[File]          top_matches_per_cluster_fastas = read_lines("TOP_FASTAS")
+    File                 skani_dist_full_tsv = "~{contigs_basename}.refs_skani_dist.full.tsv"
+    File                 skani_dist_top_tsv  = "~{contigs_basename}.refs_skani_dist.top.tsv"
+  }
+
+  runtime {
+    docker: docker
+    memory: machine_mem_gb + " GB"
+    cpu:    cpu
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TESs
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
+
 task scaffold {
     input {
       File         contigs_fasta
