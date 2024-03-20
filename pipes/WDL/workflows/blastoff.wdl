@@ -33,5 +33,6 @@ workflow megablast {
 
     output {
         File    LCA_output = lca_megablast.LCA_output
+        File    kraken_output_fromat =  lca_megablast.kraken_output_fromat
     }
 }
