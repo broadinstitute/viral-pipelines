@@ -170,7 +170,7 @@ task tar_extract {
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
-        preemptible: true
+        preemptible: 1
     }
     output {
         Array[File] files = glob("unpack/*")
