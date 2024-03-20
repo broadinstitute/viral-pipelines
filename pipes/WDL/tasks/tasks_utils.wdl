@@ -148,6 +148,35 @@ task sed {
     }
 }
 
+task tar_extract {
+    meta {
+        description: "Extract a tar file"
+    }
+    input {
+        File   tar_file
+        Int    disk_size = 375
+        String tar_opts = "-z"
+    }
+    command <<<
+        mkdir -p unpack
+        cd unpack
+        tar -xv ~{tar_opts} -f "~{tar_file}"
+    >>>
+    runtime {
+        docker: "quay.io/broadinstitute/viral-baseimage:0.2.0"
+        memory: "2 GB"
+        cpu:    1
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
+        dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
+        preemptible: true
+    }
+    output {
+        Array[File] files = glob("unpack/*")
+    }
+}
+
 task fasta_to_ids {
     meta {
         description: "Return the headers only from a fasta file"

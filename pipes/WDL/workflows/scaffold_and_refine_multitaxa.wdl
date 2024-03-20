@@ -9,7 +9,7 @@ import "assemble_refbased.wdl" as assemble_refbased
 
 workflow scaffold_and_refine_multitaxa {
     meta {
-        description: "Scaffold de novo contigs against a set of possible references and subsequently polish with reads."
+        description: "Scaffold de novo contigs against a set of possible references and subsequently polish with reads. This workflow accepts a very large set of input reference genomes. It will subset the reference genomes to those with ANI hits to the provided contigs/MAGs and cluster the reference hits by any ANI similarity to each other. It will choose the top reference from each cluster and produce one assembly for each cluster. This is intended to allow for the presence of multiple diverse viral taxa (coinfections) while forcing a choice of the best assembly from groups of related reference genomes."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
         allowNestedInputs: true
@@ -51,14 +51,19 @@ workflow scaffold_and_refine_multitaxa {
 
     # assemble and produce stats for every reference cluster
     Array[String] assembly_header = ["entity:assembly_id", "assembly_name", "sample_id", "sample_name", "taxid", "tax_name", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "scaffolding_num_segments_recovered", "reference_num_segments_required", "reference_length", "reference_accessions", "skani_num_ref_clusters", "skani_this_cluster_num_refs", "skani_dist_tsv", "scaffolding_ani", "scaffolding_pct_ref_cov", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned", "coverage_genbank", "assembly_method", "sample"]
-    scatter(ref_cluster in select_references.matched_reference_clusters_fastas) {
+    scatter(ref_cluster_tar in select_references.matched_reference_clusters_fastas_tars) {
+
+        call utils.tar_extract {
+            input:
+                tar_file = ref_cluster_tar
+        }
 
         # assemble (scaffold-and-refine) genome against this reference cluster
         call assembly.scaffold {
             input:
                 reads_bam = reads_unmapped_bam,
                 contigs_fasta = contigs_fasta,
-                reference_genome_fasta = ref_cluster,
+                reference_genome_fasta = tar_extract.files,
                 min_length_fraction = 0,
                 min_unambig = 0,
                 allow_incomplete_output = true
@@ -120,8 +125,8 @@ workflow scaffold_and_refine_multitaxa {
             "reference_length" :            scaffold.reference_length,
             "reference_accessions" :        tax_lookup.map["accessions"],
 
-            "skani_num_ref_clusters" :      length(select_references.matched_reference_clusters_basenames),
-            "skani_this_cluster_num_refs" : length(ref_cluster),
+            "skani_num_ref_clusters" :      length(select_references.matched_reference_clusters_fastas_tars),
+            "skani_this_cluster_num_refs" : length(tar_extract.files),
             "skani_dist_tsv" :              scaffold.scaffolding_stats,
             "scaffolding_ani" :             scaffold.skani_ani,
             "scaffolding_pct_ref_cov" :     scaffold.skani_ref_aligned_frac,
@@ -164,7 +169,7 @@ workflow scaffold_and_refine_multitaxa {
         String assembly_method                             = "viral-ngs/scaffold_and_refine_multitaxa"
 
         #String assembly_top_taxon_id               = select_references.top_matches_per_cluster_basenames[0]
-        Int    skani_num_ref_clusters              = length(select_references.matched_reference_clusters_basenames)
+        Int    skani_num_ref_clusters              = length(select_references.matched_reference_clusters_fastas_tars)
         File   skani_contigs_to_refs_dist_tsv      = select_references.skani_dist_full_tsv
 
         Array[String] assembly_all_taxids          = taxid

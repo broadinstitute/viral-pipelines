@@ -131,14 +131,23 @@ task select_references {
       --loglevel=DEBUG
 
     # create basename-only version of ref_clusters output file
+    # create tar-bundles of ref_clusters fastas, since Cromwell doesn't delocalize files in a Array[Array[File]] = read_tsv
     python3 <<CODE
-    import os.path
+    import os, os.path, shutil, tarfile
+    os.mkdir("clusters")
     with open("~{contigs_basename}.ref_clusters.tsv", 'r') as inf:
       with open("~{contigs_basename}.ref_clusters.basenames.tsv", 'w') as outf:
         for line in inf:
           fnames = line.strip().split('\t')
-          fnames = list([f[:-6] if f.endswith('.fasta') else f for f in map(os.path.basename, fnames)])
-          outf.write('\t'.join(fnames) + '\n')
+          assert fnames
+          basefnames = list([f[:-6] if f.endswith('.fasta') else f for f in map(os.path.basename, fnames)])
+          outf.write('\t'.join(basefnames) + '\n')
+
+          with tarfile.open(os.path.join("clusters", basefnames[0] + "." + str(len(basefnames))  + ".tar.gz"), "w:gz") as tarball:
+            for f in fnames:
+              shutil.copy(f, ".")
+              tarball.add(os.path.basename(f))
+              os.unlink(os.path.basename(f))
     CODE
 
     # create top-hits output files
@@ -147,7 +156,7 @@ task select_references {
   >>>
 
   output {
-    Array[Array[File]]   matched_reference_clusters_fastas = read_tsv("~{contigs_basename}.ref_clusters.tsv")
+    Array[File]          matched_reference_clusters_fastas_tars = glob("clusters/*.tar.gz")
     Array[Array[String]] matched_reference_clusters_basenames = read_tsv("~{contigs_basename}.ref_clusters.basenames.tsv")
     Array[String]        top_matches_per_cluster_basenames = read_lines("TOP_FASTAS_BASENAMES")
     Array[File]          top_matches_per_cluster_fastas = read_lines("TOP_FASTAS")
@@ -279,6 +288,7 @@ task scaffold {
         cut -f 3 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1 > SKANI_ANI
         cut -f 4 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1 > SKANI_REF_AF
         cut -f 5 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1 > SKANI_CONTIGS_AF
+        basename "$CHOSEN_REF_FASTA" .fasta > CHOSEN_REF_BASENAME
 
         assembly.py order_and_orient \
           "~{contigs_fasta}" \
@@ -345,6 +355,7 @@ task scaffold {
         Int    reference_num_segments_required       = read_int("reference_num_segments_required")
         Int    reference_length                      = read_int("reference_length")
         Array[String] scaffolding_chosen_ref_names   = read_lines("~{sample_name}.scaffolding_chosen_refs.txt")
+        String scaffolding_chosen_ref_basename       = read_string("CHOSEN_REF_BASENAME")
         File   scaffolding_chosen_ref                = "~{sample_name}.scaffolding_chosen_ref.fasta"
         File   scaffolding_stats                     = "~{sample_name}.refs_skani_dist.full.tsv"
         File   scaffolding_alt_contigs               = "~{sample_name}.scaffolding_alt_contigs.fasta"
