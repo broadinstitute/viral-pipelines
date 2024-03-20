@@ -116,11 +116,14 @@ task lca_megablast {
     
     # Run LCA
     retrieve_top_blast_hits_LCA_for_each_sequence.pl "~{fasta_basename}.fasta_megablast_nt.tsv" nodes.dmp 10 > "~{fasta_basename}.fasta_megablast_nt.tsv_LCA.txt"
+    # Run Krona output conversion 
+    LCA_table_to_kraken_output_format.pl "~{fasta_basename}.fasta_megablast_nt.tsv_LCA.txt" "~{trimmed_fasta}" > "~{fasta_basename}.kraken.tsv"
     # Done
 >>>
 
 output {
     File    LCA_output = "~{fasta_basename}.fasta_megablast_nt.tsv_LCA.txt"
+    File    kraken_output_fromat =  "~{fasta_basename}.kraken.tsv"
 }
 runtime {
     docker:docker
@@ -130,4 +133,3 @@ runtime {
     dx_instance_type: "n2-highmem-16"
 }
 }
-#blastn -task megablast -query Hep_WGS19_291.downsampled-100000.fasta -db "blastDB" -max_target_seqs 50 -num_threads `nproc` -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" -out "fasta_megablast_nt.tsv"
