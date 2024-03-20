@@ -27,22 +27,22 @@ workflow scaffold_and_refine_multitaxa {
     Int    min_scaffold_unambig = 10
     String sample_original_name = flatten([sample_names, [sample_id]])[0]
 
-    # download (multi-segment) genomes for each reference, fasta filename = numeric taxon ID
+    # download (multi-segment) genomes for each reference, fasta filename = colon-concatenated accession list
     scatter(taxon in read_tsv(taxid_to_ref_accessions_tsv)) {
         # taxon = [taxid, taxname, semicolon_delim_accession_list]
         call utils.string_split {
             input:
                 joined_string = taxon[2],
-                delimiter = ";"
+                delimiter = ":"
         }
         call ncbi.download_annotations {
             input:
                 accessions = string_split.tokens,
-                combined_out_prefix = taxon[0]
+                combined_out_prefix = taxon[2]
         }
     }
 
-    # subset references to those with ANI hits to contigs and cluster reference hits by any ANI similarity to each other
+    # subset reference genomes to those with ANI hits to contigs and cluster reference hits by any ANI similarity to each other
     call assembly.select_references {
         input:
             reference_genomes_fastas = download_annotations.combined_fasta,
@@ -52,6 +52,8 @@ workflow scaffold_and_refine_multitaxa {
     # assemble and produce stats for every reference cluster
     Array[String] assembly_header = ["entity:assembly_id", "assembly_name", "sample_id", "sample_name", "taxid", "tax_name", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "scaffolding_num_segments_recovered", "reference_num_segments_required", "reference_length", "reference_accessions", "skani_num_ref_clusters", "skani_this_cluster_num_refs", "skani_dist_tsv", "scaffolding_ani", "scaffolding_pct_ref_cov", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned", "coverage_genbank", "assembly_method", "sample"]
     scatter(ref_cluster in select_references.matched_reference_clusters_fastas) {
+
+        # assemble (scaffold-and-refine) genome against this reference cluster
         call assembly.scaffold {
             input:
                 reads_bam = reads_unmapped_bam,
@@ -70,16 +72,9 @@ workflow scaffold_and_refine_multitaxa {
                     sample_name          = sample_id,
                     sample_original_name = sample_original_name
             }
-        }
-
-        Int    assembly_length_unambiguous = select_first([refine.assembly_length_unambiguous])
-        Float  percent_reference_covered = 1.0 * assembly_length_unambiguous / scaffold.reference_length
-        File   assembly_fasta = select_first([refine.assembly_fasta])
-
-        if(assembly_length_unambiguous > 0) {
             call reports.coverage_report as coverage_self {
                 input:
-                    mapped_bams = select_all([refine.align_to_self_merged_aligned_only_bam]),
+                    mapped_bams = [refine.align_to_self_merged_aligned_only_bam],
                     mapped_bam_idx = []
             }
             call utils.tsv_drop_cols as coverage_two_col {
@@ -89,15 +84,21 @@ workflow scaffold_and_refine_multitaxa {
             }
         }
 
-        String taxid = basename(scaffold.scaffolding_chosen_ref, ".fasta")
+        # get taxid and taxname from taxid_to_ref_accessions_tsv
         call utils.fetch_row_from_tsv as tax_lookup {
             input:
                 tsv = taxid_to_ref_accessions_tsv,
-                idx_col = "taxid",
-                idx_val = taxid,
+                idx_col = "accessions",
+                idx_val = scaffold.scaffolding_chosen_ref_basename,
                 add_header = ["taxid", "taxname", "accessions"]
         }
+        String taxid = tax_lookup.map["taxid"]
         String tax_name = tax_lookup.map["taxname"]
+
+        # build output tsv row
+        Int    assembly_length_unambiguous = select_first([refine.assembly_length_unambiguous])
+        Float  percent_reference_covered = 1.0 * assembly_length_unambiguous / scaffold.reference_length
+        File   assembly_fasta = select_first([refine.assembly_fasta])
         Map[String, String] stats_by_taxon = {
             "entity:assembly_id" : sample_id + "-" + taxid,
             "assembly_name" :      tax_name + ": " + sample_original_name,
