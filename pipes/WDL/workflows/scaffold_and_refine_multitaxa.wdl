@@ -24,7 +24,7 @@ workflow scaffold_and_refine_multitaxa {
         File    taxid_to_ref_accessions_tsv
     }
 
-    Int    min_scaffold_unambig = 10
+    Int    min_scaffold_unambig = 10 # in base-pairs; any scaffolded assembly < this length will not be refined/polished
     String sample_original_name = flatten([sample_names, [sample_id]])[0]
 
     # download (multi-segment) genomes for each reference, fasta filename = colon-concatenated accession list
@@ -101,9 +101,9 @@ workflow scaffold_and_refine_multitaxa {
         String tax_name = tax_lookup.map["taxname"]
 
         # build output tsv row
-        Int    assembly_length_unambiguous = select_first([refine.assembly_length_unambiguous])
+        Int    assembly_length_unambiguous = select_first([refine.assembly_length_unambiguous, 0])
         Float  percent_reference_covered = 1.0 * assembly_length_unambiguous / scaffold.reference_length
-        File   assembly_fasta = select_first([refine.assembly_fasta])
+        File   assembly_fasta = select_first([refine.assembly_fasta, scaffold.intermediate_gapfill_fasta])
         Map[String, String] stats_by_taxon = {
             "entity:assembly_id" : sample_id + "-" + taxid,
             "assembly_name" :      tax_name + ": " + sample_original_name,
@@ -113,12 +113,12 @@ workflow scaffold_and_refine_multitaxa {
             "tax_name" :           tax_name,
 
             "assembly_fasta" :              assembly_fasta,
-            "aligned_only_reads_bam" :      select_first([refine.align_to_self_merged_aligned_only_bam]),
-            "coverage_plot" :               select_first([refine.align_to_self_merged_coverage_plot]),
-            "assembly_length" :             select_first([refine.assembly_length]),
+            "aligned_only_reads_bam" :      select_first([refine.align_to_self_merged_aligned_only_bam, ""]),
+            "coverage_plot" :               select_first([refine.align_to_self_merged_coverage_plot, ""]),
+            "assembly_length" :             select_first([refine.assembly_length, "0"]),
             "assembly_length_unambiguous" : assembly_length_unambiguous,
-            "reads_aligned" :               select_first([refine.align_to_self_merged_reads_aligned]),
-            "mean_coverage" :               select_first([refine.align_to_self_merged_mean_coverage]),
+            "reads_aligned" :               select_first([refine.align_to_self_merged_reads_aligned, "0"]),
+            "mean_coverage" :               select_first([refine.align_to_self_merged_mean_coverage, "0"]),
             "percent_reference_covered" :   percent_reference_covered,
             "scaffolding_num_segments_recovered" : scaffold.assembly_num_segments_recovered,
             "reference_num_segments_required" : scaffold.reference_num_segments_required,
@@ -134,16 +134,16 @@ workflow scaffold_and_refine_multitaxa {
             "intermediate_gapfill_fasta" :            scaffold.intermediate_gapfill_fasta,
             "assembly_preimpute_length_unambiguous" : scaffold.assembly_preimpute_length_unambiguous,
 
-            "replicate_concordant_sites" :  select_first([refine.replicate_concordant_sites]),
-            "replicate_discordant_snps" :   select_first([refine.replicate_discordant_snps]),
-            "replicate_discordant_indels" : select_first([refine.replicate_discordant_indels]),
-            "replicate_discordant_vcf" :    select_first([refine.replicate_discordant_vcf]),
+            "replicate_concordant_sites" :  select_first([refine.replicate_concordant_sites, "0"]),
+            "replicate_discordant_snps" :   select_first([refine.replicate_discordant_snps, "0"]),
+            "replicate_discordant_indels" : select_first([refine.replicate_discordant_indels, "0"]),
+            "replicate_discordant_vcf" :    select_first([refine.replicate_discordant_vcf, ""]),
 
-            "isnvsFile" :          select_first([refine.align_to_self_isnvs_vcf]),
-            "aligned_bam" :        select_first([refine.align_to_self_merged_aligned_only_bam]),
-            "coverage_tsv" :       select_first([refine.align_to_self_merged_coverage_tsv]),
-            "read_pairs_aligned" : select_first([refine.align_to_self_merged_read_pairs_aligned]),
-            "bases_aligned" :      select_first([refine.align_to_self_merged_bases_aligned]),
+            "isnvsFile" :          select_first([refine.align_to_self_isnvs_vcf, ""]),
+            "aligned_bam" :        select_first([refine.align_to_self_merged_aligned_only_bam, ""]),
+            "coverage_tsv" :       select_first([refine.align_to_self_merged_coverage_tsv, ""]),
+            "read_pairs_aligned" : select_first([refine.align_to_self_merged_read_pairs_aligned, "0"]),
+            "bases_aligned" :      select_first([refine.align_to_self_merged_bases_aligned, "0"]),
             "coverage_genbank" :   select_first([coverage_two_col.out_tsv, ""]),
 
             "assembly_method" :    "viral-ngs/assemble_denovo",
