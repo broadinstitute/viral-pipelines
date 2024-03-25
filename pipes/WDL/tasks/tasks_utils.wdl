@@ -148,6 +148,35 @@ task sed {
     }
 }
 
+task tar_extract {
+    meta {
+        description: "Extract a tar file"
+    }
+    input {
+        File   tar_file
+        Int    disk_size = 375
+        String tar_opts = "-z"
+    }
+    command <<<
+        mkdir -p unpack
+        cd unpack
+        tar -xv ~{tar_opts} -f "~{tar_file}"
+    >>>
+    runtime {
+        docker: "quay.io/broadinstitute/viral-baseimage:0.2.0"
+        memory: "2 GB"
+        cpu:    1
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
+        dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
+        preemptible: 1
+    }
+    output {
+        Array[File] files = glob("unpack/*")
+    }
+}
+
 task fasta_to_ids {
     meta {
         description: "Return the headers only from a fasta file"
@@ -202,6 +231,7 @@ task fetch_row_from_tsv {
     String        idx_col
     String        idx_val
     Array[String] set_default_keys = []
+    Array[String] add_header = []
   }
   Int disk_size = 50
   command <<<
@@ -209,8 +239,11 @@ task fetch_row_from_tsv {
     import csv, gzip, json
     open_or_gzopen = lambda *args, **kwargs: gzip.open(*args, **kwargs) if args[0].endswith('.gz') else open(*args, **kwargs)
     out_dict = {}
+    fieldnames = "~{sep='*' add_header}".split("*")
+    if not fieldnames:
+      fieldnames = None
     with open_or_gzopen('~{tsv}', 'rt') as inf:
-      for row in csv.DictReader(inf, delimiter='\t'):
+      for row in csv.DictReader(inf, delimiter='\t', fieldnames=fieldnames):
         if row.get('~{idx_col}') == '~{idx_val}':
           out_dict = row
           break
