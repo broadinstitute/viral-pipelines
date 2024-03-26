@@ -63,6 +63,7 @@ workflow assemble_refbased {
         Array[File]+ reads_unmapped_bams
         File         reference_fasta
         String       sample_name = basename(reads_unmapped_bams[0], '.bam')
+        String?      sample_original_name
 
         String       aligner="minimap2"
         File?        novocraft_license
@@ -150,7 +151,8 @@ workflow assemble_refbased {
             reads_aligned_bam = aligned_trimmed_bam,
             min_coverage      = min_coverage,
             major_cutoff      = major_cutoff,
-            sample_name       = sample_name
+            out_basename      = sample_name,
+            sample_name       = select_first([sample_original_name, sample_name])
     }
 
     scatter(reads_unmapped_bam in reads_unmapped_bams) {

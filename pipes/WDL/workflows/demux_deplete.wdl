@@ -1,9 +1,10 @@
 version 1.0
 
 import "../tasks/tasks_demux.wdl" as demux
-import "../tasks/tasks_taxon_filter.wdl" as taxon_filter
-import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_ncbi.wdl" as ncbi
+import "../tasks/tasks_reports.wdl" as reports
+import "../tasks/tasks_taxon_filter.wdl" as taxon_filter
+import "../tasks/tasks_terra.wdl" as terra
 
 workflow demux_deplete {
     meta {
@@ -19,6 +20,7 @@ workflow demux_deplete {
         String?      read_structure
 
         Boolean      sort_reads=true
+        Boolean      insert_demux_outputs_into_terra_tables=false
 
         File?        sample_rename_map
         File?        biosample_map
@@ -68,6 +70,10 @@ workflow demux_deplete {
         }
         sort_reads: {
             description: "Output bam files will be sorted by read name.",
+            category: "advanced"
+        }
+        insert_demux_outputs_into_terra_tables: {
+            description: "Terra only: if set to 'true', demux output will be used to insert entries in 'library' (per library-lane) and 'sample tables' (referencing one or more libraries per sample ID)",
             category: "advanced"
         }
         bmtaggerDbs: {
@@ -164,6 +170,25 @@ workflow demux_deplete {
         }
         if (deplete.depletion_read_count_post < min_reads_per_bam) {
             File empty_bam = raw_reads
+        }
+    }
+
+    if(insert_demux_outputs_into_terra_tables){
+        call terra.check_terra_env
+
+        if(check_terra_env.is_running_on_terra) {
+            call terra.create_or_update_sample_tables {
+              input:
+                flowcell_run_id     = illumina_demux.run_info[0]['run_id'],
+                workspace_name      = check_terra_env.workspace_name,
+                workspace_namespace = check_terra_env.workspace_namespace,
+                workspace_bucket    = check_terra_env.workspace_bucket_path,
+
+                raw_reads_unaligned_bams     = flatten(illumina_demux.raw_reads_unaligned_bams),
+                cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing),
+                meta_by_filename_json        = meta_filename.merged_json,
+                meta_by_sample_json          = meta_sample.merged_json
+            }
         }
     }
 

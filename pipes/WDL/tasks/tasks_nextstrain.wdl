@@ -14,7 +14,7 @@ task nextclade_one_sample {
         File? virus_properties
         String? dataset_name
         Int    disk_size = 50
-        String docker = "nextstrain/nextclade:2.12.0"
+        String docker = "nextstrain/nextclade:2.14.0"
     }
     String basename = basename(genome_fasta, ".fasta")
     command {
@@ -101,7 +101,7 @@ task nextclade_many_samples {
         String       basename
         File?        genome_ids_setdefault_blank
         Int          disk_size = 150
-        String       docker = "nextstrain/nextclade:2.12.0"
+        String       docker = "nextstrain/nextclade:2.14.0"
     }
     command <<<
         set -e
@@ -172,7 +172,7 @@ task nextclade_many_samples {
         # gather runtime metrics
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -280,7 +280,7 @@ task derived_cols {
         String?       lab_highlight_loc
         Array[File]   table_map = []
 
-        String        docker = "quay.io/broadinstitute/viral-core:2.1.33"
+        String        docker = "quay.io/broadinstitute/viral-core:2.3.1"
         Int           disk_size = 50
     }
     parameter_meta {
@@ -450,7 +450,7 @@ task nextstrain_build_subsample {
         File?  drop_list
 
         Int    machine_mem_gb = 50
-        String docker = "nextstrain/base:build-20230905T192825Z"
+        String docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
         Int    disk_size = 750
     }
@@ -566,7 +566,7 @@ task nextstrain_build_subsample {
         cd ..
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -594,7 +594,7 @@ task nextstrain_build_subsample {
 task nextstrain_ncov_defaults {
     input {
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
-        String docker                      = "nextstrain/base:build-20230905T192825Z"
+        String docker                      = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int    disk_size = 50
     }
     command {
@@ -632,7 +632,7 @@ task nextstrain_deduplicate_sequences {
         Boolean error_on_seq_diff = false
 
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
-        String docker                      = "nextstrain/base:build-20230905T192825Z"
+        String docker                      = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int disk_size = 750
     }
 
@@ -686,7 +686,7 @@ task nextstrain_ncov_sanitize_gisaid_data {
         String? prefix_to_strip
 
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
-        String docker                      = "nextstrain/base:build-20230905T192825Z"
+        String docker                      = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int    disk_size = 750
     }
 
@@ -762,7 +762,7 @@ task filter_subsample_sequences {
         Array[String]? exclude_where
         Array[String]? include_where
 
-        String         docker = "nextstrain/base:build-20230905T192825Z"
+        String         docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int            disk_size = 750
     }
     parameter_meta {
@@ -815,7 +815,7 @@ task filter_subsample_sequences {
         grep "strains passed all filters" STDOUT | cut -f 1 -d ' ' > OUT_COUNT
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -847,8 +847,8 @@ task filter_sequences_to_list {
         Array[File]? keep_list
 
         String       out_fname = sub(sub(basename(sequences, ".zst"), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
-        # Prior docker image: "nextstrain/base:build-20211012T204409Z"
-        String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
+        # Prior docker image: "nextstrain/base:build-20240318T173028Z"
+        String       docker = "quay.io/broadinstitute/viral-core:2.3.1"
         Int          disk_size = 750
     }
     parameter_meta {
@@ -913,7 +913,7 @@ task filter_sequences_to_list {
 
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1004,7 +1004,7 @@ task mafft_one_chr {
         # profiling and stats
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1112,7 +1112,7 @@ task mafft_one_chr_chunked {
         # profiling and stats
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1145,8 +1145,10 @@ task augur_mafft_align {
         Boolean fill_gaps = true
         Boolean remove_reference = true
 
-        String  docker = "nextstrain/base:build-20230905T192825Z"
+        String  docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int     disk_size = 750
+        Int     mem_size = 180
+        Int     cpus = 64
     }
     command <<<
         set -e
@@ -1161,12 +1163,12 @@ task augur_mafft_align {
             --nthreads auto
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
-        memory: "180 GB"
-        cpu :   64
+        memory: mem_size + " GB"
+        cpu :   cpus
         disks:  "local-disk " + disk_size + " LOCAL"
         disk: disk_size + " GB" # TES
         preemptible: 0
@@ -1218,7 +1220,7 @@ task augur_mask_sites {
         File   sequences
         File?  mask_bed
 
-        String docker = "nextstrain/base:build-20230905T192825Z"
+        String docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int    disk_size = 750
     }
     parameter_meta {
@@ -1241,7 +1243,7 @@ task augur_mask_sites {
         fi
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1277,7 +1279,7 @@ task draft_augur_tree {
 
         Int     cpus = 64
         Int     machine_mem_gb = 32
-        String  docker = "nextstrain/base:build-20230905T192825Z"
+        String  docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int     disk_size = 1250
     }
     parameter_meta {
@@ -1300,7 +1302,7 @@ task draft_augur_tree {
             --nthreads auto
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1346,7 +1348,7 @@ task refine_augur_tree {
         String?  divergence_units = "mutations"
         File?    vcf_reference
 
-        String   docker = "nextstrain/base:build-20230905T192825Z"
+        String   docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int      disk_size = 750
         Int      machine_mem_gb = 75
     }
@@ -1384,7 +1386,7 @@ task refine_augur_tree {
             ~{"--vcf-reference " + vcf_reference}
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1420,7 +1422,7 @@ task ancestral_traits {
         Float?        sampling_bias_correction
 
         Int           machine_mem_gb = 32
-        String        docker = "nextstrain/base:build-20230905T192825Z"
+        String        docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int           disk_size = 750
     }
     String out_basename = basename(tree, '.nwk')
@@ -1437,7 +1439,7 @@ task ancestral_traits {
             ~{true="--confidence" false="" confidence}
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1473,7 +1475,7 @@ task ancestral_tree {
         File?    vcf_reference
         File?    output_vcf
 
-        String   docker = "nextstrain/base:build-20230905T192825Z"
+        String   docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int      disk_size = 300
     }
     parameter_meta {
@@ -1499,7 +1501,7 @@ task ancestral_tree {
             ~{true="--infer-ambiguous" false="" infer_ambiguous}
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1534,7 +1536,7 @@ task translate_augur_tree {
         File?  vcf_reference_output
         File?  vcf_reference
 
-        String docker = "nextstrain/base:build-20230905T192825Z"
+        String docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int    disk_size = 300
     }
     String out_basename = basename(tree, '.nwk')
@@ -1548,7 +1550,7 @@ task translate_augur_tree {
             ~{"--vcf-reference " + vcf_reference} \
             ~{"--genes " + genes} \
             --output-node-data ~{out_basename}_aa_muts.json
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1591,7 +1593,7 @@ task tip_frequencies {
         Boolean  include_internal_nodes = false
 
         Int      machine_mem_gb = 64
-        String   docker = "nextstrain/base:build-20230905T192825Z"
+        String   docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         String   out_basename = basename(tree, '.nwk')
         Int      disk_size = 200
     }
@@ -1619,7 +1621,7 @@ task tip_frequencies {
 
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1651,7 +1653,7 @@ task assign_clades_to_nodes {
         File ref_fasta
         File clades_tsv
 
-        String docker = "nextstrain/base:build-20230905T192825Z"
+        String docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int    disk_size = 300
     }
     String out_basename = basename(basename(tree_nwk, ".nwk"), "_timetree")
@@ -1664,7 +1666,7 @@ task assign_clades_to_nodes {
         --reference "~{ref_fasta}" \
         --clades "~{clades_tsv}" \
         --output-node-data "~{out_basename}_clades.json"
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1696,7 +1698,7 @@ task augur_import_beast {
         String? tip_date_delimiter
 
         Int     machine_mem_gb = 3
-        String  docker = "nextstrain/base:build-20230905T192825Z"
+        String  docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int     disk_size = 150
     }
     String tree_basename = basename(beast_mcc_tree, ".tree")
@@ -1713,7 +1715,7 @@ task augur_import_beast {
             ~{"--tip-date-delimeter " + tip_date_delimiter}
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker
@@ -1757,7 +1759,7 @@ task export_auspice_json {
         String out_basename = basename(basename(tree, ".nwk"), "_timetree")
 
         Int    machine_mem_gb = 64
-        String docker = "nextstrain/base:build-20230905T192825Z"
+        String docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int    disk_size = 300
     }
     
@@ -1816,7 +1818,7 @@ task export_auspice_json {
         cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
         cat /proc/loadavg > CPU_LOAD
         set +o pipefail
-        { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
         docker: docker

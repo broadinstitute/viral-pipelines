@@ -6,7 +6,7 @@ task merge_tarballs {
     String       out_filename
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-core:2.1.33"
+    String       docker = "quay.io/broadinstitute/viral-core:2.3.1"
   }
 
   Int disk_size = 2625
@@ -163,7 +163,7 @@ task illumina_demux {
 
     Int?    machine_mem_gb
     Int     disk_size = 2625
-    String  docker = "quay.io/broadinstitute/viral-core:2.1.33"
+    String  docker = "quay.io/broadinstitute/viral-core:2.3.1"
   }
 
   parameter_meta {
@@ -383,13 +383,13 @@ task illumina_demux {
         --threads $num_fastqc_threads" \
       ::: $(cat $OUT_BASENAMES)
 
-    mv metrics.txt "~{out_base}-demux_metrics.txt"
+    mv metrics.txt  "~{out_base}-demux_metrics.txt"
     mv runinfo.json "~{out_base}-runinfo.json"
 
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
     set +o pipefail
-    { cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes || echo 0; } > MEM_BYTES
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
   >>>
 
   output {

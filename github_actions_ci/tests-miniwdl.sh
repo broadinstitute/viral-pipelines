@@ -56,6 +56,7 @@ for workflow in ../pipes/WDL/workflows/*.wdl; do
 			echo "$workflow_name FAILED"
 			exit 1
 		fi
+		docker image prune --all --force # prune images from this workflow execution to save space before the next
 	fi
 done
 

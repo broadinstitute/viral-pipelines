@@ -59,6 +59,7 @@ workflow scaffold_and_refine {
     Int    read_pairs_aligned                    = refine.align_to_self_merged_read_pairs_aligned
     Float  bases_aligned                         = refine.align_to_self_merged_bases_aligned
     
+    String assembly_method = "viral-ngs/scaffold_and_refine"
     String scaffold_viral_assemble_version       = scaffold.viralngs_version
     String refine_viral_assemble_version         = refine.viral_assemble_version
   }
