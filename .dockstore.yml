@@ -148,7 +148,7 @@ workflows:
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/downsample.wdl
     testParameterFiles:
-      - empty.json
+      - /empty.json
   - name: dump_gcloud_env_info
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/dump_gcloud_env_info.wdl
