@@ -334,7 +334,7 @@ task report_primary_kraken_taxa {
     File          kraken_summary_report
     String        focal_taxon = "Viruses"
 
-    String        docker = "quay.io/broadinstitute/viral-classify:2.2.4.0"
+    String        docker = "quay.io/broadinstitute/viral-classify:2.2.4.2"
   }
   String out_basename = basename(kraken_summary_report, '.txt')
   Int disk_size = 50
@@ -385,7 +385,7 @@ task filter_refs_to_found_taxa {
     File          taxdump_tgz
     Int           min_read_count = 100
 
-    String        docker = "quay.io/broadinstitute/viral-classify:2.2.4.0"
+    String        docker = "quay.io/broadinstitute/viral-classify:2.2.4.2"
   }
   String ref_basename = basename(taxid_to_ref_accessions_tsv, '.tsv')
   String hits_basename = basename(focal_report_tsv, '.tsv')
