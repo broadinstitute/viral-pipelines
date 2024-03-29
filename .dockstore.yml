@@ -411,6 +411,6 @@ workflows:
       - /empty.json
   - name: megablast_to_lca
     subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/megablast_to_lca.wdl
+    primaryDescriptorPath: /pipes/WDL/workflows/megablast_to_LCA.wdl
     testParameterFiles:
       - /empty.json
