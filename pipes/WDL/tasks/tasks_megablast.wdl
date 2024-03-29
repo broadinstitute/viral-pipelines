@@ -109,7 +109,7 @@ task lca_megablast {
         ~{taxdb} . \
         --loglevel=DEBUG
         
-    #get permissions 
+    #Set permissions 
     chmod +x /opt/viral-ngs/source/retrieve_top_blast_hits_LCA_for_each_sequence.pl
     chmod +x /opt/viral-ngs/source/LCA_table_to_kraken_output_format.pl
     # Run megablast against nt
@@ -119,18 +119,6 @@ task lca_megablast {
     # Run LCA
     retrieve_top_blast_hits_LCA_for_each_sequence.pl "~{fasta_basename}.fasta_megablast_nt.tsv" nodes.dmp 10 > "~{fasta_basename}.fasta_megablast_nt.tsv_LCA.txt"
     # Run Krona output conversion 
-    #Suspected issue: Miniwdl cannot find LCA.pl script. Debug: Trail pwd of file and current dir. 
-    echo "--------------------------------------"
-    #Print working directory
-    echo "Current working directory: $(pwd)"
-    #List working directory files to see if LCA.pl script is there
-    echo "Listing contents of the current directory:"
-    ls -l
-    #Echo the script path
-    echo "Calling script at path: ./LCA_table_to_kraken_output_format.pl"
-    #Attempt to call the script. If activates then we can assume scripts "exist" in system. 
-    ./LCA_table_to_kraken_output_format.pl --help
-    echo "--------------------------------------"
     LCA_table_to_kraken_output_format.pl "~{fasta_basename}.fasta_megablast_nt.tsv_LCA.txt" "~{trimmed_fasta}" > "~{fasta_basename}.kraken.tsv"
     # Done
 >>>
