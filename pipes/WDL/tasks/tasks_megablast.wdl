@@ -1,0 +1,149 @@
+version 1.0
+
+task trim_rmdup_subsamp {
+    meta {
+        description: "Trim reads via trimmomatic, remove duplicate reads, and subsample to a desired read count (default of 100,000), bam in, bam out. "
+    }
+    input { 
+        File inBam
+        String bam_basename = basename(inBam, '.bam')
+        File outBam = "outbam.bam"                    
+        File clipDb
+        Int n_reads=10000000
+        Int machine_mem_gb = 128
+        Int cpu = 16
+        Int disk_size_gb = 100 
+        String docker ="quay.io/broadinstitute/viral-assemble:2.3.1.3"
+    }
+    parameter_meta {
+        inBam: {
+            description: "Input BAM file",
+            category: "required"
+        }
+        clipDb: {
+            description: "FASTA file that has a list of sequences to trim from the end of reads. These includes various sequencing adapters and primer sequences that may be on the ends of reads, including those for most of the Illumina kits we use.",
+            category: "required"
+        }
+        outBam: {
+            description: "Cleaned BAM files (default=outbam.bam)",
+            category: "other"
+        }
+        n_reads: {
+            description: "Maximum number of reads set to 10000000 by default.",
+            category: "required"
+        }
+    }
+    command <<<
+        set -ex o pipefail
+        assembly.py --version | tee VERSION
+        #BAM ->FASTQ-> OutBam? https://github.com/broadinstitute/viral-assemble/blob/80bcc1da5c6a0174362ca9fd8bc0b49ee0b4103b/assembly.py#L91
+        assembly.py trim_rmdup_subsamp \
+        "~{inBam}" \
+        "~{clipDb}" \
+        "~{outBam}" \
+        ~{'--n_reads=' + n_reads}
+
+        #samtools [OutBam -> FASTA]
+        #-f 4 (f = include only) (4 = unmapped reads) https://broadinstitute.github.io/picard/explain-flags.html
+        samtools fasta "~{outBam}" > "~{bam_basename}.fasta"
+    >>>
+output {
+    File    trimmed_fasta = "~{bam_basename}.fasta"
+}
+runtime {
+    docker:docker
+    memory: machine_mem_gb + "GB"
+    cpu: cpu
+    disks: "local-disk" + disk_size_gb + "LOCAL"
+    dx_instance_type: "n2-highmem-16"
+}
+}
+
+task lca_megablast {
+    meta {
+        description: "Runs megablast followed by LCA for taxon identification."
+    }
+    input {
+        File    trimmed_fasta
+        File    blast_db_tgz
+        File    taxdb
+        String  db_name
+        File    taxonomy_db_tgz
+        String  fasta_basename = basename(trimmed_fasta, ".fasta")
+        Int     machine_mem_gb = 500 
+        Int     cpu = 16
+        Int     disk_size_gb = 300
+        String  docker = "quay.io/broadinstitute/viral-classify:2.2.4.2"
+    }
+    parameter_meta {
+        trimmed_fasta: {
+            description: "Input sequence FASTA file with clean bam reads.",
+            category: "required"
+        }
+        blast_db_tgz: {
+            description: "Compressed BLAST database.",
+            category: 'required'
+        }
+        db_name: {
+            description: "BLAST database name (default = nt).",
+            category: "other"
+        }
+        taxonomy_db_tgz: {
+            description: "Compressed taxnonomy dataset.",
+            category: "required"
+        }
+    }
+    command <<<
+    # Make directories
+    #mkdir -p blastdb results
+    read_utils.py extract_tarball \
+      ~{blast_db_tgz} . \
+      --loglevel=DEBUG
+    
+    # Unpack taxonomy.dmp
+    read_utils.py extract_tarball \
+      ~{taxonomy_db_tgz} . \
+      --loglevel=DEBUG
+    #unpack taxdb and put it in the working directory
+    read_utils.py extract_tarball \
+        ~{taxdb} . \
+        --loglevel=DEBUG
+        
+    #get permissions 
+    chmod +x /opt/viral-ngs/source/retrieve_top_blast_hits_LCA_for_each_sequence.pl
+    chmod +x /opt/viral-ngs/source/LCA_table_to_kraken_output_format.pl
+    # Run megablast against nt
+    #miniwdl run worked when the Title DB was same as called under db. Remade DB, make sure to note title of DB. 
+    blastn -task megablast -query "~{trimmed_fasta}" -db "~{db_name}" -max_target_seqs 50 -num_threads `nproc` -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" -out "~{fasta_basename}.fasta_megablast_nt.tsv"
+    
+    # Run LCA
+    retrieve_top_blast_hits_LCA_for_each_sequence.pl "~{fasta_basename}.fasta_megablast_nt.tsv" nodes.dmp 10 > "~{fasta_basename}.fasta_megablast_nt.tsv_LCA.txt"
+    # Run Krona output conversion 
+    #Suspected issue: Miniwdl cannot find LCA.pl script. Debug: Trail pwd of file and current dir. 
+    echo "--------------------------------------"
+    #Print working directory
+    echo "Current working directory: $(pwd)"
+    #List working directory files to see if LCA.pl script is there
+    echo "Listing contents of the current directory:"
+    ls -l
+    #Echo the script path
+    echo "Calling script at path: ./LCA_table_to_kraken_output_format.pl"
+    #Attempt to call the script. If activates then we can assume scripts "exist" in system. 
+    ./LCA_table_to_kraken_output_format.pl --help
+    echo "--------------------------------------"
+    LCA_table_to_kraken_output_format.pl "~{fasta_basename}.fasta_megablast_nt.tsv_LCA.txt" "~{trimmed_fasta}" > "~{fasta_basename}.kraken.tsv"
+    # Done
+>>>
+
+output {
+    File    LCA_output = "~{fasta_basename}.fasta_megablast_nt.tsv_LCA.txt"
+    File    kraken_output_fromat =  "~{fasta_basename}.kraken.tsv"
+}
+runtime {
+    docker:docker
+    memory: machine_mem_gb + "GB"
+    cpu: cpu
+    disks: "local-disk" + disk_size_gb + "LOCAL"
+    dx_instance_type: "n2-highmem-16"
+}
+}
