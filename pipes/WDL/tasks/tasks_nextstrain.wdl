@@ -1,5 +1,40 @@
 version 1.0
 
+task taxid_to_nextclade_dataset_name {
+    input {
+        String taxid
+    }
+    command <<<
+        python3 <<CODE
+        taxid = int("~{taxid}")
+        taxid_to_dataset_map = {
+            2697049 : 'sars-cov-2',
+            641809  : 'flu_h1n1pdm_ha',
+            335341  : 'flu_h3n2_ha',
+            518987  : 'flu_vic_ha',
+            208893  : 'rsv_a',
+            208895  : 'rsv_b',
+            10244   : 'MPXV',
+            619591  : 'hMPXV'
+        }
+        with open('DATASET_NAME', 'wt') as outf:
+            outf.write(taxid_to_dataset_map.get(taxid, '') + '\n')
+        CODE
+    >>>
+    runtime {
+        docker: "python:slim"
+        memory: "1 GB"
+        cpu:   1
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
+        dx_instance_type: "mem2_ssd1_v2_x2"
+        maxRetries: 2
+    }
+    output {
+        String nextclade_dataset_name = read_string("DATASET_NAME")
+    }    
+}
+
 task nextclade_one_sample {
     meta {
         description: "Nextclade classification of one sample. Leaving optional inputs unspecified will use SARS-CoV-2 defaults."
