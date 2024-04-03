@@ -25,9 +25,9 @@ task taxid_to_nextclade_dataset_name {
         docker: "python:slim"
         memory: "1 GB"
         cpu:   1
-        disks:  "local-disk " + disk_size + " LOCAL"
-        disk: disk_size + " GB" # TES
-        dx_instance_type: "mem2_ssd1_v2_x2"
+        disks: "local-disk 50 HDD"
+        disk:  "50 GB" # TES
+        dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
     output {
