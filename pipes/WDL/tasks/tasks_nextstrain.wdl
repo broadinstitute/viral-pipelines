@@ -54,16 +54,22 @@ task nextclade_one_sample {
             --output-tree "~{basename}".nextclade.auspice.json \
             "~{genome_fasta}"
         python3 <<CODE
-        # transpose table
-        import codecs
+        import codecs, csv
+        cols = [('clade', 'NEXTCLADE_CLADE'),
+            ('short-clade', 'NEXTCLADE_SHORTCLADE'),
+            ('subclade', 'NEXTCLADE_SUBCLADE'),
+            ('aaSubstitutions', 'NEXTCLADE_AASUBS'),
+            ('aaDeletions', 'NEXTCLADE_AADELS')]
+        out = {}
         with codecs.open('~{basename}.nextclade.tsv', 'r', encoding='utf-8') as inf:
-            with codecs.open('transposed.tsv', 'w', encoding='utf-8') as outf:
-                for c in zip(*(l.rstrip().split('\t') for l in inf)):
-                    outf.write('\t'.join(c)+'\n')
+            for line in csv.DictReader(inf, delimiter='\t'):
+                for k,fname in cols:
+                    if line.get(k):
+                        out[k] = line[k]
+        for k, fname in cols:
+            with codecs.open(fname, 'w', encoding='utf-8') as outf:
+                outf.write(out.get(k, '')+'\n')
         CODE
-        grep ^clade\\W transposed.tsv | cut -f 2 | grep -v clade > NEXTCLADE_CLADE
-        grep ^aaSubstitutions\\W transposed.tsv | cut -f 2 | grep -v aaSubstitutions > NEXTCLADE_AASUBS
-        grep ^aaDeletions\\W transposed.tsv | cut -f 2 | grep -v aaDeletions > NEXTCLADE_AADELS
     }
     runtime {
         docker: docker
@@ -80,6 +86,8 @@ task nextclade_one_sample {
         File   auspice_json      = "~{basename}.nextclade.auspice.json"
         File   nextclade_tsv     = "~{basename}.nextclade.tsv"
         String nextclade_clade   = read_string("NEXTCLADE_CLADE")
+        String nextclade_shortclade = read_string("NEXTCLADE_SHORTCLADE")
+        String nextclade_subclade = read_string("NEXTCLADE_SUBCLADE")
         String aa_subs_csv       = read_string("NEXTCLADE_AASUBS")
         String aa_dels_csv       = read_string("NEXTCLADE_AADELS")
     }
