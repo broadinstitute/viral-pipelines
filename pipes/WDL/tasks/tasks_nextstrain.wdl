@@ -17,7 +17,7 @@ task nextclade_one_sample {
         String docker = "nextstrain/nextclade:2.14.0"
     }
     String basename = basename(genome_fasta, ".fasta")
-    command {
+    command <<<
         set -e
         apt-get update
         apt-get -y install python3
@@ -70,7 +70,7 @@ task nextclade_one_sample {
             with codecs.open(fname, 'w', encoding='utf-8') as outf:
                 outf.write(out.get(k, '')+'\n')
         CODE
-    }
+    >>>
     runtime {
         docker: docker
         memory: "3 GB"
