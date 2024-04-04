@@ -15,7 +15,7 @@ task assemble {
       String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
       
       Int?     machine_mem_gb
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.3.1.3"
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.3.1.4"
     }
     parameter_meta{
       reads_unmapped_bam: {
@@ -111,7 +111,11 @@ task select_references {
     Array[File]   reference_genomes_fastas
     File          contigs_fasta
 
-    String        docker = "quay.io/broadinstitute/viral-assemble:2.3.1.3"
+    Int?          skani_m
+    Int?          skani_s
+    Int?          skani_c
+
+    String        docker = "quay.io/broadinstitute/viral-assemble:2.3.1.4"
     Int           machine_mem_gb = 4
     Int           cpu = 2
     Int           disk_size = 100
@@ -128,6 +132,9 @@ task select_references {
       "~{contigs_basename}.refs_skani_dist.full.tsv" \
       "~{contigs_basename}.refs_skani_dist.top.tsv" \
       "~{contigs_basename}.ref_clusters.tsv" \
+      ~{'-m ' + skani_m} \
+      ~{'-s ' + skani_s} \
+      ~{'-c ' + skani_c} \
       --loglevel=DEBUG
 
     # create basename-only version of ref_clusters output file
@@ -188,6 +195,10 @@ task scaffold {
       Int          replace_length=55
       Boolean      allow_incomplete_output = false
 
+      Int?          skani_m
+      Int?          skani_s
+      Int?          skani_c
+
       Int?         nucmer_max_gap
       Int?         nucmer_min_match
       Int?         nucmer_min_cluster
@@ -195,7 +206,7 @@ task scaffold {
       Float?       scaffold_min_pct_contig_aligned
 
       Int?         machine_mem_gb
-      String       docker="quay.io/broadinstitute/viral-assemble:2.3.1.3"
+      String       docker="quay.io/broadinstitute/viral-assemble:2.3.1.4"
 
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
@@ -283,6 +294,9 @@ task scaffold {
           "~{sample_name}.refs_skani_dist.full.tsv" \
           "~{sample_name}.refs_skani_dist.top.tsv" \
           "~{sample_name}.ref_clusters.tsv" \
+          ~{'-m ' + skani_m} \
+          ~{'-s ' + skani_s} \
+          ~{'-c ' + skani_c} \
           --loglevel=DEBUG
         CHOSEN_REF_FASTA=$(cut -f 1 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1)
         cut -f 3 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1 > SKANI_ANI
@@ -677,7 +691,7 @@ task refine_assembly_with_aligned_reads {
       Int      min_coverage = 3
 
       Int      machine_mem_gb = 15
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.3.1.3"
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.3.1.4"
     }
 
     Int disk_size = 375
@@ -802,7 +816,7 @@ task refine_2x_and_plot {
       String? plot_coverage_novoalign_options = "-r Random -l 40 -g 40 -x 20 -t 100 -k"
 
       Int?    machine_mem_gb
-      String  docker = "quay.io/broadinstitute/viral-assemble:2.3.1.3"
+      String  docker = "quay.io/broadinstitute/viral-assemble:2.3.1.4"
 
       # do this in two steps in case the input doesn't actually have "cleaned" in the name
       String  sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")

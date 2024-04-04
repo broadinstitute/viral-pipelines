@@ -15,6 +15,8 @@ workflow nextclade_single {
         File   nextclade_json     = nextclade_one_sample.nextclade_json
         String nextclade_aa_subs  = nextclade_one_sample.aa_subs_csv
         String nextclade_aa_dels  = nextclade_one_sample.aa_dels_csv
+        String nextclade_shortclade = nextclade_one_sample.nextclade_shortclade
+        String nextclade_subclade = nextclade_one_sample.nextclade_subclade
         String nextclade_version  = nextclade_one_sample.nextclade_version
     }
 }

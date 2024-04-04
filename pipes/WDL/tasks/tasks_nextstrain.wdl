@@ -1,5 +1,40 @@
 version 1.0
 
+task taxid_to_nextclade_dataset_name {
+    input {
+        String taxid
+    }
+    command <<<
+        python3 <<CODE
+        taxid = int("~{taxid}")
+        taxid_to_dataset_map = {
+            2697049 : 'sars-cov-2',
+            641809  : 'flu_h1n1pdm_ha',
+            335341  : 'flu_h3n2_ha',
+            518987  : 'flu_vic_ha',
+            208893  : 'rsv_a',
+            208895  : 'rsv_b',
+            10244   : 'MPXV',
+            619591  : 'hMPXV'
+        }
+        with open('DATASET_NAME', 'wt') as outf:
+            outf.write(taxid_to_dataset_map.get(taxid, '') + '\n')
+        CODE
+    >>>
+    runtime {
+        docker: "python:slim"
+        memory: "1 GB"
+        cpu:   1
+        disks: "local-disk 50 HDD"
+        disk:  "50 GB" # TES
+        dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
+    }
+    output {
+        String nextclade_dataset_name = read_string("DATASET_NAME")
+    }    
+}
+
 task nextclade_one_sample {
     meta {
         description: "Nextclade classification of one sample. Leaving optional inputs unspecified will use SARS-CoV-2 defaults."
@@ -17,7 +52,7 @@ task nextclade_one_sample {
         String docker = "nextstrain/nextclade:2.14.0"
     }
     String basename = basename(genome_fasta, ".fasta")
-    command {
+    command <<<
         set -e
         apt-get update
         apt-get -y install python3
@@ -54,17 +89,23 @@ task nextclade_one_sample {
             --output-tree "~{basename}".nextclade.auspice.json \
             "~{genome_fasta}"
         python3 <<CODE
-        # transpose table
-        import codecs
+        import codecs, csv
+        cols = [('clade', 'NEXTCLADE_CLADE'),
+            ('short-clade', 'NEXTCLADE_SHORTCLADE'),
+            ('subclade', 'NEXTCLADE_SUBCLADE'),
+            ('aaSubstitutions', 'NEXTCLADE_AASUBS'),
+            ('aaDeletions', 'NEXTCLADE_AADELS')]
+        out = {}
         with codecs.open('~{basename}.nextclade.tsv', 'r', encoding='utf-8') as inf:
-            with codecs.open('transposed.tsv', 'w', encoding='utf-8') as outf:
-                for c in zip(*(l.rstrip().split('\t') for l in inf)):
-                    outf.write('\t'.join(c)+'\n')
+            for line in csv.DictReader(inf, delimiter='\t'):
+                for k,fname in cols:
+                    if line.get(k):
+                        out[k] = line[k]
+        for k, fname in cols:
+            with codecs.open(fname, 'w', encoding='utf-8') as outf:
+                outf.write(out.get(k, '')+'\n')
         CODE
-        grep ^clade\\W transposed.tsv | cut -f 2 | grep -v clade > NEXTCLADE_CLADE
-        grep ^aaSubstitutions\\W transposed.tsv | cut -f 2 | grep -v aaSubstitutions > NEXTCLADE_AASUBS
-        grep ^aaDeletions\\W transposed.tsv | cut -f 2 | grep -v aaDeletions > NEXTCLADE_AADELS
-    }
+    >>>
     runtime {
         docker: docker
         memory: "3 GB"
@@ -80,6 +121,8 @@ task nextclade_one_sample {
         File   auspice_json      = "~{basename}.nextclade.auspice.json"
         File   nextclade_tsv     = "~{basename}.nextclade.tsv"
         String nextclade_clade   = read_string("NEXTCLADE_CLADE")
+        String nextclade_shortclade = read_string("NEXTCLADE_SHORTCLADE")
+        String nextclade_subclade = read_string("NEXTCLADE_SUBCLADE")
         String aa_subs_csv       = read_string("NEXTCLADE_AASUBS")
         String aa_dels_csv       = read_string("NEXTCLADE_AADELS")
     }
