@@ -20,7 +20,7 @@ workflow terra_tsv_to_table {
 
     call utils.cat_except_headers {
         input:
-            infiles = tsv_files,
+            infiles = select_all(tsv_files),
             out_filename = "terra_upload.tsv"
     }
 
