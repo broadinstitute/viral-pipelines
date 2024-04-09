@@ -174,6 +174,7 @@ task blastoff {
     read_utils.py extract_tarball \
       ~{blast_db_tgz} . \
       --loglevel=DEBUG
+
     #STAGE 1 
     #./blastoff_annotated.sh -a sample_fasta -b host_species -c stage2_min_id -d stage2_min_qcov -e stage3_min_id -f stage3_min_qcov
     #Subsamples 100 random reads from original FASTA file
@@ -197,7 +198,7 @@ task blastoff {
     output{
         File    subsampled_fasta = "~{fasta_basename}_subsampled.fasta"
         File    LCA_subsample_reads = "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv_LCA.txt"
-        File    top_taxonids_list = sample_specific_db_taxa.txt
+        File    top_taxonids_list = "sample_specific_db_taxa.txt"
     }
     runtime{
         docker:docker
