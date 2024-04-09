@@ -94,17 +94,17 @@ task lca_megablast {
         }
     }
     command <<<
-    # Make directories
-    #mkdir -p blastdb results
+    #Extract BLAST DB tarball
     read_utils.py extract_tarball \
       ~{blast_db_tgz} . \
       --loglevel=DEBUG
     
-    # Unpack taxonomy.dmp
+    # Extract taxonomy DB tarball 
     read_utils.py extract_tarball \
       ~{taxonomy_db_tgz} . \
       --loglevel=DEBUG
-    #unpack taxdb and put it in the working directory
+
+    #Extract taxid map file tarball
     read_utils.py extract_tarball \
         ~{taxdb} . \
         --loglevel=DEBUG
@@ -120,11 +120,16 @@ task lca_megablast {
     else
         echo "Database '~{db_name}' found and accessible."
     fi
-    # Run megablast against nt
     #miniwdl run worked when the Title DB was same as called under db. Remade DB, make sure to note title of DB. 
-    
+    #Log start time 
+    START_TIME=$(date +%s)
+    # Run megablast against nt
     blastn -task megablast -query "~{trimmed_fasta}" -db "~{db_name}" -max_target_seqs 50 -num_threads `nproc` -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" -out "~{fasta_basename}.fasta_megablast_nt.tsv"
-    
+    #Log end time
+    END_TIME=$(date +%s)
+     # Calculate elapsed time
+    ELAPSED_TIME=$(($END_TIME - $START_TIME))
+    echo "BLAST step took $ELAPSED_TIME seconds." > blast_elapsed_time.txt
     # Run LCA
     retrieve_top_blast_hits_LCA_for_each_sequence.pl "~{fasta_basename}.fasta_megablast_nt.tsv" nodes.dmp 10 > "~{fasta_basename}.fasta_megablast_nt.tsv_LCA.txt"
     # Run Krona output conversion 
@@ -135,6 +140,7 @@ task lca_megablast {
 output {
     File    LCA_output = "~{fasta_basename}.fasta_megablast_nt.tsv_LCA.txt"
     File    kraken_output_fromat =  "~{fasta_basename}.kraken.tsv"
+    File    elapsed_time_normal_blastn = "blast_elapsed_time.txt"
 }
 runtime {
     docker:docker
@@ -143,4 +149,62 @@ runtime {
     disks: "local-disk" + disk_size_gb + "LOCAL"
     dx_instance_type: "n2-highmem-16"
 }
+}
+
+task blastoff {
+    meta{
+        description:""
+    }
+    input{
+        File    trimmed_fasta
+        Int     host_species
+        Int     stage2_min_id = 98
+        Int     stage2_min_qcov = 98 
+        File    blast_db_tgz
+        String  db_name
+        String  fasta_basename = basename(trimmed_fasta, ".fasta")
+        Int     machine_mem_gb = 500 
+        Int     cpu = 16
+        Int     disk_size_gb = 300
+        String  docker = "quay.io/broadinstitute/viral-classify:2.2.4.2"
+
+    }
+    command <<<
+    #Extract BLAST DB tarball
+    read_utils.py extract_tarball \
+      ~{blast_db_tgz} . \
+      --loglevel=DEBUG
+    #STAGE 1 
+    #./blastoff_annotated.sh -a sample_fasta -b host_species -c stage2_min_id -d stage2_min_qcov -e stage3_min_id -f stage3_min_qcov
+    #Subsamples 100 random reads from original FASTA file
+    select_random_sequences.pl "~{trimmed_fasta}" 100 > "~{fasta_basename}_subsampled.fasta"
+    #run megablast on random reads x nt
+    #switched output from out to txt for readability issues
+    blastn -task megablast -query "~{fasta_basename}_subsampled.fasta"  -db "~{db_name}" -max_target_seqs 50 -num_threads `nproc` -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" -out "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv"
+    # Run LCA
+    retrieve_top_blast_hits_LCA_for_each_sequence.pl "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv" nodes.dmp 1 1 > "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv_LCA.txt"
+    #Looks for most frequently matched taxon IDs and outputs a list
+    retrieve_most_common_taxonids_in_LCA_output.pl "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv_LCA.txt" species 10 1 > "sample_specific_db_taxa.txt"
+    #adding host_species to sample_specific_db_taxa.txt
+    echo "~{host_species}" >> sample_specific_db_taxa.txt
+    #ensure file is sorted and unique 
+    sort sample_specific_db_taxa.txt | uniq > sample_specific_db_taxa_unique.txt
+    mv sample_specific_db_taxa_unique.txt sample_specific_db_taxa.txt
+    echo "--END STAGE 1"
+    echo "---START STAGE 2"
+    
+    >>>
+    output{
+        File    subsampled_fasta = "~{fasta_basename}_subsampled.fasta"
+        File    LCA_subsample_reads = "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv_LCA.txt"
+        File    top_taxonids_list = sample_specific_db_taxa.txt
+    }
+    runtime{
+        docker:docker
+        memory: machine_mem_gb + "GB"
+        cpu: cpu
+        disks: "local-disk" + disk_size_gb + "LOCAL"
+        dx_instance_type: "n2-highmem-16"
+    }
+
 }
