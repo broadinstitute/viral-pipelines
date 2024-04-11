@@ -163,6 +163,7 @@ task blastoff {
         Int     stage2_min_id = 98
         Int     stage2_min_qcov = 98 
         File    blast_db_tgz
+        File    taxonomy_db_tgz
         String  db_name
         String  fasta_basename = basename(trimmed_fasta, ".fasta")
         Int     machine_mem_gb = 500 
