@@ -15,24 +15,23 @@ workflow megablast {
         File    blast_db_tgz
         File    taxonomy_db_tgz
         File    taxid_map_file
+        Int     db_name
     }
     call tools.trim_rmdup_subsamp {
         input: 
             inBam = inBam,
             clipDb = clipDb
     }
-
-    call tools.lca_megablast {
+    call tools.blastoff {
         input:
             trimmed_fasta = trim_rmdup_subsamp.trimmed_fasta, 
             blast_db_tgz = blast_db_tgz,
             taxonomy_db_tgz = taxonomy_db_tgz,
+            host_species = host_species,
             db_name = db_name
 
     }
-
     output {
-        File    LCA_output = lca_megablast.LCA_output
-        File    kraken_output_fromat =  lca_megablast.kraken_output_fromat
+        File    most_popular_taxon_id = blastoff.most_popular_taxon_id
     }
 }

@@ -104,11 +104,13 @@ task lca_megablast {
       ~{taxonomy_db_tgz} . \
       --loglevel=DEBUG
 
+    '''
     #Extract taxid map file tarball
     read_utils.py extract_tarball \
         ~{taxdb} . \
         --loglevel=DEBUG
-        
+    '''
+
     #Set permissions 
     chmod +x /opt/viral-ngs/source/retrieve_top_blast_hits_LCA_for_each_sequence.pl
     chmod +x /opt/viral-ngs/source/LCA_table_to_kraken_output_format.pl
@@ -146,14 +148,14 @@ runtime {
     docker:docker
     memory: machine_mem_gb + "GB"
     cpu: cpu
-    disks: "local-disk" + disk_size_gb + "LOCAL"
+    disks: "local-disk" + disk_size_gb + "HDD"
     dx_instance_type: "n2-highmem-16"
 }
 }
 
 task blastoff {
     meta{
-        description:""
+        description:"test for stage 1"
     }
     input{
         File    trimmed_fasta
@@ -175,17 +177,24 @@ task blastoff {
       ~{blast_db_tgz} . \
       --loglevel=DEBUG
 
+    # Extract taxonomy DB tarball (includes nodes.dmp)
+    read_utils.py extract_tarball \
+      ~{taxonomy_db_tgz} . \
+      --loglevel=DEBUG
+
     #STAGE 1 
     #./blastoff_annotated.sh -a sample_fasta -b host_species -c stage2_min_id -d stage2_min_qcov -e stage3_min_id -f stage3_min_qcov
     #Subsamples 100 random reads from original FASTA file
     select_random_sequences.pl "~{trimmed_fasta}" 100 > "~{fasta_basename}_subsampled.fasta"
     #run megablast on random reads x nt
     #switched output from out to txt for readability issues
-    blastn -task megablast -query "~{fasta_basename}_subsampled.fasta"  -db "~{db_name}" -max_target_seqs 50 -num_threads `nproc` -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" -out "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv"
+    blastn -task megablast -query "~{fasta_basename}_subsampled.fasta"  -db "~{db_name}" -max_target_seqs 50 -num_threads `nproc` -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" -out "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv" 
     # Run LCA
     retrieve_top_blast_hits_LCA_for_each_sequence.pl "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv" nodes.dmp 1 1 > "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv_LCA.txt"
     #Looks for most frequently matched taxon IDs and outputs a list
     retrieve_most_common_taxonids_in_LCA_output.pl "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv_LCA.txt" species 10 1 > "sample_specific_db_taxa.txt"
+    # Create an empty sample_specific_db_taxa.txt if it doesn't exist
+    touch sample_specific_db_taxa.txt
     #adding host_species to sample_specific_db_taxa.txt
     echo "~{host_species}" >> sample_specific_db_taxa.txt
     #ensure file is sorted and unique 
@@ -196,15 +205,15 @@ task blastoff {
     
     >>>
     output{
-        File    subsampled_fasta = "~{fasta_basename}_subsampled.fasta"
-        File    LCA_subsample_reads = "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv_LCA.txt"
-        File    top_taxonids_list = "sample_specific_db_taxa.txt"
+
+        File  most_popular_taxon_id.txt = "sample_specific_db_taxa.txt"
+
     }
     runtime{
         docker:docker
         memory: machine_mem_gb + "GB"
         cpu: cpu
-        disks: "local-disk" + disk_size_gb + "LOCAL"
+        disks: "local-disk" + disk_size_gb + "HDD"
         dx_instance_type: "n2-highmem-16"
     }
 
