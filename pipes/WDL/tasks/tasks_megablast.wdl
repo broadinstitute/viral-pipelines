@@ -206,7 +206,7 @@ task blastoff {
     >>>
     output{
 
-        File  most_popular_taxon_id.txt = "sample_specific_db_taxa.txt"
+        File  most_popular_taxon_id = "sample_specific_db_taxa.txt"
 
     }
     runtime{
