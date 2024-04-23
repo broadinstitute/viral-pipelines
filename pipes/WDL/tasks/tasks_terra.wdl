@@ -396,6 +396,18 @@ task create_or_update_sample_tables {
     volatile: true
   }
 
+  parameter_meta {
+    flowcell_table_name: {
+      description: "Name of table containing per-flowcell rows. If overridden, flowcell_table_name must not contain spaces."
+    }
+    seq_library_table_name: {
+      description: "Name of table containing per-library rows. If overridden, seq_library_table_name must not contain spaces."
+    }
+    sample_aggregation_table_name: {
+      description: "Name of table representing samples, where each row has a foreign key link to one or more per-library rows. If overridden, sample_aggregation_table_name must not contain spaces."
+    }
+  }
+
   command <<<
     python3<<CODE
     flowcell_data_id  = '~{flowcell_run_id}'
@@ -576,7 +588,7 @@ task create_or_update_sample_tables {
                 # collapse duplicate sample IDs
                 sample_to_libraries[sample_id] = list(set(sample_to_libraries[sample_id]))
 
-    sample_fname = 'sample_membership.tsv'
+    sample_fname = '~{sample_aggregation_table_name}_membership.tsv'
     with open(sample_fname, 'wt') as outf:
         outf.write(f'entity:~{sample_aggregation_table_name}_id\t{pluralized_library_term}\n')
         for sample_id, libraries in sample_to_libraries.items():
@@ -614,7 +626,7 @@ task create_or_update_sample_tables {
                     out_row[col] = sample_library_metadata.get(col, '')
                 out_rows.append(out_row)
 
-    library_meta_fname = "sample_metadata.tsv"
+    library_meta_fname = "~{seq_library_table_name}_metadata.tsv"
     with open(library_meta_fname, 'wt') as outf:
       outf.write("entity:")
       writer = csv.DictWriter(outf, out_header, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
@@ -642,6 +654,10 @@ task create_or_update_sample_tables {
   output {
     File stdout_log = stdout()
     File stderr_log = stderr()
+
+    File sample_table_tsv  = '~{sample_aggregation_table_name}_membership.tsv'
+    File library_table_tsv = "~{seq_library_table_name}_metadata.tsv"
+
     Int  max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
   }
 }
