@@ -392,7 +392,7 @@ task align_and_count {
     File   ref_db
     Int    topNHits = 3
 
-    Boolean filter_bam_to_proper_primary_mapped_reads         = false
+    Boolean filter_bam_to_proper_primary_mapped_reads         = true
     Boolean do_not_require_proper_mapped_pairs_when_filtering = false
     Boolean keep_singletons_when_filtering                    = false
     Boolean keep_duplicates_when_filtering                    = false
