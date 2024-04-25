@@ -455,12 +455,23 @@ task align_and_count {
 
     TOTAL_COUNT_OF_TOP_HIT=$(grep -E "^($TOP_HIT)" "~{reads_basename}.count.~{ref_basename}.txt" | cut -f3 | tee TOTAL_COUNT_OF_TOP_HIT)
     TOTAL_COUNT_OF_LESSER_HITS=$(grep -vE "^(\*|$TOP_HIT)" "~{reads_basename}.count.~{ref_basename}.txt" | cut -f3 | paste -sd+ - | bc -l | tee TOTAL_COUNT_OF_LESSER_HITS)
-    PCT_MAPPING_TO_LESSER_HITS=$( echo "scale=3; 100 * $TOTAL_COUNT_OF_LESSER_HITS / ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT)" | \
-      bc -l | awk '{printf "%.3f\n", $0}' | tee '~{reads_basename}.count.~{ref_basename}.pct_lesser_hits_of_mapped.txt' )
+
+    if [ $TOTAL_COUNT_OF_LESSER_HITS -ne 0 -o $TOTAL_COUNT_OF_TOP_HIT -ne 0 ]; then
+      PCT_MAPPING_TO_LESSER_HITS=$( echo "scale=3; 100 * $TOTAL_COUNT_OF_LESSER_HITS / ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT)" | \
+        bc -l | awk '{printf "%.3f\n", $0}' | tee '~{reads_basename}.count.~{ref_basename}.pct_lesser_hits_of_mapped.txt' )
+    else
+      echo "PCT_MAPPING_TO_LESSER_HITS cannot be calculated: there were no hits to any sequence"
+      PCT_MAPPING_TO_LESSER_HITS=$( echo "null" | tee '~{reads_basename}.count.~{ref_basename}.pct_lesser_hits_of_mapped.txt')
+    fi
 
     TOTAL_READS_IN_INPUT=$(samtools view -c "~{reads_basename}.bam")
-    PCT_OF_INPUT_READS_MAPPED=$( echo "scale=3; 100 * ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT) / $TOTAL_READS_IN_INPUT" | \
+    if [ $TOTAL_READS_IN_INPUT -eq 0 ]; then
+      echo "no reads in input bam"
+      PCT_OF_INPUT_READS_MAPPED=$(echo "0" | tee "~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt")
+    else
+      PCT_OF_INPUT_READS_MAPPED=$( echo "scale=3; 100 * ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT) / $TOTAL_READS_IN_INPUT" | \
       bc -l | awk '{printf "%.3f\n", $0}' | tee '~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt' )
+    fi
   >>>
 
   output {
