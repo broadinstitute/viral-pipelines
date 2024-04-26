@@ -34,5 +34,7 @@ workflow megablast {
     }
     output {
         File    most_popular_taxon_id = blastoff.most_popular_taxon_id
+        File    blastoff_txt_results = blastoff.blastoff_results
+        File    blastoff_krona = blastoff.blastoff_krona
     }
 }

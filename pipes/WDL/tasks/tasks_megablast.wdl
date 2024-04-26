@@ -162,12 +162,15 @@ task blastoff {
         Int     host_species
         Int     stage2_min_id = 98
         Int     stage2_min_qcov = 98 
+        #Are these id/qcov b/w stage 2 & 3 ever different?
+        Int     stage3_min_id = 98
+        Int     stage3_min_qcov = 98
         File    blast_db_tgz
         File    taxonomy_db_tgz
         String  db_name
         String  fasta_basename = basename(trimmed_fasta, ".fasta")
         Int     machine_mem_gb = 500 
-        Int     cpu = 16
+        Int     cpu = 2
         Int     disk_size_gb = 300
         String  docker = "quay.io/broadinstitute/viral-classify:2.2.4.2"
 
@@ -193,21 +196,78 @@ task blastoff {
     # Run LCA
     retrieve_top_blast_hits_LCA_for_each_sequence.pl "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv" nodes.dmp 1 1 > "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv_LCA.txt"
     #Looks for most frequently matched taxon IDs and outputs a list
-    retrieve_most_common_taxonids_in_LCA_output.pl "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv_LCA.txt" species 10 1 > "sample_specific_db_taxa.txt"
+    retrieve_most_common_taxonids_in_LCA_output.pl "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv_LCA.txt" species 10 1 > "sample_specific_db_taxa.txt" 
     # Create an empty sample_specific_db_taxa.txt if it doesn't exist
     touch sample_specific_db_taxa.txt
     #adding host_species to sample_specific_db_taxa.txt
-    echo "~{host_species}" >> sample_specific_db_taxa.txt
+    echo "~{host_species}" >> "sample_specific_db_taxa.txt"
     #ensure file is sorted and unique 
     sort sample_specific_db_taxa.txt | uniq > sample_specific_db_taxa_unique.txt
     mv sample_specific_db_taxa_unique.txt sample_specific_db_taxa.txt
+    echo "input sequences to stage 2:"
+    grep ">" "~{trimmed_fasta}" | wc -l
     echo "--END STAGE 1"
+
+    #STAGE 2
     echo "---START STAGE 2"
+    echo "megablast sample-specific database start"
+    #Run blastn w/ taxidlist specific 
+    blastn -task megablast -query "~{fasta_basename}_subsampled.fasta" -db "~{db_name}" -max_target_seqs 50 -num_threads `nproc` -taxidlist "sample_specific_db_taxa.txt" -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" -out "~{fasta_basename}_megablast_sample_specific_db.tsv" 
+    #Run LCA on last output
+    retrieve_top_blast_hits_LCA_for_each_sequence.pl  "~{fasta_basename}_megablast_sample_specific_db.tsv" nodes.dmp 2 >  "~{fasta_basename}_megablast_sample_specific_db_LCA.txt" 
+    #filter
+    filter_LCA_matches.pl "~{fasta_basename}_megablast_sample_specific_db_LCA.txt" 1 0 0 "~{stage2_min_id}" 999 "~{stage2_min_qcov}" 999 > "~{fasta_basename}_megablast_sample_specific_LCA.txt_classified.txt"
+    #add one clmn value: database
+    add_one_value_column.pl "~{fasta_basename}_megablast_sample_specific_LCA.txt_classified.txt" "database" "sample-specific" > "~{fasta_basename}_megablast_sample_specific_LCA.txt_classified.txt_column_added.txt"
+    mv "~{fasta_basename}_megablast_sample_specific_LCA.txt_classified.txt_column_added.txt" "~{fasta_basename}_megablast_sample_specific_LCA.txt_classified.txt"
+    #add one clmn value: classified
+    add_one_value_column.pl "~{fasta_basename}_megablast_sample_specific_LCA.txt_classified.txt" "classified" "classified" > "~{fasta_basename}_megablast_sample_specific_LCA.txt_classified.txt_column_added.txt"
+    mv "~{fasta_basename}_megablast_sample_specific_LCA.txt_classified.txt_column_added.txt" "~{fasta_basename}_megablast_sample_specific_LCA.txt_classified.txt"
+    #retrieves collection of unclassified sequences
+    retrieve_sequences_appearing_or_not_appearing_in_table.pl "~{trimmed_fasta}" "~{fasta_basename}_megablast_sample_specific_LCA.txt_classified.txt" 0 0 > "~{fasta_basename}_megablast_sample_specific_db_unclassified.fasta"
+    # megablast_sample_specific_db_${sample_fasta}_unclassified.fasta = "~{fasta_basename}_megablast_sample_specific_db_unclassified.fasta"
+    echo "input sequences to stage 3"
+    grep ">" "~{fasta_basename}_megablast_sample_specific_db_unclassified.fasta" | wc -l 
+    echo "--END STAGE 2"
+    echo "---START STAGE 3"
     
+    #Stage 3 
+    #/blast/results/${sample_fasta}_megablast_sample_specific_db_megablast_nt.out = "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.tsv"
+    blastn -task megablast -query "~{fasta_basename}_megablast_sample_specific_db_unclassified.fasta" -db "~{dn_name}" -max_target_seqs 50 -num_threads `nproc` -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" -out "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.tsv"
+    retrieve_top_blast_hits_LCA_for_each_sequence.pl "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.tsv" nodes.dmp 10 > "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt"
+    filter_LCA_matches.pl "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt" 0 0 0 "~{stage3_min_id}" 999 "~{stage3_min_qcov}" 999 > "~{fasta_basename}_megablast_sample_specific_db_megablast_nt_LCA_classified.txt"
+    #add one column: database, nt
+    add_one_value_column.pl "~{fasta_basename}_megablast_sample_specific_db_megablast_nt_LCA_classified.txt" "database" "nt" > "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_classified.txt_column_added.txt"
+    mv "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_classified.txt_column_added.txt" "~{fasta_basename}_megablast_sample_specific_db_megablast_nt_LCA_classified.txt"
+    #add one column: classified, classified
+    add_one_value_column.pl "~{fasta_basename}_megablast_sample_specific_db_megablast_nt_LCA_classified.txt" "classified" "classified" > "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_classified.txt_column_added.txt"
+    mv "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_classified.txt_column_added.txt" "~{fasta_basename}_megablast_sample_specific_db_megablast_nt_LCA_classified.txt"
+    filter_LCA_matches.pl "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt" 0 0 0 "~{stage3_min_id}" 999 "~{stage3_min_qcov}" 999 1 > "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_unclassified.txt"
+    add_one_value_column.pl "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_unclassified.txt" "database" "nt" > "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_unclassified.txt_column_added.txt"
+    mv "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_unclassified.txt_column_added.txt" "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_unclassified.txt"
+    add_one_value_column.pl "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_unclassified.txt" "classified" "unclassified" > "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_unclassified.txt_column_added.txt"
+    mv "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_unclassified.txt_column_added.txt" "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_unclassified.txt"
+    generate_LCA_table_for_sequences_with_no_matches.pl "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt" "~{fasta_basename}_megablast_sample_specific_db_unclassified.fasta" > "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_no_hits.txt"
+    add_one_value_column.pl "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_no_hits.txt" "database" "nt" > "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_no_hits.txt_column_added.txt"
+    mv "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_no_hits.txt_column_added.txt" "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_no_hits.txt" 
+    add_one_value_column.pl "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_no_hits.txt" "classified" "unclassified (no matches)" > "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_no_hits.txt_column_added.txt"
+    mv "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_no_hits.txt_column_added.txt" "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_no_hits.txt" 
+    #Table 1 (classified sequences from stage 2) "~{fasta_basename}_megablast_sample_specific_LCA.txt_classified.txt"
+    #Table 2 (classified sequences from stage 3) "~{fasta_basename}_megablast_sample_specific_db_megablast_nt_LCA_classified.txt"
+    #Table 3 (unclassified sequences from stage 3) "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_unclassified.txt"
+    #Table 4 (no-blast-hits sequences from stage 3) "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_no_hits.txt"
+    concatenate_tables.pl "~{fasta_basename}_megablast_sample_specific_LCA.txt_classified.txt" "~{fasta_basename}_megablast_sample_specific_db_megablast_nt_LCA_classified.txt" "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_unclassified.txt" "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_no_hits.txt" > blastoff.txt
+    awk 'BEGIN {FS="\t";OFS="\t"} {for (i=2; i<=NF; i++) printf "%s%s", $i, (i<NF ? OFS : ORS)}' blastoff.txt > blastoff_no_first_column.txt
+    mv blastoff_no_first_column.txt blastoff.txt
+
+    LCA_table_to_kraken_output_format.pl blastoff.txt "~{trimmed_fasta}" > blastoff_krona.txt
+
     >>>
     output{
 
         File  most_popular_taxon_id = "sample_specific_db_taxa.txt"
+        File  blastoff_results = "blastoff.txt"
+        File  blastoff_krona = "blastoff_krona.txt"
 
     }
     runtime{
@@ -215,7 +275,7 @@ task blastoff {
         memory: machine_mem_gb + "GB"
         cpu: cpu
         disks: "local-disk" + disk_size_gb + "HDD"
-        dx_instance_type: "n2-highmem-16"
+        dx_instance_type: "n2-highmem-4"
     }
 
 }
