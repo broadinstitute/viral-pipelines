@@ -16,7 +16,7 @@ workflow megablast {
         File    taxonomy_db_tgz
         File    taxid_map_file
         Int     host_species
-        Int     db_name
+        String  db_name
     }
     call tools.trim_rmdup_subsamp {
         input: 
