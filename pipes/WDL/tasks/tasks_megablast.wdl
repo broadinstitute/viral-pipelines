@@ -159,7 +159,7 @@ task blastoff {
     }
     input{
         File    trimmed_fasta
-        Int     host_species
+        Int     host_species = 9606
         Int     stage2_min_id = 98
         Int     stage2_min_qcov = 98 
         #Are these id/qcov b/w stage 2 & 3 ever different?
