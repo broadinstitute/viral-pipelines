@@ -185,9 +185,18 @@ task blastoff {
     read_utils.py extract_tarball \
       ~{taxonomy_db_tgz} . \
       --loglevel=DEBUG
+    #permissions 
+    chmod +x /opt/viral-ngs/source/retrieve_top_blast_hits_LCA_for_each_sequence.pl
+    chmod +x /opt/viral-ngs/source/retrieve_most_common_taxonids_in_LCA_output.pl
+    chmod +x /opt/viral-ngs/source/filter_LCA_matches.pl
+    chmod +x /opt/viral-ngs/source/add_one_value_column.pl
+    chmod +x /opt/viral-ngs/source/retrieve_sequences_appearing_or_not_appearing_in_table.pl
+    chmod +x /opt/viral-ngs/source/generate_LCA_table_for_sequences_with_no_matches.pl
+    chmod +x /opt/viral-ngs/source/concatenate_tables.pl
+    chmod +x /opt/viral-ngs/source/LCA_table_to_kraken_output_format.pl
+
 
     #STAGE 1 
-    #./blastoff_annotated.sh -a sample_fasta -b host_species -c stage2_min_id -d stage2_min_qcov -e stage3_min_id -f stage3_min_qcov
     #Subsamples 100 random reads from original FASTA file
     select_random_sequences.pl "~{trimmed_fasta}" 100 > "~{fasta_basename}_subsampled.fasta"
     #run megablast on random reads x nt
