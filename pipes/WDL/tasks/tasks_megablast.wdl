@@ -194,6 +194,7 @@ task blastoff {
     chmod +x /opt/viral-ngs/source/generate_LCA_table_for_sequences_with_no_matches.pl
     chmod +x /opt/viral-ngs/source/concatenate_tables.pl
     chmod +x /opt/viral-ngs/source/LCA_table_to_kraken_output_format.pl
+    chmod +x /opt/viral-ngs/source/select_random_sequences.pl
 
 
     #STAGE 1 
