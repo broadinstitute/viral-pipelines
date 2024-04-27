@@ -14,7 +14,6 @@ workflow megablast {
         File    clipDb
         File    blast_db_tgz
         File    taxonomy_db_tgz
-        File    taxid_map_file
         Int     host_species
         String  db_name
     }
