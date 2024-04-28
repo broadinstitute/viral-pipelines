@@ -266,18 +266,18 @@ task blastoff {
     #Table 2 (classified sequences from stage 3) "~{fasta_basename}_megablast_sample_specific_db_megablast_nt_LCA_classified.txt"
     #Table 3 (unclassified sequences from stage 3) "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_unclassified.txt"
     #Table 4 (no-blast-hits sequences from stage 3) "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_no_hits.txt"
-    concatenate_tables.pl "~{fasta_basename}_megablast_sample_specific_LCA.txt_classified.txt" "~{fasta_basename}_megablast_sample_specific_db_megablast_nt_LCA_classified.txt" "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_unclassified.txt" "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_no_hits.txt" > blastoff.txt
-    awk 'BEGIN {FS="\t";OFS="\t"} {for (i=2; i<=NF; i++) printf "%s%s", $i, (i<NF ? OFS : ORS)}' blastoff.txt > blastoff_no_first_column.txt
-    mv blastoff_no_first_column.txt blastoff.txt
+    concatenate_tables.pl "~{fasta_basename}_megablast_sample_specific_LCA.txt_classified.txt" "~{fasta_basename}_megablast_sample_specific_db_megablast_nt_LCA_classified.txt" "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_unclassified.txt" "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt_no_hits.txt" > "~{fasta_basename}_blastoff.txt"
+    awk 'BEGIN {FS="\t";OFS="\t"} {for (i=2; i<=NF; i++) printf "%s%s", $i, (i<NF ? OFS : ORS)}' "~{fasta_basename}_blastoff.txt" > blastoff_no_first_column.txt
+    mv blastoff_no_first_column.txt "~{fasta_basename}_blastoff.txt"
 
-    LCA_table_to_kraken_output_format.pl blastoff.txt "~{trimmed_fasta}" > blastoff_krona.txt
+    LCA_table_to_kraken_output_format.pl "~{fasta_basename}_blastoff.txt" "~{trimmed_fasta}" > "~{fasta_basename}_blastoff_kraken.txt"
 
     >>>
     output{
 
         File  most_popular_taxon_id = "sample_specific_db_taxa.txt"
-        File  blastoff_results = "blastoff.txt"
-        File  blastoff_krona = "blastoff_krona.txt"
+        File  blastoff_results = "~{fasta_basename}_blastoff.txt"
+        File  blastoff_kraken = "~{fasta_basename}_blastoff_kraken.txt"
 
     }
     runtime{
