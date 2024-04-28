@@ -284,7 +284,7 @@ task blastoff {
         docker:docker
         memory: machine_mem_gb + "GB"
         cpu: cpu
-        disks: "local-disk" + disk_size_gb + "HDD"
+        disks: "local-disk " + disk_size_gb + " HDD"
         dx_instance_type: "n2-highmem-4"
     }
 
