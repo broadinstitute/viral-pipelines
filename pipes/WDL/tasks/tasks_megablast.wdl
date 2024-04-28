@@ -54,8 +54,8 @@ runtime {
     docker:docker
     memory: machine_mem_gb + "GB"
     cpu: cpu
-    disks: "local-disk" + disk_size_gb + "LOCAL"
-    dx_instance_type: "n2-highmem-16"
+    disks: "local-disk " + disk_size_gb + " LOCAL"
+    dx_instance_type: "n2-highmem-4"
 }
 }
 
