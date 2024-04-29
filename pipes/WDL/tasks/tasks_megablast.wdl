@@ -6,7 +6,8 @@ task trim_rmdup_subsamp {
     }
     input { 
         File inBam
-        String bam_basename = basename(inBam, '.bam')                 
+        String bam_basename = basename(inBam, '.bam')
+        File outBam = "outbam.bam"                   
         File clipDb
         Int n_reads=10000000
         Int machine_mem_gb = 128
@@ -35,18 +36,13 @@ task trim_rmdup_subsamp {
         assembly.py trim_rmdup_subsamp \
         "~{inBam}" \
         "~{clipDb}" \
-        "outbam.bam" \
+        "~{outBam}" \
         ~{'--n_reads=' + n_reads}
-        
-        #validating outbam file existance and not empty.
-        ls -lh "$(pwd)/outbam.bam"
-        if [ ! -s "$(pwd)/outbam.bam" ]; then
-            echo "Error: BAM file not found or is empty."
-            exit 1
-        fi
+
+
         #samtools [OutBam -> FASTA]
         #-f 4 (f = include only) (4 = unmapped reads) https://broadinstitute.github.io/picard/explain-flags.html
-        samtools fasta "outbam.bam" > "~{bam_basename}.fasta"
+        samtools fasta "~{outBam}" > "~{bam_basename}.fasta"
     >>>
 output {
     File    trimmed_fasta = "~{bam_basename}.fasta"
