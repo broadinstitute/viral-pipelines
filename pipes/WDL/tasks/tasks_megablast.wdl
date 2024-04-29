@@ -35,12 +35,12 @@ task trim_rmdup_subsamp {
         assembly.py trim_rmdup_subsamp \
         "~{inBam}" \
         "~{clipDb}" \
-        $(pwd)/outbam.bam \
+        "$(pwd)/outbam.bam" \
         ~{'--n_reads=' + n_reads}
 
         #samtools [OutBam -> FASTA]
         #-f 4 (f = include only) (4 = unmapped reads) https://broadinstitute.github.io/picard/explain-flags.html
-        samtools fasta $(pwd)/outbam.bam > "~{bam_basename}.fasta"
+        samtools fasta "$(pwd)/outbam.bam" > "~{bam_basename}.fasta"
     >>>
 output {
     File    trimmed_fasta = "~{bam_basename}.fasta"
