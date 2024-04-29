@@ -23,10 +23,6 @@ task trim_rmdup_subsamp {
             description: "FASTA file that has a list of sequences to trim from the end of reads. These includes various sequencing adapters and primer sequences that may be on the ends of reads, including those for most of the Illumina kits we use.",
             category: "required"
         }
-        outBam: {
-            description: "Cleaned BAM files (default=outbam.bam)",
-            category: "other"
-        }
         n_reads: {
             description: "Maximum number of reads set to 10000000 by default.",
             category: "required"
