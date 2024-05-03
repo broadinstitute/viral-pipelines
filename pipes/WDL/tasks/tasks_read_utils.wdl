@@ -173,10 +173,10 @@ task merge_and_reheader_bams {
       String       out_basename = basename(in_bams[0], ".bam")
 
       String       docker = "quay.io/broadinstitute/viral-core:2.3.1"
+      Int          disk_size = 750
+      Int          machine_mem_gb = 4
     }
     
-    Int disk_size = 750
-
     command <<<
         set -ex -o pipefail
 
@@ -224,7 +224,7 @@ task merge_and_reheader_bams {
 
     runtime {
         docker: docker
-        memory: "3 GB"
+        memory: machine_mem_gb + " GB"
         cpu: 2
         disks:  "local-disk " + disk_size + " LOCAL"
         disk: disk_size + " GB" # TES
