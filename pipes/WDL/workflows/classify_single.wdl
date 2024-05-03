@@ -23,6 +23,9 @@ workflow classify_single {
 
         File kraken2_db_tgz
         File krona_taxonomy_db_kraken2_tgz
+
+        Array[String] taxa_to_dehost         = ["Vertebrata"]
+        Array[String] taxa_to_avoid_assembly = ["Vertebrata", "other sequences", "Bacteria"]
     }
 
     parameter_meta {
@@ -96,7 +99,7 @@ workflow classify_single {
             classified_reads_txt_gz = kraken2.kraken2_reads_report,
             ncbi_taxonomy_db_tgz    = ncbi_taxdump_tgz,
             exclude_taxa            = true,
-            taxonomic_names         = ["Vertebrata"],
+            taxonomic_names         = taxa_to_dehost,
             out_filename_suffix     = "hs_depleted"
     }
     call reports.fastqc as fastqc_cleaned {
@@ -108,7 +111,7 @@ workflow classify_single {
             classified_reads_txt_gz = kraken2.kraken2_reads_report,
             ncbi_taxonomy_db_tgz    = ncbi_taxdump_tgz,
             exclude_taxa            = true,
-            taxonomic_names         = ["Vertebrata", "other sequences", "Bacteria"],
+            taxonomic_names         = taxa_to_avoid_assembly,
             out_filename_suffix     = "acellular"
     }
     call read_utils.rmdup_ubam {
