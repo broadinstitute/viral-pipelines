@@ -83,7 +83,8 @@ workflow fetch_multiple_sra_to_bams {
                         "sra_metadata"
                     ]
 
-    String input_ids_string = sep('_',SRA_IDs)
+    #String input_ids_string = sep('_',SRA_IDs) # WDL >=1.1 (join all specified IDs)
+    String input_ids_string = flatten([SRA_IDs])[0] # WDL 1.0 (just use the first ID)
 
     call utils.concatenate as combined_metadata {
       input:
