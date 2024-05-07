@@ -652,6 +652,7 @@ task align_reads {
     File   aligned_only_reads_bam_idx    = "~{sample_name}.mapped.bai"
     File   aligned_only_reads_fastqc     = "~{sample_name}.mapped_fastqc.html"
     File   aligned_only_reads_fastqc_zip = "~{sample_name}.mapped_fastqc.zip"
+    Int    reference_length              = read_int("assembly_length")
     Int    reads_provided                = read_int("reads_provided")
     Int    reads_aligned                 = read_int("reads_aligned")
     Int    read_pairs_aligned            = read_int("read_pairs_aligned")
