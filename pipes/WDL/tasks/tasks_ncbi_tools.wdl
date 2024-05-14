@@ -9,7 +9,7 @@ task Fetch_SRA_to_BAM {
         Int?    machine_mem_gb
         String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     }
-    Int disk_size = 750
+    Int disk_size = 6000
     meta {
         description: "This searches NCBI SRA for accessions using the Entrez interface, collects associated metadata, and returns read sets as unaligned BAM files with metadata loaded in. Useful metadata from BioSample is also output from this task directly. This has been tested with both SRA and ENA accessions. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input."
         volatile: true
