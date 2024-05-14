@@ -165,7 +165,7 @@ task blastoff {
         File    taxonomy_db_tgz
         String  db_name
         String  fasta_basename = basename(trimmed_fasta, ".fasta")
-        Int     machine_mem_gb = 500 
+        Int     machine_mem_gb = 64 
         Int     cpu = 2
         Int     disk_size_gb = 300
         String  docker = "quay.io/broadinstitute/viral-classify:2.2.4.2"
@@ -281,7 +281,7 @@ task blastoff {
         memory: machine_mem_gb + "GB"
         cpu: cpu
         disks: "local-disk " + disk_size_gb + " HDD"
-        dx_instance_type: "n2-highmem-4"
+        dx_instance_type: "n2-highmem-8"
     }
 
 }
