@@ -143,7 +143,7 @@ task Fetch_SRA_to_BAM {
     runtime {
         #cpu:     2
         #memory:  select_first([machine_mem_gb, 6]) + " GB"
-        machineType: "n1-standard-8" # 8 vCPU 30 GB mem
+        machineType: "us-central1-b/n1-standard-8" # 8 vCPU 30 GB mem
         disks:   "local-disk " + disk_size + " LOCAL"
         disk:    disk_size + " GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
