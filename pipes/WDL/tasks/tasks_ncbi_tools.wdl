@@ -143,9 +143,10 @@ task Fetch_SRA_to_BAM {
     runtime {
         #cpu:     2
         #memory:  select_first([machine_mem_gb, 6]) + " GB"
-        googleLegacyMachineSelection: true
-        cpu: 8
-        memory: "30 GB"
+        #googleLegacyMachineSelection: true
+        cpuPlatform: "Intel Ice Lake"
+        cpu: 128
+        memory: "512 GB"
         #machineType: "n1-standard-8" # 8 vCPU 30 GB mem
         disks:   "local-disk " + disk_size + " LOCAL"
         disk:    disk_size + " GB" # TES
