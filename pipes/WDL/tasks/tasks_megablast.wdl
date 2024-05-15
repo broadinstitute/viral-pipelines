@@ -155,7 +155,7 @@ task ChunkBlastHits {
     input {
         File   inFasta
         File   blast_db_tgz
-        File?   taxidlist
+        File?  taxidlist
         String db_name
         String tasks = "megablast"
         Int    chunkSize=1000000
@@ -180,7 +180,15 @@ task ChunkBlastHits {
     export LOG_DIR=~{log_dir_final}
     echo "Using $(nproc) CPU cores."
     echo "Asked for ~{machine_mem_gb} memory GB"
-    time python /opt/viral-ngs/viral-classify/taxon_filter.py chunk_blast_hits "~{inFasta}" "~{db_name}" "~{blast_hits_output}" --outfmt '~{outfmt}' --chunkSize ~{chunkSize} --task '~{tasks}' --max_target_seqs "~{max_target_seqs}" --output_type "~{output_type}" --taxidlist '~{taxidlist}'
+    #Adding taxidlist input as optional 
+    TAXIDLIST_OPTION=""
+    if [ -n "~{taxidlist}" ]; then
+        TAXIDLIST_OPTION="--taxidlist ~{taxidlist}"
+    fi
+    #COMMAND
+    time python /opt/viral-ngs/viral-classify/taxon_filter.py chunk_blast_hits "~{inFasta}" "~{db_name}" "~{blast_hits_output}" --outfmt '~{outfmt}' --chunkSize ~{chunkSize} --task '~{tasks}' --max_target_seqs "~{max_target_seqs}" --output_type "~{output_type}" $TAXIDLIST_OPTION
+    #add taxidlist to command only if user input
+
     # Extract runtime
     grep "Completed the WHOLE blastn_chunked_fasta in" ~{log_dir_final}/blast_py.log | awk '{print $NF}' > ~{log_dir_final}/duration_seconds.txt
 
