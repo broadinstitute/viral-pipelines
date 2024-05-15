@@ -414,3 +414,13 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/create_enterics_qc_viz_general.wdl
     testParameterFiles:
       - /empty.json
+  - name: megablast_to_lca
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/megablast_to_LCA.wdl
+    testParameterFiles:
+      - /empty.json
+  - name: blastoff
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/blastoff.wdl
+    testParameterFiles:
+      - /empty.json
