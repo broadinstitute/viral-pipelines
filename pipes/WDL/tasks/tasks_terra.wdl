@@ -525,7 +525,7 @@ task create_or_update_sample_tables {
     # grab the meta_by_filename values to create new sample->library (sample_set->sample) mappings
     sample_to_libraries = {}
     for library_id, data in library_meta_dict.items():
-        sample_id = data['sample']
+        sample_id = data['sample_original']
         sample_to_libraries.setdefault(sample_id, [])
         if library_id in df_library.index:
             sample_to_libraries[sample_id].append(library_id)
