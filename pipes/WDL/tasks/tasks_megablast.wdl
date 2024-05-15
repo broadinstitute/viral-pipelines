@@ -242,7 +242,6 @@ task blastoff {
         String  docker = "quay.io/broadinstitute/viral-classify:2.2.4.2"
 
     }
-        String fasta_basename = basename(inFasta, ".fasta")
         #setting current working directory as logging outputs
         String log_dir_final = select_first([log_dir, "."])
     command <<<
