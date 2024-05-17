@@ -212,7 +212,7 @@ task kraken2 {
     Float? confidence_threshold
     Int?   min_base_qual
 
-    Int    machine_mem_gb = 72
+    Int    machine_mem_gb = 90
     String docker = "quay.io/broadinstitute/viral-classify:2.2.4.0"
   }
 
