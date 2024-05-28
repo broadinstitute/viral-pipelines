@@ -230,7 +230,7 @@ task blastoff {
         File   trimmed_fasta
         String outfmt = "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue"
         String tasks = "megablast"
-        Int    chunkSize=1000000
+        Int    chunkSize=5000000
         Int    max_target_seqs = 50
         String output_type = "full_line"
         String? log_dir 
