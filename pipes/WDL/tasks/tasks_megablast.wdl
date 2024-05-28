@@ -306,9 +306,9 @@ task blastoff {
     echo "megablast sample-specific database start"
     #Run blastn w/ taxidlist specific 
     #blastn -task megablast -query "~{fasta_basename}_subsampled.fasta" -db "~{db_name}" -max_target_seqs 50 -num_threads `nproc` -taxidlist "sample_specific_db_taxa.txt" -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" -out "~{fasta_basename}_megablast_sample_specific_db.tsv" 
-    python /opt/viral-ngs/viral-classify/taxon_filter.py chunk_blast_hits "~{fasta_basename}_subsampled.fasta" "~{db_name}" "~{fasta_basename}_megablast_sample_specific_db.tsv"  --outfmt '~{outfmt}' --chunkSize ~{chunkSize} --task '~{tasks}' --max_target_seqs "~{max_target_seqs}" --output_type "~{output_type}" --taxidlist "sample_specific_db_taxa.txt"
+    python /opt/viral-ngs/viral-classify/taxon_filter.py chunk_blast_hits "~{trimmed_fasta}" "~{db_name}" "~{fasta_basename}_megablast_sample_specific_db.tsv"  --outfmt '~{outfmt}' --chunkSize ~{chunkSize} --task '~{tasks}' --max_target_seqs "~{max_target_seqs}" --output_type "~{output_type}" --taxidlist "sample_specific_db_taxa.txt"
     #Run LCA on last output
-    retrieve_top_blast_hits_LCA_for_each_sequence.pl  "~{fasta_basename}_megablast_sample_specific_db.tsv" nodes.dmp 2 >  "~{fasta_basename}_megablast_sample_specific_db_LCA.txt" 
+    retrieve_top_blast_hits_LCA_for_each_sequence.pl "~{fasta_basename}_megablast_sample_specific_db.tsv" nodes.dmp 2 >  "~{fasta_basename}_megablast_sample_specific_db_LCA.txt" 
     #filter
     filter_LCA_matches.pl "~{fasta_basename}_megablast_sample_specific_db_LCA.txt" 1 0 0 "~{stage2_min_id}" 999 "~{stage2_min_qcov}" 999 > "~{fasta_basename}_megablast_sample_specific_LCA.txt_classified.txt"
     #add one clmn value: database
