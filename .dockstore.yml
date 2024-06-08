@@ -419,7 +419,7 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/blastoff.wdl
     testParameterFiles:
       - /empty.json
-    - name: chunk_blast
+  - name: chunk_blast
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/megablast_chunk.wdl
     testParameterFiles:

@@ -247,7 +247,7 @@ task blastoff {
         Int     machine_mem_gb = 64 
         Int     cpu = 16
         Int     disk_size_gb = 300
-        String  docker = "quay.io/broadinstitute/viral-classify:fn_blast"
+        String  docker = "quay.io/broadinstitute/viral-classify:fn_cleaned_blast"
 
     }
         #setting current working directory as logging outputs
