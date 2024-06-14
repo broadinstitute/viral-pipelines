@@ -38,6 +38,7 @@ workflow megablast {
             taxonomy_db_tgz = taxonomy_db_tgz,
             host_species = host_species,
             db_name = db_name
+    }
     call metagenomics.krona {
         input: 
             reports_txt_gz = blastoff.blastoff_kraken,
