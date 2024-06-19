@@ -13,14 +13,15 @@ workflow fetch_sra_to_bam {
 
     call terra.check_terra_env
 
-    if(check_terra_env.is_running_on_terra) {
-        call ncbi_tools.Fetch_SRA_to_BAM {
-            input:
-                email_address = check_terra_env.user_email
-        }
-    } else {
-        call ncbi_tools.Fetch_SRA_to_BAM
+    #if(check_terra_env.is_running_on_terra) {
+    call ncbi_tools.Fetch_SRA_to_BAM {
+        input:
+            email_address = select_first(check_terra_env.user_email, None)
     }
+    #}
+    #if(!check_terra_env.is_running_on_terra) {
+    #    call ncbi_tools.Fetch_SRA_to_BAM
+    #}
 
     output {
         File   reads_ubam                = Fetch_SRA_to_BAM.reads_ubam
