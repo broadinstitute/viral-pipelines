@@ -212,7 +212,7 @@ task kraken2 {
     Float? confidence_threshold
     Int?   min_base_qual
 
-    Int    machine_mem_gb = 72
+    Int    machine_mem_gb = 90
     String docker = "quay.io/broadinstitute/viral-classify:2.2.4.0"
   }
 
@@ -318,6 +318,7 @@ task kraken2 {
     docker: docker
     memory: machine_mem_gb + " GB"
     cpu: 16
+    cpuPlatform: "Intel Ice Lake"
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TESs
     dx_instance_type: "mem3_ssd1_v2_x8"

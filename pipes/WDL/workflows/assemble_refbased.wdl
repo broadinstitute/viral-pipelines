@@ -194,7 +194,7 @@ workflow assemble_refbased {
         File        align_to_ref_variants_vcf_gz                 = call_consensus.sites_vcf_gz
         Int         assembly_length                              = call_consensus.assembly_length
         Int         assembly_length_unambiguous                  = call_consensus.assembly_length_unambiguous
-        Int         reference_genome_length                      = plot_ref_coverage.assembly_length
+        Int         reference_genome_length                      = align_to_ref.reference_length[0]
         Float       assembly_mean_coverage                       = plot_ref_coverage.mean_coverage
         
         Int         dist_to_ref_snps                             = call_consensus.dist_to_ref_snps
