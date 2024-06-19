@@ -373,7 +373,7 @@ task blastoff {
 
         File  most_popular_taxon_id = "sample_specific_db_taxa.txt"
         File  blastoff_results = "~{fasta_basename}_blastoff.txt"
-        File  blastoff_kraken = "~{fasta_basename}_blastoff_kraken.txt"
+        File  blastoff_kraken = "~{fasta_basename}_blastoff_kraken.tsv"
         File blast_py_log = "~{log_dir_final}/blast_py.log"
         Int  max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
         String  cpu_load = read_string("CPU_LOAD")

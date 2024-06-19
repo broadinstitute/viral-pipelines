@@ -5,7 +5,7 @@ import "../tasks/tasks_metagenomics.wdl" as metagenomics
 
 workflow megablast {
     meta {
-        desription: "Runs megablast followed by LCA for taxon identification."
+        description: "Runs megablast followed by LCA for taxon identification."
         author: "Broad Viral Genomics"
         email: "viral-ngs@broadinstitute.org"
         allowNestedInputs: true
@@ -18,7 +18,7 @@ workflow megablast {
         File    taxonomy_db_tgz
         Int     host_species
         String  db_name
-        String sample_name = basename(in_bam, '.bam')
+        String sample_name = basename(inBam, '.bam')
     }
     parameter_meta {
         krona_taxonomy_tab: {
@@ -41,17 +41,16 @@ workflow megablast {
     }
     call metagenomics.krona {
         input: 
-            reports_txt_gz = blastoff.blastoff_kraken,
+            reports_txt_gz = [blastoff.blastoff_kraken],
             krona_taxonomy_db_tgz = krona_taxonomy_tab,
             input_type = "tsv",
             out_basename = "~{sample_name}.krona"
     }
 
-    }
     output {
         File    most_popular_taxon_id = blastoff.most_popular_taxon_id
         File    blastoff_txt_results = blastoff.blastoff_results
         File    blastoff_kraken = blastoff.blastoff_kraken
-        File    krona_html = metagenomics.krona_report_html
+        File    krona_html = krona.krona_report_html
     }
 }
