@@ -21,7 +21,8 @@ task Fetch_SRA_to_BAM {
         ~{if defined(ncbi_api_key) then "export NCBI_API_KEY=~{ncbi_api_key}}" else ""}
 
         # fetch SRA metadata on this record
-        esearch ~{if defined(email_address) then "-email ~{email_address}" else ""} -db sra -q "~{SRA_ID}" | efetch ~{if defined(email_address) then "-email ~{email_address}" else ""} -mode json -json > SRA.json
+        esearch ~{if defined(email_address) then "-email ~{email_address}" else ""} -db sra -query "~{SRA_ID}" | efetch -db sra ~{if defined(email_address) then "-email ~{email_address}" else ""} -mode json -json > SRA.json
+
         cp SRA.json "~{SRA_ID}.json"
 
         # pull reads from SRA and make a fully annotated BAM -- must succeed
