@@ -6,6 +6,8 @@ task Fetch_SRA_to_BAM {
         String  SRA_ID
 
         String? sample_name
+        String? email_address
+        String? ncbi_api_key
         Int?    machine_mem_gb
         String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     }
@@ -16,8 +18,10 @@ task Fetch_SRA_to_BAM {
     }
     command <<<
         set -e
+        ~{if defined(ncbi_api_key) then "export NCBI_API_KEY=~{ncbi_api_key}}" else ""}
+
         # fetch SRA metadata on this record
-        esearch -db sra -q "~{SRA_ID}" | efetch -mode json -json > SRA.json
+        esearch ~{if defined(email_address) then "-email ~{email_address}" else ""} -db sra -q "~{SRA_ID}" | efetch ~{if defined(email_address) then "-email ~{email_address}" else ""} -mode json -json > SRA.json
         cp SRA.json "~{SRA_ID}.json"
 
         # pull reads from SRA and make a fully annotated BAM -- must succeed
