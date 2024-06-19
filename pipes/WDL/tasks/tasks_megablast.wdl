@@ -167,7 +167,6 @@ task ChunkBlastHits {
         Int    machine_mem_gb = 64 
         Int    cpu = 16
         Int    disk_size_gb = 300
-        String docker = "quay.io/broadinstitute/viral-classify:fn_blast"
         String docker = "quay.io/broadinstitute/viral-classify:fn_blast" #skip-global-version-pin
     }
         String fasta_basename = basename(inFasta, ".fasta")
