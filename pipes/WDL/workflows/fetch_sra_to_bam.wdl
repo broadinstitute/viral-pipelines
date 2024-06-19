@@ -16,7 +16,7 @@ workflow fetch_sra_to_bam {
     #if(check_terra_env.is_running_on_terra) {
     call ncbi_tools.Fetch_SRA_to_BAM {
         input:
-            email_address = select_first(check_terra_env.user_email, None)
+            email_address = select_first([check_terra_env.user_email, None])
     }
     #}
     #if(!check_terra_env.is_running_on_terra) {
