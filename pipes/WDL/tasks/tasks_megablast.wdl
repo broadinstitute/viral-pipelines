@@ -12,7 +12,7 @@ task trim_rmdup_subsamp {
         Int machine_mem_gb = 128
         Int cpu = 16
         Int disk_size_gb = 100 
-        String docker ="quay.io/broadinstitute/viral-assemble:2.3.1.3"
+        String docker ="quay.io/broadinstitute/viral-assemble:2.3.1.3" #skip-global-version-pin
     }
     parameter_meta {
         inBam: {
@@ -69,7 +69,7 @@ task lca_megablast {
         Int     machine_mem_gb = 500 
         Int     cpu = 16
         Int     disk_size_gb = 300
-        String  docker = "quay.io/broadinstitute/viral-classify:2.2.4.2"
+        String  docker = "quay.io/broadinstitute/viral-classify:2.2.4.2" #skip-global-version-pin
     }
     parameter_meta {
         trimmed_fasta: {
@@ -167,7 +167,7 @@ task ChunkBlastHits {
         Int    machine_mem_gb = 64 
         Int    cpu = 16
         Int    disk_size_gb = 300
-        String docker = "quay.io/broadinstitute/viral-classify:fn_blast"
+        String docker = "quay.io/broadinstitute/viral-classify:fn_blast" #skip-global-version-pin
     }
         String fasta_basename = basename(inFasta, ".fasta")
         #setting current working directory as logging outputs
@@ -247,7 +247,7 @@ task blastoff {
         Int     machine_mem_gb = 64 
         Int     cpu = 16
         Int     disk_size_gb = 300
-        String  docker = "quay.io/broadinstitute/viral-classify:fn_cleaned_blast"
+        String  docker = "quay.io/broadinstitute/viral-classify:fn_cleaned_blast" #skip-global-version-pin
 
     }
         #setting current working directory as logging outputs
