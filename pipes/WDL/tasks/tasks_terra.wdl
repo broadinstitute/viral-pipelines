@@ -333,10 +333,10 @@ task download_entities_tsv {
     from firecloud import api as fapi
 
     workspace_project = '~{terra_project}'
-    workspace_name = '~{workspace_name}'
-    table_name = '~{table_name}'
-    out_fname = '~{outname}'
-    nop_string = '~{default="" nop_input_string}'
+    workspace_name    = '~{workspace_name}'
+    table_name        = '~{table_name}'
+    out_fname         = '~{outname}'
+    nop_string        = '~{default="" nop_input_string}'
 
     # load terra table and convert to list of dicts
     # I've found that fapi.get_entities_tsv produces malformed outputs if funky chars are in any of the cells of the table
@@ -537,16 +537,18 @@ task create_or_update_sample_tables {
         print(df_sample.index)
         for sample_id in sample_to_libraries.keys():
             if sample_id in df_sample.index:
-                print (f"sample_set {sample_id} pre-exists in Terra table, merging with new members")
+                print (f"sample '{sample_id}' already exists in Terra table, merging new attributes")
                 #sample_set_to_samples[set_id].extend(df_sample_set.samples[set_id])
                 already_associated_libraries = [entity["entityName"] for entity in df_sample.libraries[sample_id]]
                 
-                print(f"already_associated_libraries {already_associated_libraries}")
+                print(f"already_associated_libraries   {already_associated_libraries}")
                 print(f"sample_to_libraries[sample_id] {sample_to_libraries[sample_id]}")
                 continue
                 sample_to_libraries[sample_id].extend(already_associated_libraries)
                 # collapse duplicate sample IDs
                 sample_to_libraries[sample_id] = list(set(sample_to_libraries[sample_id]))
+
+                print(f"resulting set of libraries associated with sample: {sample_to_libraries[sample_id]}")
 
     sample_fname = 'sample_membership.tsv'
     with open(sample_fname, 'wt') as outf:
@@ -586,7 +588,7 @@ task create_or_update_sample_tables {
                     out_row[col] = sample_library_metadata.get(col, '')
                 out_rows.append(out_row)
 
-    library_meta_fname = "sample_metadata.tsv"
+    library_meta_fname = "library_metadata.tsv"
     with open(library_meta_fname, 'wt') as outf:
       outf.write("entity:")
       writer = csv.DictWriter(outf, out_header, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
@@ -614,6 +616,10 @@ task create_or_update_sample_tables {
   output {
     File stdout_log = stdout()
     File stderr_log = stderr()
+
+    File sample_info_tsv  = "sample_membership.tsv"
+    File library_info_tsv = "library_metadata.tsv"
+
     Int  max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
   }
 }
