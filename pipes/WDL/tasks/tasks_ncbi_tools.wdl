@@ -92,6 +92,9 @@ task Fetch_SRA_to_BAM {
             '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.DESIGN.LIBRARY_DESCRIPTOR.LIBRARY_STRATEGY' \
             SRA.json | tee OUT_LIBRARY_STRATEGY
 
+        # make sure the files exist
+        touch OUT_MODEL OUT_COLLECTION_DATE OUT_STRAIN OUT_COLLECTED_BY OUT_GEO_LOC
+
         set -e
         python3 << CODE
         import json
