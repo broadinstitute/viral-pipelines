@@ -95,6 +95,41 @@ task Fetch_SRA_to_BAM {
         # make sure the files exist
         touch OUT_MODEL OUT_COLLECTION_DATE OUT_STRAIN OUT_COLLECTED_BY OUT_GEO_LOC OUT_LIBRARY_STRATEGY OUT_CENTER OUT_PLATFORM OUT_BIOSAMPLE OUT_LIBRARY OUT_RUNDATE
 
+        # set file contents to NA if they don't exist or are empty
+        if [ ! -s OUT_CENTER ]; then
+            echo "NA" > OUT_CENTER
+        fi
+        if [ ! -s OUT_PLATFORM ]; then
+            echo "NA" > OUT_PLATFORM
+        fi
+        if [ ! -s OUT_BIOSAMPLE ]; then
+            echo "NA" > OUT_BIOSAMPLE
+        fi
+        if [ ! -s OUT_LIBRARY ]; then
+            echo "NA" > OUT_LIBRARY
+        fi
+        if [ ! -s OUT_RUNDATE ]; then
+            echo "NA" > OUT_RUNDATE
+        fi
+        if [ ! -s OUT_MODEL ]; then
+            echo "NA" > OUT_MODEL
+        fi
+        if [ ! -s OUT_COLLECTION_DATE ]; then
+            echo "NA" > OUT_COLLECTION_DATE
+        fi
+        if [ ! -s OUT_STRAIN ]; then
+            echo "NA" > OUT_STRAIN
+        fi
+        if [ ! -s OUT_COLLECTED_BY ]; then
+            echo "NA" > OUT_COLLECTED_BY
+        fi
+        if [ ! -s OUT_GEO_LOC ]; then
+            echo "NA" > OUT_GEO_LOC
+        fi
+        if [ ! -s OUT_LIBRARY_STRATEGY ]; then
+            echo "NA" > OUT_LIBRARY_STRATEGY
+        fi
+
         set -e
         python3 << CODE
         import json
