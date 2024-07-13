@@ -71,7 +71,7 @@ task Fetch_SRA_to_BAM {
         samtools view -c "~{SRA_ID}.bam" | tee OUT_NUM_READS
 
         # pull other metadata from SRA -- allow for silent failures here!
-        touch OUT_MODEL OUT_COLLECTION_DATE OUT_STRAIN OUT_COLLECTED_BY OUT_GEO_LOC
+        touch OUT_MODEL OUT_COLLECTION_DATE OUT_STRAIN OUT_COLLECTED_BY OUT_GEO_LOC OUT_LIBRARY_STRATEGY
         set +e
         jq -r \
             .EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.PLATFORM."$PLATFORM".INSTRUMENT_MODEL \
@@ -93,7 +93,7 @@ task Fetch_SRA_to_BAM {
             SRA.json | tee OUT_LIBRARY_STRATEGY
 
         # make sure the files exist
-        touch OUT_MODEL OUT_COLLECTION_DATE OUT_STRAIN OUT_COLLECTED_BY OUT_GEO_LOC
+        touch OUT_MODEL OUT_COLLECTION_DATE OUT_STRAIN OUT_COLLECTED_BY OUT_GEO_LOC OUT_LIBRARY_STRATEGY
 
         set -e
         python3 << CODE
