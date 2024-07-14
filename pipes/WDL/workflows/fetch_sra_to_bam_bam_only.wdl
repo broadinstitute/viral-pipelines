@@ -1,5 +1,7 @@
+version 1.0
 
-
+import "../tasks/tasks_ncbi_tools.wdl" as ncbi_tools
+import "../tasks/tasks_terra.wdl" as terra
 
 workflow fetch_sra_to_bam_bam_only {
     meta {
