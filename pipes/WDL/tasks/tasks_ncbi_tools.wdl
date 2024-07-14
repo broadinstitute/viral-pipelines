@@ -29,10 +29,9 @@ task Fetch_SRA_to_BAM {
         CENTER=$(jq -r .EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.SUBMISSION.center_name SRA.json)
         PLATFORM=$(jq -r '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.PLATFORM | keys[] as $k | "\($k)"' SRA.json)
         MODEL=$(jq -r ".EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.PLATFORM.$PLATFORM.INSTRUMENT_MODEL" SRA.json)
-        SAMPLE=$(jq -r '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.SAMPLE.IDENTIFIERS.EXTERNAL_ID[]|select(.namespace == "BioSample")|.content' SRA.json)
+        SAMPLE=$(jq -r '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.SAMPLE.IDENTIFIERS.EXTERNAL_ID|select(.namespace == "BioSample")|.content' SRA.json)
         LIBRARY=$(jq -r .EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.alias SRA.json)
         RUNDATE=$(jq -r '(.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.RUN_SET | (if (.RUN|type) == "object" then (.RUN) else (.RUN[] | select(any(.; .accession == "~{SRA_ID}"))) end) | .SRAFiles) | if (.SRAFile|type) == "object" then .SRAFile.date else [.SRAFile[]|select(.supertype == "Original" or .supertype=="Primary ETL")][0].date end' SRA.json | cut -f 1 -d ' ')
-
 
         if [[ -n "~{sample_name}" ]]; then
             SAMPLE="~{sample_name}"
@@ -72,7 +71,7 @@ task Fetch_SRA_to_BAM {
         samtools view -c "~{SRA_ID}.bam" | tee OUT_NUM_READS
 
         # pull other metadata from SRA -- allow for silent failures here!
-        touch OUT_MODEL OUT_COLLECTION_DATE OUT_STRAIN OUT_COLLECTED_BY OUT_GEO_LOC OUT_LIBRARY_STRATEGY
+        touch OUT_MODEL OUT_COLLECTION_DATE OUT_STRAIN OUT_COLLECTED_BY OUT_GEO_LOC
         set +e
         jq -r \
             .EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.PLATFORM."$PLATFORM".INSTRUMENT_MODEL \
@@ -92,44 +91,6 @@ task Fetch_SRA_to_BAM {
         jq -r \
             '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.DESIGN.LIBRARY_DESCRIPTOR.LIBRARY_STRATEGY' \
             SRA.json | tee OUT_LIBRARY_STRATEGY
-
-        # make sure the files exist
-        touch OUT_MODEL OUT_COLLECTION_DATE OUT_STRAIN OUT_COLLECTED_BY OUT_GEO_LOC OUT_LIBRARY_STRATEGY OUT_CENTER OUT_PLATFORM OUT_BIOSAMPLE OUT_LIBRARY OUT_RUNDATE
-
-        # set file contents to NA if they don't exist or are empty
-        if [ ! -s OUT_CENTER ]; then
-            echo "NA" > OUT_CENTER
-        fi
-        if [ ! -s OUT_PLATFORM ]; then
-            echo "NA" > OUT_PLATFORM
-        fi
-        if [ ! -s OUT_BIOSAMPLE ]; then
-            echo "NA" > OUT_BIOSAMPLE
-        fi
-        if [ ! -s OUT_LIBRARY ]; then
-            echo "NA" > OUT_LIBRARY
-        fi
-        if [ ! -s OUT_RUNDATE ]; then
-            echo "NA" > OUT_RUNDATE
-        fi
-        if [ ! -s OUT_MODEL ]; then
-            echo "NA" > OUT_MODEL
-        fi
-        if [ ! -s OUT_COLLECTION_DATE ]; then
-            echo "NA" > OUT_COLLECTION_DATE
-        fi
-        if [ ! -s OUT_STRAIN ]; then
-            echo "NA" > OUT_STRAIN
-        fi
-        if [ ! -s OUT_COLLECTED_BY ]; then
-            echo "NA" > OUT_COLLECTED_BY
-        fi
-        if [ ! -s OUT_GEO_LOC ]; then
-            echo "NA" > OUT_GEO_LOC
-        fi
-        if [ ! -s OUT_LIBRARY_STRATEGY ]; then
-            echo "NA" > OUT_LIBRARY_STRATEGY
-        fi
 
         set -e
         python3 << CODE
@@ -181,6 +142,88 @@ task Fetch_SRA_to_BAM {
         String  sample_geo_loc            = read_string("OUT_GEO_LOC")
         File    sra_metadata              = "~{SRA_ID}.json"
         File    biosample_attributes_json = "~{SRA_ID}-biosample_attributes.json"
+    }
+
+    runtime {
+        cpu:     2
+        memory:  select_first([machine_mem_gb, 6]) + " GB"
+        disks:   "local-disk " + disk_size + " LOCAL"
+        disk:    disk_size + " GB" # TES
+        dx_instance_type: "mem2_ssd1_v2_x2"
+        docker:  docker
+        maxRetries: 2
+    }
+}
+
+task Fetch_SRA_to_BAM_BAM_only {
+
+    input {
+        String  SRA_ID
+
+        String? sample_name
+        String? email_address
+        String? ncbi_api_key
+        Int?    machine_mem_gb
+        String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
+    }
+    Int disk_size = 750
+    meta {
+        description: "This searches NCBI SRA for accessions using the Entrez interface and returns read sets as unaligned BAM files. This has been tested with both SRA and ENA accessions. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input."
+        volatile: true
+    }
+    command <<<
+        set -e
+        ~{if defined(ncbi_api_key) then "export NCBI_API_KEY=~{ncbi_api_key}}" else ""}
+
+        # fetch SRA metadata on this record
+        esearch ~{if defined(email_address) then "-email ~{email_address}" else ""} -db sra -query "~{SRA_ID}" | efetch -db sra ~{if defined(email_address) then "-email ~{email_address}" else ""} -mode json -json > SRA.json
+
+        cp SRA.json "~{SRA_ID}.json"
+
+        # pull reads from SRA and make a fully annotated BAM -- must succeed
+#        CENTER=$(jq -r .EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.SUBMISSION.center_name SRA.json)
+#        PLATFORM=$(jq -r '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.PLATFORM | keys[] as $k | "\($k)"' SRA.json)
+#        MODEL=$(jq -r ".EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.PLATFORM.$PLATFORM.INSTRUMENT_MODEL" SRA.json)
+#        SAMPLE=$(jq -r '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.SAMPLE.IDENTIFIERS.EXTERNAL_ID|select(.namespace == "BioSample")|.content' SRA.json)
+#        LIBRARY=$(jq -r .EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.alias SRA.json)
+#        RUNDATE=$(jq -r '(.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.RUN_SET | (if (.RUN|type) == "object" then (.RUN) else (.RUN[] | select(any(.; .accession == "~{SRA_ID}"))) end) | .SRAFiles) | if (.SRAFile|type) == "object" then .SRAFile.date else [.SRAFile[]|select(.supertype == "Original" or .supertype=="Primary ETL")][0].date end' SRA.json | cut -f 1 -d ' ')
+
+#        if [[ -n "~{sample_name}" ]]; then
+#            SAMPLE="~{sample_name}"
+#        fi
+
+#        if [ "$PLATFORM" = "OXFORD_NANOPORE" ]; then
+#            # per the SAM/BAM specification
+#            SAM_PLATFORM="ONT"
+#        else
+#            SAM_PLATFORM="$PLATFORM"
+#        fi
+
+        sam-dump --unaligned --header "~{SRA_ID}" \
+            | samtools view -bhS - \
+            > temp.bam
+        picard AddOrReplaceReadGroups \
+            I=temp.bam \
+            O="~{SRA_ID}.bam" \
+            RGID=1 \
+#            RGLB="$LIBRARY" \
+            RGSM="$SAMPLE" \
+#            RGPL="$SAM_PLATFORM" \
+#            RGPU="$LIBRARY" \
+#            RGPM="$MODEL" \
+#            RGDT="$RUNDATE" \
+#            RGCN="$CENTER" \
+            VALIDATION_STRINGENCY=SILENT
+        rm temp.bam
+        samtools view -H "~{SRA_ID}.bam"
+
+        # emit read count
+        samtools view -c "~{SRA_ID}.bam" | tee OUT_NUM_READS
+    >>>
+
+    output {
+        File    reads_ubam                = "~{SRA_ID}.bam"
+        Int     num_reads                 = read_int("OUT_NUM_READS")
     }
 
     runtime {
