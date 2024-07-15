@@ -9,11 +9,10 @@ workflow mafft {
         email:  "viral-ngs@broadinstitute.org"
     }
 
-    call interhost.multi_align_mafft
+    call interhost.multi_align_mafft_ref
 
     output {
-        File        sampleNamesFile     = multi_align_mafft.sampleNamesFile
-        Array[File] alignments_by_chr   = multi_align_mafft.alignments_by_chr
-        String      viral_phylo_version = multi_align_mafft.viralngs_version
+        #File        sampleNamesFile     = multi_align_mafft_ref.sampleNamesFile
+        Array[File] alignments_by_chr   = multi_align_mafft_ref.alignments_by_chr
     }
 }
