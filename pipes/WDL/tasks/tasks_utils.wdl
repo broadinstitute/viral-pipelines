@@ -43,8 +43,7 @@ task zcat {
         import os.path
         import gzip, lzma, bz2
         import lz4.frame # pypi library: lz4
-        import zstandard as zstd # pypi library: zstandard
-        import util.file # viral-core
+        import zstandard # pypi library: zstandard
 
         # magic bytes from here:
         # https://en.wikipedia.org/wiki/List_of_file_signatures
@@ -53,7 +52,7 @@ task zcat {
             b"\xfd\x37\x7a\x58\x5a\x00": lzma.open,      # .xz
             b"\x42\x5a\x68":             bz2.open,       # .bz2
             b"\x04\x22\x4d\x18":         lz4.frame.open, # .lz4
-            b"\x28\xb5\x2f\xfd":         util.file.zstd_open   # .zst (open using function above rather than library function)
+            b"\x28\xb5\x2f\xfd":         zstandard.open  # .zst
         }
         extension_to_compressor = {
             ".gz":   gzip.open,      # .gz
@@ -61,8 +60,8 @@ task zcat {
             ".xz":   lzma.open,      # .xz
             ".bz2":  bz2.open,       # .bz2
             ".lz4":  lz4.frame.open, # .lz4
-            ".zst":  util.file.zstd_open,  # .zst (open using function above rather than library function)
-            ".zstd": util.file.zstd_open   # .zst (open using function above rather than library function)
+            ".zst":  zstandard.open, # .zst
+            ".zstd": zstandard.open  # .zst
         }
 
         # max number of bytes we need to identify one of the files listed above
