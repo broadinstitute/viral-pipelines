@@ -359,7 +359,6 @@ task tsv_join {
 
     def open_or_compressed_open(*args, **kwargs):
         input_file = args[0]
-
         # if the file exists, try to guess the (de) compressor based on "magic numbers"
         # at the very start of the file
         if os.path.isfile(input_file):
@@ -369,16 +368,13 @@ task tsv_join {
                 if file_start.startswith(magic):
                     print("opening via {}: {}".format(compressor_open_fn.__module__,input_file))
                     return compressor_open_fn(*args, **kwargs)
-            # fall back to generic open if compression type could not be determine from magic numbers
-            return open(*args, **kwargs)
-        else:
-            # if this is a new file, try to choose the opener based on file extension
-            for ext,compressor_open_fn in extension_to_compressor.items():
-                if str(input_file).lower().endswith(ext):
-                    print("opening via {}: {}".format(compressor_open_fn.__module__,input_file))
-                    return compressor_open_fn(*args, **kwargs)
-            # fall back to generic open if compression type could not be determine from magic numbers
-            return open(*args, **kwargs)
+        # if this is a new file, or failure to map above, try to choose the opener based on file extension
+        for ext,compressor_open_fn in extension_to_compressor.items():
+            if str(input_file).lower().endswith(ext):
+                print("opening via {}: {}".format(compressor_open_fn.__module__,input_file))
+                return compressor_open_fn(*args, **kwargs)
+        # fall back to generic open if compression type could not be determined otherwise
+        return open(*args, **kwargs)
 
     # prep input readers
     out_basename = '~{out_basename}'
