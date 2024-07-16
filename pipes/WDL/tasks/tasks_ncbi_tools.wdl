@@ -159,8 +159,7 @@ task Fetch_SRA_to_BAM_BAM_only {
 
     input {
         String  SRA_ID
-
-        String? sample_name
+        String  sample_name
         String? email_address
         String? ncbi_api_key
         Int?    machine_mem_gb
@@ -180,24 +179,7 @@ task Fetch_SRA_to_BAM_BAM_only {
 
         cp SRA.json "~{SRA_ID}.json"
 
-        # pull reads from SRA and make a fully annotated BAM -- must succeed
-#        CENTER=$(jq -r .EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.SUBMISSION.center_name SRA.json)
-#        PLATFORM=$(jq -r '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.PLATFORM | keys[] as $k | "\($k)"' SRA.json)
-#        MODEL=$(jq -r ".EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.PLATFORM.$PLATFORM.INSTRUMENT_MODEL" SRA.json)
-        SAMPLE=$(jq -r '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.SAMPLE.IDENTIFIERS.EXTERNAL_ID|select(.namespace == "BioSample")|.content' SRA.json)
-#        LIBRARY=$(jq -r .EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.alias SRA.json)
-#        RUNDATE=$(jq -r '(.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.RUN_SET | (if (.RUN|type) == "object" then (.RUN) else (.RUN[] | select(any(.; .accession == "~{SRA_ID}"))) end) | .SRAFiles) | if (.SRAFile|type) == "object" then .SRAFile.date else [.SRAFile[]|select(.supertype == "Original" or .supertype=="Primary ETL")][0].date end' SRA.json | cut -f 1 -d ' ')
-
-        if [[ -n "~{sample_name}" ]]; then
-            SAMPLE="~{sample_name}"
-        fi
-
-#        if [ "$PLATFORM" = "OXFORD_NANOPORE" ]; then
-#            # per the SAM/BAM specification
-#            SAM_PLATFORM="ONT"
-#        else
-#            SAM_PLATFORM="$PLATFORM"
-#        fi
+        SAMPLE="~{sample_name}"
 
         sam-dump --unaligned --header "~{SRA_ID}" \
             | samtools view -bhS - \
@@ -206,13 +188,7 @@ task Fetch_SRA_to_BAM_BAM_only {
             I=temp.bam \
             O="~{SRA_ID}.bam" \
             RGID=1 \
-#            RGLB="$LIBRARY" \
             RGSM="$SAMPLE" \
-#            RGPL="$SAM_PLATFORM" \
-#            RGPU="$LIBRARY" \
-#            RGPM="$MODEL" \
-#            RGDT="$RUNDATE" \
-#            RGCN="$CENTER" \
             VALIDATION_STRINGENCY=SILENT
         rm temp.bam
         samtools view -H "~{SRA_ID}.bam"
