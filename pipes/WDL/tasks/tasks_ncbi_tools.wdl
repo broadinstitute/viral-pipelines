@@ -72,79 +72,12 @@ task Fetch_SRA_to_BAM {
         echo $LIBRARY > OUT_LIBRARY
         echo $RUNDATE > OUT_RUNDATE
         samtools view -c "~{SRA_ID}.bam" | tee OUT_NUM_READS
-
-        # pull other metadata from SRA -- allow for silent failures here!
-        touch OUT_MODEL OUT_COLLECTION_DATE OUT_STRAIN OUT_COLLECTED_BY OUT_GEO_LOC
-        set +e
-        jq -r \
-            .EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.PLATFORM."$PLATFORM".INSTRUMENT_MODEL \
-            SRA.json | tee OUT_MODEL
-        jq -r \
-            '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.SAMPLE.SAMPLE_ATTRIBUTES.SAMPLE_ATTRIBUTE[]|select(.TAG == "collection_date" or .TAG=="collection date")|.VALUE' \
-            SRA.json | tee OUT_COLLECTION_DATE
-        jq -r \
-            '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.SAMPLE.SAMPLE_ATTRIBUTES.SAMPLE_ATTRIBUTE[]|select(.TAG == "strain")|.VALUE' \
-            SRA.json | tee OUT_STRAIN
-        jq -r \
-            '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.SAMPLE.SAMPLE_ATTRIBUTES.SAMPLE_ATTRIBUTE[]|select(.TAG == "collected_by" or .TAG == "collecting institution")|.VALUE' \
-            SRA.json | tee OUT_COLLECTED_BY
-        jq -r \
-            '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.SAMPLE.SAMPLE_ATTRIBUTES.SAMPLE_ATTRIBUTE[]|select(.TAG == "geo_loc_name" or .TAG == "geographic location (country and/or sea)")|.VALUE' \
-            SRA.json | tee OUT_GEO_LOC
-        jq -r \
-            '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.DESIGN.LIBRARY_DESCRIPTOR.LIBRARY_STRATEGY' \
-            SRA.json | tee OUT_LIBRARY_STRATEGY
-
-        set -e
-        python3 << CODE
-        import json
-        with open('SRA.json', 'rt') as inf:
-            meta = json.load(inf)
-        # reorganize to look more like a biosample attributes tsv
-        biosample = dict((x['TAG'],x['VALUE']) for x in meta['EXPERIMENT_PACKAGE_SET']['EXPERIMENT_PACKAGE']['SAMPLE']['SAMPLE_ATTRIBUTES']['SAMPLE_ATTRIBUTE'])
-        biosample['accession'] = meta['EXPERIMENT_PACKAGE_SET']['EXPERIMENT_PACKAGE']['SAMPLE']['IDENTIFIERS']['EXTERNAL_ID']['content']
-        biosample['message'] = 'Successfully loaded'
-        biosample['bioproject_accession'] = meta['EXPERIMENT_PACKAGE_SET']['EXPERIMENT_PACKAGE']['STUDY']['IDENTIFIERS']['EXTERNAL_ID']['content']
-        biosample['sample_name'] = biosample.get('isolate', biosample.get('Sample Name', biosample.get('strain', '')))
-        for k,v in biosample.items():
-            if v == 'not provided':
-                biosample[k] = ''
-
-        # British to American conversions (NCBI vs ENA)
-        us_to_uk = {
-            'sample_name': 'Sample Name',
-            'isolate': 'Sample Name',
-            'collected_by': 'collecting institution',
-            'collection_date': 'collection date',
-            'geo_loc_name': 'geographic location (country and/or sea)',
-            'host': 'host scientific name',
-        }
-        for key_us, key_uk in us_to_uk.items():
-            if not biosample.get(key_us,''):
-                biosample[key_us] = biosample.get(key_uk,'')
-
-        # write outputs
-        with open('~{SRA_ID}-biosample_attributes.json', 'wt') as outf:
-            json.dump(biosample, outf)
         CODE
     >>>
 
     output {
         File    reads_ubam                = "~{SRA_ID}.bam"
         Int     num_reads                 = read_int("OUT_NUM_READS")
-        String  sequencing_center         = read_string("OUT_CENTER")
-        String  sequencing_platform       = read_string("OUT_PLATFORM")
-        String  sequencing_platform_model = read_string("OUT_MODEL")
-        String  biosample_accession       = read_string("OUT_BIOSAMPLE")
-        String  library_id                = read_string("OUT_LIBRARY")
-        String  library_strategy          = read_string("OUT_LIBRARY_STRATEGY")
-        String  run_date                  = read_string("OUT_RUNDATE")
-        String  sample_collection_date    = read_string("OUT_COLLECTION_DATE")
-        String  sample_collected_by       = read_string("OUT_COLLECTED_BY")
-        String  sample_strain             = read_string("OUT_STRAIN")
-        String  sample_geo_loc            = read_string("OUT_GEO_LOC")
-        File    sra_metadata              = "~{SRA_ID}.json"
-        File    biosample_attributes_json = "~{SRA_ID}-biosample_attributes.json"
     }
 
     runtime {
