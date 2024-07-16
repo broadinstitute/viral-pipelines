@@ -33,6 +33,7 @@ task Fetch_SRA_to_BAM {
         LIBRARY=$(jq -r .EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.alias SRA.json)
         RUNDATE=$(jq -r '(.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.RUN_SET | (if (.RUN|type) == "object" then (.RUN) else (.RUN[] | select(any(.; .accession == "~{SRA_ID}"))) end) | .SRAFiles) | if (.SRAFile|type) == "object" then .SRAFile.date else [.SRAFile[]|select(.supertype == "Original" or .supertype=="Primary ETL")][0].date end' SRA.json | cut -f 1 -d ' ')
 
+        SAMPLE="SAMPLE"
         if [[ -n "~{SRA_ID}" ]]; then
             SAMPLE="~{SRA_ID}"
         fi
