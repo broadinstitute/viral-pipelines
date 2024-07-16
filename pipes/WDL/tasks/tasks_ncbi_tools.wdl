@@ -160,6 +160,7 @@ task Fetch_SRA_to_BAM_BAM_only {
     input {
         String  SRA_ID
         String  sample_name
+
         String? email_address
         String? ncbi_api_key
         Int?    machine_mem_gb
@@ -167,7 +168,7 @@ task Fetch_SRA_to_BAM_BAM_only {
     }
     Int disk_size = 750
     meta {
-        description: "This searches NCBI SRA for accessions using the Entrez interface and returns read sets as unaligned BAM files. This has been tested with both SRA and ENA accessions. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input."
+        description: "This searches NCBI SRA for accessions using the Entrez interface, collects associated metadata, and returns read sets as unaligned BAM files with metadata loaded in. Useful metadata from BioSample is also output from this task directly. This has been tested with both SRA and ENA accessions. This queries the NCBI production database, and as such, the output of this task is non-deterministic given the same input."
         volatile: true
     }
     command <<<
@@ -179,7 +180,25 @@ task Fetch_SRA_to_BAM_BAM_only {
 
         cp SRA.json "~{SRA_ID}.json"
 
+        # pull reads from SRA and make a fully annotated BAM -- must succeed
+        CENTER=$(jq -r .EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.SUBMISSION.center_name SRA.json)
+        PLATFORM=$(jq -r '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.PLATFORM | keys[] as $k | "\($k)"' SRA.json)
+        MODEL=$(jq -r ".EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.PLATFORM.$PLATFORM.INSTRUMENT_MODEL" SRA.json)
+#        SAMPLE=$(jq -r '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.SAMPLE.IDENTIFIERS.EXTERNAL_ID|select(.namespace == "BioSample")|.content' SRA.json)
+        LIBRARY=$(jq -r .EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.alias SRA.json)
+        RUNDATE=$(jq -r '(.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.RUN_SET | (if (.RUN|type) == "object" then (.RUN) else (.RUN[] | select(any(.; .accession == "~{SRA_ID}"))) end) | .SRAFiles) | if (.SRAFile|type) == "object" then .SRAFile.date else [.SRAFile[]|select(.supertype == "Original" or .supertype=="Primary ETL")][0].date end' SRA.json | cut -f 1 -d ' ')
+
+#        if [[ -n "~{sample_name}" ]]; then
+#            SAMPLE="~{sample_name}"
+#        fi
         SAMPLE="~{sample_name}"
+
+        if [ "$PLATFORM" = "OXFORD_NANOPORE" ]; then
+            # per the SAM/BAM specification
+            SAM_PLATFORM="ONT"
+        else
+            SAM_PLATFORM="$PLATFORM"
+        fi
 
         sam-dump --unaligned --header "~{SRA_ID}" \
             | samtools view -bhS - \
@@ -188,18 +207,97 @@ task Fetch_SRA_to_BAM_BAM_only {
             I=temp.bam \
             O="~{SRA_ID}.bam" \
             RGID=1 \
+            RGLB="$LIBRARY" \
             RGSM="$SAMPLE" \
+            RGPL="$SAM_PLATFORM" \
+            RGPU="$LIBRARY" \
+            RGPM="$MODEL" \
+            RGDT="$RUNDATE" \
+            RGCN="$CENTER" \
             VALIDATION_STRINGENCY=SILENT
         rm temp.bam
         samtools view -H "~{SRA_ID}.bam"
 
-        # emit read count
+        # emit numeric WDL outputs
+        echo $CENTER > OUT_CENTER
+        echo $PLATFORM > OUT_PLATFORM
+        echo $SAMPLE > OUT_BIOSAMPLE
+        echo $LIBRARY > OUT_LIBRARY
+        echo $RUNDATE > OUT_RUNDATE
         samtools view -c "~{SRA_ID}.bam" | tee OUT_NUM_READS
+
+        # pull other metadata from SRA -- allow for silent failures here!
+        touch OUT_MODEL OUT_COLLECTION_DATE OUT_STRAIN OUT_COLLECTED_BY OUT_GEO_LOC
+        set +e
+        jq -r \
+            .EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.PLATFORM."$PLATFORM".INSTRUMENT_MODEL \
+            SRA.json | tee OUT_MODEL
+        jq -r \
+            '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.SAMPLE.SAMPLE_ATTRIBUTES.SAMPLE_ATTRIBUTE[]|select(.TAG == "collection_date" or .TAG=="collection date")|.VALUE' \
+            SRA.json | tee OUT_COLLECTION_DATE
+        jq -r \
+            '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.SAMPLE.SAMPLE_ATTRIBUTES.SAMPLE_ATTRIBUTE[]|select(.TAG == "strain")|.VALUE' \
+            SRA.json | tee OUT_STRAIN
+        jq -r \
+            '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.SAMPLE.SAMPLE_ATTRIBUTES.SAMPLE_ATTRIBUTE[]|select(.TAG == "collected_by" or .TAG == "collecting institution")|.VALUE' \
+            SRA.json | tee OUT_COLLECTED_BY
+        jq -r \
+            '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.SAMPLE.SAMPLE_ATTRIBUTES.SAMPLE_ATTRIBUTE[]|select(.TAG == "geo_loc_name" or .TAG == "geographic location (country and/or sea)")|.VALUE' \
+            SRA.json | tee OUT_GEO_LOC
+        jq -r \
+            '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.DESIGN.LIBRARY_DESCRIPTOR.LIBRARY_STRATEGY' \
+            SRA.json | tee OUT_LIBRARY_STRATEGY
+
+        set -e
+        python3 << CODE
+        import json
+        with open('SRA.json', 'rt') as inf:
+            meta = json.load(inf)
+        # reorganize to look more like a biosample attributes tsv
+        biosample = dict((x['TAG'],x['VALUE']) for x in meta['EXPERIMENT_PACKAGE_SET']['EXPERIMENT_PACKAGE']['SAMPLE']['SAMPLE_ATTRIBUTES']['SAMPLE_ATTRIBUTE'])
+        biosample['accession'] = meta['EXPERIMENT_PACKAGE_SET']['EXPERIMENT_PACKAGE']['SAMPLE']['IDENTIFIERS']['EXTERNAL_ID']['content']
+        biosample['message'] = 'Successfully loaded'
+        biosample['bioproject_accession'] = meta['EXPERIMENT_PACKAGE_SET']['EXPERIMENT_PACKAGE']['STUDY']['IDENTIFIERS']['EXTERNAL_ID']['content']
+        biosample['sample_name'] = biosample.get('isolate', biosample.get('Sample Name', biosample.get('strain', '')))
+        for k,v in biosample.items():
+            if v == 'not provided':
+                biosample[k] = ''
+
+        # British to American conversions (NCBI vs ENA)
+        us_to_uk = {
+            'sample_name': 'Sample Name',
+            'isolate': 'Sample Name',
+            'collected_by': 'collecting institution',
+            'collection_date': 'collection date',
+            'geo_loc_name': 'geographic location (country and/or sea)',
+            'host': 'host scientific name',
+        }
+        for key_us, key_uk in us_to_uk.items():
+            if not biosample.get(key_us,''):
+                biosample[key_us] = biosample.get(key_uk,'')
+
+        # write outputs
+        with open('~{SRA_ID}-biosample_attributes.json', 'wt') as outf:
+            json.dump(biosample, outf)
+        CODE
     >>>
 
     output {
         File    reads_ubam                = "~{SRA_ID}.bam"
         Int     num_reads                 = read_int("OUT_NUM_READS")
+        String  sequencing_center         = read_string("OUT_CENTER")
+        String  sequencing_platform       = read_string("OUT_PLATFORM")
+        String  sequencing_platform_model = read_string("OUT_MODEL")
+        String  biosample_accession       = read_string("OUT_BIOSAMPLE")
+        String  library_id                = read_string("OUT_LIBRARY")
+        String  library_strategy          = read_string("OUT_LIBRARY_STRATEGY")
+        String  run_date                  = read_string("OUT_RUNDATE")
+        String  sample_collection_date    = read_string("OUT_COLLECTION_DATE")
+        String  sample_collected_by       = read_string("OUT_COLLECTED_BY")
+        String  sample_strain             = read_string("OUT_STRAIN")
+        String  sample_geo_loc            = read_string("OUT_GEO_LOC")
+        File    sra_metadata              = "~{SRA_ID}.json"
+        File    biosample_attributes_json = "~{SRA_ID}-biosample_attributes.json"
     }
 
     runtime {
