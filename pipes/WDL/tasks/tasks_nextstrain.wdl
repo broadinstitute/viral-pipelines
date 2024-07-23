@@ -1517,6 +1517,7 @@ task ancestral_tree {
         Boolean  keep_overhangs = false
         File?    vcf_reference
         File?    output_vcf
+        File?    root_sequence
 
         String   docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int      disk_size = 300
@@ -1537,6 +1538,7 @@ task ancestral_tree {
             --output-node-data "~{out_basename}_nt_muts.json" \
             ~{"--vcf-reference " + vcf_reference} \
             ~{"--output-vcf " + output_vcf} \
+            ~{"--root-sequence " + root_sequence} \
             --output-sequences "~{out_basename}_ancestral_sequences.fasta" \
             ~{true="--keep-overhangs" false="" keep_overhangs} \
             --inference ~{default="joint" inference} \
