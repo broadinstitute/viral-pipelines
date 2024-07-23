@@ -1706,7 +1706,6 @@ task assign_clades_to_nodes {
         AUGUR_RECURSION_LIMIT=100000 augur clades \
         --tree "~{tree_nwk}" \
         --mutations "~{nt_muts_json}" ~{'"' + aa_muts_json + '"'} \
-        --reference "~{ref_fasta}" \
         --clades "~{clades_tsv}" \
         --output-node-data "~{out_basename}_clades.json"
         { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
