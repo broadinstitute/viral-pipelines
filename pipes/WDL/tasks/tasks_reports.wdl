@@ -14,7 +14,7 @@ task alignment_metrics {
     Int    max_amp_len=5000
     Int    max_amplicons=500
 
-    Int    machine_mem_gb=13
+    Int    machine_mem_gb=32
     String docker = "quay.io/broadinstitute/viral-core:2.3.1"
   }
 
@@ -108,10 +108,10 @@ task alignment_metrics {
   runtime {
     docker: docker
     memory: machine_mem_gb + " GB"
-    cpu: 2
+    cpu: 4
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
-    dx_instance_type: "mem1_ssd1_v2_x2"
+    dx_instance_type: "mem3_ssd1_v2_x4"
     maxRetries: 2
   }
 }
