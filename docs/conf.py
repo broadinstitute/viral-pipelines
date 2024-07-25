@@ -23,10 +23,10 @@ import wdl_aid
 sys.path.insert(0, os.path.dirname(os.path.abspath('.')))
 
 # -- Mock out the heavyweight pip packages, esp those that require C ----
-import mock
-MOCK_MODULES = []
-for mod_name in MOCK_MODULES:
-    sys.modules[mod_name] = mock.Mock()
+#import mock
+#MOCK_MODULES = []
+#for mod_name in MOCK_MODULES:
+#    sys.modules[mod_name] = mock.Mock()
 
 # -- Obtain GIT version --
 def _git_version():
