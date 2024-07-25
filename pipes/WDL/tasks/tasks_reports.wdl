@@ -72,7 +72,8 @@ task alignment_metrics {
     echo -e "sample_sanitized\tbam\tamplicon_set\tamplicon_idx\tamplicon_left\tamplicon_right\tFREADS\tFDEPTH\tFPCOV\tFAMP" > "~{out_basename}.ampliconstats_parsed.txt"
     if [ -n "~{primers_bed}" ]; then
       # samtools ampliconstats
-      cat "~{primers_bed}" | sort -k 1 -k 4 -t $'\t' > primers-sorted_for_samtools.bed
+      cat "~{primers_bed}" | sort -k 1,1 -k 4,4 -t $'\t' > primers-sorted_for_samtools.bed
+      set +e # there are just some weird bed files out there -- let them fail silently
       samtools ampliconstats -s -@ $(nproc) \
         ~{'-d ' + min_coverage} \
         ~{'-l ' + max_amp_len} \
