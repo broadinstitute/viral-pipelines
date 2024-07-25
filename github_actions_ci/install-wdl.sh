@@ -12,9 +12,10 @@ fetch_jar_from_github () {
 	ln -s $_jar_fname $_tool_name.jar
 }
 
-fetch_jar_from_github broadinstitute cromwell womtool 86
-fetch_jar_from_github broadinstitute cromwell cromwell 86
+fetch_jar_from_github broadinstitute cromwell womtool 87
+fetch_jar_from_github broadinstitute cromwell cromwell 87
 fetch_jar_from_github dnanexus dxWDL dxWDL v1.50
+fetch_jar_from_github dnanexus dxCompiler dxCompiler 2.11.6
 
 TGZ=dx-toolkit-v0.311.0-ubuntu-20.04-amd64.tar.gz
 echo "Fetching $TGZ"
