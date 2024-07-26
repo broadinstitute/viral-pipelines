@@ -543,7 +543,7 @@ task create_or_update_sample_tables {
                 
                 print(f"already_associated_libraries   {already_associated_libraries}")
                 print(f"sample_to_libraries[sample_id] {sample_to_libraries[sample_id]}")
-                continue
+
                 sample_to_libraries[sample_id].extend(already_associated_libraries)
                 # collapse duplicate sample IDs
                 sample_to_libraries[sample_id] = list(set(sample_to_libraries[sample_id]))
