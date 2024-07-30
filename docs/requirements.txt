@@ -5,5 +5,4 @@ sphinx-rtd-theme>=2.0.0
 PyYAML==6.0.1
 mock==5.0.1
 recommonmark
-miniwdl==1.8.0
 wdl-aid==1.0.0
