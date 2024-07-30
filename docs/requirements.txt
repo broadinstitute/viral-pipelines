@@ -1,5 +1,5 @@
 jinja2==3.1.2 # https://github.com/readthedocs/readthedocs.org/issues/9037#issuecomment-1077818554
-Sphinx==5.3.0 #override sphinx pinning done by RTD: https://docs.readthedocs.io/en/stable/build-default-versions.html#external-dependencies
+Sphinx>=5.3.0, <8 #override sphinx pinning done by RTD: https://docs.readthedocs.io/en/stable/build-default-versions.html#external-dependencies
 sphinx-argparse>=0.5.2
 sphinx-rtd-theme>=1.3.0,<2 # pinning to <2.0 for now until dependency incompatibilities are resolved
 PyYAML==6.0
