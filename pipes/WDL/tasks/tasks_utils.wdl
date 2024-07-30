@@ -104,7 +104,7 @@ task zcat {
         { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
-        docker: "quay.io/broadinstitute/viral-core:2.2.4"
+        docker: "quay.io/broadinstitute/viral-core:2.3.1"
         memory: "1 GB"
         cpu:    cpus
         disks:  "local-disk " + disk_size + " LOCAL"
@@ -145,6 +145,35 @@ task sed {
     }
     output {
         File outfile = "~{outfilename}"
+    }
+}
+
+task tar_extract {
+    meta {
+        description: "Extract a tar file"
+    }
+    input {
+        File   tar_file
+        Int    disk_size = 375
+        String tar_opts = "-z"
+    }
+    command <<<
+        mkdir -p unpack
+        cd unpack
+        tar -xv ~{tar_opts} -f "~{tar_file}"
+    >>>
+    runtime {
+        docker: "quay.io/broadinstitute/viral-baseimage:0.2.0"
+        memory: "2 GB"
+        cpu:    1
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
+        dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
+        preemptible: 1
+    }
+    output {
+        Array[File] files = glob("unpack/*")
     }
 }
 
@@ -202,6 +231,7 @@ task fetch_row_from_tsv {
     String        idx_col
     String        idx_val
     Array[String] set_default_keys = []
+    Array[String] add_header = []
   }
   Int disk_size = 50
   command <<<
@@ -209,8 +239,11 @@ task fetch_row_from_tsv {
     import csv, gzip, json
     open_or_gzopen = lambda *args, **kwargs: gzip.open(*args, **kwargs) if args[0].endswith('.gz') else open(*args, **kwargs)
     out_dict = {}
+    fieldnames = "~{sep='*' add_header}".split("*")
+    if not fieldnames:
+      fieldnames = None
     with open_or_gzopen('~{tsv}', 'rt') as inf:
-      for row in csv.DictReader(inf, delimiter='\t'):
+      for row in csv.DictReader(inf, delimiter='\t', fieldnames=fieldnames):
         if row.get('~{idx_col}') == '~{idx_val}':
           out_dict = row
           break
@@ -399,7 +432,7 @@ task tsv_join {
   runtime {
     memory: "~{machine_mem_gb} GB"
     cpu: 4
-    docker: "quay.io/broadinstitute/viral-core:2.2.4"
+    docker: "quay.io/broadinstitute/viral-core:2.3.1"
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
@@ -486,7 +519,7 @@ task tsv_stack {
   input {
     Array[File]+ input_tsvs
     String       out_basename
-    String       docker = "quay.io/broadinstitute/viral-core:2.2.4"
+    String       docker = "quay.io/broadinstitute/viral-core:2.3.1"
   }
 
   Int disk_size = 50
@@ -712,6 +745,35 @@ task s3_copy {
   }
 }
 
+task string_split {
+  meta {
+    description: "split a string by a delimiter"
+  }
+  input {
+    String   joined_string
+    String   delimiter
+  }
+  command <<<
+    set -e
+    python3<<CODE
+    with open('TOKENS', 'wt') as outf:
+      for token in "~{joined_string}".split("~{delimiter}"):
+        outf.write(token + '\n')
+    CODE
+  >>>
+  output {
+    Array[String] tokens = read_lines("TOKENS")
+  }
+  runtime {
+    docker: "python:slim"
+    memory: "1 GB"
+    cpu: 1
+    disks: "local-disk 50 SSD"
+    disk: "50 GB" # TES
+    maxRetries: 2
+  }
+}
+
 task filter_sequences_by_length {
     meta {
         description: "Filter sequences in a fasta file to enforce a minimum count of non-N bases."
@@ -720,7 +782,7 @@ task filter_sequences_by_length {
         File   sequences_fasta
         Int    min_non_N = 1
 
-        String docker = "quay.io/broadinstitute/viral-core:2.2.4"
+        String docker = "quay.io/broadinstitute/viral-core:2.3.1"
         Int    disk_size = 750
     }
     parameter_meta {
@@ -744,7 +806,7 @@ task filter_sequences_by_length {
         with open_or_gzopen('~{out_fname}', 'wt') as outf:
             for seq in Bio.SeqIO.parse(inf, 'fasta'):
                 n_total += 1
-                ungapseq = seq.seq.ungap().upper()
+                ungapseq = seq.seq.replace("-","").upper()
                 if (len(ungapseq) - ungapseq.count('N')) >= ~{min_non_N}:
                     n_kept += 1
                     Bio.SeqIO.write(seq, outf, 'fasta')

@@ -1,5 +1,40 @@
 version 1.0
 
+task taxid_to_nextclade_dataset_name {
+    input {
+        String taxid
+    }
+    command <<<
+        python3 <<CODE
+        taxid = int("~{taxid}")
+        taxid_to_dataset_map = {
+            2697049 : 'sars-cov-2',
+            641809  : 'flu_h1n1pdm_ha',
+            335341  : 'flu_h3n2_ha',
+            518987  : 'flu_vic_ha',
+            208893  : 'rsv_a',
+            208895  : 'rsv_b',
+            10244   : 'MPXV',
+            619591  : 'hMPXV'
+        }
+        with open('DATASET_NAME', 'wt') as outf:
+            outf.write(taxid_to_dataset_map.get(taxid, '') + '\n')
+        CODE
+    >>>
+    runtime {
+        docker: "python:slim"
+        memory: "1 GB"
+        cpu:   1
+        disks: "local-disk 50 HDD"
+        disk:  "50 GB" # TES
+        dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
+    }
+    output {
+        String nextclade_dataset_name = read_string("DATASET_NAME")
+    }    
+}
+
 task nextclade_one_sample {
     meta {
         description: "Nextclade classification of one sample. Leaving optional inputs unspecified will use SARS-CoV-2 defaults."
@@ -17,7 +52,7 @@ task nextclade_one_sample {
         String docker = "nextstrain/nextclade:2.14.0"
     }
     String basename = basename(genome_fasta, ".fasta")
-    command {
+    command <<<
         set -e
         apt-get update
         apt-get -y install python3
@@ -54,17 +89,23 @@ task nextclade_one_sample {
             --output-tree "~{basename}".nextclade.auspice.json \
             "~{genome_fasta}"
         python3 <<CODE
-        # transpose table
-        import codecs
+        import codecs, csv
+        cols = [('clade', 'NEXTCLADE_CLADE'),
+            ('short-clade', 'NEXTCLADE_SHORTCLADE'),
+            ('subclade', 'NEXTCLADE_SUBCLADE'),
+            ('aaSubstitutions', 'NEXTCLADE_AASUBS'),
+            ('aaDeletions', 'NEXTCLADE_AADELS')]
+        out = {}
         with codecs.open('~{basename}.nextclade.tsv', 'r', encoding='utf-8') as inf:
-            with codecs.open('transposed.tsv', 'w', encoding='utf-8') as outf:
-                for c in zip(*(l.rstrip().split('\t') for l in inf)):
-                    outf.write('\t'.join(c)+'\n')
+            for line in csv.DictReader(inf, delimiter='\t'):
+                for k,fname in cols:
+                    if line.get(k):
+                        out[k] = line[k]
+        for k, fname in cols:
+            with codecs.open(fname, 'w', encoding='utf-8') as outf:
+                outf.write(out.get(k, '')+'\n')
         CODE
-        grep ^clade\\W transposed.tsv | cut -f 2 | grep -v clade > NEXTCLADE_CLADE
-        grep ^aaSubstitutions\\W transposed.tsv | cut -f 2 | grep -v aaSubstitutions > NEXTCLADE_AASUBS
-        grep ^aaDeletions\\W transposed.tsv | cut -f 2 | grep -v aaDeletions > NEXTCLADE_AADELS
-    }
+    >>>
     runtime {
         docker: docker
         memory: "3 GB"
@@ -80,6 +121,8 @@ task nextclade_one_sample {
         File   auspice_json      = "~{basename}.nextclade.auspice.json"
         File   nextclade_tsv     = "~{basename}.nextclade.tsv"
         String nextclade_clade   = read_string("NEXTCLADE_CLADE")
+        String nextclade_shortclade = read_string("NEXTCLADE_SHORTCLADE")
+        String nextclade_subclade = read_string("NEXTCLADE_SUBCLADE")
         String aa_subs_csv       = read_string("NEXTCLADE_AASUBS")
         String aa_dels_csv       = read_string("NEXTCLADE_AADELS")
     }
@@ -280,7 +323,7 @@ task derived_cols {
         String?       lab_highlight_loc
         Array[File]   table_map = []
 
-        String        docker = "quay.io/broadinstitute/viral-core:2.2.4"
+        String        docker = "quay.io/broadinstitute/viral-core:2.3.1"
         Int           disk_size = 50
     }
     parameter_meta {
@@ -450,7 +493,7 @@ task nextstrain_build_subsample {
         File?  drop_list
 
         Int    machine_mem_gb = 50
-        String docker = "nextstrain/base:build-20230905T192825Z"
+        String docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
         Int    disk_size = 750
     }
@@ -594,7 +637,7 @@ task nextstrain_build_subsample {
 task nextstrain_ncov_defaults {
     input {
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
-        String docker                      = "nextstrain/base:build-20230905T192825Z"
+        String docker                      = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int    disk_size = 50
     }
     command {
@@ -632,7 +675,7 @@ task nextstrain_deduplicate_sequences {
         Boolean error_on_seq_diff = false
 
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
-        String docker                      = "nextstrain/base:build-20230905T192825Z"
+        String docker                      = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int disk_size = 750
     }
 
@@ -686,7 +729,7 @@ task nextstrain_ncov_sanitize_gisaid_data {
         String? prefix_to_strip
 
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
-        String docker                      = "nextstrain/base:build-20230905T192825Z"
+        String docker                      = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int    disk_size = 750
     }
 
@@ -762,7 +805,7 @@ task filter_subsample_sequences {
         Array[String]? exclude_where
         Array[String]? include_where
 
-        String         docker = "nextstrain/base:build-20230905T192825Z"
+        String         docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int            disk_size = 750
     }
     parameter_meta {
@@ -847,8 +890,8 @@ task filter_sequences_to_list {
         Array[File]? keep_list
 
         String       out_fname = sub(sub(basename(sequences, ".zst"), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
-        # Prior docker image: "nextstrain/base:build-20211012T204409Z"
-        String       docker = "quay.io/broadinstitute/viral-core:2.2.4"
+        # Prior docker image: "nextstrain/base:build-20240318T173028Z"
+        String       docker = "quay.io/broadinstitute/viral-core:2.3.1"
         Int          disk_size = 750
     }
     parameter_meta {
@@ -1145,8 +1188,10 @@ task augur_mafft_align {
         Boolean fill_gaps = true
         Boolean remove_reference = true
 
-        String  docker = "nextstrain/base:build-20230905T192825Z"
+        String  docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int     disk_size = 750
+        Int     mem_size = 180
+        Int     cpus = 64
     }
     command <<<
         set -e
@@ -1165,8 +1210,8 @@ task augur_mafft_align {
     >>>
     runtime {
         docker: docker
-        memory: "180 GB"
-        cpu :   64
+        memory: mem_size + " GB"
+        cpu :   cpus
         disks:  "local-disk " + disk_size + " LOCAL"
         disk: disk_size + " GB" # TES
         preemptible: 0
@@ -1218,7 +1263,7 @@ task augur_mask_sites {
         File   sequences
         File?  mask_bed
 
-        String docker = "nextstrain/base:build-20230905T192825Z"
+        String docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int    disk_size = 750
     }
     parameter_meta {
@@ -1277,7 +1322,7 @@ task draft_augur_tree {
 
         Int     cpus = 64
         Int     machine_mem_gb = 32
-        String  docker = "nextstrain/base:build-20230905T192825Z"
+        String  docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int     disk_size = 1250
     }
     parameter_meta {
@@ -1346,7 +1391,7 @@ task refine_augur_tree {
         String?  divergence_units = "mutations"
         File?    vcf_reference
 
-        String   docker = "nextstrain/base:build-20230905T192825Z"
+        String   docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int      disk_size = 750
         Int      machine_mem_gb = 75
     }
@@ -1420,7 +1465,7 @@ task ancestral_traits {
         Float?        sampling_bias_correction
 
         Int           machine_mem_gb = 32
-        String        docker = "nextstrain/base:build-20230905T192825Z"
+        String        docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int           disk_size = 750
     }
     String out_basename = basename(tree, '.nwk')
@@ -1473,7 +1518,7 @@ task ancestral_tree {
         File?    vcf_reference
         File?    output_vcf
 
-        String   docker = "nextstrain/base:build-20230905T192825Z"
+        String   docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int      disk_size = 300
     }
     parameter_meta {
@@ -1534,7 +1579,7 @@ task translate_augur_tree {
         File?  vcf_reference_output
         File?  vcf_reference
 
-        String docker = "nextstrain/base:build-20230905T192825Z"
+        String docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int    disk_size = 300
     }
     String out_basename = basename(tree, '.nwk')
@@ -1591,7 +1636,7 @@ task tip_frequencies {
         Boolean  include_internal_nodes = false
 
         Int      machine_mem_gb = 64
-        String   docker = "nextstrain/base:build-20230905T192825Z"
+        String   docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         String   out_basename = basename(tree, '.nwk')
         Int      disk_size = 200
     }
@@ -1651,7 +1696,7 @@ task assign_clades_to_nodes {
         File ref_fasta
         File clades_tsv
 
-        String docker = "nextstrain/base:build-20230905T192825Z"
+        String docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int    disk_size = 300
     }
     String out_basename = basename(basename(tree_nwk, ".nwk"), "_timetree")
@@ -1696,7 +1741,7 @@ task augur_import_beast {
         String? tip_date_delimiter
 
         Int     machine_mem_gb = 3
-        String  docker = "nextstrain/base:build-20230905T192825Z"
+        String  docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int     disk_size = 150
     }
     String tree_basename = basename(beast_mcc_tree, ".tree")
@@ -1757,7 +1802,7 @@ task export_auspice_json {
         String out_basename = basename(basename(tree, ".nwk"), "_timetree")
 
         Int    machine_mem_gb = 64
-        String docker = "nextstrain/base:build-20230905T192825Z"
+        String docker = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int    disk_size = 300
     }
     

@@ -84,7 +84,7 @@ task group_bams_by_sample {
 task get_bam_samplename {
   input {
     File    bam
-    String  docker = "quay.io/broadinstitute/viral-core:2.2.4"
+    String  docker = "quay.io/broadinstitute/viral-core:2.3.1"
   }
   Int   disk_size = round(size(bam, "GB")) + 50
   command <<<
@@ -111,7 +111,7 @@ task get_sample_meta {
   input {
     Array[File] samplesheets_extended
 
-    String      docker = "quay.io/broadinstitute/viral-core:2.2.4"
+    String      docker = "quay.io/broadinstitute/viral-core:2.3.1"
   }
   Int disk_size = 50
   command <<<
@@ -172,11 +172,11 @@ task merge_and_reheader_bams {
       File?        reheader_table
       String       out_basename = basename(in_bams[0], ".bam")
 
-      String       docker = "quay.io/broadinstitute/viral-core:2.2.4"
+      String       docker = "quay.io/broadinstitute/viral-core:2.3.1"
+      Int          disk_size = 750
+      Int          machine_mem_gb = 4
     }
     
-    Int disk_size = 750
-
     command <<<
         set -ex -o pipefail
 
@@ -224,7 +224,7 @@ task merge_and_reheader_bams {
 
     runtime {
         docker: docker
-        memory: "3 GB"
+        memory: machine_mem_gb + " GB"
         cpu: 2
         disks:  "local-disk " + disk_size + " LOCAL"
         disk: disk_size + " GB" # TES
@@ -243,8 +243,8 @@ task rmdup_ubam {
     File    reads_unmapped_bam
     String  method = "mvicuna"
 
-    Int?    machine_mem_gb
-    String  docker = "quay.io/broadinstitute/viral-core:2.2.4"
+    Int     machine_mem_gb = 7
+    String  docker = "quay.io/broadinstitute/viral-core:2.3.1"
   }
 
   Int disk_size = 375
@@ -256,32 +256,32 @@ task rmdup_ubam {
 
   String reads_basename = basename(reads_unmapped_bam, ".bam")
   
-  command {
+  command <<<
     set -ex -o pipefail
     mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
     read_utils.py --version | tee VERSION
 
-    read_utils.py rmdup_"${method}"_bam \
-      "${reads_unmapped_bam}" \
-      "${reads_basename}".dedup.bam \
+    read_utils.py rmdup_"~{method}"_bam \
+      "~{reads_unmapped_bam}" \
+      "~{reads_basename}".dedup.bam \
       --JVMmemory "$mem_in_mb"m \
       --loglevel=DEBUG
 
-    samtools view -c ${reads_basename}.dedup.bam | tee dedup_read_count_post
-    reports.py fastqc ${reads_basename}.dedup.bam ${reads_basename}.dedup_fastqc.html --out_zip ${reads_basename}.dedup_fastqc.zip
-  }
+    samtools view -c "~{reads_basename}.dedup.bam" | tee dedup_read_count_post
+    reports.py fastqc "~{reads_basename}.dedup.bam" "~{reads_basename}.dedup_fastqc.html" --out_zip "~{reads_basename}.dedup_fastqc.zip"
+  >>>
 
   output {
-    File   dedup_bam             = "${reads_basename}.dedup.bam"
-    File   dedup_fastqc          = "${reads_basename}.dedup_fastqc.html"
-    File   dedup_fastqc_zip      = "${reads_basename}.dedup_fastqc.zip"
+    File   dedup_bam             = "~{reads_basename}.dedup.bam"
+    File   dedup_fastqc          = "~{reads_basename}.dedup_fastqc.html"
+    File   dedup_fastqc_zip      = "~{reads_basename}.dedup_fastqc.zip"
     Int    dedup_read_count_post = read_int("dedup_read_count_post")
     String viralngs_version      = read_string("VERSION")
   }
 
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 7]) + " GB"
+    memory: machine_mem_gb + " GB"
     cpu:    2
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
@@ -299,11 +299,11 @@ task downsample_bams {
   input {
     Array[File]+ reads_bam
     Int?         readCount
-    Boolean?     deduplicateBefore = false
-    Boolean?     deduplicateAfter = false
+    Boolean      deduplicateBefore = false
+    Boolean      deduplicateAfter = false
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-core:2.2.4"
+    String       docker = "quay.io/broadinstitute/viral-core:2.3.1"
   }
 
   Int disk_size = 750
@@ -365,8 +365,9 @@ task FastqToUBAM {
     String? run_date
     String  platform_name
     String? sequencing_center
+    String? additional_picard_options
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.2.4"
+    String  docker = "quay.io/broadinstitute/viral-core:2.3.1"
   }
   Int disk_size = 375
   parameter_meta {
@@ -375,6 +376,7 @@ task FastqToUBAM {
     sample_name: { description: "Sample name. This is required and will populate the 'SM' read group value and will be used as the output filename (must be filename-friendly)." }
     library_name: { description: "Library name. This is required and will populate the 'LB' read group value. SM & LB combinations must be identical for any sequencing reads generated from the same sequencing library, and must be distinct for any reads generated from different libraries." }
     platform_name: { description: "Sequencing platform. This is required and will populate the 'PL' read group value. Must be one of CAPILLARY, DNBSEQ, HELICOS, ILLUMINA, IONTORRENT, LS454, ONT, PACBIO, or SOLID." }
+    additional_picard_options: { description: "A string containing additional options to pass to picard FastqToSam beyond those made explicitly available as inputs to this task. For valid values, see: https://broadinstitute.github.io/picard/command-line-overview.html#FastqToSam" }
   }
   command {
       set -ex -o pipefail
@@ -395,7 +397,7 @@ task FastqToUBAM {
         ${"PLATFORM_UNIT=" + platform_unit} \
         ${"RUN_DATE=" + run_date} \
         ${"PLATFORM=" + platform_name} \
-        ${"SEQUENCING_CENTER=" + sequencing_center}
+        ${"SEQUENCING_CENTER=" + sequencing_center} ${additional_picard_options}
   }
   runtime {
     docker: docker
@@ -416,7 +418,7 @@ task read_depths {
     File      aligned_bam
 
     String    out_basename = basename(aligned_bam, '.bam')
-    String    docker = "quay.io/broadinstitute/viral-core:2.2.4"
+    String    docker = "quay.io/broadinstitute/viral-core:2.3.1"
   }
   Int disk_size = 200
   command <<<

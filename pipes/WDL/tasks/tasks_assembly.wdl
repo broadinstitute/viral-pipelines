@@ -15,7 +15,7 @@ task assemble {
       String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
       
       Int?     machine_mem_gb
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.2.4.0"
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.3.1.4"
     }
     parameter_meta{
       reads_unmapped_bam: {
@@ -103,6 +103,86 @@ task assemble {
 
 }
 
+task select_references {
+  meta {
+    description: "Evaluate reference genomes based on ANI similarity to provided contigs. This will emit an ANI-rank-ordered table of references and will also cluster reference genomes based on ANI similarity to each other, picking only the top hit (based on ANI similairty to contigs) of each cluster. Default parameters for skani are tuned for viral genomes (-m 50 -s 85 --no-learned-ani --slow --robust --no-marker-index). This tool can tolerate a large number of reference genomes as input."
+  }
+  input {
+    Array[File]   reference_genomes_fastas
+    File          contigs_fasta
+
+    Int?          skani_m
+    Int?          skani_s
+    Int?          skani_c
+
+    String        docker = "quay.io/broadinstitute/viral-assemble:2.3.1.4"
+    Int           machine_mem_gb = 4
+    Int           cpu = 2
+    Int           disk_size = 100
+  }
+  String contigs_basename = basename(basename(contigs_fasta, '.fasta'), '.assembly1-spades')
+
+  command <<<
+    set -e
+
+    # run skani, find top hits, cluster references
+    assembly.py skani_contigs_to_refs \
+      "~{contigs_fasta}" \
+      "~{sep='" "' reference_genomes_fastas}" \
+      "~{contigs_basename}.refs_skani_dist.full.tsv" \
+      "~{contigs_basename}.refs_skani_dist.top.tsv" \
+      "~{contigs_basename}.ref_clusters.tsv" \
+      ~{'-m ' + skani_m} \
+      ~{'-s ' + skani_s} \
+      ~{'-c ' + skani_c} \
+      --loglevel=DEBUG
+
+    # create basename-only version of ref_clusters output file
+    # create tar-bundles of ref_clusters fastas, since Cromwell doesn't delocalize files in a Array[Array[File]] = read_tsv
+    python3 <<CODE
+    import os, os.path, shutil, tarfile
+    os.mkdir("clusters")
+    with open("~{contigs_basename}.ref_clusters.tsv", 'r') as inf:
+      with open("~{contigs_basename}.ref_clusters.basenames.tsv", 'w') as outf:
+        for line in inf:
+          fnames = line.strip().split('\t')
+          assert fnames
+          basefnames = list([f[:-6] if f.endswith('.fasta') else f for f in map(os.path.basename, fnames)])
+          outf.write('\t'.join(basefnames) + '\n')
+
+          with tarfile.open(os.path.join("clusters", basefnames[0] + "-" + str(len(basefnames))  + ".tar.gz"), "w:gz") as tarball:
+            for f in fnames:
+              shutil.copy(f, ".")
+              tarball.add(os.path.basename(f))
+              os.unlink(os.path.basename(f))
+    CODE
+
+    # create top-hits output files
+    cut -f 1 "~{contigs_basename}.refs_skani_dist.top.tsv" | tail +2 > TOP_FASTAS
+    for f in $(cat TOP_FASTAS); do basename "$f" .fasta; done > TOP_FASTAS_BASENAMES
+  >>>
+
+  output {
+    Array[File]          matched_reference_clusters_fastas_tars = glob("clusters/*.tar.gz")
+    Array[Array[String]] matched_reference_clusters_basenames = read_tsv("~{contigs_basename}.ref_clusters.basenames.tsv")
+    Array[String]        top_matches_per_cluster_basenames = read_lines("TOP_FASTAS_BASENAMES")
+    Array[File]          top_matches_per_cluster_fastas = read_lines("TOP_FASTAS")
+    File                 skani_dist_full_tsv = "~{contigs_basename}.refs_skani_dist.full.tsv"
+    File                 skani_dist_top_tsv  = "~{contigs_basename}.refs_skani_dist.top.tsv"
+  }
+
+  runtime {
+    docker: docker
+    memory: machine_mem_gb + " GB"
+    cpu:    cpu
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TESs
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
+
 task scaffold {
     input {
       File         contigs_fasta
@@ -115,6 +195,10 @@ task scaffold {
       Int          replace_length=55
       Boolean      allow_incomplete_output = false
 
+      Int?          skani_m
+      Int?          skani_s
+      Int?          skani_c
+
       Int?         nucmer_max_gap
       Int?         nucmer_min_match
       Int?         nucmer_min_cluster
@@ -122,7 +206,7 @@ task scaffold {
       Float?       scaffold_min_pct_contig_aligned
 
       Int?         machine_mem_gb
-      String       docker="quay.io/broadinstitute/viral-assemble:2.2.4.0"
+      String       docker="quay.io/broadinstitute/viral-assemble:2.3.1.4"
 
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
@@ -203,47 +287,76 @@ task scaffold {
 
         assembly.py --version | tee VERSION
 
+        # use skani to choose top hit
+        assembly.py skani_contigs_to_refs \
+          "~{contigs_fasta}" \
+          "~{sep='" "' reference_genome_fasta}" \
+          "~{sample_name}.refs_skani_dist.full.tsv" \
+          "~{sample_name}.refs_skani_dist.top.tsv" \
+          "~{sample_name}.ref_clusters.tsv" \
+          ~{'-m ' + skani_m} \
+          ~{'-s ' + skani_s} \
+          ~{'-c ' + skani_c} \
+          --loglevel=DEBUG
+        CHOSEN_REF_FASTA=$(cut -f 1 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1)
+        cut -f 3 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1 > SKANI_ANI
+        cut -f 4 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1 > SKANI_REF_AF
+        cut -f 5 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1 > SKANI_CONTIGS_AF
+        basename "$CHOSEN_REF_FASTA" .fasta > CHOSEN_REF_BASENAME
+
         assembly.py order_and_orient \
-          ~{contigs_fasta} \
-          ~{sep=' ' reference_genome_fasta} \
-          ~{sample_name}.intermediate_scaffold.fasta \
+          "~{contigs_fasta}" \
+          "$CHOSEN_REF_FASTA" \
+          "~{sample_name}".intermediate_scaffold.fasta \
           ~{'--min_contig_len=' + scaffold_min_contig_len} \
           ~{'--maxgap=' + nucmer_max_gap} \
           ~{'--minmatch=' + nucmer_min_match} \
           ~{'--mincluster=' + nucmer_min_cluster} \
           ~{'--min_pct_contig_aligned=' + scaffold_min_pct_contig_aligned} \
-          --outReference ~{sample_name}.scaffolding_chosen_ref.fasta \
-          --outStats ~{sample_name}.scaffolding_stats.txt \
+          --outReference "~{sample_name}".scaffolding_chosen_ref.fasta \
+          --outStats "~{sample_name}".scaffolding_stats.txt \
           --outAlternateContigs ~{sample_name}.scaffolding_alt_contigs.fasta \
           ~{true='--allow_incomplete_output' false="" allow_incomplete_output} \
           --loglevel=DEBUG
 
-        grep '^>' ~{sample_name}.scaffolding_chosen_ref.fasta | cut -c 2- | cut -f 1 -d ' ' > ~{sample_name}.scaffolding_chosen_refs.txt
+        grep '^>' "~{sample_name}".scaffolding_chosen_ref.fasta | cut -c 2- | cut -f 1 -d ' ' > "~{sample_name}".scaffolding_chosen_refs.txt
 
         assembly.py gapfill_gap2seq \
-          ~{sample_name}.intermediate_scaffold.fasta \
-          ~{reads_bam} \
-          ~{sample_name}.intermediate_gapfill.fasta \
+          "~{sample_name}".intermediate_scaffold.fasta \
+          "~{reads_bam}" \
+          "~{sample_name}".intermediate_gapfill.fasta \
           --memLimitGb $mem_in_gb \
           --maskErrors \
           --loglevel=DEBUG
 
         set +e +o pipefail
-        grep -v '^>' ~{sample_name}.intermediate_gapfill.fasta | tr -d '\n' | wc -c | tee assembly_preimpute_length
-        grep -v '^>' ~{sample_name}.intermediate_gapfill.fasta | tr -d '\nNn' | wc -c | tee assembly_preimpute_length_unambiguous
+        grep -v '^>' "~{sample_name}".intermediate_gapfill.fasta | tr -d '\n' | wc -c | tee assembly_preimpute_length
+        grep -v '^>' "~{sample_name}".intermediate_gapfill.fasta | tr -d '\nNn' | wc -c | tee assembly_preimpute_length_unambiguous
+        grep '^>' "~{sample_name}".intermediate_gapfill.fasta | wc -l | tee assembly_num_segments_recovered
+        grep '^>' "~{sample_name}".scaffolding_chosen_ref.fasta | wc -l | tee reference_num_segments_required
+        grep -v '^>' "~{sample_name}".scaffolding_chosen_ref.fasta | tr -d '\n' | wc -c | tee reference_length
         set -e -o pipefail
 
-        #Input assembly/contigs, FASTA, already ordered oriented and merged with the reference gneome (FASTA)
-        assembly.py impute_from_reference \
-          ~{sample_name}.intermediate_gapfill.fasta \
-          ~{sample_name}.scaffolding_chosen_ref.fasta \
-          ~{sample_name}.scaffolded_imputed.fasta \
-          --newName ~{sample_name} \
-          ~{'--replaceLength=' + replace_length} \
-          ~{'--minLengthFraction=' + min_length_fraction} \
-          ~{'--minUnambig=' + min_unambig} \
-          ~{'--aligner=' + aligner} \
-          --loglevel=DEBUG
+        if ~{true='true' false='false' allow_incomplete_output} && ! cmp -s assembly_num_segments_recovered reference_num_segments_required
+        then
+          # draft assembly does not have enough segments--and that's okay (allow_incomplete_output=true)
+          file_utils.py rename_fasta_sequences \
+            "~{sample_name}".intermediate_gapfill.fasta \
+            "~{sample_name}".scaffolded_imputed.fasta \
+            "~{sample_name}" --suffix_always --loglevel=DEBUG
+        else
+          # draft assembly must have the right number of segments (fail if not)
+          assembly.py impute_from_reference \
+            "~{sample_name}".intermediate_gapfill.fasta \
+            "~{sample_name}".scaffolding_chosen_ref.fasta \
+            "~{sample_name}".scaffolded_imputed.fasta \
+            --newName "~{sample_name}" \
+            ~{'--replaceLength=' + replace_length} \
+            ~{'--minLengthFraction=' + min_length_fraction} \
+            ~{'--minUnambig=' + min_unambig} \
+            ~{'--aligner=' + aligner} \
+            --loglevel=DEBUG
+        fi
     }
 
     output {
@@ -252,10 +365,17 @@ task scaffold {
         File   intermediate_gapfill_fasta            = "~{sample_name}.intermediate_gapfill.fasta"
         Int    assembly_preimpute_length             = read_int("assembly_preimpute_length")
         Int    assembly_preimpute_length_unambiguous = read_int("assembly_preimpute_length_unambiguous")
+        Int    assembly_num_segments_recovered       = read_int("assembly_num_segments_recovered")
+        Int    reference_num_segments_required       = read_int("reference_num_segments_required")
+        Int    reference_length                      = read_int("reference_length")
         Array[String] scaffolding_chosen_ref_names   = read_lines("~{sample_name}.scaffolding_chosen_refs.txt")
+        String scaffolding_chosen_ref_basename       = read_string("CHOSEN_REF_BASENAME")
         File   scaffolding_chosen_ref                = "~{sample_name}.scaffolding_chosen_ref.fasta"
-        File   scaffolding_stats                     = "~{sample_name}.scaffolding_stats.txt"
+        File   scaffolding_stats                     = "~{sample_name}.refs_skani_dist.full.tsv"
         File   scaffolding_alt_contigs               = "~{sample_name}.scaffolding_alt_contigs.fasta"
+        Float  skani_ani                             = read_float("SKANI_ANI")
+        Float  skani_ref_aligned_frac                = read_float("SKANI_REF_AF")
+        Float  skani_contigs_aligned_frac            = read_float("SKANI_CONTIGS_AF")
         String viralngs_version                      = read_string("VERSION")
     }
 
@@ -435,7 +555,7 @@ task align_reads {
     Boolean  skip_mark_dupes = false
 
     Int?     machine_mem_gb
-    String   docker = "quay.io/broadinstitute/viral-core:2.2.4"
+    String   docker = "quay.io/broadinstitute/viral-core:2.3.1"
 
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
   }
@@ -532,6 +652,7 @@ task align_reads {
     File   aligned_only_reads_bam_idx    = "~{sample_name}.mapped.bai"
     File   aligned_only_reads_fastqc     = "~{sample_name}.mapped_fastqc.html"
     File   aligned_only_reads_fastqc_zip = "~{sample_name}.mapped_fastqc.zip"
+    Int    reference_length              = read_int("assembly_length")
     Int    reads_provided                = read_int("reads_provided")
     Int    reads_aligned                 = read_int("reads_aligned")
     Int    read_pairs_aligned            = read_int("read_pairs_aligned")
@@ -563,14 +684,15 @@ task refine_assembly_with_aligned_reads {
     input {
       File     reference_fasta
       File     reads_aligned_bam
-      String   sample_name
+      String   out_basename = basename(reads_aligned_bam, '.bam')
+      String   sample_name = out_basename
 
       Boolean  mark_duplicates = false
       Float    major_cutoff = 0.5
       Int      min_coverage = 3
 
-      Int?     machine_mem_gb
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.2.4.0"
+      Int      machine_mem_gb = 15
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.3.1.4"
     }
 
     Int disk_size = 375
@@ -599,7 +721,7 @@ task refine_assembly_with_aligned_reads {
       }
     }
 
-    command {
+    command <<<
         set -ex -o pipefail
 
         # find 90% memory
@@ -624,36 +746,36 @@ task refine_assembly_with_aligned_reads {
           temp_markdup.bam \
           refined.fasta \
           --already_realigned_bam=temp_markdup.bam \
-          --outVcf ~{sample_name}.sites.vcf.gz \
+          --outVcf "~{out_basename}.sites.vcf.gz" \
           --min_coverage ~{min_coverage} \
           --major_cutoff ~{major_cutoff} \
           --JVMmemory "$mem_in_mb"m \
           --loglevel=DEBUG
 
         file_utils.py rename_fasta_sequences \
-          refined.fasta "${sample_name}.fasta" "${sample_name}"
+          refined.fasta "~{out_basename}.fasta" "~{sample_name}"
 
         # collect variant counts
         if (( $(cat refined.fasta | wc -l) > 1 )); then
-          bcftools filter -e "FMT/DP<${min_coverage}" -S . "${sample_name}.sites.vcf.gz" -Ou | bcftools filter -i "AC>1" -Ou > "${sample_name}.diffs.vcf"
-          bcftools filter -i 'TYPE="snp"'  "${sample_name}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_snps
-          bcftools filter -i 'TYPE!="snp"' "${sample_name}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_indels
+          bcftools filter -e "FMT/DP<~{min_coverage}" -S . "~{out_basename}.sites.vcf.gz" -Ou | bcftools filter -i "AC>1" -Ou > "~{out_basename}.diffs.vcf"
+          bcftools filter -i 'TYPE="snp"'  "~{out_basename}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_snps
+          bcftools filter -i 'TYPE!="snp"' "~{out_basename}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_indels
         else
           # empty output
           echo "0" > num_snps
           echo "0" > num_indels
-          cp "${sample_name}.sites.vcf.gz" "${sample_name}.diffs.vcf"
+          cp "~{out_basename}.sites.vcf.gz" "~{out_basename}.diffs.vcf"
         fi
 
         # collect figures of merit
         set +o pipefail # grep will exit 1 if it fails to find the pattern
         grep -v '^>' refined.fasta | tr -d '\n' | wc -c | tee assembly_length
         grep -v '^>' refined.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
-    }
+    >>>
 
     output {
-        File   refined_assembly_fasta      = "${sample_name}.fasta"
-        File   sites_vcf_gz                = "${sample_name}.sites.vcf.gz"
+        File   refined_assembly_fasta      = "~{out_basename}.fasta"
+        File   sites_vcf_gz                = "~{out_basename}.sites.vcf.gz"
         Int    assembly_length             = read_int("assembly_length")
         Int    assembly_length_unambiguous = read_int("assembly_length_unambiguous")
         Int    dist_to_ref_snps            = read_int("num_snps")
@@ -663,7 +785,7 @@ task refine_assembly_with_aligned_reads {
 
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 15]) + " GB"
+        memory: machine_mem_gb + " GB"
         cpu: 8
         disks:  "local-disk " + disk_size + " LOCAL"
         disk: disk_size + " GB" # TES
@@ -695,7 +817,7 @@ task refine_2x_and_plot {
       String? plot_coverage_novoalign_options = "-r Random -l 40 -g 40 -x 20 -t 100 -k"
 
       Int?    machine_mem_gb
-      String  docker = "quay.io/broadinstitute/viral-assemble:2.2.4.0"
+      String  docker = "quay.io/broadinstitute/viral-assemble:2.3.1.4"
 
       # do this in two steps in case the input doesn't actually have "cleaned" in the name
       String  sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
@@ -831,7 +953,7 @@ task run_discordance {
       String out_basename = "run"
       Int    min_coverage = 4
 
-      String docker = "quay.io/broadinstitute/viral-core:2.2.4"
+      String docker = "quay.io/broadinstitute/viral-core:2.3.1"
     }
     parameter_meta {
       reads_aligned_bam: {

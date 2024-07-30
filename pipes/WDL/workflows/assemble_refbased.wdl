@@ -63,6 +63,7 @@ workflow assemble_refbased {
         Array[File]+ reads_unmapped_bams
         File         reference_fasta
         String       sample_name = basename(reads_unmapped_bams[0], '.bam')
+        String?      sample_original_name
 
         String       aligner="minimap2"
         File?        novocraft_license
@@ -150,7 +151,8 @@ workflow assemble_refbased {
             reads_aligned_bam = aligned_trimmed_bam,
             min_coverage      = min_coverage,
             major_cutoff      = major_cutoff,
-            sample_name       = sample_name
+            out_basename      = sample_name,
+            sample_name       = select_first([sample_original_name, sample_name])
     }
 
     scatter(reads_unmapped_bam in reads_unmapped_bams) {
@@ -192,7 +194,7 @@ workflow assemble_refbased {
         File        align_to_ref_variants_vcf_gz                 = call_consensus.sites_vcf_gz
         Int         assembly_length                              = call_consensus.assembly_length
         Int         assembly_length_unambiguous                  = call_consensus.assembly_length_unambiguous
-        Int         reference_genome_length                      = plot_ref_coverage.assembly_length
+        Int         reference_genome_length                      = align_to_ref.reference_length[0]
         Float       assembly_mean_coverage                       = plot_ref_coverage.mean_coverage
         
         Int         dist_to_ref_snps                             = call_consensus.dist_to_ref_snps
