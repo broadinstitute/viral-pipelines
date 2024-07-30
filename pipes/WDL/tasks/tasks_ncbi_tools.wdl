@@ -6,6 +6,8 @@ task Fetch_SRA_to_BAM {
         String  SRA_ID
 
         String? sample_name
+        String? email_address
+        String? ncbi_api_key
         Int?    machine_mem_gb
         String  docker = "quay.io/broadinstitute/ncbi-tools:2.10.7.10"
     }
@@ -16,8 +18,11 @@ task Fetch_SRA_to_BAM {
     }
     command <<<
         set -e
+        ~{if defined(ncbi_api_key) then "export NCBI_API_KEY=~{ncbi_api_key}}" else ""}
+
         # fetch SRA metadata on this record
-        esearch -db sra -q "~{SRA_ID}" | efetch -mode json -json > SRA.json
+        esearch ~{if defined(email_address) then "-email ~{email_address}" else ""} -db sra -query "~{SRA_ID}" | efetch -db sra ~{if defined(email_address) then "-email ~{email_address}" else ""} -mode json -json > SRA.json
+
         cp SRA.json "~{SRA_ID}.json"
 
         # pull reads from SRA and make a fully annotated BAM -- must succeed
@@ -26,7 +31,7 @@ task Fetch_SRA_to_BAM {
         MODEL=$(jq -r ".EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.PLATFORM.$PLATFORM.INSTRUMENT_MODEL" SRA.json)
         SAMPLE=$(jq -r '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.SAMPLE.IDENTIFIERS.EXTERNAL_ID|select(.namespace == "BioSample")|.content' SRA.json)
         LIBRARY=$(jq -r .EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.EXPERIMENT.alias SRA.json)
-        RUNDATE=$(jq -r '.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.RUN_SET.RUN.SRAFiles|if (.SRAFile|type) == "object" then .SRAFile.date else [.SRAFile[]|select(.supertype == "Original")][0].date end' SRA.json | cut -f 1 -d ' ')
+        RUNDATE=$(jq -r '(.EXPERIMENT_PACKAGE_SET.EXPERIMENT_PACKAGE.RUN_SET | (if (.RUN|type) == "object" then (.RUN) else (.RUN[] | select(any(.; .accession == "~{SRA_ID}"))) end) | .SRAFiles) | if (.SRAFile|type) == "object" then .SRAFile.date else [.SRAFile[]|select(.supertype == "Original" or .supertype=="Primary ETL")][0].date end' SRA.json | cut -f 1 -d ' ')
 
         if [[ -n "~{sample_name}" ]]; then
             SAMPLE="~{sample_name}"

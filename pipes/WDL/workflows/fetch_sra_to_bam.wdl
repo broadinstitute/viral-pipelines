@@ -1,6 +1,7 @@
 version 1.0
 
 import "../tasks/tasks_ncbi_tools.wdl" as ncbi_tools
+import "../tasks/tasks_terra.wdl" as terra
 
 workflow fetch_sra_to_bam {
     meta {
@@ -10,7 +11,17 @@ workflow fetch_sra_to_bam {
         allowNestedInputs: true
     }
 
-    call ncbi_tools.Fetch_SRA_to_BAM
+    call terra.check_terra_env
+
+    #if(check_terra_env.is_running_on_terra) {
+    call ncbi_tools.Fetch_SRA_to_BAM {
+        input:
+            email_address = select_first([check_terra_env.user_email, ""])
+    }
+    #}
+    #if(!check_terra_env.is_running_on_terra) {
+    #    call ncbi_tools.Fetch_SRA_to_BAM
+    #}
 
     output {
         File   reads_ubam                = Fetch_SRA_to_BAM.reads_ubam
