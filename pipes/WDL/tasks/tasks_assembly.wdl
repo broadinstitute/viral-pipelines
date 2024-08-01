@@ -298,27 +298,55 @@ task scaffold {
           ~{'-s ' + skani_s} \
           ~{'-c ' + skani_c} \
           --loglevel=DEBUG
-        CHOSEN_REF_FASTA=$(cut -f 1 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1)
-        cut -f 3 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1 > SKANI_ANI
-        cut -f 4 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1 > SKANI_REF_AF
-        cut -f 5 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1 > SKANI_CONTIGS_AF
-        basename "$CHOSEN_REF_FASTA" .fasta > CHOSEN_REF_BASENAME
 
-        assembly.py order_and_orient \
-          "~{contigs_fasta}" \
-          "$CHOSEN_REF_FASTA" \
-          "~{sample_name}".intermediate_scaffold.fasta \
-          ~{'--min_contig_len=' + scaffold_min_contig_len} \
-          ~{'--maxgap=' + nucmer_max_gap} \
-          ~{'--minmatch=' + nucmer_min_match} \
-          ~{'--mincluster=' + nucmer_min_cluster} \
-          ~{'--min_pct_contig_aligned=' + scaffold_min_pct_contig_aligned} \
-          --outReference "~{sample_name}".scaffolding_chosen_ref.fasta \
-          --outStats "~{sample_name}".scaffolding_stats.txt \
-          --outAlternateContigs ~{sample_name}.scaffolding_alt_contigs.fasta \
-          ~{true='--allow_incomplete_output' false="" allow_incomplete_output} \
-          --loglevel=DEBUG
+        # sometimes skani fails; if so, just fall-back to sending all refs downstream
+        if [[ $(wc -l <"~{sample_name}.refs_skani_dist.full.tsv") -ge 2 ]]; then
+          # skani reference selection worked: just try one reference
+          CHOSEN_REF_FASTA=$(cut -f 1 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1)
+          basename "$CHOSEN_REF_FASTA" .fasta > CHOSEN_REF_BASENAME
 
+          assembly.py order_and_orient \
+            "~{contigs_fasta}" \
+            "$CHOSEN_REF_FASTA" \
+            "~{sample_name}".intermediate_scaffold.fasta \
+            ~{'--min_contig_len=' + scaffold_min_contig_len} \
+            ~{'--maxgap=' + nucmer_max_gap} \
+            ~{'--minmatch=' + nucmer_min_match} \
+            ~{'--mincluster=' + nucmer_min_cluster} \
+            ~{'--min_pct_contig_aligned=' + scaffold_min_pct_contig_aligned} \
+            --outReference "~{sample_name}".scaffolding_chosen_ref.fasta \
+            --outStats "~{sample_name}".scaffolding_stats.txt \
+            --outAlternateContigs ~{sample_name}.scaffolding_alt_contigs.fasta \
+            ~{true='--allow_incomplete_output' false="" allow_incomplete_output} \
+            --loglevel=DEBUG
+
+          cut -f 3 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1 > SKANI_ANI
+          cut -f 4 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1 > SKANI_REF_AF
+          cut -f 5 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1 > SKANI_CONTIGS_AF
+
+        else
+          # skani reference selection failed: try all references
+          echo "0" > SKANI_ANI
+          echo "0" > SKANI_REF_AF
+          echo "0" > SKANI_CONTIGS_AF
+          echo "" > CHOSEN_REF_BASENAME
+
+          assembly.py order_and_orient \
+            "~{contigs_fasta}" \
+            "~{sep='" "' reference_genome_fasta}" \
+            "~{sample_name}".intermediate_scaffold.fasta \
+            ~{'--min_contig_len=' + scaffold_min_contig_len} \
+            ~{'--maxgap=' + nucmer_max_gap} \
+            ~{'--minmatch=' + nucmer_min_match} \
+            ~{'--mincluster=' + nucmer_min_cluster} \
+            ~{'--min_pct_contig_aligned=' + scaffold_min_pct_contig_aligned} \
+            --outReference "~{sample_name}".scaffolding_chosen_ref.fasta \
+            --outStats "~{sample_name}".scaffolding_stats.txt \
+            --outAlternateContigs ~{sample_name}.scaffolding_alt_contigs.fasta \
+            ~{true='--allow_incomplete_output' false="" allow_incomplete_output} \
+            --loglevel=DEBUG
+
+        fi
         grep '^>' "~{sample_name}".scaffolding_chosen_ref.fasta | cut -c 2- | cut -f 1 -d ' ' > "~{sample_name}".scaffolding_chosen_refs.txt
 
         assembly.py gapfill_gap2seq \
