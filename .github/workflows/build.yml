@@ -10,6 +10,11 @@ on:
     types:
       - created
 
+  # cancel earlier actions, if a commit is added to a branch or a PR
+  concurrency:
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
+
 env:
   PYTHONIOENCODING: UTF8
   DOCKER_REGISTRY: "quay.io"
