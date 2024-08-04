@@ -3,6 +3,5 @@ Sphinx==7.4.7 #override sphinx pinning done by RTD: https://docs.readthedocs.io/
 sphinx-argparse==0.5.2
 sphinx-rtd-theme>=2.0.0
 PyYAML==6.0.1
-mock==5.0.1
 recommonmark
 wdl-aid==1.0.0

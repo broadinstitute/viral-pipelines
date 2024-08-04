@@ -12,7 +12,7 @@ task trim_rmdup_subsamp {
         Int machine_mem_gb = 128
         Int cpu = 16
         Int disk_size_gb = 100 
-        String docker ="quay.io/broadinstitute/viral-assemble:2.3.1.4"
+        String docker ="quay.io/broadinstitute/viral-assemble:2.3.2.0"
     }
     parameter_meta {
         inBam: {

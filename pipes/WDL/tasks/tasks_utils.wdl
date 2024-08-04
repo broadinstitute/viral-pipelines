@@ -43,8 +43,7 @@ task zcat {
         import os.path
         import gzip, lzma, bz2
         import lz4.frame # pypi library: lz4
-        import zstandard as zstd # pypi library: zstandard
-        import util.file # viral-core
+        import zstandard # pypi library: zstandard
 
         # magic bytes from here:
         # https://en.wikipedia.org/wiki/List_of_file_signatures
@@ -53,7 +52,7 @@ task zcat {
             b"\xfd\x37\x7a\x58\x5a\x00": lzma.open,      # .xz
             b"\x42\x5a\x68":             bz2.open,       # .bz2
             b"\x04\x22\x4d\x18":         lz4.frame.open, # .lz4
-            b"\x28\xb5\x2f\xfd":         util.file.zstd_open   # .zst (open using function above rather than library function)
+            b"\x28\xb5\x2f\xfd":         zstandard.open  # .zst
         }
         extension_to_compressor = {
             ".gz":   gzip.open,      # .gz
@@ -61,8 +60,8 @@ task zcat {
             ".xz":   lzma.open,      # .xz
             ".bz2":  bz2.open,       # .bz2
             ".lz4":  lz4.frame.open, # .lz4
-            ".zst":  util.file.zstd_open,  # .zst (open using function above rather than library function)
-            ".zstd": util.file.zstd_open   # .zst (open using function above rather than library function)
+            ".zst":  zstandard.open, # .zst
+            ".zstd": zstandard.open  # .zst
         }
 
         # max number of bytes we need to identify one of the files listed above
@@ -104,7 +103,7 @@ task zcat {
         { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
-        docker: "quay.io/broadinstitute/viral-core:2.3.1"
+        docker: "quay.io/broadinstitute/viral-core:2.3.2"
         memory: "1 GB"
         cpu:    cpus
         disks:  "local-disk " + disk_size + " LOCAL"
@@ -332,8 +331,7 @@ task tsv_join {
     import os.path
     import gzip, lzma, bz2
     import lz4.frame # pypi library: lz4
-    import zstandard as zstd # pypi library: zstandard
-    import util.file # viral-core
+    import zstandard # pypi library: zstandard
 
     # magic bytes from here:
     # https://en.wikipedia.org/wiki/List_of_file_signatures
@@ -342,7 +340,7 @@ task tsv_join {
         b"\xfd\x37\x7a\x58\x5a\x00": lzma.open,      # .xz
         b"\x42\x5a\x68":             bz2.open,       # .bz2
         b"\x04\x22\x4d\x18":         lz4.frame.open, # .lz4
-        b"\x28\xb5\x2f\xfd":         util.file.zstd_open   # .zst (open using function above rather than library function)
+        b"\x28\xb5\x2f\xfd":         zstandard.open  # .zst
     }
     extension_to_compressor = {
         ".gz":   gzip.open,      # .gz
@@ -350,8 +348,8 @@ task tsv_join {
         ".xz":   lzma.open,      # .xz
         ".bz2":  bz2.open,       # .bz2
         ".lz4":  lz4.frame.open, # .lz4
-        ".zst":  util.file.zstd_open,  # .zst (open using function above rather than library function)
-        ".zstd": util.file.zstd_open   # .zst (open using function above rather than library function)
+        ".zst":  zstandard.open, # .zst
+        ".zstd": zstandard.open  # .zst
     }
 
     # max number of bytes we need to identify one of the files listed above
@@ -432,7 +430,7 @@ task tsv_join {
   runtime {
     memory: "~{machine_mem_gb} GB"
     cpu: 4
-    docker: "quay.io/broadinstitute/viral-core:2.3.1"
+    docker: "quay.io/broadinstitute/viral-core:2.3.2"
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
@@ -519,7 +517,7 @@ task tsv_stack {
   input {
     Array[File]+ input_tsvs
     String       out_basename
-    String       docker = "quay.io/broadinstitute/viral-core:2.3.1"
+    String       docker = "quay.io/broadinstitute/viral-core:2.3.2"
   }
 
   Int disk_size = 50
@@ -782,7 +780,7 @@ task filter_sequences_by_length {
         File   sequences_fasta
         Int    min_non_N = 1
 
-        String docker = "quay.io/broadinstitute/viral-core:2.3.1"
+        String docker = "quay.io/broadinstitute/viral-core:2.3.2"
         Int    disk_size = 750
     }
     parameter_meta {

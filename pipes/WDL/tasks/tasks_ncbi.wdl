@@ -192,7 +192,7 @@ task structured_comments {
 
     File?  filter_to_ids
 
-    String docker = "quay.io/broadinstitute/viral-core:2.3.1"
+    String docker = "quay.io/broadinstitute/viral-core:2.3.2"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -272,7 +272,7 @@ task rename_fasta_header {
 
     String out_basename = basename(genome_fasta, ".fasta")
 
-    String docker = "quay.io/broadinstitute/viral-core:2.3.1"
+    String docker = "quay.io/broadinstitute/viral-core:2.3.2"
   }
   command {
     set -e
@@ -437,7 +437,7 @@ task sra_meta_prep {
     Boolean     paired
 
     String      out_name = "sra_metadata.tsv"
-    String      docker="quay.io/broadinstitute/viral-core:2.3.1"
+    String      docker="quay.io/broadinstitute/viral-core:2.3.2"
   }
   Int disk_size = 100
   parameter_meta {
@@ -1010,3 +1010,68 @@ task vadr {
   }
 }
 
+task sequence_rename_by_species {
+  meta {
+    description: "Rename sequences based on species-specific naming conventions for many viral taxa."
+  }
+  input {
+    String sample_id
+    String organism_name
+    File   biosample_attributes
+    String taxid
+    File   taxdump_tgz
+
+    String docker = "quay.io/broadinstitute/viral-classify:2.2.4.2"
+  }
+  command <<<
+    set -e
+    mkdir -p taxdump
+    read_utils.py extract_tarball "~{taxdump_tgz}" taxdump
+    python3 << CODE
+    import metagenomics
+    taxdb = metagenomics.TaxonomyDb(tax_dir='taxdump', load_nodes=True, load_gis=False)
+    taxid = int('~{taxid}')
+    ancestors = taxdb.get_ordered_ancestors(taxid)
+
+
+    if any(node == 3052310 for node in [taxid] + ancestors):
+      # LASV
+      pass
+    elif any(node == 186538 for node in [taxid] + ancestors):
+      # ZEBOV
+      pass
+    elif any(node == 11250 for node in [taxid] + ancestors):
+      # RSV -- no real convention! Some coalescence around this:
+      # <type>/<host lowercase>/Country/ST-Institution-LabID/Year
+      # e.g. RSV-A/human/USA/MA-Broad-1234/2020
+      pass
+    elif any(node == 2697049 for node in [taxid] + ancestors):
+      # SARS-CoV-2
+      # SARS-CoV-2/<host lowercase>/Country/ST-Institution-LabID/Year
+      # e.g. SARS-CoV-2/human/USA/MA-Broad-1234/2020
+      pass
+    elif any((node == 11320 or node == 11520) for node in [taxid] + ancestors):
+      # Flu A or B
+      # <type>/<hostname if not human>/<geoloc>/seqUID/year
+      # e.g. A/Massachusetts/Broad_MGH-1234/2001 or A/chicken/Hokkaido/TU25-3/2022 or B/Rhode Island/RISHL-1234/2024
+      pass
+    elif any(node == 12059 for node in [taxid] + ancestors):
+      # Enterovirus (including rhinos)
+      pass
+    else:
+      # everything else
+      pass
+
+    CODE
+  >>>
+  output {
+    String assembly_name_genbank = read_string("assembly_name_genbank")
+  }
+  runtime {
+    docker: docker
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
