@@ -108,6 +108,8 @@ task krakenuniq {
 
     # merge all krona reports
     ktImportKrona -o krakenuniq.krona.combined.html *.krakenuniq-krona.html
+
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
   >>>
 
   output {
@@ -115,6 +117,9 @@ task krakenuniq {
     Array[File] krakenuniq_summary_reports  = glob("*.krakenuniq-summary_report.txt")
     Array[File] krona_report_html           = glob("*.krakenuniq-krona.html")
     File        krona_report_merged_html    = "krakenuniq.krona.combined.html"
+
+    Int         max_ram_gb                  = ceil(read_float("MEM_BYTES")/1000000000)
+
     String      viralngs_version            = read_string("VERSION")
   }
 
@@ -305,12 +310,17 @@ task kraken2 {
       --loglevel=DEBUG
 
     wait # pigz reads.txt
+
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
   >>>
 
   output {
     File   kraken2_reads_report   = "~{out_basename}.kraken2.reads.txt.gz"
     File   kraken2_summary_report = "~{out_basename}.kraken2.report.txt"
     File   krona_report_html      = "~{out_basename}.kraken2.krona.html"
+
+    Int    max_ram_gb             = ceil(read_float("MEM_BYTES")/1000000000)
+
     String viralngs_version       = read_string("VERSION")
   }
 
