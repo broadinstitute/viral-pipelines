@@ -11,12 +11,18 @@ workflow fetch_sra_to_bam {
         allowNestedInputs: true
     }
 
+    input {
+        String? email_address
+    }
+
     call terra.check_terra_env
+
+    String? user_email_address = select_first([email_address,check_terra_env.user_email, ""])
 
     #if(check_terra_env.is_running_on_terra) {
     call ncbi_tools.Fetch_SRA_to_BAM {
         input:
-            email_address = select_first([check_terra_env.user_email, ""])
+            email_address = user_email_address
     }
     #}
     #if(!check_terra_env.is_running_on_terra) {
