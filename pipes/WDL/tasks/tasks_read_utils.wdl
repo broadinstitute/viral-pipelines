@@ -428,7 +428,7 @@ task read_depths {
   >>>
 
   output {
-    File   read_depths    = "~{out_basename}.read_depths.txt"
+    File read_depths = "~{out_basename}.read_depths.txt"
   }
   runtime {
     docker: docker

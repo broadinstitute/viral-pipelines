@@ -177,7 +177,6 @@ task ChunkBlastHits {
         Int     max_target_seqs   = 1
         String  output_type       = "full_line"
         String? log_dir 
-        String  blast_hits_output = "~{fasta_basename}_new_output.txt"
 
         Int     machine_mem_gb    = 64 
         Int     cpu               = 16
@@ -186,7 +185,8 @@ task ChunkBlastHits {
         String  docker            = "quay.io/broadinstitute/viral-classify:fn_blast" #skip-global-version-pin
     }
 
-    String fasta_basename = basename(inFasta, ".fasta")
+    String fasta_basename     = basename(inFasta, ".fasta")
+    String blast_hits_output = "~{fasta_basename}_new_output.txt"
     #setting current working directory as logging outputs
     String log_dir_final = select_first([log_dir, "."])
 
