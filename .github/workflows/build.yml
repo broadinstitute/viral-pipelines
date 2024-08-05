@@ -10,6 +10,12 @@ on:
     types:
       - created
 
+concurrency:
+  # Group jobs by the branch or tag ref to ensure only one job runs for a ref at a time
+  group: ${{ github.ref }}
+  # Cancel any in-progress jobs for the same group
+  cancel-in-progress: true
+
 env:
   PYTHONIOENCODING: UTF8
   DOCKER_REGISTRY: "quay.io"
@@ -32,6 +38,8 @@ env:
 
 jobs:
   validate_wdl_miniwdl:
+    # Run if not a push event or if there's no pull request for the branch
+    if: github.event_name != 'push' || github.event.pull_request == null
     runs-on: ubuntu-20.04
     steps:
       - name: checkout repository
@@ -85,6 +93,8 @@ jobs:
           miniwdl check pipes/WDL/workflows/*.wdl
 
   validate_wdl_womtool:
+    # Run if not a push event or if there's no pull request for the branch
+    if: github.event_name != 'push' || github.event.pull_request == null
     runs-on: ubuntu-20.04
     steps:
       - name: checkout repository
@@ -135,6 +145,8 @@ jobs:
   ## readthedocs does its own build trigger. this job exists simply to 
   ## attempt a build and alert us of documentation build failures because otherwise we would never know.
   test_docs:
+    # Run if not a push event or if there's no pull request for the branch
+    if: github.event_name != 'push' || github.event.pull_request == null
     runs-on: ubuntu-20.04
     steps:
       - name: checkout repository
@@ -179,6 +191,8 @@ jobs:
           github_actions_ci/build-docs.sh
 
   test_cromwell:
+    # Run if not a push event or if there's no pull request for the branch
+    if: github.event_name != 'push' || github.event.pull_request == null
     needs: validate_wdl_womtool
     runs-on: ubuntu-20.04
     steps:
@@ -234,6 +248,8 @@ jobs:
           github_actions_ci/tests-cromwell.sh
 
   test_miniwdl:
+    # Run if not a push event or if there's no pull request for the branch
+    if: github.event_name != 'push' || github.event.pull_request == null
     needs: validate_wdl_miniwdl
     runs-on: ubuntu-20.04
     steps:
