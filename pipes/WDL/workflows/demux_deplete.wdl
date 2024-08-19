@@ -178,6 +178,22 @@ workflow demux_deplete {
         }
     }
 
+    if(defined(biosample_map)) {
+        #### SRA submission prep
+        call ncbi.sra_meta_prep {
+            input:
+                cleaned_bam_filepaths = select_all(cleaned_bam_passing),
+                biosample_map         = select_first([biosample_map]),
+                library_metadata      = samplesheet_rename_ids.new_sheet,
+                platform              = "ILLUMINA",
+                paired                = (illumina_demux.run_info[0]['indexes'] == '2'),
+
+                out_name              = "sra_metadata-~{illumina_demux.run_info[0]['run_id']}.tsv",
+                instrument_model      = select_first(flatten([[instrument_model_user_specified],[illumina_demux.run_info[0]['sequencer_model']]])),
+                title                 = select_first([sra_title])
+        }
+    }
+
     if(insert_demux_outputs_into_terra_tables){
         call terra.check_terra_env
 
@@ -194,22 +210,6 @@ workflow demux_deplete {
                 meta_by_filename_json        = meta_filename.merged_json,
                 meta_by_sample_json          = meta_sample.merged_json
             }
-        }
-    }
-
-    #### SRA submission prep
-    if(defined(biosample_map)) {
-        call ncbi.sra_meta_prep {
-            input:
-                cleaned_bam_filepaths = select_all(cleaned_bam_passing),
-                biosample_map         = select_first([biosample_map]),
-                library_metadata      = samplesheet_rename_ids.new_sheet,
-                platform              = "ILLUMINA",
-                paired                = (illumina_demux.run_info[0]['indexes'] == '2'),
-
-                out_name              = "sra_metadata-~{illumina_demux.run_info[0]['run_id']}.tsv",
-                instrument_model      = select_first(flatten([[instrument_model_user_specified],[illumina_demux.run_info[0]['sequencer_model']]])),
-                title                 = select_first([sra_title])
         }
     }
 
