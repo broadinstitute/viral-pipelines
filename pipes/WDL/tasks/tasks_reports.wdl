@@ -456,6 +456,8 @@ task align_and_count {
 
     TOTAL_COUNT_OF_TOP_HIT=$(grep -E "^($TOP_HIT)" "~{reads_basename}.count.~{ref_basename}.txt" | cut -f3 | tee TOTAL_COUNT_OF_TOP_HIT)
     TOTAL_COUNT_OF_LESSER_HITS=$((grep -vE "^(\*|$TOP_HIT)" "~{reads_basename}.count.~{ref_basename}.txt" || echo "0" ) | cut -f3 | paste -sd+ - | bc -l | tee TOTAL_COUNT_OF_LESSER_HITS)
+    echo $TOTAL_COUNT_OF_TOP_HIT | tee TOTAL_COUNT_OF_TOP_HIT
+    echo $TOTAL_COUNT_OF_LESSER_HITS | tee TOTAL_COUNT_OF_LESSER_HITS
 
     if [ $TOTAL_COUNT_OF_LESSER_HITS -ne 0 -o $TOTAL_COUNT_OF_TOP_HIT -ne 0 ]; then
       PCT_MAPPING_TO_LESSER_HITS=$( echo "scale=3; 100 * $TOTAL_COUNT_OF_LESSER_HITS / ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT)" | \
@@ -466,6 +468,7 @@ task align_and_count {
     fi
 
     TOTAL_READS_IN_INPUT=$(samtools view -c "~{reads_basename}.bam")
+    echo $TOTAL_READS_IN_INPUT | tee TOTAL_READS_IN_INPUT
     if [ $TOTAL_READS_IN_INPUT -eq 0 ]; then
       echo "no reads in input bam"
       PCT_OF_INPUT_READS_MAPPED=$(echo "0" | tee "~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt")
@@ -480,7 +483,11 @@ task align_and_count {
     
     File   report_top_hits  = "~{reads_basename}.count.~{ref_basename}.top_~{topNHits}_hits.txt"
     String top_hit_id       = read_string("~{reads_basename}.count.~{ref_basename}.top.txt")
-    
+
+    Int    reads_total          = read_int("TOTAL_READS_IN_INPUT")
+    Int    reads_mapped_top_hit = read_int("TOTAL_COUNT_OF_TOP_HIT")
+    Int    reads_mapped         = read_int("TOTAL_COUNT_OF_LESSER_HITS") + read_int("TOTAL_COUNT_OF_TOP_HIT")
+
     String pct_total_reads_mapped    = read_string('~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt')
     String pct_lesser_hits_of_mapped = read_string('~{reads_basename}.count.~{ref_basename}.pct_lesser_hits_of_mapped.txt')
     

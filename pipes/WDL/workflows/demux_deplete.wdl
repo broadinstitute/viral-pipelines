@@ -158,17 +158,22 @@ workflow demux_deplete {
                 reads_bam = raw_reads,
                 ref_db = spikein_db
         }
-        call taxon_filter.deplete_taxa as deplete {
-            input:
-                raw_reads_unmapped_bam = raw_reads,
-                bmtaggerDbs = bmtaggerDbs,
-                blastDbs = blastDbs,
-                bwaDbs = bwaDbs
+        if (length(flatten(select_all([bmtaggerDbs, blastDbs, bwaDbs]))) > 0) {
+            call taxon_filter.deplete_taxa as deplete {
+                input:
+                    raw_reads_unmapped_bam = raw_reads,
+                    bmtaggerDbs = bmtaggerDbs,
+                    blastDbs = blastDbs,
+                    bwaDbs = bwaDbs
+            }
         }
-        if (deplete.depletion_read_count_post >= min_reads_per_bam) {
-            File cleaned_bam_passing = deplete.cleaned_bam
+
+        Int  read_count_post_depletion = select_first([deplete.depletion_read_count_post, spikein.reads_total])
+        File cleaned_bam = select_first([deplete.cleaned_bam, raw_reads])
+        if (read_count_post_depletion >= min_reads_per_bam) {
+            File cleaned_bam_passing = cleaned_bam
         }
-        if (deplete.depletion_read_count_post < min_reads_per_bam) {
+        if (read_count_post_depletion < min_reads_per_bam) {
             File empty_bam = raw_reads
         }
     }
@@ -216,7 +221,7 @@ workflow demux_deplete {
     }
     call reports.MultiQC as multiqc_cleaned {
         input:
-            input_files = deplete.cleaned_fastqc_zip,
+            input_files = cleaned_bam,
             file_name   = "multiqc-cleaned.html"
     }
     call reports.align_and_count_summary as spike_summary {
@@ -228,7 +233,7 @@ workflow demux_deplete {
 
     output {
         Array[File] raw_reads_unaligned_bams                 = flatten(illumina_demux.raw_reads_unaligned_bams)
-        Array[Int]  read_counts_raw                          = deplete.depletion_read_count_pre
+        Array[Int]  read_counts_raw                          = spikein.reads_total
         
         Map[String,Map[String,String]] meta_by_filename      = meta_filename.merged
         Map[String,Map[String,String]] meta_by_sample        = meta_sample.merged
@@ -237,7 +242,7 @@ workflow demux_deplete {
         
         Array[File] cleaned_reads_unaligned_bams             = select_all(cleaned_bam_passing)
         Array[File] cleaned_bams_tiny                        = select_all(empty_bam)
-        Array[Int]  read_counts_depleted                     = deplete.depletion_read_count_post
+        Array[Int]  read_counts_depleted                     = read_count_post_depletion
         
         File?       sra_metadata                             = sra_meta_prep.sra_metadata
         File?       cleaned_bam_uris                         = sra_meta_prep.cleaned_bam_uris
