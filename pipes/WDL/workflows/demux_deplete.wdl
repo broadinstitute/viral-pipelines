@@ -179,6 +179,14 @@ workflow demux_deplete {
     }
 
     if(defined(biosample_map)) {
+        #### biosample metadata mapping
+        call ncbi.biosample_to_table {
+            input:
+                biosample_attributes_tsv = select_first([biosample_map]),
+                cleaned_bam_filepaths    = select_all(cleaned_bam_passing),
+                demux_meta_json          = meta_filename.merged_json
+        }
+
         #### SRA submission prep
         call ncbi.sra_meta_prep {
             input:
@@ -209,6 +217,15 @@ workflow demux_deplete {
                 cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing),
                 meta_by_filename_json        = meta_filename.merged_json,
                 meta_by_sample_json          = meta_sample.merged_json
+            }
+
+            if(defined(biosample_map)) {
+                call terra.upload_entities_tsv {
+                    input:
+                        workspace_name   = check_terra_env.workspace_name,
+                        terra_project    = check_terra_env.workspace_namespace,
+                        tsv_file         = select_first([biosample_to_table.sample_meta_tsv])
+                }
             }
         }
     }

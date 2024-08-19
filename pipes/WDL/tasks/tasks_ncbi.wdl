@@ -554,6 +554,87 @@ task sra_meta_prep {
   }
 }
 
+task biosample_to_table {
+  meta {
+    description: "Reformats a BioSample registration attributes table (attributes.tsv) for ingest into a Terra table."
+  }
+  input {
+    File        biosample_attributes_tsv
+    Array[File] cleaned_bam_filepaths
+    File        demux_meta_json
+
+    String  sanitized_id_col = "entity:sample_id"
+    String  docker = "python:slim"
+  }
+  String base = basename(basename(biosample_attributes_tsv, ".txt"), ".tsv")
+  parameter_meta {
+    cleaned_bam_filepaths: {
+      description: "Unaligned bam files containing cleaned (submittable) reads.",
+      localization_optional: true,
+      stream: true,
+      patterns: ["*.bam"]
+    }
+  }
+  command <<<
+    set -ex -o pipefail
+
+    python3 << CODE
+    import os.path
+    import csv
+    import json
+
+    # load demux metadata
+    with open("~{demux_meta_json}", 'rt') as inf:
+      demux_meta_by_file = json.load(inf)
+
+    # load list of bams surviving filters
+    bam_fnames = list(os.path.basename(x) for x in '~{sep="*" cleaned_bam_filepaths}'.split('*'))
+    bam_fnames = list(x[:-len('.bam')] for x in bam_fnames if x.endswith('.bam'))
+    bam_fnames = list(x[:-len('.cleaned')] for x in bam_fnames if x.endswith('.cleaned'))
+    sample_to_sanitized = {demux_meta_by_file.get(x, {}).get('sample_original'): demux_meta_by_file.get(x, {}).get('sample') for x in bam_fnames}
+    if None in sample_to_sanitized:
+      del sample_to_sanitized[None]
+    sample_names_seen = sample_to_sanitized.keys()
+    print("samples seen ({}): {}".format(len(sample_names_seen), sample_names_seen))
+
+    # load biosample metadata
+    biosample_attributes = []
+    biosample_headers = []
+    with open('~{biosample_attributes_tsv}', 'rt') as inf:
+      for row in csv.DictReader(inf, delimiter='\t'):
+        if row['sample_name'] in sample_names_seen and row['message'] == "Successfully loaded":
+          row['biosample_accession'] = row.get('accession')
+          biosample_attributes.append(row)
+          for k,v in row.items()
+            if v and (k not in biosample_headers) and h not in ('message'):
+              if h == 'accession':
+                h = 'biosample_accession'
+              biosample_headers.append(h)
+    print("biosample headers ({}): {}".format(len(biosample_headers), biosample_headers))
+    print("biosample rows ({})".format(len(biosample_attributes)))
+
+    # write reformatted table
+    with open('~{base}.entities.tsv', wt) as outf:
+      writer = csv.DictWriter(outf, delimiter='\t', fieldnames=["~{sanitized_id_col}"]+biosample_headers, quoting=csv.QUOTE_MINIMAL)
+      writer.writeheader()
+      for row in biosample_attributes:
+        outrow = {h: row[h] for h in biosample_headers}
+        outrow["~{sanitized_id_col}"] = sample_to_sanitized[row['sample_name']]
+        writer.writerow(row)
+    CODE
+  >>>
+  output {
+    File sample_meta_tsv = "~{base}.entities.tsv"
+  }
+  runtime {
+    docker: docker
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
 task biosample_to_genbank {
   meta {
     description: "Prepares two input metadata files for Genbank submission based on a BioSample registration attributes table (attributes.tsv) since all of the necessary values are there. This produces both a Genbank Source Modifier Table and a BioSample ID map file that can be fed into the prepare_genbank task."
