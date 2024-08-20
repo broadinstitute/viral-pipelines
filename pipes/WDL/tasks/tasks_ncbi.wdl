@@ -591,8 +591,8 @@ task biosample_to_table {
 
     # load list of bams surviving filters
     bam_fnames = list(os.path.basename(x) for x in '~{sep="*" cleaned_bam_filepaths}'.split('*'))
-    bam_fnames = list(x[:-len('.bam')] for x in bam_fnames if x.endswith('.bam'))
-    bam_fnames = list(x[:-len('.cleaned')] for x in bam_fnames if x.endswith('.cleaned'))
+    bam_fnames = list(x[:-len('.bam')] if x.endswith('.bam') else x for x in bam_fnames)
+    bam_fnames = list(x[:-len('.cleaned')] if x.endswith('.cleaned') else x for x in bam_fnames)
     print("bam basenames ({}): {}".format(len(bam_fnames), bam_fnames))
     sample_to_sanitized = {demux_meta_by_file.get(x, {}).get('sample_original'): demux_meta_by_file.get(x, {}).get('sample') for x in bam_fnames}
     if None in sample_to_sanitized:
