@@ -283,6 +283,9 @@ task upload_entities_tsv {
 
     String        docker = "schaluvadi/pathogen-genomic-surveillance:api-wdl"
   }
+  meta {
+    volatile: true
+  }
   command {
     set -e
     python3<<CODE
@@ -423,8 +426,8 @@ task create_or_update_sample_tables {
     df_library_bams = pd.merge(df_library_table_raw_bams, df_library_table_clean_bams, on="entity:library_id", how="outer")
     library_bams_tsv = flowcell_data_id + "-all_bams.tsv"
     df_library_bams.to_csv(library_bams_tsv, sep="\t", index=False)
-    libraries_in_bams = set(df_library_bams["entity:library_id"])
-    print("libraries in bams: {}".format(libraries_in_bams))
+    library_bam_names = set(df_library_bams["entity:library_id"])
+    print("libraries in bams: {}".format(len(library_bam_names)))
 
     # # update sample_set with new set memberships and flowcell metadata
 
@@ -439,7 +442,7 @@ task create_or_update_sample_tables {
     for library_id, data in library_meta_dict.items():
         sample_id = data['sample']
         sample_to_libraries.setdefault(sample_id, [])
-        if library_id in libraries_in_bams:
+        if library_id in library_bam_names:
             sample_to_libraries[sample_id].append(library_id)
             libraries_in_bams.add(library_id)
         else:
@@ -471,7 +474,7 @@ task create_or_update_sample_tables {
         print(df_sample.index)
         for sample_id in sample_to_libraries.keys():
             if sample_id in df_sample.index:
-                print (f"sample_set {sample_id} pre-exists in Terra table, merging with new members")
+                print (f"sample {sample_id} pre-exists in Terra table, merging with new members")
                 #sample_set_to_samples[set_id].extend(df_sample_set.samples[set_id])
                 already_associated_libraries = [entity["entityName"] for entity in df_sample.libraries[sample_id]]
                 
