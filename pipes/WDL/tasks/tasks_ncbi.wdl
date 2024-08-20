@@ -609,10 +609,10 @@ task biosample_to_table {
           row['biosample_accession'] = row.get('accession')
           biosample_attributes.append(row)
           for k,v in row.items():
-            if v and (k not in biosample_headers) and h not in ('message'):
-              if h == 'accession':
-                h = 'biosample_accession'
-              biosample_headers.append(h)
+            if v and (k not in biosample_headers) and k not in ('message'):
+              if k == 'accession':
+                k = 'biosample_accession'
+              biosample_headers.append(k)
     print("biosample headers ({}): {}".format(len(biosample_headers), biosample_headers))
     print("biosample rows ({})".format(len(biosample_attributes)))
 
