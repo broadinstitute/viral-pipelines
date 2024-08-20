@@ -410,7 +410,7 @@ task create_or_update_sample_tables {
     from ast import literal_eval
     from io import StringIO
 
-    print(workspace_project + "\n" + workspace_name + "\n")
+    print(workspace_project + "\n" + workspace_name)
 
     # create tsv to populate library table with raw_bam and cleaned_bam columns
     print(f"creating library->bam mapping tsv files from file input")
@@ -486,10 +486,12 @@ task create_or_update_sample_tables {
                 sample_to_libraries[sample_id] = list(set(sample_to_libraries[sample_id]))
 
     sample_fname = 'sample_membership.tsv'
+    print("checkpoint 1")
     with open(sample_fname, 'wt') as outf:
         outf.write('entity:sample_id\tlibraries\n')
         for sample_id, libraries in sample_to_libraries.items():
             outf.write(f'{sample_id}\t{json.dumps([{"entityType":"library","entityName":library_name} for library_name in libraries])}\n')
+    print("checkpoint 2")
 
     # create tsv to populate library table with metadata from json
     library_meta_fname = "library_metadata.tsv"
