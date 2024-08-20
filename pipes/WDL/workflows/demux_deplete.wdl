@@ -215,12 +215,11 @@ workflow demux_deplete {
 
                 raw_reads_unaligned_bams     = flatten(illumina_demux.raw_reads_unaligned_bams),
                 cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing),
-                meta_by_filename_json        = meta_filename.merged_json,
-                meta_by_sample_json          = meta_sample.merged_json
+                meta_by_filename_json        = meta_filename.merged_json
             }
 
             if(defined(biosample_map)) {
-                call terra.upload_entities_tsv {
+                call terra.upload_entities_tsv as terra_load_biosample_data {
                     input:
                         workspace_name   = check_terra_env.workspace_name,
                         terra_project    = check_terra_env.workspace_namespace,
