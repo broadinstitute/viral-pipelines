@@ -236,10 +236,12 @@ workflow demux_deplete {
             input_files = flatten(illumina_demux.raw_reads_fastqc_zip),
             file_name   = "multiqc-raw.html"
     }
-    call reports.MultiQC as multiqc_cleaned {
-        input:
-            input_files = cleaned_bam,
-            file_name   = "multiqc-cleaned.html"
+    if (length(flatten(select_all([bmtaggerDbs, blastDbs, bwaDbs]))) > 0) {
+        call reports.MultiQC as multiqc_cleaned {
+            input:
+                input_files = select_all(deplete.cleaned_fastqc_zip),
+                file_name   = "multiqc-cleaned.html"
+        }
     }
     call reports.align_and_count_summary as spike_summary {
         input:
@@ -269,7 +271,7 @@ workflow demux_deplete {
         Array[File] demux_outlierBarcodes                    = illumina_demux.outlierBarcodes
         
         File        multiqc_report_raw                       = multiqc_raw.multiqc_report
-        File        multiqc_report_cleaned                   = multiqc_cleaned.multiqc_report
+        File        multiqc_report_cleaned                   = select_first([multiqc_cleaned.multiqc_report, multiqc_raw.multiqc_report])
         File        spikein_counts                           = spike_summary.count_summary
         
         String      instrument_model_inferred                = select_first(flatten([[instrument_model_user_specified],[illumina_demux.run_info[0]['sequencer_model']]]))
