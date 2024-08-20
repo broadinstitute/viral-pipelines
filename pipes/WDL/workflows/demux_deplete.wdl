@@ -280,5 +280,7 @@ workflow demux_deplete {
         Map[String,String] run_info                          = illumina_demux.run_info[0]
         File               run_info_json                     = illumina_demux.run_info_json[0]
         String             run_id                            = illumina_demux.run_info[0]['run_id']
+
+        String      demux_viral_core_version                 = illumina_demux.viralngs_version[0]
     }
 }
