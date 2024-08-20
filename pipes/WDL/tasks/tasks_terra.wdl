@@ -473,10 +473,11 @@ task create_or_update_sample_tables {
     if len(df_sample)>0:
         print(df_sample.index)
         for sample_id in sample_to_libraries.keys():
-            if sample_id in df_sample.index:
+            if sample_id in df_sample.index and "libraries" in df_sample.columns:
                 print (f"sample {sample_id} pre-exists in Terra table, merging with new members")
                 #sample_set_to_samples[set_id].extend(df_sample_set.samples[set_id])
-                already_associated_libraries = [entity["entityName"] for entity in df_sample.libraries[sample_id]]
+                already_associated_libraries = [entity.get("entityName") for entity in df_sample.libraries[sample_id]]
+                already_associated_libraries = [lib for lib in already_associated_libraries if lib]
                 
                 print(f"already_associated_libraries {already_associated_libraries}")
                 print(f"sample_to_libraries[sample_id] {sample_to_libraries[sample_id]}")
