@@ -401,7 +401,7 @@ task create_or_update_sample_tables {
     workspace_name    = '~{workspace_name}'
 
     # import required packages.
-    import os
+    import sys
     import collections
     import json
     import csv
@@ -429,13 +429,11 @@ task create_or_update_sample_tables {
     library_bam_names = set(df_library_bams["entity:library_id"])
     print("libraries in bams: {}".format(len(library_bam_names)))
 
-    # # update sample_set with new set memberships and flowcell metadata
-
-    # load library metadata from json
+    # load library metadata from demux json / samplesheet
     with open('~{meta_by_filename_json}',"r") as meta_fp:
         library_meta_dict = json.load(meta_fp)
 
-    # grab the meta_by_filename values to create new sample->library (sample_set->sample) mappings
+    # grab the meta_by_filename values to create new sample->library mappings
     # restrict to libraries/samples that we actually have bam files for
     sample_to_libraries = {}
     libraries_in_bams = set()
@@ -468,33 +466,22 @@ task create_or_update_sample_tables {
         return (headers, rows)
     header, rows = get_entities_to_table(workspace_project, workspace_name, "sample")
     df_sample = pd.DataFrame.from_records(rows, columns=header, index="sample_id")
+    print(df_sample.index)
 
-    # merge in new sample->library mappings with any pre-existing sample->library mappings
-    if len(df_sample)>0:
-        print(df_sample.index)
-        for sample_id in sample_to_libraries.keys():
-            if sample_id in df_sample.index and "libraries" in df_sample.columns:
-                print (f"sample {sample_id} pre-exists in Terra table, merging with new members")
-                #sample_set_to_samples[set_id].extend(df_sample_set.samples[set_id])
-                already_associated_libraries = [entity.get("entityName") for entity in df_sample.libraries[sample_id]]
-                already_associated_libraries = [lib for lib in already_associated_libraries if lib]
-                
-                print(f"already_associated_libraries {already_associated_libraries}")
-                print(f"sample_to_libraries[sample_id] {sample_to_libraries[sample_id]}")
-                continue
-                sample_to_libraries[sample_id].extend(already_associated_libraries)
-                # collapse duplicate sample IDs
-                sample_to_libraries[sample_id] = list(set(sample_to_libraries[sample_id]))
-
+    # create tsv to populate sample table with new sample->library mappings
     sample_fname = 'sample_membership.tsv'
-    print("checkpoint 1")
     with open(sample_fname, 'wt') as outf:
         outf.write('entity:sample_id\tlibraries\n')
         for sample_id, libraries in sample_to_libraries.items():
-            outf.write(f'{sample_id}\t{json.dumps([{"entityType":"library","entityName":library_name} for library_name in libraries])}\n')
-    print("checkpoint 2")
+            if sample_id in df_sample.index and "libraries" in df_sample.columns and df_sample.libraries[sample_id]:
+                # merge in new sample->library mappings with any pre-existing sample->library mappings
+                already_associated_libraries = [entity["entityName"] for entity in df_sample.libraries[sample_id] if entity.get("entityName")]
+                libraries = list(set(libraries + already_associated_libraries))
+                print (f"sample {sample_id} pre-exists in Terra table, merging old members {already_associated_libraries} with new members {libraries}")
 
-    # create tsv to populate library table with metadata from json
+            outf.write(f'{sample_id}\t{json.dumps([{"entityType":"library","entityName":library_name} for library_name in libraries])}\n')
+
+    # create tsv to populate library table with metadata from demux json / samplesheet
     library_meta_fname = "library_metadata.tsv"
     with open(library_meta_fname, 'wt') as outf:
       outf.write("entity:")
@@ -517,6 +504,7 @@ task create_or_update_sample_tables {
         if response.status_code != 200:
             print(f'ERROR UPLOADING {fname}: See full error message:')
             print(response.text)
+            sys.exit(1)
         else:
             print("Upload complete. Check your workspace for new table!")
 
