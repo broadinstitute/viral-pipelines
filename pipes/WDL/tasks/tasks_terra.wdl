@@ -423,7 +423,8 @@ task create_or_update_sample_tables {
     df_library_bams = pd.merge(df_library_table_raw_bams, df_library_table_clean_bams, on="entity:library_id", how="outer")
     library_bams_tsv = flowcell_data_id + "-all_bams.tsv"
     df_library_bams.to_csv(library_bams_tsv, sep="\t", index=False)
-    print("libraries in bams: {}".format(df_library_bams.index))
+    libraries_in_bams = set(df_library_bams["entity:library_id"])
+    print("libraries in bams: {}".format(libraries_in_bams))
 
     # # update sample_set with new set memberships and flowcell metadata
 
@@ -438,7 +439,7 @@ task create_or_update_sample_tables {
     for library_id, data in library_meta_dict.items():
         sample_id = data['sample']
         sample_to_libraries.setdefault(sample_id, [])
-        if library_id in df_library_bams.index:
+        if library_id in libraries_in_bams:
             sample_to_libraries[sample_id].append(library_id)
             libraries_in_bams.add(library_id)
         else:
