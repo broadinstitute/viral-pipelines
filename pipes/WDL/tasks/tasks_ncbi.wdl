@@ -616,7 +616,7 @@ task biosample_to_table {
     print("biosample rows ({})".format(len(biosample_attributes)))
 
     # write reformatted table
-    with open('~{base}.entities.tsv', wt) as outf:
+    with open('~{base}.entities.tsv', 'wt') as outf:
       writer = csv.DictWriter(outf, delimiter='\t', fieldnames=["~{sanitized_id_col}"]+biosample_headers, quoting=csv.QUOTE_MINIMAL)
       writer.writeheader()
       for row in biosample_attributes:
