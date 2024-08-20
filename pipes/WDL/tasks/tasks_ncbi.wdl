@@ -479,12 +479,15 @@ task sra_meta_prep {
     lib_to_bams = {}
     sample_to_biosample = {}
     for bam in bam_uris:
-      # filename must be <libraryname>.<flowcell>.<lane>.cleaned.bam
-      assert bam.endswith('.cleaned.bam'), "filename does not end in .cleaned.bam: {}".format(bam)
+      # filename must be <libraryname>.<flowcell>.<lane>.cleaned.bam or <libraryname>.<flowcell>.<lane>.bam
       bam_base = os.path.basename(bam)
       bam_parts = bam_base.split('.')
-      assert len(bam_parts) >= 5, "filename does not conform to <libraryname>.<flowcell>.<lane>.cleaned.bam -- {}".format(bam_base)
-      lib = '.'.join(bam_parts[:-4])
+      assert bam_parts[-1] == 'bam', "filename does not end in .bam -- {}".format(bam) 
+      bam_parts = bam_parts[:-1]
+      if bam_parts[-1] == 'cleaned':
+        bam_parts = bam_parts[:-1]
+      assert len(bam_parts) >= 3, "filename does not conform to <libraryname>.<flowcell>.<lane>.cleaned.bam -- {}".format(bam_base)
+      lib = '.'.join(bam_parts[:-2]) # drop flowcell and lane
       lib_to_bams.setdefault(lib, [])
       lib_to_bams[lib].append(bam_base)
       print("debug: registering lib={} bam={}".format(lib, bam_base))
@@ -577,7 +580,6 @@ task biosample_to_table {
   }
   command <<<
     set -ex -o pipefail
-
     python3 << CODE
     import os.path
     import csv
