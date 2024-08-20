@@ -377,7 +377,6 @@ task create_or_update_sample_tables {
 
     String workspace_namespace
     String workspace_name
-    String workspace_bucket
 
     Array[String]  raw_reads_unaligned_bams
     Array[String]  cleaned_reads_unaligned_bams
@@ -397,7 +396,6 @@ task create_or_update_sample_tables {
     
     workspace_project = '~{workspace_namespace}'
     workspace_name    = '~{workspace_name}'
-    workspace_bucket  = '~{workspace_bucket}'
 
     # import required packages.
     import os
@@ -409,7 +407,7 @@ task create_or_update_sample_tables {
     from ast import literal_eval
     from io import StringIO
 
-    print(workspace_project + "\n" + workspace_name + "\n" + "bucket: " + workspace_bucket)
+    print(workspace_project + "\n" + workspace_name + "\n")
 
     # create tsv to populate library table with raw_bam and cleaned_bam columns
     print(f"creating library->bam mapping tsv files from file input")
@@ -425,6 +423,7 @@ task create_or_update_sample_tables {
     df_library_bams = pd.merge(df_library_table_raw_bams, df_library_table_clean_bams, on="entity:library_id", how="outer")
     library_bams_tsv = flowcell_data_id + "-all_bams.tsv"
     df_library_bams.to_csv(library_bams_tsv, sep="\t", index=False)
+    print("libraries in bams: {}".format(df_library_bams.index))
 
     # # update sample_set with new set memberships and flowcell metadata
 
@@ -492,7 +491,7 @@ task create_or_update_sample_tables {
     library_meta_fname = "library_metadata.tsv"
     with open(library_meta_fname, 'wt') as outf:
       outf.write("entity:")
-      copy_cols = ["sample_original", "spike_in", "control", "batch_lib", "run", "lane", "library_id_per_sample", "library_strategy", "library_source", "library_selection", "design_description"]
+      copy_cols = ["sample_original", "spike_in", "control", "batch_lib", "library", "lane", "library_id_per_sample", "library_strategy", "library_source", "library_selection", "design_description"]
       out_header = ['library_id'] + copy_cols
       print(f"library_metadata.tsv output header: {out_header}")
       writer = csv.DictWriter(outf, out_header, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
@@ -501,7 +500,7 @@ task create_or_update_sample_tables {
       out_rows = []
       for library in library_meta_dict.values():
           out_row = {col: library.get(col, '') for col in copy_cols}
-          out_row['library_id'] = library['library']
+          out_row['library_id'] = library['run']
           out_rows.append(out_row)
       writer.writerows(out_rows)
 

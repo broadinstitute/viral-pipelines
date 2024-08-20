@@ -211,7 +211,6 @@ workflow demux_deplete {
                 flowcell_run_id     = illumina_demux.run_info[0]['run_id'],
                 workspace_name      = check_terra_env.workspace_name,
                 workspace_namespace = check_terra_env.workspace_namespace,
-                workspace_bucket    = check_terra_env.workspace_bucket_path,
 
                 raw_reads_unaligned_bams     = flatten(illumina_demux.raw_reads_unaligned_bams),
                 cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing),
