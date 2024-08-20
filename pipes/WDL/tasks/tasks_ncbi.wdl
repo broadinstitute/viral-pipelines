@@ -602,16 +602,16 @@ task biosample_to_table {
 
     # load biosample metadata
     biosample_attributes = []
-    biosample_headers = []
+    biosample_headers = ['biosample_accession']
     with open('~{biosample_attributes_tsv}', 'rt') as inf:
       for row in csv.DictReader(inf, delimiter='\t'):
         if row['sample_name'] in sample_names_seen and row['message'] == "Successfully loaded":
           row['biosample_accession'] = row.get('accession')
           biosample_attributes.append(row)
           for k,v in row.items():
-            if v and (k not in biosample_headers) and k not in ('message'):
-              if k == 'accession':
-                k = 'biosample_accession'
+            if v.strip().lower() in ('missing', 'na', 'not applicable', 'not collected', ''):
+              v = None
+            if v and (k not in biosample_headers) and k not in ('message', 'accession'):
               biosample_headers.append(k)
     print("biosample headers ({}): {}".format(len(biosample_headers), biosample_headers))
     print("biosample rows ({})".format(len(biosample_attributes)))
@@ -623,7 +623,7 @@ task biosample_to_table {
       for row in biosample_attributes:
         outrow = {h: row[h] for h in biosample_headers}
         outrow["~{sanitized_id_col}"] = sample_to_sanitized[row['sample_name']]
-        writer.writerow(row)
+        writer.writerow(outrow)
     CODE
   >>>
   output {
