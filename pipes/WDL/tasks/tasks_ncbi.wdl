@@ -607,7 +607,7 @@ task biosample_to_table {
         if row['sample_name'] in sample_names_seen and row['message'] == "Successfully loaded":
           row['biosample_accession'] = row.get('accession')
           biosample_attributes.append(row)
-          for k,v in row.items()
+          for k,v in row.items():
             if v and (k not in biosample_headers) and h not in ('message'):
               if h == 'accession':
                 h = 'biosample_accession'
