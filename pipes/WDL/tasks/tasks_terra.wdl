@@ -473,7 +473,7 @@ task create_or_update_sample_tables {
     with open(sample_fname, 'wt') as outf:
         outf.write('entity:sample_id\tlibraries\n')
         for sample_id, libraries in sample_to_libraries.items():
-            if sample_id in df_sample.index and "libraries" in df_sample.columns and df_sample.libraries[sample_id]:
+            if sample_id in df_sample.index and "libraries" in df_sample.columns and df_sample.libraries[sample_id] and pd.notna(df_sample.libraries[sample_id]):
                 # merge in new sample->library mappings with any pre-existing sample->library mappings
                 print(f"sample: {sample_id} - pre-existing library entries json: {df_sample.libraries[sample_id]}")
                 already_associated_libraries = [entity["entityName"] for entity in df_sample.libraries[sample_id] if entity.get("entityName")]
