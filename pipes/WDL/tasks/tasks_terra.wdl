@@ -357,7 +357,7 @@ task download_entities_tsv {
         rows.append(outrow)
 
     # dump to tsv
-    with open(out_fname, 'wt') as outf:
+    with open(out_fname, 'w', newline='') as outf:
       writer = csv.DictWriter(outf, headers.keys(), delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
       writer.writeheader()
       writer.writerows(rows)
@@ -435,7 +435,7 @@ task create_or_update_sample_tables {
     # create tsv to populate library table with metadata from demux json / samplesheet
     # to do: maybe just merge this into df_library_bams instead and make a single tsv output
     library_meta_fname = "library_metadata.tsv"
-    with open(library_meta_fname, 'wt') as outf:
+    with open(library_meta_fname, 'w', newline='') as outf:
       copy_cols = ["sample_original", "spike_in", "control", "batch_lib", "library", "lane", "library_id_per_sample", "library_strategy", "library_source", "library_selection", "design_description"]
       out_header = [lib_col_name] + copy_cols
       print(f"library_metadata.tsv output header: {out_header}")

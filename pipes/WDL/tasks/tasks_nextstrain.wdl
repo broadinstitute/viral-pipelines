@@ -399,7 +399,7 @@ task derived_cols {
                     out_headers.extend(adder.extra_headers())
 
                 with open_or_gzopen(out_tsv, 'wt') as outf:
-                    writer = csv.DictWriter(outf, out_headers, delimiter='\t')
+                    writer = csv.DictWriter(outf, out_headers, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
                     writer.writeheader()
                     for row in reader:
                         for adder in adders:
