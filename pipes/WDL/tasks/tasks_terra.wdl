@@ -475,6 +475,7 @@ task create_or_update_sample_tables {
         for sample_id, libraries in sample_to_libraries.items():
             if sample_id in df_sample.index and "libraries" in df_sample.columns and df_sample.libraries[sample_id]:
                 # merge in new sample->library mappings with any pre-existing sample->library mappings
+                print(f"sample: {sample_id} - pre-existing library entries json: {df_sample.libraries[sample_id]}")
                 already_associated_libraries = [entity["entityName"] for entity in df_sample.libraries[sample_id] if entity.get("entityName")]
                 libraries = list(set(libraries + already_associated_libraries))
                 print (f"sample {sample_id} pre-exists in Terra table, merging old members {already_associated_libraries} with new members {libraries}")
