@@ -386,7 +386,8 @@ task create_or_update_sample_tables {
 
     File           meta_by_filename_json
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.2.4" #skip-global-version-pin
+    #String  docker = "quay.io/broadinstitute/viral-core:2.2.4" #skip-global-version-pin
+    String  docker = "quay.io/broadinstitute/viral-core:2.3.2"
   }
 
   meta {
@@ -396,25 +397,20 @@ task create_or_update_sample_tables {
   command <<<
     python3<<CODE
     flowcell_data_id  = '~{flowcell_run_id}'
-    
     workspace_project = '~{workspace_namespace}'
     workspace_name    = '~{workspace_name}'
 
-    # import required packages.
+    # import required packages
     import sys
     import collections
     import json
     import csv
     import pandas as pd
     from firecloud import api as fapi
-    from ast import literal_eval
-    from io import StringIO
 
     print(workspace_project + "\n" + workspace_name)
 
     # create tsv to populate library table with raw_bam and cleaned_bam columns
-    print(f"creating library->bam mapping tsv files from file input")
-
     raw_bams_list               = '~{sep="*" raw_reads_unaligned_bams}'.split('*')
     raw_library_id_list         = [bam.split("/")[-1].replace(".bam", "") for bam in raw_bams_list]
     df_library_table_raw_bams   = pd.DataFrame({"entity:library_id" : raw_library_id_list, "raw_bam" : raw_bams_list})
@@ -491,15 +487,17 @@ task create_or_update_sample_tables {
     sample_fname = 'sample_membership.tsv'
     with open(sample_fname, 'wt') as outf:
         outf.write('entity:sample_id\tlibraries\n')
+        merged_sample_ids = set()
         for sample_id, libraries in sample_to_libraries.items():
             if sample_id in df_sample.index and "libraries" in df_sample.columns and df_sample.libraries[sample_id] and pd.notna(df_sample.libraries[sample_id]):
                 # merge in new sample->library mappings with any pre-existing sample->library mappings
-                print(f"sample: {sample_id} - pre-existing library entries json: {df_sample.libraries[sample_id]}")
                 already_associated_libraries = [entity["entityName"] for entity in df_sample.libraries[sample_id] if entity.get("entityName")]
                 libraries = list(set(libraries + already_associated_libraries))
-                print (f"sample {sample_id} pre-exists in Terra table, merging old members {already_associated_libraries} with new members {libraries}")
+                print (f"\tsample {sample_id} pre-exists in Terra table, merging old members {already_associated_libraries} with new members {libraries}")
+                merged_sample_ids.add(sample_id)
 
             outf.write(f'{sample_id}\t{json.dumps([{"entityType":"library","entityName":library_name} for library_name in libraries])}\n')
+    print(f"wrote {len(sample_to_libraries)} samples to {sample_fname} where {len(merged_sample_ids)} samples were already in the Terra table")
 
     # write everything to the Terra table! -- TO DO: move this to separate task
     for fname in (library_bams_tsv, library_meta_fname, sample_fname):
