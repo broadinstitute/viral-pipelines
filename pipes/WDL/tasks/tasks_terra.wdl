@@ -386,7 +386,9 @@ task create_or_update_sample_tables {
 
     File           meta_by_filename_json
 
-    #String  docker = "quay.io/broadinstitute/viral-core:2.2.4" #skip-global-version-pin
+    String  sample_table_name  = "sample"
+    String  library_table_name = "library"
+
     String  docker = "quay.io/broadinstitute/viral-core:2.3.2"
   }
 
@@ -399,6 +401,7 @@ task create_or_update_sample_tables {
     flowcell_data_id  = '~{flowcell_run_id}'
     workspace_project = '~{workspace_namespace}'
     workspace_name    = '~{workspace_name}'
+    lib_col_name      = "entity:~{library_table_name}_id"
 
     # import required packages
     import sys
@@ -413,16 +416,16 @@ task create_or_update_sample_tables {
     # create tsv to populate library table with raw_bam and cleaned_bam columns
     raw_bams_list               = '~{sep="*" raw_reads_unaligned_bams}'.split('*')
     raw_library_id_list         = [bam.split("/")[-1].replace(".bam", "") for bam in raw_bams_list]
-    df_library_table_raw_bams   = pd.DataFrame({"entity:library_id" : raw_library_id_list, "raw_bam" : raw_bams_list})
+    df_library_table_raw_bams   = pd.DataFrame({lib_col_name : raw_library_id_list, "raw_bam" : raw_bams_list})
 
     cleaned_bams_list           = '~{sep="*" cleaned_reads_unaligned_bams}'.split('*')
     cleaned_library_id_list     = [bam.split("/")[-1].replace(".bam", "").replace(".cleaned", "") for bam in cleaned_bams_list]
-    df_library_table_clean_bams = pd.DataFrame({"entity:library_id" : cleaned_library_id_list, "cleaned_bam" : cleaned_bams_list})
+    df_library_table_clean_bams = pd.DataFrame({lib_col_name : cleaned_library_id_list, "cleaned_bam" : cleaned_bams_list})
 
-    df_library_bams = pd.merge(df_library_table_raw_bams, df_library_table_clean_bams, on="entity:library_id", how="outer")
+    df_library_bams = pd.merge(df_library_table_raw_bams, df_library_table_clean_bams, on=lib_col_name, how="outer")
     library_bams_tsv = flowcell_data_id + "-all_bams.tsv"
     df_library_bams.to_csv(library_bams_tsv, sep="\t", index=False)
-    library_bam_names = set(df_library_bams["entity:library_id"])
+    library_bam_names = set(df_library_bams[lib_col_name])
     print("libraries in bams: {}".format(len(library_bam_names)))
 
     # load library metadata from demux json / samplesheet
@@ -433,9 +436,8 @@ task create_or_update_sample_tables {
     # to do: maybe just merge this into df_library_bams instead and make a single tsv output
     library_meta_fname = "library_metadata.tsv"
     with open(library_meta_fname, 'wt') as outf:
-      outf.write("entity:")
       copy_cols = ["sample_original", "spike_in", "control", "batch_lib", "library", "lane", "library_id_per_sample", "library_strategy", "library_source", "library_selection", "design_description"]
-      out_header = ['library_id'] + copy_cols
+      out_header = [lib_col_name] + copy_cols
       print(f"library_metadata.tsv output header: {out_header}")
       writer = csv.DictWriter(outf, out_header, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
       writer.writeheader()
@@ -444,7 +446,7 @@ task create_or_update_sample_tables {
       for library in library_meta_dict.values():
         if library['run'] in library_bam_names:
           out_row = {col: library.get(col, '') for col in copy_cols}
-          out_row['library_id'] = library['run']
+          out_row[lib_col_name] = library['run']
           out_rows.append(out_row)
       writer.writerows(out_rows)
 
@@ -479,14 +481,14 @@ task create_or_update_sample_tables {
             outrow[table_name + "_id"] = row['name']
             rows.append(outrow)
         return (headers, rows)
-    header, rows = get_entities_to_table(workspace_project, workspace_name, "sample")
-    df_sample = pd.DataFrame.from_records(rows, columns=header, index="sample_id")
+    header, rows = get_entities_to_table(workspace_project, workspace_name, "~{sample_table_name}")
+    df_sample = pd.DataFrame.from_records(rows, columns=header, index="~{sample_table_name}_id")
     print(df_sample.index)
 
     # create tsv to populate sample table with new sample->library mappings
     sample_fname = 'sample_membership.tsv'
     with open(sample_fname, 'wt') as outf:
-        outf.write('entity:sample_id\tlibraries\n')
+        outf.write('entity:~{sample_table_name}_id\tlibraries\n')
         merged_sample_ids = set()
         for sample_id, libraries in sample_to_libraries.items():
             if sample_id in df_sample.index and "libraries" in df_sample.columns and df_sample.libraries[sample_id] and pd.notna(df_sample.libraries[sample_id]):

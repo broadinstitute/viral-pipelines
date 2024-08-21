@@ -566,9 +566,10 @@ task biosample_to_table {
     Array[File] cleaned_bam_filepaths
     File        demux_meta_json
 
-    String  sanitized_id_col = "entity:sample_id"
+    String  sample_table_name  = "sample"
     String  docker = "python:slim"
   }
+  String  sanitized_id_col = "entity:~{sample_table_name}_id"
   String base = basename(basename(biosample_attributes_tsv, ".txt"), ".tsv")
   parameter_meta {
     cleaned_bam_filepaths: {
