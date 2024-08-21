@@ -23,8 +23,7 @@ workflow populate_library_and_sample_tables_from_flowcell {
           input:
             flowcell_run_id     = flowcell_run_id,
             workspace_name      = check_terra_env.workspace_name,
-            workspace_namespace = check_terra_env.workspace_namespace,
-            workspace_bucket    = check_terra_env.workspace_bucket_path
+            workspace_namespace = check_terra_env.workspace_namespace
         }
     }
 }

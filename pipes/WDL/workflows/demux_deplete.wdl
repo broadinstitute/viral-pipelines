@@ -158,42 +158,36 @@ workflow demux_deplete {
                 reads_bam = raw_reads,
                 ref_db = spikein_db
         }
-        call taxon_filter.deplete_taxa as deplete {
-            input:
-                raw_reads_unmapped_bam = raw_reads,
-                bmtaggerDbs = bmtaggerDbs,
-                blastDbs = blastDbs,
-                bwaDbs = bwaDbs
+        if (length(flatten(select_all([bmtaggerDbs, blastDbs, bwaDbs]))) > 0) {
+            call taxon_filter.deplete_taxa as deplete {
+                input:
+                    raw_reads_unmapped_bam = raw_reads,
+                    bmtaggerDbs = bmtaggerDbs,
+                    blastDbs = blastDbs,
+                    bwaDbs = bwaDbs
+            }
         }
-        if (deplete.depletion_read_count_post >= min_reads_per_bam) {
-            File cleaned_bam_passing = deplete.cleaned_bam
+
+        Int  read_count_post_depletion = select_first([deplete.depletion_read_count_post, spikein.reads_total])
+        File cleaned_bam = select_first([deplete.cleaned_bam, raw_reads])
+        if (read_count_post_depletion >= min_reads_per_bam) {
+            File cleaned_bam_passing = cleaned_bam
         }
-        if (deplete.depletion_read_count_post < min_reads_per_bam) {
+        if (read_count_post_depletion < min_reads_per_bam) {
             File empty_bam = raw_reads
         }
     }
 
-    if(insert_demux_outputs_into_terra_tables){
-        call terra.check_terra_env
-
-        if(check_terra_env.is_running_on_terra) {
-            call terra.create_or_update_sample_tables {
-              input:
-                flowcell_run_id     = illumina_demux.run_info[0]['run_id'],
-                workspace_name      = check_terra_env.workspace_name,
-                workspace_namespace = check_terra_env.workspace_namespace,
-                workspace_bucket    = check_terra_env.workspace_bucket_path,
-
-                raw_reads_unaligned_bams     = flatten(illumina_demux.raw_reads_unaligned_bams),
-                cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing),
-                meta_by_filename_json        = meta_filename.merged_json,
-                meta_by_sample_json          = meta_sample.merged_json
-            }
-        }
-    }
-
-    #### SRA submission prep
     if(defined(biosample_map)) {
+        #### biosample metadata mapping
+        call ncbi.biosample_to_table {
+            input:
+                biosample_attributes_tsv = select_first([biosample_map]),
+                cleaned_bam_filepaths    = select_all(cleaned_bam_passing),
+                demux_meta_json          = meta_filename.merged_json
+        }
+
+        #### SRA submission prep
         call ncbi.sra_meta_prep {
             input:
                 cleaned_bam_filepaths = select_all(cleaned_bam_passing),
@@ -208,16 +202,44 @@ workflow demux_deplete {
         }
     }
 
+    if(insert_demux_outputs_into_terra_tables){
+        call terra.check_terra_env
+
+        if(check_terra_env.is_running_on_terra) {
+            call terra.create_or_update_sample_tables {
+              input:
+                flowcell_run_id     = illumina_demux.run_info[0]['run_id'],
+                workspace_name      = check_terra_env.workspace_name,
+                workspace_namespace = check_terra_env.workspace_namespace,
+
+                raw_reads_unaligned_bams     = flatten(illumina_demux.raw_reads_unaligned_bams),
+                cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing),
+                meta_by_filename_json        = meta_filename.merged_json
+            }
+
+            if(defined(biosample_map)) {
+                call terra.upload_entities_tsv as terra_load_biosample_data {
+                    input:
+                        workspace_name   = check_terra_env.workspace_name,
+                        terra_project    = check_terra_env.workspace_namespace,
+                        tsv_file         = select_first([biosample_to_table.sample_meta_tsv])
+                }
+            }
+        }
+    }
+
     #### summary stats
     call reports.MultiQC as multiqc_raw {
         input:
             input_files = flatten(illumina_demux.raw_reads_fastqc_zip),
             file_name   = "multiqc-raw.html"
     }
-    call reports.MultiQC as multiqc_cleaned {
-        input:
-            input_files = deplete.cleaned_fastqc_zip,
-            file_name   = "multiqc-cleaned.html"
+    if (length(flatten(select_all([bmtaggerDbs, blastDbs, bwaDbs]))) > 0) {
+        call reports.MultiQC as multiqc_cleaned {
+            input:
+                input_files = select_all(deplete.cleaned_fastqc_zip),
+                file_name   = "multiqc-cleaned.html"
+        }
     }
     call reports.align_and_count_summary as spike_summary {
         input:
@@ -228,7 +250,7 @@ workflow demux_deplete {
 
     output {
         Array[File] raw_reads_unaligned_bams                 = flatten(illumina_demux.raw_reads_unaligned_bams)
-        Array[Int]  read_counts_raw                          = deplete.depletion_read_count_pre
+        Array[Int]  read_counts_raw                          = spikein.reads_total
         
         Map[String,Map[String,String]] meta_by_filename      = meta_filename.merged
         Map[String,Map[String,String]] meta_by_sample        = meta_sample.merged
@@ -237,7 +259,7 @@ workflow demux_deplete {
         
         Array[File] cleaned_reads_unaligned_bams             = select_all(cleaned_bam_passing)
         Array[File] cleaned_bams_tiny                        = select_all(empty_bam)
-        Array[Int]  read_counts_depleted                     = deplete.depletion_read_count_post
+        Array[Int]  read_counts_depleted                     = read_count_post_depletion
         
         File?       sra_metadata                             = sra_meta_prep.sra_metadata
         File?       cleaned_bam_uris                         = sra_meta_prep.cleaned_bam_uris
@@ -247,7 +269,7 @@ workflow demux_deplete {
         Array[File] demux_outlierBarcodes                    = illumina_demux.outlierBarcodes
         
         File        multiqc_report_raw                       = multiqc_raw.multiqc_report
-        File        multiqc_report_cleaned                   = multiqc_cleaned.multiqc_report
+        File        multiqc_report_cleaned                   = select_first([multiqc_cleaned.multiqc_report, multiqc_raw.multiqc_report])
         File        spikein_counts                           = spike_summary.count_summary
         
         String      instrument_model_inferred                = select_first(flatten([[instrument_model_user_specified],[illumina_demux.run_info[0]['sequencer_model']]]))
@@ -256,7 +278,7 @@ workflow demux_deplete {
         Map[String,String] run_info                          = illumina_demux.run_info[0]
         File               run_info_json                     = illumina_demux.run_info_json[0]
         String             run_id                            = illumina_demux.run_info[0]['run_id']
-        
+
         String      demux_viral_core_version                 = illumina_demux.viralngs_version[0]
     }
 }

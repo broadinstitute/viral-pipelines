@@ -283,6 +283,9 @@ task upload_entities_tsv {
 
     String        docker = "schaluvadi/pathogen-genomic-surveillance:api-wdl"
   }
+  meta {
+    volatile: true
+  }
   command {
     set -e
     python3<<CODE
@@ -377,15 +380,16 @@ task create_or_update_sample_tables {
 
     String workspace_namespace
     String workspace_name
-    String workspace_bucket
 
-    Array[String]? raw_reads_unaligned_bams
-    Array[String]? cleaned_reads_unaligned_bams
+    Array[String]  raw_reads_unaligned_bams
+    Array[String]  cleaned_reads_unaligned_bams
 
-    File?                           meta_by_filename_json
-    File?                           meta_by_sample_json
+    File           meta_by_filename_json
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.2.4" #skip-global-version-pin
+    String  sample_table_name  = "sample"
+    String  library_table_name = "library"
+
+    String  docker = "quay.io/broadinstitute/viral-core:2.3.2"
   }
 
   meta {
@@ -395,27 +399,73 @@ task create_or_update_sample_tables {
   command <<<
     python3<<CODE
     flowcell_data_id  = '~{flowcell_run_id}'
-    
     workspace_project = '~{workspace_namespace}'
     workspace_name    = '~{workspace_name}'
-    workspace_bucket  = '~{workspace_bucket}'
+    lib_col_name      = "entity:~{library_table_name}_id"
 
-    raw_reads_unaligned_bams_list_filepath     = '~{if defined(raw_reads_unaligned_bams) then write_lines(select_first([raw_reads_unaligned_bams, []])) else ""}'
-    cleaned_reads_unaligned_bams_list_filepath = '~{if defined(cleaned_reads_unaligned_bams) then write_lines(select_first([cleaned_reads_unaligned_bams, []])) else ""}'
-
-    # import required packages.
-    import os
-    import argparse
+    # import required packages
+    import sys
     import collections
     import json
     import csv
     import pandas as pd
     from firecloud import api as fapi
-    from ast import literal_eval
-    from io import StringIO
 
-    print(workspace_project + "\n" + workspace_name + "\n" + "bucket: " + workspace_bucket)
+    print(workspace_project + "\n" + workspace_name)
 
+    # create tsv to populate library table with raw_bam and cleaned_bam columns
+    raw_bams_list               = '~{sep="*" raw_reads_unaligned_bams}'.split('*')
+    raw_library_id_list         = [bam.split("/")[-1].replace(".bam", "") for bam in raw_bams_list]
+    df_library_table_raw_bams   = pd.DataFrame({lib_col_name : raw_library_id_list, "raw_bam" : raw_bams_list})
+
+    cleaned_bams_list           = '~{sep="*" cleaned_reads_unaligned_bams}'.split('*')
+    cleaned_library_id_list     = [bam.split("/")[-1].replace(".bam", "").replace(".cleaned", "") for bam in cleaned_bams_list]
+    df_library_table_clean_bams = pd.DataFrame({lib_col_name : cleaned_library_id_list, "cleaned_bam" : cleaned_bams_list})
+
+    df_library_bams = pd.merge(df_library_table_raw_bams, df_library_table_clean_bams, on=lib_col_name, how="outer")
+    library_bams_tsv = flowcell_data_id + "-all_bams.tsv"
+    df_library_bams.to_csv(library_bams_tsv, sep="\t", index=False)
+    library_bam_names = set(df_library_bams[lib_col_name])
+    print("libraries in bams: {}".format(len(library_bam_names)))
+
+    # load library metadata from demux json / samplesheet
+    with open('~{meta_by_filename_json}',"r") as meta_fp:
+        library_meta_dict = json.load(meta_fp)
+
+    # create tsv to populate library table with metadata from demux json / samplesheet
+    # to do: maybe just merge this into df_library_bams instead and make a single tsv output
+    library_meta_fname = "library_metadata.tsv"
+    with open(library_meta_fname, 'wt') as outf:
+      copy_cols = ["sample_original", "spike_in", "control", "batch_lib", "library", "lane", "library_id_per_sample", "library_strategy", "library_source", "library_selection", "design_description"]
+      out_header = [lib_col_name] + copy_cols
+      print(f"library_metadata.tsv output header: {out_header}")
+      writer = csv.DictWriter(outf, out_header, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
+      writer.writeheader()
+
+      out_rows = []
+      for library in library_meta_dict.values():
+        if library['run'] in library_bam_names:
+          out_row = {col: library.get(col, '') for col in copy_cols}
+          out_row[lib_col_name] = library['run']
+          out_rows.append(out_row)
+      writer.writerows(out_rows)
+
+    # grab the meta_by_filename values to create new sample->library mappings
+    # restrict to libraries/samples that we actually have bam files for
+    sample_to_libraries = {}
+    libraries_in_bams = set()
+    for library_id, data in library_meta_dict.items():
+        sample_id = data['sample']
+        sample_to_libraries.setdefault(sample_id, [])
+        if library_id in library_bam_names:
+            sample_to_libraries[sample_id].append(library_id)
+            libraries_in_bams.add(library_id)
+        else:
+            print (f"missing {library_id} from bam list")
+    print("json describes {} libraries from {} unique samples".format(len(library_meta_dict), len(sample_to_libraries)))
+    print("json describes {} libraries we have bam files for and {} libraries we will ignore".format(len(libraries_in_bams), len(library_meta_dict) - len(libraries_in_bams)))
+
+    # API call to get existing sample->library mappings  <-- THIS IS THE VOLATILE PART
     # get_entities -> python list of dicts
     def get_entities_to_table(project, workspace, table_name):
         table = json.loads(fapi.get_entities(project, workspace, table_name).text)
@@ -431,174 +481,33 @@ task create_or_update_sample_tables {
             outrow[table_name + "_id"] = row['name']
             rows.append(outrow)
         return (headers, rows)
+    header, rows = get_entities_to_table(workspace_project, workspace_name, "~{sample_table_name}")
+    df_sample = pd.DataFrame.from_records(rows, columns=header, index="~{sample_table_name}_id")
+    print(df_sample.index)
 
-    # # populate sample table from run outputs
-    # In particular, popualte the raw_bam and cleaned_bam columns
-
-    def get_bam_lists_for_flowcell_from_live_table(project, workspace, runID):
-        # API call to get flowcell_data table
-        response = fapi.get_entities_tsv(project, workspace, "flowcell", model="flexible")
-
-        # read API response into data frame
-        df = pd.read_csv(StringIO(response.text), sep="\t", index_col="entity:flowcell_id")
-
-        # create library.tsv data frame (entity:library_id)
-        cleaned_bams_list       = literal_eval(df.cleaned_reads_unaligned_bams[runID])
-        raw_bams_list           = literal_eval(df.raw_reads_unaligned_bams[runID])
-
-        return (cleaned_bams_list,raw_bams_list)
-
-    def create_library_to_bam_tsvs(cleaned_bams_list, raw_bams_list, runID):
-        cleaned_library_id_list = [bam.split("/")[-1].replace(".bam", "").replace(".cleaned", "") for bam in cleaned_bams_list]
-        df_library_table        = pd.DataFrame({"entity:library_id" : cleaned_library_id_list,
-                                        "cleaned_bam" : cleaned_bams_list})
-        cleaned_library_fname   = runID + "_cleaned_bams.tsv"
-        df_library_table.to_csv(cleaned_library_fname, sep="\t", index=False)
-
-        # create library.tsv data frame (entity:library_id)
-        raw_library_id_list     = [bam.split("/")[-1].replace(".bam", "") for bam in raw_bams_list]
-        df_library_table        = pd.DataFrame({"entity:library_id" : raw_library_id_list,
-                                        "raw_bam" : raw_bams_list})
-        raw_library_fname       = runID + "_raw_bams.tsv"
-        df_library_table.to_csv(raw_library_fname, sep="\t", index=False)
-        
-        return (cleaned_library_fname, raw_library_fname)
-
-    #   IF optional input bam file lists passed in 
-    #      create tsvs for row insertion based on them
-    #   ELSE
-    #      create tsvs based on data from live data table
-    #
-    if ( (os.path.exists(raw_reads_unaligned_bams_list_filepath) and os.path.getsize(raw_reads_unaligned_bams_list_filepath)) > 0 and
-         (os.path.exists(cleaned_reads_unaligned_bams_list_filepath) and os.path.getsize(cleaned_reads_unaligned_bams_list_filepath)) > 0 ):
-        print(f"creating library->bam mapping tsv files from file input")
-        with open(raw_reads_unaligned_bams_list_filepath) as raw_reads_unaligned_bams_list_fp, open(cleaned_reads_unaligned_bams_list_filepath) as cleaned_reads_unaligned_bams_list_fp:
-            cleaned_bams_list,raw_bams_list = ( cleaned_reads_unaligned_bams_list_fp.read().splitlines(),
-                                                raw_reads_unaligned_bams_list_fp.read().splitlines() )
-    else:
-        print(f"creating library->bam mapping tsv files from live table data (no file lists passed in to task)")
-        cleaned_bams_list,raw_bams_list = get_bam_lists_for_flowcell_from_live_table(workspace_project, workspace_name, flowcell_data_id)
-
-    # call the create_tsv function and save files to data tables
-    tsv_list = create_library_to_bam_tsvs(cleaned_bams_list, raw_bams_list, flowcell_data_id)
-
-    print (f"wrote outputs to {tsv_list}")
-
-    for tsv in tsv_list:
-        # ToDo: check whether subject to race condition (and if so, implement via async/promises)
-        response = fapi.upload_entities_tsv(workspace_project, workspace_name, tsv, model="flexible")
-        if response.status_code != 200:
-            print('ERROR UPLOADING: See full error message:')
-            print(response.text)
-        else:
-            print("Upload complete. Check your workspace for new table!")
-
-    # # update sample_set with new set memberships and flowcell metadata
-
-    # columns to copy from flowcell_data to library table
-    copy_cols = ["sample_original", "spike_in"]
-
-    # API call to get existing sample_set mappings
-    header, rows = get_entities_to_table(workspace_project, workspace_name, "sample")
-    df_sample = pd.DataFrame.from_records(rows, columns=header, index="sample_id")
-
-    # API call to get all existing library ids
-    header, rows = get_entities_to_table(workspace_project, workspace_name, "library")
-    df_library = pd.DataFrame.from_records(rows, columns=header, index="library_id")
-
-    #   if meta_by_filename_json specified and size>0 bytes
-    #       parse as json, pass to for loop below
-    #   else
-    #       get data from live table 
-    if ( len('~{default="" meta_by_filename_json}')>0 and 
-        os.path.getsize('~{meta_by_filename_json}') > 0 ):
-
-        library_meta_dict = {}
-        with open('~{meta_by_filename_json}',"r") as meta_fp:
-            library_meta_dict = json.load(meta_fp)
-    else:
-        # API call to get flowcell_data table
-        header, rows = get_entities_to_table(workspace_project, workspace_name, "flowcell")
-        df_flowcell = pd.DataFrame.from_records(rows, columns=header, index="flowcell_id")
-        library_meta_dict = df_flowcell.meta_by_filename[flowcell_data_id]
-
-    # grab the meta_by_filename values to create new sample->library (sample_set->sample) mappings
-    sample_to_libraries = {}
-    for library_id, data in library_meta_dict.items():
-        sample_id = data['sample']
-        sample_to_libraries.setdefault(sample_id, [])
-        if library_id in df_library.index:
-            sample_to_libraries[sample_id].append(library_id)
-        else:
-            print (f"missing {library_id} from library table")
-
-    # merge in new sample->library mappings with any pre-existing sample->library mappings
-    if len(df_sample)>0:
-        print(df_sample.index)
-        for sample_id in sample_to_libraries.keys():
-            if sample_id in df_sample.index:
-                print (f"sample_set {sample_id} pre-exists in Terra table, merging with new members")
-                #sample_set_to_samples[set_id].extend(df_sample_set.samples[set_id])
-                already_associated_libraries = [entity["entityName"] for entity in df_sample.libraries[sample_id]]
-                
-                print(f"already_associated_libraries {already_associated_libraries}")
-                print(f"sample_to_libraries[sample_id] {sample_to_libraries[sample_id]}")
-                continue
-                sample_to_libraries[sample_id].extend(already_associated_libraries)
-                # collapse duplicate sample IDs
-                sample_to_libraries[sample_id] = list(set(sample_to_libraries[sample_id]))
-
+    # create tsv to populate sample table with new sample->library mappings
     sample_fname = 'sample_membership.tsv'
     with open(sample_fname, 'wt') as outf:
-        outf.write('entity:sample_id\tlibraries\n')
+        outf.write('entity:~{sample_table_name}_id\tlibraries\n')
+        merged_sample_ids = set()
         for sample_id, libraries in sample_to_libraries.items():
-            #for library_id in sorted(libraries):
+            if sample_id in df_sample.index and "libraries" in df_sample.columns and df_sample.libraries[sample_id] and pd.notna(df_sample.libraries[sample_id]):
+                # merge in new sample->library mappings with any pre-existing sample->library mappings
+                already_associated_libraries = [entity["entityName"] for entity in df_sample.libraries[sample_id] if entity.get("entityName")]
+                libraries = list(set(libraries + already_associated_libraries))
+                print (f"\tsample {sample_id} pre-exists in Terra table, merging old members {already_associated_libraries} with new members {libraries}")
+                merged_sample_ids.add(sample_id)
+
             outf.write(f'{sample_id}\t{json.dumps([{"entityType":"library","entityName":library_name} for library_name in libraries])}\n')
+    print(f"wrote {len(sample_to_libraries)} samples to {sample_fname} where {len(merged_sample_ids)} samples were already in the Terra table")
 
-    #   if meta_by_filename_json specified and size>0 bytes
-    #       parse as json, pass to for loop below
-    #   else
-    #       get data from live table 
-    if ( len('~{default="" meta_by_sample_json}')>0 and 
-        os.path.getsize('~{meta_by_sample_json}') > 0 ):
-        
-        sample = {}
-        with open('~{meta_by_sample_json}',"r") as meta_fp:
-            meta_by_library_all = json.load(meta_fp)
-    else:
-        # API call to get flowcell_data table
-        header, rows = get_entities_to_table(workspace_project, workspace_name, "flowcell")
-        df_flowcell = pd.DataFrame.from_records(rows, columns=header, index="flowcell_id")
-        # grab the meta_by_sample values from one row in the flowcell_data table
-        meta_by_library_all = df_flowcell.meta_by_sample[flowcell_data_id]
-
-    # grab all the library IDs
-    header, rows = get_entities_to_table(workspace_project, workspace_name, "library")
-    out_rows = []
-    out_header = ['library_id'] + copy_cols
-    print(f"out_header {out_header}")
-    for row in rows:
-        out_row = {'library_id': row['library_id']}
-
-        for sample_id,sample_library_metadata in meta_by_library_all.items():
-            if sample_library_metadata["library"] in row['library_id']:
-                for col in copy_cols:
-                    out_row[col] = sample_library_metadata.get(col, '')
-                out_rows.append(out_row)
-
-    library_meta_fname = "sample_metadata.tsv"
-    with open(library_meta_fname, 'wt') as outf:
-      outf.write("entity:")
-      writer = csv.DictWriter(outf, out_header, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
-      writer.writeheader()
-      writer.writerows(out_rows)
-
-    # write them to the Terra table!
-    for fname in (library_meta_fname,sample_fname):
+    # write everything to the Terra table! -- TO DO: move this to separate task
+    for fname in (library_bams_tsv, library_meta_fname, sample_fname):
         response = fapi.upload_entities_tsv(workspace_project, workspace_name, fname, model="flexible")
         if response.status_code != 200:
             print(f'ERROR UPLOADING {fname}: See full error message:')
             print(response.text)
+            sys.exit(1)
         else:
             print("Upload complete. Check your workspace for new table!")
 
@@ -612,6 +521,9 @@ task create_or_update_sample_tables {
     maxRetries: 2
   }
   output {
+    File library_metadata_tsv = "library_metadata.tsv"
+    File sample_membership_tsv = "sample_membership.tsv"
+    File library_bams_tsv = "~{flowcell_run_id}-all_bams.tsv"
     File stdout_log = stdout()
     File stderr_log = stderr()
     Int  max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)

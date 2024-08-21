@@ -479,12 +479,15 @@ task sra_meta_prep {
     lib_to_bams = {}
     sample_to_biosample = {}
     for bam in bam_uris:
-      # filename must be <libraryname>.<flowcell>.<lane>.cleaned.bam
-      assert bam.endswith('.cleaned.bam'), "filename does not end in .cleaned.bam: {}".format(bam)
+      # filename must be <libraryname>.<flowcell>.<lane>.cleaned.bam or <libraryname>.<flowcell>.<lane>.bam
       bam_base = os.path.basename(bam)
       bam_parts = bam_base.split('.')
-      assert len(bam_parts) >= 5, "filename does not conform to <libraryname>.<flowcell>.<lane>.cleaned.bam -- {}".format(bam_base)
-      lib = '.'.join(bam_parts[:-4])
+      assert bam_parts[-1] == 'bam', "filename does not end in .bam -- {}".format(bam) 
+      bam_parts = bam_parts[:-1]
+      if bam_parts[-1] == 'cleaned':
+        bam_parts = bam_parts[:-1]
+      assert len(bam_parts) >= 3, "filename does not conform to <libraryname>.<flowcell>.<lane>.cleaned.bam -- {}".format(bam_base)
+      lib = '.'.join(bam_parts[:-2]) # drop flowcell and lane
       lib_to_bams.setdefault(lib, [])
       lib_to_bams[lib].append(bam_base)
       print("debug: registering lib={} bam={}".format(lib, bam_base))
@@ -549,6 +552,90 @@ task sra_meta_prep {
     cpu: 1
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
+task biosample_to_table {
+  meta {
+    description: "Reformats a BioSample registration attributes table (attributes.tsv) for ingest into a Terra table."
+  }
+  input {
+    File        biosample_attributes_tsv
+    Array[File] cleaned_bam_filepaths
+    File        demux_meta_json
+
+    String  sample_table_name  = "sample"
+    String  docker = "python:slim"
+  }
+  String  sanitized_id_col = "entity:~{sample_table_name}_id"
+  String base = basename(basename(biosample_attributes_tsv, ".txt"), ".tsv")
+  parameter_meta {
+    cleaned_bam_filepaths: {
+      description: "Unaligned bam files containing cleaned (submittable) reads.",
+      localization_optional: true,
+      stream: true,
+      patterns: ["*.bam"]
+    }
+  }
+  command <<<
+    set -ex -o pipefail
+    python3 << CODE
+    import os.path
+    import csv
+    import json
+
+    # load demux metadata
+    with open("~{demux_meta_json}", 'rt') as inf:
+      demux_meta_by_file = json.load(inf)
+
+    # load list of bams surviving filters
+    bam_fnames = list(os.path.basename(x) for x in '~{sep="*" cleaned_bam_filepaths}'.split('*'))
+    bam_fnames = list(x[:-len('.bam')] if x.endswith('.bam') else x for x in bam_fnames)
+    bam_fnames = list(x[:-len('.cleaned')] if x.endswith('.cleaned') else x for x in bam_fnames)
+    print("bam basenames ({}): {}".format(len(bam_fnames), bam_fnames))
+    sample_to_sanitized = {demux_meta_by_file.get(x, {}).get('sample_original'): demux_meta_by_file.get(x, {}).get('sample') for x in bam_fnames}
+    if None in sample_to_sanitized:
+      del sample_to_sanitized[None]
+    sample_names_seen = sample_to_sanitized.keys()
+    print("samples seen ({}): {}".format(len(sample_names_seen), sorted(sample_names_seen)))
+
+    # load biosample metadata
+    biosample_attributes = []
+    biosample_headers = ['biosample_accession']
+    with open('~{biosample_attributes_tsv}', 'rt') as inf:
+      for row in csv.DictReader(inf, delimiter='\t'):
+        if row['sample_name'] in sample_names_seen and row['message'] == "Successfully loaded":
+          row['biosample_accession'] = row.get('accession')
+          biosample_attributes.append(row)
+          for k,v in row.items():
+            if v.strip().lower() in ('missing', 'na', 'not applicable', 'not collected', ''):
+              v = None
+            if v and (k not in biosample_headers) and k not in ('message', 'accession'):
+              biosample_headers.append(k)
+    print("biosample headers ({}): {}".format(len(biosample_headers), biosample_headers))
+    print("biosample rows ({})".format(len(biosample_attributes)))
+    samples_seen_without_biosample = set(sample_names_seen) - set(row['sample_name'] for row in biosample_attributes)
+    print("samples seen in bams without biosample entries ({}): {}".format(len(samples_seen_without_biosample), sorted(samples_seen_without_biosample)))
+
+    # write reformatted table
+    with open('~{base}.entities.tsv', 'wt') as outf:
+      writer = csv.DictWriter(outf, delimiter='\t', fieldnames=["~{sanitized_id_col}"]+biosample_headers, quoting=csv.QUOTE_MINIMAL)
+      writer.writeheader()
+      for row in biosample_attributes:
+        outrow = {h: row[h] for h in biosample_headers}
+        outrow["~{sanitized_id_col}"] = sample_to_sanitized[row['sample_name']]
+        writer.writerow(outrow)
+    CODE
+  >>>
+  output {
+    File sample_meta_tsv = "~{base}.entities.tsv"
+  }
+  runtime {
+    docker: docker
+    memory: "1 GB"
+    cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
