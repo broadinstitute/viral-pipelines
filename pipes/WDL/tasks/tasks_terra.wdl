@@ -433,6 +433,25 @@ task create_or_update_sample_tables {
     with open('~{meta_by_filename_json}',"r") as meta_fp:
         library_meta_dict = json.load(meta_fp)
 
+    # create tsv to populate library table with metadata from demux json / samplesheet
+    # to do: maybe just merge this into df_library_bams instead and make a single tsv output
+    library_meta_fname = "library_metadata.tsv"
+    with open(library_meta_fname, 'wt') as outf:
+      outf.write("entity:")
+      copy_cols = ["sample_original", "spike_in", "control", "batch_lib", "library", "lane", "library_id_per_sample", "library_strategy", "library_source", "library_selection", "design_description"]
+      out_header = ['library_id'] + copy_cols
+      print(f"library_metadata.tsv output header: {out_header}")
+      writer = csv.DictWriter(outf, out_header, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
+      writer.writeheader()
+
+      out_rows = []
+      for library in library_meta_dict.values():
+        if library['run'] in library_bam_names:
+          out_row = {col: library.get(col, '') for col in copy_cols}
+          out_row['library_id'] = library['run']
+          out_rows.append(out_row)
+      writer.writerows(out_rows)
+
     # grab the meta_by_filename values to create new sample->library mappings
     # restrict to libraries/samples that we actually have bam files for
     sample_to_libraries = {}
@@ -481,23 +500,6 @@ task create_or_update_sample_tables {
                 print (f"sample {sample_id} pre-exists in Terra table, merging old members {already_associated_libraries} with new members {libraries}")
 
             outf.write(f'{sample_id}\t{json.dumps([{"entityType":"library","entityName":library_name} for library_name in libraries])}\n')
-
-    # create tsv to populate library table with metadata from demux json / samplesheet
-    library_meta_fname = "library_metadata.tsv"
-    with open(library_meta_fname, 'wt') as outf:
-      outf.write("entity:")
-      copy_cols = ["sample_original", "spike_in", "control", "batch_lib", "library", "lane", "library_id_per_sample", "library_strategy", "library_source", "library_selection", "design_description"]
-      out_header = ['library_id'] + copy_cols
-      print(f"library_metadata.tsv output header: {out_header}")
-      writer = csv.DictWriter(outf, out_header, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
-      writer.writeheader()
-
-      out_rows = []
-      for library in library_meta_dict.values():
-          out_row = {col: library.get(col, '') for col in copy_cols}
-          out_row['library_id'] = library['run']
-          out_rows.append(out_row)
-      writer.writerows(out_rows)
 
     # write everything to the Terra table! -- TO DO: move this to separate task
     for fname in (library_bams_tsv, library_meta_fname, sample_fname):
