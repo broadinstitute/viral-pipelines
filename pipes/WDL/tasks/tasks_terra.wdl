@@ -357,7 +357,7 @@ task download_entities_tsv {
         rows.append(outrow)
 
     # dump to tsv
-    with open(out_fname, 'wt') as outf:
+    with open(out_fname, 'w', newline='') as outf:
       writer = csv.DictWriter(outf, headers.keys(), delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
       writer.writeheader()
       writer.writerows(rows)
@@ -385,6 +385,8 @@ task create_or_update_sample_tables {
     Array[String]  cleaned_reads_unaligned_bams
 
     File           meta_by_filename_json
+    File?          read_counts_raw_json
+    File?          read_counts_cleaned_json
 
     String  sample_table_name  = "sample"
     String  library_table_name = "library"
@@ -397,6 +399,7 @@ task create_or_update_sample_tables {
   }
 
   command <<<
+    set -e
     python3<<CODE
     flowcell_data_id  = '~{flowcell_run_id}'
     workspace_project = '~{workspace_namespace}'
@@ -412,6 +415,16 @@ task create_or_update_sample_tables {
     from firecloud import api as fapi
 
     print(workspace_project + "\n" + workspace_name)
+
+    # process read counts if available
+    read_counts_raw = {}
+    read_counts_cleaned = {}
+    if '~{default="" read_counts_raw_json}':
+        with open('~{default="" read_counts_raw_json}','rt') as inf:
+            read_counts_raw = {pair['left']: pair['right'] for pair in json.load(inf)}
+    if '~{default="" read_counts_cleaned_json}':
+        with open('~{default="" read_counts_cleaned_json}','rt') as inf:
+            read_counts_cleaned = {pair['left']: pair['right'] for pair in json.load(inf)}
 
     # create tsv to populate library table with raw_bam and cleaned_bam columns
     raw_bams_list               = '~{sep="*" raw_reads_unaligned_bams}'.split('*')
@@ -435,9 +448,9 @@ task create_or_update_sample_tables {
     # create tsv to populate library table with metadata from demux json / samplesheet
     # to do: maybe just merge this into df_library_bams instead and make a single tsv output
     library_meta_fname = "library_metadata.tsv"
-    with open(library_meta_fname, 'wt') as outf:
+    with open(library_meta_fname, 'w', newline='') as outf:
       copy_cols = ["sample_original", "spike_in", "control", "batch_lib", "library", "lane", "library_id_per_sample", "library_strategy", "library_source", "library_selection", "design_description"]
-      out_header = [lib_col_name] + copy_cols
+      out_header = [lib_col_name, 'flowcell', 'read_count_raw', 'read_count_cleaned'] + copy_cols
       print(f"library_metadata.tsv output header: {out_header}")
       writer = csv.DictWriter(outf, out_header, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
       writer.writeheader()
@@ -447,6 +460,9 @@ task create_or_update_sample_tables {
         if library['run'] in library_bam_names:
           out_row = {col: library.get(col, '') for col in copy_cols}
           out_row[lib_col_name] = library['run']
+          out_row['flowcell'] = flowcell_data_id
+          out_row['read_count_raw'] = read_counts_raw.get(library['run'], '')
+          out_row['read_count_cleaned'] = read_counts_cleaned.get(library['run'], '')
           out_rows.append(out_row)
       writer.writerows(out_rows)
 
@@ -498,7 +514,7 @@ task create_or_update_sample_tables {
                 print (f"\tsample {sample_id} pre-exists in Terra table, merging old members {already_associated_libraries} with new members {libraries}")
                 merged_sample_ids.add(sample_id)
 
-            outf.write(f'{sample_id}\t{json.dumps([{"entityType":"library","entityName":library_name} for library_name in libraries])}\n')
+            outf.write(f'{sample_id}\t{json.dumps([{"entityType":"~{library_table_name}","entityName":library_name} for library_name in libraries])}\n')
     print(f"wrote {len(sample_to_libraries)} samples to {sample_fname} where {len(merged_sample_ids)} samples were already in the Terra table")
 
     # write everything to the Terra table! -- TO DO: move this to separate task

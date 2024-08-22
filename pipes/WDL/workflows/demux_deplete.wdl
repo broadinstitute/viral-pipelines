@@ -1,5 +1,7 @@
 version 1.0
 
+#DX_SKIP_WORKFLOW
+
 import "../tasks/tasks_demux.wdl" as demux
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_reports.wdl" as reports
@@ -176,6 +178,8 @@ workflow demux_deplete {
         if (read_count_post_depletion < min_reads_per_bam) {
             File empty_bam = raw_reads
         }
+        Pair[String,Int] count_raw = (basename(raw_reads, '.bam'), spikein.reads_total)
+        Pair[String,Int] count_cleaned = (basename(raw_reads, '.bam'), read_count_post_depletion)
     }
 
     if(defined(biosample_map)) {
@@ -214,7 +218,9 @@ workflow demux_deplete {
 
                 raw_reads_unaligned_bams     = flatten(illumina_demux.raw_reads_unaligned_bams),
                 cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing),
-                meta_by_filename_json        = meta_filename.merged_json
+                meta_by_filename_json        = meta_filename.merged_json,
+                read_counts_raw_json         = write_json(count_raw),
+                read_counts_cleaned_json     = write_json(count_cleaned)
             }
 
             if(defined(biosample_map)) {
@@ -278,6 +284,10 @@ workflow demux_deplete {
         Map[String,String] run_info                          = illumina_demux.run_info[0]
         File               run_info_json                     = illumina_demux.run_info_json[0]
         String             run_id                            = illumina_demux.run_info[0]['run_id']
+
+        File?       terra_library_table                      = create_or_update_sample_tables.library_metadata_tsv
+        File?       terra_sample_library_map                 = create_or_update_sample_tables.sample_membership_tsv
+        File?       terra_sample_metadata                    = biosample_to_table.sample_meta_tsv
 
         String      demux_viral_core_version                 = illumina_demux.viralngs_version[0]
     }
