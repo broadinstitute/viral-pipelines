@@ -437,7 +437,7 @@ task create_or_update_sample_tables {
     library_meta_fname = "library_metadata.tsv"
     with open(library_meta_fname, 'w', newline='') as outf:
       copy_cols = ["sample_original", "spike_in", "control", "batch_lib", "library", "lane", "library_id_per_sample", "library_strategy", "library_source", "library_selection", "design_description"]
-      out_header = [lib_col_name] + copy_cols
+      out_header = [lib_col_name, 'flowcell'] + copy_cols
       print(f"library_metadata.tsv output header: {out_header}")
       writer = csv.DictWriter(outf, out_header, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
       writer.writeheader()
@@ -447,6 +447,7 @@ task create_or_update_sample_tables {
         if library['run'] in library_bam_names:
           out_row = {col: library.get(col, '') for col in copy_cols}
           out_row[lib_col_name] = library['run']
+          out_row['flowcell'] = flowcell_data_id
           out_rows.append(out_row)
       writer.writerows(out_rows)
 
