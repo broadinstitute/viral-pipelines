@@ -279,6 +279,10 @@ workflow demux_deplete {
         File               run_info_json                     = illumina_demux.run_info_json[0]
         String             run_id                            = illumina_demux.run_info[0]['run_id']
 
+        File?       terra_library_table                      = create_or_update_sample_tables.library_metadata_tsv
+        File?       terra_sample_library_map                 = create_or_update_sample_tables.sample_membership_tsv
+        File?       terra_sample_metadata                    = biosample_to_table.sample_meta_tsv
+
         String      demux_viral_core_version                 = illumina_demux.viralngs_version[0]
     }
 }
