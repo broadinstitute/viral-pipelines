@@ -615,7 +615,7 @@ task biosample_to_table {
             if v and (k not in biosample_headers) and k not in ('message', 'accession'):
               biosample_headers.append(k)
     print("biosample headers ({}): {}".format(len(biosample_headers), biosample_headers))
-    print("biosample rows ({})".format(len(biosample_attributes)))
+    print("biosample output rows ({})".format(len(biosample_attributes)))
     samples_seen_without_biosample = set(sample_names_seen) - set(row['sample_name'] for row in biosample_attributes)
     print("samples seen in bams without biosample entries ({}): {}".format(len(samples_seen_without_biosample), sorted(samples_seen_without_biosample)))
 

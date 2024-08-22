@@ -397,6 +397,7 @@ task create_or_update_sample_tables {
   }
 
   command <<<
+    set -e
     python3<<CODE
     flowcell_data_id  = '~{flowcell_run_id}'
     workspace_project = '~{workspace_namespace}'
