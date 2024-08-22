@@ -385,6 +385,8 @@ task create_or_update_sample_tables {
     Array[String]  cleaned_reads_unaligned_bams
 
     File           meta_by_filename_json
+    File?          read_counts_raw_json
+    File?          read_counts_cleaned_json
 
     String  sample_table_name  = "sample"
     String  library_table_name = "library"
@@ -414,6 +416,16 @@ task create_or_update_sample_tables {
 
     print(workspace_project + "\n" + workspace_name)
 
+    # process read counts if available
+    read_counts_raw = {}
+    read_counts_cleaned = {}
+    if '~{default="" read_counts_raw_json}':
+        with open('~{default="" read_counts_raw_json}','rt') as inf:
+            read_counts_raw = {pair.left: int(pair.right) for pair in json.load(inf)}
+    if '~{default="" read_counts_cleaned_json}':
+        with open('~{default="" read_counts_cleaned_json}','rt') as inf:
+            read_counts_cleaned = {pair.left: int(pair.right) for pair in json.load(inf)}
+
     # create tsv to populate library table with raw_bam and cleaned_bam columns
     raw_bams_list               = '~{sep="*" raw_reads_unaligned_bams}'.split('*')
     raw_library_id_list         = [bam.split("/")[-1].replace(".bam", "") for bam in raw_bams_list]
@@ -438,7 +450,7 @@ task create_or_update_sample_tables {
     library_meta_fname = "library_metadata.tsv"
     with open(library_meta_fname, 'w', newline='') as outf:
       copy_cols = ["sample_original", "spike_in", "control", "batch_lib", "library", "lane", "library_id_per_sample", "library_strategy", "library_source", "library_selection", "design_description"]
-      out_header = [lib_col_name, 'flowcell'] + copy_cols
+      out_header = [lib_col_name, 'flowcell', 'read_count_raw', 'read_count_cleaned'] + copy_cols
       print(f"library_metadata.tsv output header: {out_header}")
       writer = csv.DictWriter(outf, out_header, delimiter='\t', dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
       writer.writeheader()
@@ -449,6 +461,8 @@ task create_or_update_sample_tables {
           out_row = {col: library.get(col, '') for col in copy_cols}
           out_row[lib_col_name] = library['run']
           out_row['flowcell'] = flowcell_data_id
+          out_row['read_count_raw'] = read_counts_raw.get(library['run'], '')
+          out_row['read_count_cleaned'] = read_counts_cleaned.get(library['run'], '')
           out_rows.append(out_row)
       writer.writerows(out_rows)
 
