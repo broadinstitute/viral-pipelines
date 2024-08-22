@@ -421,10 +421,10 @@ task create_or_update_sample_tables {
     read_counts_cleaned = {}
     if '~{default="" read_counts_raw_json}':
         with open('~{default="" read_counts_raw_json}','rt') as inf:
-            read_counts_raw = {pair.left: int(pair.right) for pair in json.load(inf)}
+            read_counts_raw = {pair['left']: pair['right'] for pair in json.load(inf)}
     if '~{default="" read_counts_cleaned_json}':
         with open('~{default="" read_counts_cleaned_json}','rt') as inf:
-            read_counts_cleaned = {pair.left: int(pair.right) for pair in json.load(inf)}
+            read_counts_cleaned = {pair['left']: pair['right'] for pair in json.load(inf)}
 
     # create tsv to populate library table with raw_bam and cleaned_bam columns
     raw_bams_list               = '~{sep="*" raw_reads_unaligned_bams}'.split('*')
