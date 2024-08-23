@@ -366,6 +366,7 @@ task fastqc {
 
   command {
     set -ex -o pipefail
+    export OPENBLAS_NUM_THREADS=1
     reports.py --version | tee VERSION
     reports.py fastqc ${reads_bam} ${reads_basename}_fastqc.html --out_zip ${reads_basename}_fastqc.zip
   }
