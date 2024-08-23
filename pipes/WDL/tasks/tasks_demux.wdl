@@ -6,7 +6,7 @@ task merge_tarballs {
     String       out_filename
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-core:2.3.2"
+    String       docker = "quay.io/broadinstitute/viral-core:2.3.3"
   }
 
   Int disk_size = 2625
@@ -163,7 +163,7 @@ task illumina_demux {
 
     Int?    machine_mem_gb
     Int     disk_size = 2625
-    String  docker = "quay.io/broadinstitute/viral-core:2.3.2"
+    String  docker = "quay.io/broadinstitute/viral-core:2.3.3"
   }
 
   parameter_meta {
@@ -185,6 +185,8 @@ task illumina_demux {
 
   command <<<
     set -ex -o pipefail
+
+    export OPENBLAS_NUM_THREADS=1
 
     # find N% memory
     mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 85)
