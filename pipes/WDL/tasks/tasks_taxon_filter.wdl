@@ -38,6 +38,8 @@ task deplete_taxa {
 
   command <<<
     set -ex -o pipefail
+    export OPENBLAS_NUM_THREADS=1
+
     taxon_filter.py --version | tee VERSION
 
     if [ -z "$TMPDIR" ]; then
