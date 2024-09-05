@@ -149,7 +149,7 @@ workflow scaffold_and_refine_multitaxa {
             "coverage_genbank" :   select_first([coverage_two_col.out_tsv, ""]),
 
             "assembly_method" :         "viral-ngs/assemble_denovo",
-            "assembly_method_version" : coverage_self.viralngs_version,
+            "assembly_method_version" : scaffold.viralngs_version,
 
             "biosample_accession":      select_first([biosample_accession, ""]),
             "biosample_attributes_tsv": select_first([biosample_attributes_tsv, ""]),
