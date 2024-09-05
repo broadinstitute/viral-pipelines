@@ -434,6 +434,7 @@ task create_or_update_sample_tables {
     cleaned_bams_list           = '~{sep="*" cleaned_reads_unaligned_bams}'.split('*')
     cleaned_library_id_list     = [bam.split("/")[-1].replace(".bam", "").replace(".cleaned", "") for bam in cleaned_bams_list]
     df_library_table_clean_bams = pd.DataFrame({lib_col_name : cleaned_library_id_list, "cleaned_bam" : cleaned_bams_list})
+    cleaned_bam_names           = set(df_library_table_clean_bams[lib_col_name])
 
     df_library_bams = pd.merge(df_library_table_raw_bams, df_library_table_clean_bams, on=lib_col_name, how="outer")
     library_bams_tsv = flowcell_data_id + "-all_bams.tsv"
@@ -467,13 +468,13 @@ task create_or_update_sample_tables {
       writer.writerows(out_rows)
 
     # grab the meta_by_filename values to create new sample->library mappings
-    # restrict to libraries/samples that we actually have bam files for
+    # restrict to libraries/samples that we actually have cleaned bam files for
     sample_to_libraries = {}
     libraries_in_bams = set()
     for library_id, data in library_meta_dict.items():
         sample_id = data['sample']
         sample_to_libraries.setdefault(sample_id, [])
-        if library_id in library_bam_names:
+        if library_id in cleaned_bam_names:
             sample_to_libraries[sample_id].append(library_id)
             libraries_in_bams.add(library_id)
         else:
