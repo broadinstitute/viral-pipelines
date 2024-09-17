@@ -503,12 +503,23 @@ task create_or_update_sample_tables {
     print(df_sample.index)
 
     # create tsv to populate sample table with new sample->library mappings
+    def test_non_empty_value(value):
+      # this function exists because pandas / numpy arrays don't behave like python lists with regards to coercion to truth values
+      # Check for numpy NaN (which coerces to python True!)
+      if isinstance(value, float) and pd.isna(value):
+        return False
+      # Check for numpy arrays (which refuse to coerce to logical values and throw ValueError instead!)
+      if isinstance(value, (np.ndarray, pd.Series, pd.DataFrame)):
+        return value.size > 0 and value.any()
+      # Default to normal python behavior
+      return bool(value)
+
     sample_fname = 'sample_membership.tsv'
     with open(sample_fname, 'wt') as outf:
         outf.write('entity:~{sample_table_name}_id\tlibraries\n')
         merged_sample_ids = set()
         for sample_id, libraries in sample_to_libraries.items():
-            if sample_id in df_sample.index and "libraries" in df_sample.columns and df_sample.libraries[sample_id] and pd.notna(df_sample.libraries[sample_id]):
+            if sample_id in df_sample.index and "libraries" in df_sample.columns and test_non_empty_value(df_sample.libraries[sample_id]):
                 # merge in new sample->library mappings with any pre-existing sample->library mappings
                 already_associated_libraries = [entity["entityName"] for entity in df_sample.libraries[sample_id] if entity.get("entityName")]
                 libraries = list(set(libraries + already_associated_libraries))
