@@ -412,6 +412,7 @@ task create_or_update_sample_tables {
     import json
     import csv
     import pandas as pd
+    import numpy as np
     from firecloud import api as fapi
 
     print(workspace_project + "\n" + workspace_name)
