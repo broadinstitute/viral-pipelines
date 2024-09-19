@@ -158,9 +158,12 @@ workflow scaffold_and_refine_multitaxa {
     }
 
     ### summary stats
+    if len(select_all(stats_by_taxon)) > 0 {
+        File assembly_stats_body = write_tsv(select_all(stats_by_taxon))
+    }
     call utils.concatenate {
       input:
-        infiles     = [write_tsv([assembly_header]), write_tsv(select_all(stat_by_taxon))],
+        infiles     = select_all([write_tsv([assembly_header]), assembly_stats_body]),
         output_name = "assembly_metadata-~{sample_id}.tsv"
     }
 
