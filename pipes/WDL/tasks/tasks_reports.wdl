@@ -28,7 +28,12 @@ task alignment_metrics {
     echo "Requesting $MEM_MB MB of RAM for Java"
 
     # requisite Picard fasta indexing
-    cp "~{ref_fasta}" reference.fasta
+    python3<<CODE
+    import shutil
+    import util.file
+    with util.file.fastas_with_sanitized_ids("~{ref_fasta}", use_tmp=True) as sanitized_fastas:
+        shutil.copyfile(sanitized_fastas[0], 'reference.fasta')
+    CODE
     picard $XMX CreateSequenceDictionary -R reference.fasta
 
     if [ -s "~{ref_fasta}" ]; then
