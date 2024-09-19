@@ -100,6 +100,11 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/coverage_table.wdl
     testParameterFiles:
       - /empty.json
+  - name: delphy_phylo
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/delphy_phylo.wdl
+    testParameterFiles:
+      - /empty.json
   - name: demux_metag
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/demux_metag.wdl
