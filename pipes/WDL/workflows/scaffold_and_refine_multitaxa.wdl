@@ -50,6 +50,7 @@ workflow scaffold_and_refine_multitaxa {
 
     # assemble and produce stats for every reference cluster
     Array[String] assembly_header = ["entity:assembly_id", "assembly_name", "sample_id", "sample_name", "taxid", "tax_name", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "scaffolding_num_segments_recovered", "reference_num_segments_required", "reference_length", "reference_accessions", "skani_num_ref_clusters", "skani_this_cluster_num_refs", "skani_dist_tsv", "scaffolding_ani", "scaffolding_pct_ref_cov", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned", "coverage_genbank", "assembly_method", "sample"]
+    File assembly_header_tsv = write_tsv([assembly_header])
     scatter(ref_cluster_tar in select_references.matched_reference_clusters_fastas_tars) {
 
         call utils.tar_extract {
@@ -159,17 +160,16 @@ workflow scaffold_and_refine_multitaxa {
 
     ### summary stats
     if (length(select_all(stat_by_taxon)) > 0) {
-        File assembly_stats_body = write_tsv(select_all(stat_by_taxon))
-    }
-    call utils.concatenate {
-      input:
-        infiles     = select_all([write_tsv([assembly_header]), assembly_stats_body]),
-        output_name = "assembly_metadata-~{sample_id}.tsv"
+        call utils.concatenate {
+            input:
+                infiles     = [assembly_header_tsv, write_tsv(select_all(stat_by_taxon))],
+                output_name = "assembly_metadata-~{sample_id}.tsv"
+        }
     }
 
     output {
         Array[Map[String,String]] assembly_stats_by_taxon  = stats_by_taxon
-        File   assembly_stats_by_taxon_tsv                 = concatenate.combined
+        File   assembly_stats_by_taxon_tsv                 = select_first([concatenate.combined, assembly_header_tsv])
         String assembly_method                             = "viral-ngs/scaffold_and_refine_multitaxa"
 
         #String assembly_top_taxon_id               = select_references.top_matches_per_cluster_basenames[0]
