@@ -1,4 +1,4 @@
-broadinstitute/viral-core=2.3.4
+broadinstitute/viral-core=2.3.5
 broadinstitute/viral-assemble=2.3.4.0
 broadinstitute/viral-classify=2.2.4.2
 broadinstitute/viral-phylo=2.1.20.2

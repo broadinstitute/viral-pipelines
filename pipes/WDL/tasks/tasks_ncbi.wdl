@@ -192,7 +192,7 @@ task structured_comments {
 
     File?  filter_to_ids
 
-    String docker = "quay.io/broadinstitute/viral-core:2.3.4"
+    String docker = "quay.io/broadinstitute/viral-core:2.3.5"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -272,7 +272,7 @@ task rename_fasta_header {
 
     String out_basename = basename(genome_fasta, ".fasta")
 
-    String docker = "quay.io/broadinstitute/viral-core:2.3.4"
+    String docker = "quay.io/broadinstitute/viral-core:2.3.5"
   }
   command {
     set -e
@@ -437,7 +437,7 @@ task sra_meta_prep {
     Boolean     paired
 
     String      out_name = "sra_metadata.tsv"
-    String      docker="quay.io/broadinstitute/viral-core:2.3.4"
+    String      docker="quay.io/broadinstitute/viral-core:2.3.5"
   }
   Int disk_size = 100
   parameter_meta {
