@@ -693,7 +693,7 @@ task compare_two_genomes {
     File   genome_two
     String out_basename
 
-    String docker = "quay.io/broadinstitute/viral-assemble:2.3.4.0"
+    String docker = "quay.io/broadinstitute/viral-assemble:2.3.5.0"
   }
 
   Int disk_size = 50
