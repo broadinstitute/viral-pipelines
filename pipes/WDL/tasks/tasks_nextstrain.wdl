@@ -71,10 +71,10 @@ task nextclade_one_sample {
             DATASET_ARG="--input-dataset ."
         python3<<CODE1
         import json, os
-        with open('tag.json', 'rt') as inf:
+        with open('pathogen.json', 'rt') as inf:
             datasetinfo = json.load(inf)
         with open('VERSION', 'wt') as outf:
-            outf.write(os.environ['NEXTCLADE_VERSION'] + "; name=" + datasetinfo['name'] + "; tag=" + datasetinfo['tag'] + "\n")
+            outf.write(os.environ['NEXTCLADE_VERSION'] + "; name=" + datasetinfo['attributes']['name'] + "; tag=" + datasetinfo['version']['tag'] + "\n")
         CODE1
         fi
 
