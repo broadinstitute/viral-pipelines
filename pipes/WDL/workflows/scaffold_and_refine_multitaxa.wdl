@@ -158,8 +158,8 @@ workflow scaffold_and_refine_multitaxa {
     }
 
     ### summary stats
-    if len(select_all(stats_by_taxon)) > 0 {
-        File assembly_stats_body = write_tsv(select_all(stats_by_taxon))
+    if (length(select_all(stats_by_taxon)) > 0) {
+        File assembly_stats_body = write_tsv(select_all(stat_by_taxon))
     }
     call utils.concatenate {
       input:
