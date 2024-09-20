@@ -191,7 +191,7 @@ task isnvs_per_sample {
     Boolean removeDoublyMappedReads = true
 
     Int?    machine_mem_gb
-    String  docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
+    String  docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
 
     String  sample_name = basename(basename(basename(mapped_bam, ".bam"), ".all"), ".mapped")
   }
@@ -234,7 +234,7 @@ task isnvs_vcf {
     Boolean        naiveFilter = false
 
     Int?           machine_mem_gb
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
   }
 
   parameter_meta {
@@ -308,7 +308,7 @@ task annotate_vcf_snpeff {
     String?        emailAddress
 
     Int?           machine_mem_gb
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
 
     String         output_basename = basename(basename(in_vcf, ".gz"), ".vcf")
   }
