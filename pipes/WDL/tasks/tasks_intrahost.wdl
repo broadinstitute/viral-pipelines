@@ -136,7 +136,7 @@ task lofreq {
     File      reference_fasta
 
     String    out_basename = basename(aligned_bam, '.bam')
-    String    docker = "quay.io/biocontainers/lofreq:2.1.5--py38h588ecb2_4"
+    String    docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
   }
   Int disk_size = 200
   command <<<
@@ -145,8 +145,13 @@ task lofreq {
     lofreq version | grep version | sed 's/.* \(.*\)/\1/g' | tee LOFREQ_VERSION
 
     # make local copies because CWD is writeable but localization dir isn't always
-    cp "~{reference_fasta}" reference.fasta
     cp "~{aligned_bam}" aligned.bam
+    python3<<CODE
+    import shutil
+    import util.file
+    with util.file.fastas_with_sanitized_ids("~{reference_fasta}", use_tmp=True) as sanitized_fastas:
+        shutil.copyfile(sanitized_fastas[0], 'reference.fasta')
+    CODE
 
     # samtools faidx fails if fasta is empty
     if [ $(grep -v '^>' reference.fasta | tr -d '\nNn' | wc -c) == "0" ]; then
