@@ -698,31 +698,100 @@ task biosample_to_genbank {
     Int     taxid
 
     File?   filter_to_ids
+    String  biosample_col_for_fasta_headers = "sample_name"
 
-    Boolean s_dropout_note = true
     String  docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
   }
-  String base = basename(biosample_attributes, ".txt")
-  command {
+  String base = basename(basename(biosample_attributes, ".txt"), ".tsv")
+  command <<<
     set -ex -o pipefail
-    ncbi.py --version | tee VERSION
-    ncbi.py biosample_to_genbank \
-        "${biosample_attributes}" \
-        ${num_segments} \
-        ${taxid} \
-        "${base}".genbank.src \
-        "${base}".biosample.map.txt \
-        ${'--filter_to_samples ' + filter_to_ids} \
-        --biosample_in_smt \
-        --iso_dates \
-        ~{true="--sgtf_override" false="" s_dropout_note} \
-        --loglevel DEBUG
+    python3<<CODE
+    import csv
+
+    header_key_map = {
+        'Sequence_ID':'~{biosample_col_for_fasta_headers}',
+        'country':'geo_loc_name',
+        'BioProject':'bioproject_accession',
+        'BioSample':'accession',
+    }
+    datestring_formats = [
+        "YYYY-MM-DDTHH:mm:ss", "YYYY-MM-DD", "YYYY-MM", "DD-MMM-YYYY", "MMM-YYYY", "YYYY"
+    ]
+    out_headers_total = ['Sequence_ID', 'isolate', 'collection_date', 'country', 'collected_by', 'isolation_source', 'organism', 'host', 'note', 'db_xref', 'BioProject', 'BioSample']
+    samples_to_filter_to = set()
+    if "~{default='' filter_to_ids}":
+        with open("~{filter_to_ids}", 'rt') as inf:
+            samples_to_filter_to = set(line.strip() for line in inf)
+
+    with open("~{biosample_attributes}", 'rt') as inf_biosample:
+      biosample_attributes = csv.DictReader(inf_biosample, delimiter='\t')
+      in_headers = biosample_attributes.fieldnames
+
+      with open("~{base}.genbank.src", 'wt') as outf_smt:
+        out_headers = list(h for h in out_headers_total if header_key_map.get(h,h) in in_headers)
+        if 'db_xref' not in out_headers:
+            out_headers.append('db_xref')
+        if 'note' not in out_headers:
+            out_headers.append('note')
+        outf_smt.write('\t'.join(out_headers)+'\n')
+
+        with open("~{base}.biosample.map.txt", 'wt') as outf_biosample:
+            outf_biosample.write('BioSample\tsample\n')
+
+            for row in biosample_attributes:
+                if row['message'].startswith('Success'):
+                    # skip if this is not a sample we're interested in
+                    if samples_to_filter_to and (row[header_key_map['Sequence_ID']] not in samples_to_filter_to):
+                      continue
+
+                    # write BioSample
+                    outf_biosample.write("{}\t{}\n".format(row['accession'], row[header_key_map['Sequence_ID']]))
+
+                    # populate output row as a dict
+                    outrow = dict((h, row.get(header_key_map.get(h,h), '')) for h in out_headers)
+
+                    # custom reformat collection_date
+                    collection_date = outrow.get('collection_date', '')
+                    if collection_date:
+                        date_parsed = None
+                        for datestring_format in datestring_formats:
+                            try:
+                                date_parsed = arrow.get(collection_date, datestring_format)
+                                break
+                            except arrow.parser.ParserError:
+                                pass
+                        if date_parsed:
+                            #if iso_dates:
+                            collection_date = str(date_parsed.format("YYYY-MM-DD"))
+                            #else:
+                            #    collection_date = str(date_parsed.format("DD-MMM-YYYY"))
+                            outrow['collection_date'] = collection_date
+                        else:
+                            log.warn("unable to parse date {} from sample {}".format(collection_date, outrow['Sequence_ID']))
+
+                    # custom db_xref/taxon
+                    outrow['db_xref'] = "taxon:{}".format(~{taxid})
+
+                    # load the purpose of sequencing (or if not, the purpose of sampling) in the note field
+                    outrow['note'] = row.get('purpose_of_sequencing', row.get('purpose_of_sampling', ''))
+
+                    # write entry for this sample
+                    outf_smt.write('\t'.join(outrow[h] for h in out_headers)+'\n')
+
+                    # also write numbered versions for every segment/chromosome
+                    sample_name = outrow['Sequence_ID']
+                    if ~{num_segments}>1:
+                        for i in range(~{num_segments}):
+                            outrow['Sequence_ID'] = "{}-{}".format(sample_name, i+1)
+                            outf_smt.write('\t'.join(outrow[h] for h in out_headers)+'\n')
+
+    CODE
     cut -f 1 "${base}.genbank.src" | tail +2 > "${base}.sample_ids.txt"
-  }
+  >>>
   output {
-    File genbank_source_modifier_table = "${base}.genbank.src"
-    File biosample_map                 = "${base}.biosample.map.txt"
-    File sample_ids                    = "${base}.sample_ids.txt"
+    File genbank_source_modifier_table = "~{base}.genbank.src"
+    File biosample_map                 = "~{base}.biosample.map.txt"
+    File sample_ids                    = "~{base}.sample_ids.txt"
   }
   runtime {
     docker: docker
