@@ -694,13 +694,13 @@ task biosample_to_genbank {
   }
   input {
     File    biosample_attributes
-    Int     num_segments = 1
     Int     taxid
-
-    File?   filter_to_ids
+    Int     num_segments = 1
     String  biosample_col_for_fasta_headers = "sample_name"
 
-    String  docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
+    File?   filter_to_ids
+
+    String  docker = "python:slim"
   }
   String base = basename(basename(biosample_attributes, ".txt"), ".tsv")
   command <<<
