@@ -700,12 +700,13 @@ task biosample_to_genbank {
 
     File?   filter_to_ids
 
-    String  docker = "python:slim"
+    String  docker = "quay.io/broadinstitute/viral-core:2.3.6"
   }
   String base = basename(basename(biosample_attributes, ".txt"), ".tsv")
   command <<<
     set -ex -o pipefail
     python3<<CODE
+    import arrow
     import csv
 
     header_key_map = {
@@ -722,6 +723,7 @@ task biosample_to_genbank {
     if "~{default='' filter_to_ids}":
         with open("~{filter_to_ids}", 'rt') as inf:
             samples_to_filter_to = set(line.strip() for line in inf)
+            print("filtering to samples: {}".format(samples_to_filter_to))
 
     with open("~{biosample_attributes}", 'rt') as inf_biosample:
       biosample_attributes = csv.DictReader(inf_biosample, delimiter='\t')
