@@ -79,7 +79,7 @@ task sequencing_platform_from_bam {
   input {
     File    bam
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.3.2"
+    String  docker = "quay.io/broadinstitute/viral-core:2.3.6"
   }
 
   command <<<
@@ -1036,7 +1036,7 @@ task prepare_genbank_single {
     String?      assembly_method_version
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
+    String       docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
   }
 
   parameter_meta {
