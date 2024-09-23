@@ -157,21 +157,32 @@ workflow scaffold_and_refine_multitaxa {
             "sample":              '{"entityType":"sample","entityName":"' + sample_id + '"}'
         }
 
-        scatter(h in assembly_header) {
-            String stat_by_taxon = stats_by_taxon[h]
+        if(assembly_length_unambiguous > min_scaffold_unambig) {
+            scatter(h in assembly_header) {
+                String stat_by_taxon = stats_by_taxon[h]
+            }
         }
     }
 
     ### summary stats
-    call utils.concatenate {
-      input:
-        infiles     = [write_tsv([assembly_header]), write_tsv(stat_by_taxon)],
-        output_name = "assembly_metadata-~{sample_id}.tsv"
+    if (length(select_all(stat_by_taxon)) > 0) {
+        call utils.concatenate as assembly_stats_non_empty {
+            input:
+                infiles     = [write_tsv([assembly_header]), write_tsv(select_all(stat_by_taxon))],
+                output_name = "assembly_metadata-~{sample_id}.tsv"
+        }
+    }
+    if (length(select_all(stat_by_taxon)) == 0) {
+        call utils.concatenate as assembly_stats_empty {
+            input:
+                infiles     = [write_tsv([assembly_header])],
+                output_name = "assembly_metadata-~{sample_id}.tsv"
+        }
     }
 
     output {
         Array[Map[String,String]] assembly_stats_by_taxon  = stats_by_taxon
-        File   assembly_stats_by_taxon_tsv                 = concatenate.combined
+        File   assembly_stats_by_taxon_tsv                 = select_first([assembly_stats_non_empty.combined, assembly_stats_empty.combined])
         String assembly_method                             = "viral-ngs/scaffold_and_refine_multitaxa"
 
         #String assembly_top_taxon_id               = select_references.top_matches_per_cluster_basenames[0]

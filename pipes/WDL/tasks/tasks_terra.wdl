@@ -391,7 +391,7 @@ task create_or_update_sample_tables {
     String  sample_table_name  = "sample"
     String  library_table_name = "library"
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.3.2"
+    String  docker = "quay.io/broadinstitute/viral-core:2.3.6"
   }
 
   meta {
@@ -412,6 +412,7 @@ task create_or_update_sample_tables {
     import json
     import csv
     import pandas as pd
+    import numpy as np
     from firecloud import api as fapi
 
     print(workspace_project + "\n" + workspace_name)
@@ -434,6 +435,7 @@ task create_or_update_sample_tables {
     cleaned_bams_list           = '~{sep="*" cleaned_reads_unaligned_bams}'.split('*')
     cleaned_library_id_list     = [bam.split("/")[-1].replace(".bam", "").replace(".cleaned", "") for bam in cleaned_bams_list]
     df_library_table_clean_bams = pd.DataFrame({lib_col_name : cleaned_library_id_list, "cleaned_bam" : cleaned_bams_list})
+    cleaned_bam_names           = set(df_library_table_clean_bams[lib_col_name])
 
     df_library_bams = pd.merge(df_library_table_raw_bams, df_library_table_clean_bams, on=lib_col_name, how="outer")
     library_bams_tsv = flowcell_data_id + "-all_bams.tsv"
@@ -467,13 +469,13 @@ task create_or_update_sample_tables {
       writer.writerows(out_rows)
 
     # grab the meta_by_filename values to create new sample->library mappings
-    # restrict to libraries/samples that we actually have bam files for
+    # restrict to libraries/samples that we actually have cleaned bam files for
     sample_to_libraries = {}
     libraries_in_bams = set()
     for library_id, data in library_meta_dict.items():
         sample_id = data['sample']
         sample_to_libraries.setdefault(sample_id, [])
-        if library_id in library_bam_names:
+        if library_id in cleaned_bam_names:
             sample_to_libraries[sample_id].append(library_id)
             libraries_in_bams.add(library_id)
         else:
@@ -502,12 +504,23 @@ task create_or_update_sample_tables {
     print(df_sample.index)
 
     # create tsv to populate sample table with new sample->library mappings
+    def test_non_empty_value(value):
+      # this function exists because pandas / numpy arrays don't behave like python lists with regards to coercion to truth values
+      # Check for numpy NaN (which coerces to python True!)
+      if isinstance(value, float) and pd.isna(value):
+        return False
+      # Check for numpy arrays (which refuse to coerce to logical values and throw ValueError instead!)
+      if isinstance(value, (np.ndarray, pd.Series, pd.DataFrame)):
+        return value.size > 0 and value.any()
+      # Default to normal python behavior
+      return bool(value)
+
     sample_fname = 'sample_membership.tsv'
     with open(sample_fname, 'wt') as outf:
         outf.write('entity:~{sample_table_name}_id\tlibraries\n')
         merged_sample_ids = set()
         for sample_id, libraries in sample_to_libraries.items():
-            if sample_id in df_sample.index and "libraries" in df_sample.columns and df_sample.libraries[sample_id] and pd.notna(df_sample.libraries[sample_id]):
+            if sample_id in df_sample.index and "libraries" in df_sample.columns and test_non_empty_value(df_sample.libraries[sample_id]):
                 # merge in new sample->library mappings with any pre-existing sample->library mappings
                 already_associated_libraries = [entity["entityName"] for entity in df_sample.libraries[sample_id] if entity.get("entityName")]
                 libraries = list(set(libraries + already_associated_libraries))
