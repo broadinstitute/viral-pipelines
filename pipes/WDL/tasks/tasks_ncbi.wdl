@@ -735,7 +735,8 @@ task biosample_to_genbank {
             out_headers.append('note')
         outf_smt.write('\t'.join(out_headers)+'\n')
 
-        with open("~{base}.biosample.map.txt", 'wt') as outf_biosample:
+        with open("~{base}.sample_ids.txt", 'wt') as outf_ids:
+          with open("~{base}.biosample.map.txt", 'wt') as outf_biosample:
             outf_biosample.write('BioSample\tsample\n')
 
             for row in biosample_attributes:
@@ -777,6 +778,7 @@ task biosample_to_genbank {
 
                     # write entry for this sample
                     outf_smt.write('\t'.join(outrow[h] for h in out_headers)+'\n')
+                    outf_ids.write(outrow['Sequence_ID']+'\n')
 
                     # also write numbered versions for every segment/chromosome
                     sample_name = outrow['Sequence_ID']
@@ -784,9 +786,9 @@ task biosample_to_genbank {
                         for i in range(~{num_segments}):
                             outrow['Sequence_ID'] = "{}-{}".format(sample_name, i+1)
                             outf_smt.write('\t'.join(outrow[h] for h in out_headers)+'\n')
+                            outf_ids.write(outrow['Sequence_ID']+'\n')
 
     CODE
-    cut -f 1 "${base}.genbank.src" | tail +2 > "${base}.sample_ids.txt"
   >>>
   output {
     File genbank_source_modifier_table = "~{base}.genbank.src"
