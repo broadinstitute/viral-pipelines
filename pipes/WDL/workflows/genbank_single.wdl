@@ -101,8 +101,7 @@ workflow genbank_single {
         input:
             biosample_attributes = biosample_attributes,
             num_segments         = length(reference_accessions),
-            taxid                = tax_id,
-            s_dropout_note       = false
+            taxid                = tax_id
     }
 
     # TO DO: for VADR-based viruses, call VADR instead of align_and_annot_transfer_single

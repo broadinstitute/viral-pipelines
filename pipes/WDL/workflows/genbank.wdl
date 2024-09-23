@@ -105,8 +105,7 @@ workflow genbank {
         input:
             biosample_attributes = biosample_attributes,
             num_segments         = length(reference_accessions),
-            taxid                = fetch_genbank_metadata.taxid[0],
-            s_dropout_note       = false
+            taxid                = fetch_genbank_metadata.taxid[0]
     }
 
     scatter(assembly in assemblies_fasta) {
