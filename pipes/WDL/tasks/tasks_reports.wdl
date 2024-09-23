@@ -15,7 +15,7 @@ task alignment_metrics {
     Int    max_amplicons=500
 
     Int    machine_mem_gb=32
-    String docker = "quay.io/broadinstitute/viral-core:2.3.2"
+    String docker = "quay.io/broadinstitute/viral-core:2.3.6"
   }
 
   String out_basename = basename(aligned_bam, ".bam")
@@ -28,7 +28,12 @@ task alignment_metrics {
     echo "Requesting $MEM_MB MB of RAM for Java"
 
     # requisite Picard fasta indexing
-    cp "~{ref_fasta}" reference.fasta
+    python3<<CODE
+    import shutil
+    import util.file
+    with util.file.fastas_with_sanitized_ids("~{ref_fasta}", use_tmp=True) as sanitized_fastas:
+        shutil.copyfile(sanitized_fastas[0], 'reference.fasta')
+    CODE
     picard $XMX CreateSequenceDictionary -R reference.fasta
 
     if [ -s "~{ref_fasta}" ]; then
@@ -137,7 +142,7 @@ task plot_coverage {
     String? plotXLimits # of the form "min max" (ints, space between)
     String? plotYLimits # of the form "min max" (ints, space between)
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.3.2"
+    String  docker = "quay.io/broadinstitute/viral-core:2.3.6"
   }
 
   Int disk_size = 375
@@ -284,7 +289,7 @@ task coverage_report {
     Array[File]  mapped_bam_idx # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name = "coverage_report.txt"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.3.2"
+    String       docker = "quay.io/broadinstitute/viral-core:2.3.6"
   }
 
   Int disk_size = 375
@@ -351,7 +356,7 @@ task fastqc {
   input {
     File   reads_bam
 
-    String docker = "quay.io/broadinstitute/viral-core:2.3.2"
+    String docker = "quay.io/broadinstitute/viral-core:2.3.6"
   }
   parameter_meta {
     reads_bam:{ 
@@ -399,7 +404,7 @@ task align_and_count {
     Boolean keep_duplicates_when_filtering                    = false
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.3.2"
+    String docker = "quay.io/broadinstitute/viral-core:2.3.6"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
@@ -511,7 +516,7 @@ task align_and_count_summary {
 
     String       output_prefix = "count_summary"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.3.2"
+    String       docker = "quay.io/broadinstitute/viral-core:2.3.6"
   }
 
   Int disk_size = 100
@@ -693,7 +698,7 @@ task compare_two_genomes {
     File   genome_two
     String out_basename
 
-    String docker = "quay.io/broadinstitute/viral-assemble:2.3.2.0"
+    String docker = "quay.io/broadinstitute/viral-assemble:2.3.6.1"
   }
 
   Int disk_size = 50

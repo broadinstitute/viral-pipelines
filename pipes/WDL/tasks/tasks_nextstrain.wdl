@@ -321,7 +321,7 @@ task derived_cols {
         String?       lab_highlight_loc
         Array[File]   table_map = []
 
-        String        docker = "quay.io/broadinstitute/viral-core:2.3.2"
+        String        docker = "quay.io/broadinstitute/viral-core:2.3.6"
         Int           disk_size = 50
     }
     parameter_meta {
@@ -889,7 +889,7 @@ task filter_sequences_to_list {
 
         String       out_fname = sub(sub(basename(sequences, ".zst"), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
         # Prior docker image: "nextstrain/base:build-20240318T173028Z"
-        String       docker = "quay.io/broadinstitute/viral-core:2.3.2"
+        String       docker = "quay.io/broadinstitute/viral-core:2.3.6"
         Int          disk_size = 750
     }
     parameter_meta {
@@ -990,7 +990,7 @@ task mafft_one_chr {
         Boolean  large = false
         Boolean  memsavetree = false
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
+        String   docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
         Int      mem_size = 500
         Int      cpus = 64
         Int      disk_size = 750
@@ -1078,7 +1078,7 @@ task mafft_one_chr_chunked {
         Int      batch_chunk_size = 2000
         Int      threads_per_job = 2
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
+        String   docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
         Int      mem_size = 32
         Int      cpus = 64
         Int      disk_size = 750
