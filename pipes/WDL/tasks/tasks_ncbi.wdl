@@ -721,6 +721,7 @@ task biosample_to_genbank {
         more_header_key_map = json.load(inf)
     for k,v in more_header_key_map.items():
         header_key_map[k] = v
+    print("header_key_map: {}".format(header_key_map))
 
     datestring_formats = [
         "YYYY-MM-DDTHH:mm:ss", "YYYY-MM-DD", "YYYY-MM", "DD-MMM-YYYY", "MMM-YYYY", "YYYY"
