@@ -713,7 +713,6 @@ task biosample_to_genbank {
 
     header_key_map = {
         'Sequence_ID':'~{biosample_col_for_fasta_headers}',
-        'country':'geo_loc_name',
         'BioProject':'bioproject_accession',
         'BioSample':'accession',
     }
