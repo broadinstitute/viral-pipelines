@@ -759,7 +759,7 @@ task biosample_to_genbank {
 
                     # Influenza-specific requirement
                     if row['organism'].startswith('Influenza'):
-                        match = re.search(r'\(([^()]+)\)+$', string)
+                        match = re.search(r'\(([^()]+)\)+$', row[header_key_map.get('isolate','isolate')])
                         if match:
                             row['serotype'] = match.group(1)
 
