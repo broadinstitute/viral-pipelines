@@ -786,16 +786,15 @@ task biosample_to_genbank {
                     outrow['note'] = row.get('purpose_of_sequencing', row.get('purpose_of_sampling', ''))
 
                     # write entry for this sample
-                    outf_smt.write('\t'.join(outrow[h] for h in out_headers)+'\n')
-                    outf_ids.write(outrow['Sequence_ID']+'\n')
-
-                    # also write numbered versions for every segment/chromosome
                     sample_name = outrow['Sequence_ID']
                     if ~{num_segments}>1:
                         for i in range(~{num_segments}):
                             outrow['Sequence_ID'] = "{}-{}".format(sample_name, i+1)
                             outf_smt.write('\t'.join(outrow[h] for h in out_headers)+'\n')
                             outf_ids.write(outrow['Sequence_ID']+'\n')
+                    else:
+                        outf_smt.write('\t'.join(outrow[h] for h in out_headers)+'\n')
+                        outf_ids.write(outrow['Sequence_ID']+'\n')
 
     CODE
   >>>
