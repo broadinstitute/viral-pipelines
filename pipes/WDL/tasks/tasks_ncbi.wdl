@@ -699,6 +699,7 @@ task biosample_to_genbank {
     String  biosample_col_for_fasta_headers = "sample_name"
 
     File?   filter_to_ids
+    Map[String,String] src_to_attr_map = {}
 
     String  docker = "quay.io/broadinstitute/viral-core:2.3.6"
   }
@@ -715,6 +716,11 @@ task biosample_to_genbank {
         'BioProject':'bioproject_accession',
         'BioSample':'accession',
     }
+    with open("~{write_json(src_to_attr_map)}", rt) as inf:
+        more_header_key_map = json.load(inf)
+    for k,v in more_header_key_map.items():
+        header_key_map[k] = v
+
     datestring_formats = [
         "YYYY-MM-DDTHH:mm:ss", "YYYY-MM-DD", "YYYY-MM", "DD-MMM-YYYY", "MMM-YYYY", "YYYY"
     ]
