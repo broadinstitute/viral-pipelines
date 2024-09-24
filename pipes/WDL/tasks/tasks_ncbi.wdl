@@ -769,6 +769,16 @@ task biosample_to_genbank {
                     # populate output row as a dict
                     outrow = dict((h, row.get(header_key_map.get(h,h), '')) for h in out_headers)
 
+                    # isolate name should not start with organism string
+                    if outrow['isolate'].startswith(outrow['organism']):
+                        outrow['isolate'] = outrow['isolate'][len(outrow['organism']):].strip()
+
+                    # some fields are not allowed to be empty
+                    if not outrow['geo_loc_name']:
+                        outrow['geo_loc_name'] = 'missing'
+                    if not outrow['host']:
+                        outrow['host'] = 'not applicable'
+
                     # custom reformat collection_date
                     collection_date = outrow.get('collection_date', '')
                     if collection_date:
