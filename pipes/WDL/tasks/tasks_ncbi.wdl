@@ -710,6 +710,7 @@ task biosample_to_genbank {
     import arrow
     import csv
     import json
+    import re
 
     header_key_map = {
         'Sequence_ID':'~{biosample_col_for_fasta_headers}',
@@ -725,7 +726,7 @@ task biosample_to_genbank {
     datestring_formats = [
         "YYYY-MM-DDTHH:mm:ss", "YYYY-MM-DD", "YYYY-MM", "DD-MMM-YYYY", "MMM-YYYY", "YYYY"
     ]
-    out_headers_total = ['Sequence_ID', 'isolate', 'collection_date', 'geo_loc_name', 'collected_by', 'isolation_source', 'organism', 'host', 'note', 'db_xref', 'BioProject', 'BioSample']
+    out_headers_total = ['Sequence_ID', 'isolate', 'collection_date', 'geo_loc_name', 'collected_by', 'isolation_source', 'organism', 'host', 'note', 'serotype', 'db_xref', 'BioProject', 'BioSample']
     samples_to_filter_to = set()
     if "~{default='' filter_to_ids}":
         with open("~{filter_to_ids}", 'rt') as inf:
@@ -742,6 +743,8 @@ task biosample_to_genbank {
             out_headers.append('db_xref')
         if 'note' not in out_headers:
             out_headers.append('note')
+        if 'serotype' not in out_headers:
+            out_headers.append('serotype')
         outf_smt.write('\t'.join(out_headers)+'\n')
 
         with open("~{base}.sample_ids.txt", 'wt') as outf_ids:
@@ -753,6 +756,12 @@ task biosample_to_genbank {
                     # skip if this is not a sample we're interested in
                     if samples_to_filter_to and (row[header_key_map['Sequence_ID']] not in samples_to_filter_to):
                       continue
+
+                    # Influenza-specific requirement
+                    if row['organism'].startswith('Influenza'):
+                        match = re.search(r'\(([^()]+)\)+$', string)
+                        if match:
+                            row['serotype'] = match.group(1)
 
                     # write BioSample
                     outf_biosample.write("{}\t{}\n".format(row['accession'], row[header_key_map['Sequence_ID']]))
