@@ -716,7 +716,7 @@ task biosample_to_genbank {
         'BioProject':'bioproject_accession',
         'BioSample':'accession',
     }
-    with open("~{write_json(src_to_attr_map)}", rt) as inf:
+    with open("~{write_json(src_to_attr_map)}", 'rt') as inf:
         more_header_key_map = json.load(inf)
     for k,v in more_header_key_map.items():
         header_key_map[k] = v
