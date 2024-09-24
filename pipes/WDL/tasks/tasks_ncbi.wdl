@@ -725,7 +725,7 @@ task biosample_to_genbank {
     datestring_formats = [
         "YYYY-MM-DDTHH:mm:ss", "YYYY-MM-DD", "YYYY-MM", "DD-MMM-YYYY", "MMM-YYYY", "YYYY"
     ]
-    out_headers_total = ['Sequence_ID', 'isolate', 'collection_date', 'country', 'collected_by', 'isolation_source', 'organism', 'host', 'note', 'db_xref', 'BioProject', 'BioSample']
+    out_headers_total = ['Sequence_ID', 'isolate', 'collection_date', 'geo_loc_name', 'collected_by', 'isolation_source', 'organism', 'host', 'note', 'db_xref', 'BioProject', 'BioSample']
     samples_to_filter_to = set()
     if "~{default='' filter_to_ids}":
         with open("~{filter_to_ids}", 'rt') as inf:
