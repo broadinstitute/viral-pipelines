@@ -709,6 +709,7 @@ task biosample_to_genbank {
     python3<<CODE
     import arrow
     import csv
+    import json
 
     header_key_map = {
         'Sequence_ID':'~{biosample_col_for_fasta_headers}',
