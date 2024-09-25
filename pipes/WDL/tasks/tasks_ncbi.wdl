@@ -752,13 +752,14 @@ task biosample_to_genbank {
             out_headers_total.append('serotype')
           if special.startswith('Influenza'):
             # for flu: populate serotype and host and simplify isolate name
-            match = re.search(r'\(([^()]+)\)+$', row['sample_name'])
-            if match:
-                row['serotype'] = match.group(1)
-            match = re.search(r'[^/]+/([^/]+)/[^/]+/[^/]+/[^/]+', row['sample_name'])
-            if match:
-                row['host'] = match.group(1)
             header_key_map['isolate'] = 'strain'
+            for row in biosample_attributes:
+              match = re.search(r'\(([^()]+)\)+$', row['sample_name'])
+              if match:
+                  row['serotype'] = match.group(1)
+              match = re.search(r'[^/]+/([^/]+)/[^/]+/[^/]+/[^/]+', row['sample_name'])
+              if match:
+                  row['host'] = match.group(1)
 
     with open("~{base}.genbank.src", 'wt') as outf_smt:
       out_headers = list(h for h in out_headers_total if header_key_map.get(h,h) in in_headers)
