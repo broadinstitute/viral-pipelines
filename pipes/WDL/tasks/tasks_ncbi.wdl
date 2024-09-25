@@ -726,95 +726,112 @@ task biosample_to_genbank {
     datestring_formats = [
         "YYYY-MM-DDTHH:mm:ss", "YYYY-MM-DD", "YYYY-MM", "DD-MMM-YYYY", "MMM-YYYY", "YYYY"
     ]
-    out_headers_total = ['Sequence_ID', 'isolate', 'collection_date', 'geo_loc_name', 'collected_by', 'isolation_source', 'organism', 'host', 'note', 'serotype', 'db_xref', 'BioProject', 'BioSample']
+    out_headers_total = ['Sequence_ID', 'isolate', 'collection_date', 'geo_loc_name', 'collected_by', 'isolation_source', 'organism', 'host', 'note', 'db_xref', 'BioProject', 'BioSample']
     samples_to_filter_to = set()
     if "~{default='' filter_to_ids}":
         with open("~{filter_to_ids}", 'rt') as inf:
             samples_to_filter_to = set(line.strip() for line in inf)
             print("filtering to samples: {}".format(samples_to_filter_to))
 
+    # read entire tsv -> biosample_attributes, filtered to only the entries we keep
     with open("~{biosample_attributes}", 'rt') as inf_biosample:
-      biosample_attributes = csv.DictReader(inf_biosample, delimiter='\t')
-      in_headers = biosample_attributes.fieldnames
+      biosample_attributes_reader = csv.DictReader(inf_biosample, delimiter='\t')
+      in_headers = biosample_attributes_reader.fieldnames
+      biosample_attributes = list(row for row in biosample_attributes_reader
+        if row['message'].startswith('Success')
+        and (not samples_to_filter_to or row[header_key_map['Sequence_ID']] in samples_to_filter_to))
+      print("filtered to {} samples".format(len(biosample_attributes)))
 
-      with open("~{base}.genbank.src", 'wt') as outf_smt:
-        out_headers = list(h for h in out_headers_total if header_key_map.get(h,h) in in_headers)
-        if 'db_xref' not in out_headers:
-            out_headers.append('db_xref')
-        if 'note' not in out_headers:
-            out_headers.append('note')
-        if 'serotype' not in out_headers:
-            out_headers.append('serotype')
-        outf_smt.write('\t'.join(out_headers)+'\n')
+    # handle special submission types: flu, sc2, noro, dengue
+    for special in ('Influenza A virus', 'Influenza B virus', 'Influenza C virus',
+                    'Severe acute respiratory syndrome coronavirus 2',
+                    'Norovirus', 'Dengue virus'):
+        if any(row['organism'] == special for row in biosample_attributes):
+          assert all(row['organism'] == special for row in biosample_attributes), "if any samples are {}, all samples must be {}".format(special, special)
+          if 'serotype' not in out_headers_total:
+            out_headers_total.append('serotype')
+          if special.startswith('Influenza'):
+            # for flu: populate serotype and host and simplify isolate name
+            match = re.search(r'\(([^()]+)\)+$', row['sample_name'])
+            if match:
+                row['serotype'] = match.group(1)
+            match = re.search(r'[^/]+/([^/]+)/[^/]+/[^/]+/[^/]+', row['sample_name'])
+            if match:
+                row['host'] = match.group(1)
+            header_key_map['isolate'] = 'strain'
 
-        with open("~{base}.sample_ids.txt", 'wt') as outf_ids:
-          with open("~{base}.biosample.map.txt", 'wt') as outf_biosample:
-            outf_biosample.write('BioSample\tsample\n')
+    with open("~{base}.genbank.src", 'wt') as outf_smt:
+      out_headers = list(h for h in out_headers_total if header_key_map.get(h,h) in in_headers)
+      if 'db_xref' not in out_headers:
+          out_headers.append('db_xref')
+      if 'note' not in out_headers:
+          out_headers.append('note')
+      if 'serotype' not in out_headers:
+          out_headers.append('serotype')
+      outf_smt.write('\t'.join(out_headers)+'\n')
 
-            for row in biosample_attributes:
-                if row['message'].startswith('Success'):
-                    # skip if this is not a sample we're interested in
-                    if samples_to_filter_to and (row[header_key_map['Sequence_ID']] not in samples_to_filter_to):
-                      continue
+      with open("~{base}.sample_ids.txt", 'wt') as outf_ids:
+        with open("~{base}.biosample.map.txt", 'wt') as outf_biosample:
+          outf_biosample.write('BioSample\tsample\n')
 
-                    # Influenza-specific requirement
-                    if row['organism'].startswith('Influenza'):
-                        match = re.search(r'\(([^()]+)\)+$', row[header_key_map.get('isolate','isolate')])
-                        if match:
-                            row['serotype'] = match.group(1)
+          for row in biosample_attributes:
+            # Influenza-specific requirement
+            if row['organism'].startswith('Influenza'):
+                match = re.search(r'\(([^()]+)\)+$', row[header_key_map.get('isolate','isolate')])
+                if match:
+                    row['serotype'] = match.group(1)
 
-                    # write BioSample
-                    outf_biosample.write("{}\t{}\n".format(row['accession'], row[header_key_map['Sequence_ID']]))
+            # write BioSample
+            outf_biosample.write("{}\t{}\n".format(row['accession'], row[header_key_map['Sequence_ID']]))
 
-                    # populate output row as a dict
-                    outrow = dict((h, row.get(header_key_map.get(h,h), '')) for h in out_headers)
+            # populate output row as a dict
+            outrow = dict((h, row.get(header_key_map.get(h,h), '')) for h in out_headers)
 
-                    # isolate name should not start with organism string
-                    if outrow['isolate'].startswith(outrow['organism']):
-                        outrow['isolate'] = outrow['isolate'][len(outrow['organism']):].strip()
+            # isolate name should not start with organism string
+            if outrow['isolate'].startswith(outrow['organism']):
+                outrow['isolate'] = outrow['isolate'][len(outrow['organism']):].strip()
 
-                    # some fields are not allowed to be empty
-                    if not outrow['geo_loc_name']:
-                        outrow['geo_loc_name'] = 'missing'
-                    if not outrow['host']:
-                        outrow['host'] = 'not applicable'
+            # some fields are not allowed to be empty
+            if not outrow['geo_loc_name']:
+                outrow['geo_loc_name'] = 'missing'
+            if not outrow['host']:
+                outrow['host'] = 'not applicable'
 
-                    # custom reformat collection_date
-                    collection_date = outrow.get('collection_date', '')
-                    if collection_date:
-                        date_parsed = None
-                        for datestring_format in datestring_formats:
-                            try:
-                                date_parsed = arrow.get(collection_date, datestring_format)
-                                break
-                            except arrow.parser.ParserError:
-                                pass
-                        if date_parsed:
-                            #if iso_dates:
-                            collection_date = str(date_parsed.format("YYYY-MM-DD"))
-                            #else:
-                            #    collection_date = str(date_parsed.format("DD-MMM-YYYY"))
-                            outrow['collection_date'] = collection_date
-                        else:
-                            log.warn("unable to parse date {} from sample {}".format(collection_date, outrow['Sequence_ID']))
+            # custom reformat collection_date
+            collection_date = outrow.get('collection_date', '')
+            if collection_date:
+                date_parsed = None
+                for datestring_format in datestring_formats:
+                    try:
+                        date_parsed = arrow.get(collection_date, datestring_format)
+                        break
+                    except arrow.parser.ParserError:
+                        pass
+                if date_parsed:
+                    #if iso_dates:
+                    collection_date = str(date_parsed.format("YYYY-MM-DD"))
+                    #else:
+                    #    collection_date = str(date_parsed.format("DD-MMM-YYYY"))
+                    outrow['collection_date'] = collection_date
+                else:
+                    log.warn("unable to parse date {} from sample {}".format(collection_date, outrow['Sequence_ID']))
 
-                    # custom db_xref/taxon
-                    outrow['db_xref'] = "taxon:{}".format(~{taxid})
+            # custom db_xref/taxon
+            outrow['db_xref'] = "taxon:{}".format(~{taxid})
 
-                    # load the purpose of sequencing (or if not, the purpose of sampling) in the note field
-                    outrow['note'] = row.get('purpose_of_sequencing', row.get('purpose_of_sampling', ''))
+            # load the purpose of sequencing (or if not, the purpose of sampling) in the note field
+            outrow['note'] = row.get('purpose_of_sequencing', row.get('purpose_of_sampling', ''))
 
-                    # write entry for this sample
-                    sample_name = outrow['Sequence_ID']
-                    if ~{num_segments}>1:
-                        for i in range(~{num_segments}):
-                            outrow['Sequence_ID'] = "{}-{}".format(sample_name, i+1)
-                            outf_smt.write('\t'.join(outrow[h] for h in out_headers)+'\n')
-                            outf_ids.write(outrow['Sequence_ID']+'\n')
-                    else:
-                        outf_smt.write('\t'.join(outrow[h] for h in out_headers)+'\n')
-                        outf_ids.write(outrow['Sequence_ID']+'\n')
-
+            # write entry for this sample
+            sample_name = outrow['Sequence_ID']
+            if ~{num_segments}>1:
+                for i in range(~{num_segments}):
+                    outrow['Sequence_ID'] = "{}-{}".format(sample_name, i+1)
+                    outf_smt.write('\t'.join(outrow[h] for h in out_headers)+'\n')
+                    outf_ids.write(outrow['Sequence_ID']+'\n')
+            else:
+                outf_smt.write('\t'.join(outrow[h] for h in out_headers)+'\n')
+                outf_ids.write(outrow['Sequence_ID']+'\n')
     CODE
   >>>
   output {
