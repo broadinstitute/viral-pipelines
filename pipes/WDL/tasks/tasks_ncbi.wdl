@@ -701,13 +701,12 @@ task biosample_to_genbank {
     File?   filter_to_ids
     Map[String,String] src_to_attr_map = {}
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.3.6"
+    String  docker = "python:slim"
   }
   String base = basename(basename(biosample_attributes, ".txt"), ".tsv")
   command <<<
     set -ex -o pipefail
     python3<<CODE
-    import arrow
     import csv
     import json
     import re
@@ -750,16 +749,25 @@ task biosample_to_genbank {
           assert all(row['organism'] == special for row in biosample_attributes), "if any samples are {}, all samples must be {}".format(special, special)
           if 'serotype' not in out_headers_total:
             out_headers_total.append('serotype')
+          ### Influenza-specific requirements
           if special.startswith('Influenza'):
-            # for flu: populate serotype and host and simplify isolate name
+            # simplify isolate name
             header_key_map['isolate'] = 'strain'
             for row in biosample_attributes:
+              # populate serotype from name parsing
               match = re.search(r'\(([^()]+)\)+$', row['sample_name'])
               if match:
                   row['serotype'] = match.group(1)
-              match = re.search(r'[^/]+/([^/]+)/[^/]+/[^/]+/[^/]+', row['sample_name'])
-              if match:
-                  row['host'] = match.group(1)
+              # populate host field from name parsing if empty, override milk
+              if 'host' not in row:
+                match = re.search(r'[^/]+/([^/]+)/[^/]+/[^/]+/[^/]+', row['sample_name'])
+                if match:
+                    row['host'] = match.group(1)
+                    if row['host'] == 'bovine_milk':
+                      row['host'] = 'Cattle'
+              # override geo_loc_name if food_source exists
+              if 'food_source' in row:
+                  row['geo_loc_name'] = row['food_source']
 
     with open("~{base}.genbank.src", 'wt') as outf_smt:
       out_headers = list(h for h in out_headers_total if header_key_map.get(h,h) in in_headers)
@@ -797,25 +805,6 @@ task biosample_to_genbank {
                 outrow['geo_loc_name'] = 'missing'
             if not outrow['host']:
                 outrow['host'] = 'not applicable'
-
-            # custom reformat collection_date
-            collection_date = outrow.get('collection_date', '')
-            if collection_date:
-                date_parsed = None
-                for datestring_format in datestring_formats:
-                    try:
-                        date_parsed = arrow.get(collection_date, datestring_format)
-                        break
-                    except arrow.parser.ParserError:
-                        pass
-                if date_parsed:
-                    #if iso_dates:
-                    collection_date = str(date_parsed.format("YYYY-MM-DD"))
-                    #else:
-                    #    collection_date = str(date_parsed.format("DD-MMM-YYYY"))
-                    outrow['collection_date'] = collection_date
-                else:
-                    log.warn("unable to parse date {} from sample {}".format(collection_date, outrow['Sequence_ID']))
 
             # custom db_xref/taxon
             outrow['db_xref'] = "taxon:{}".format(~{taxid})
