@@ -766,7 +766,7 @@ task biosample_to_genbank {
                     if row['host'] == 'bovine_milk':
                       row['host'] = 'Cattle'
               # override geo_loc_name if food_origin exists
-              if 'food_origin' in row:
+              if row.get('food_origin'):
                   row['geo_loc_name'] = row['food_origin']
 
     with open("~{base}.genbank.src", 'wt') as outf_smt:
@@ -801,9 +801,9 @@ task biosample_to_genbank {
                 outrow['isolate'] = outrow['isolate'][len(outrow['organism']):].strip()
 
             # some fields are not allowed to be empty
-            if not outrow['geo_loc_name']:
+            if not outrow.get('geo_loc_name'):
                 outrow['geo_loc_name'] = 'missing'
-            if not outrow['host']:
+            if not outrow.get('host'):
                 outrow['host'] = 'not applicable'
 
             # custom db_xref/taxon
