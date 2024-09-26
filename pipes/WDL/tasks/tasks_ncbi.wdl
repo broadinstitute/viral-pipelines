@@ -766,7 +766,8 @@ task biosample_to_genbank {
                     if row['host'] == 'bovine_milk':
                       row['host'] = 'Cattle'
               # override geo_loc_name if food_origin exists
-              if row.get('food_origin'):
+              if row.get('food_origin','').strip():
+                  print("overriding geo_loc_name '{}' with food_origin '{}'".format(row['geo_loc_name'], row['food_origin']))
                   row['geo_loc_name'] = row['food_origin']
 
     with open("~{base}.genbank.src", 'wt') as outf_smt:
