@@ -765,9 +765,9 @@ task biosample_to_genbank {
                     row['host'] = match.group(1)
                     if row['host'] == 'bovine_milk':
                       row['host'] = 'Cattle'
-              # override geo_loc_name if food_source exists
-              if 'food_source' in row:
-                  row['geo_loc_name'] = row['food_source']
+              # override geo_loc_name if food_origin exists
+              if 'food_origin' in row:
+                  row['geo_loc_name'] = row['food_origin']
 
     with open("~{base}.genbank.src", 'wt') as outf_smt:
       out_headers = list(h for h in out_headers_total if header_key_map.get(h,h) in in_headers)
