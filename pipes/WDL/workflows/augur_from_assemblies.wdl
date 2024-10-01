@@ -59,7 +59,7 @@ workflow augur_from_assemblies {
 
     call utils.zcat {
         input:
-            infiles     = flatten([assembly_fastas, select_first(contextual_genome_fastas,[])]),
+            infiles     = flatten([assembly_fastas, select_first([contextual_genome_fastas,[]])]),
             output_name = "all_samples_combined_assembly.fasta"
     }
     call utils.filter_sequences_by_length {
