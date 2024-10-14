@@ -235,7 +235,7 @@ workflow demux_deplete {
                 read_counts_cleaned_json     = write_json(count_cleaned)
             }
 
-            if (length(flatten(select_all([biosample_map]))) > 0) {
+            if (length(flatten(select_all([biosample_map_tsvs]))) > 0) {
                 call terra.upload_entities_tsv as terra_load_biosample_data {
                     input:
                         workspace_name   = check_terra_env.workspace_name,
