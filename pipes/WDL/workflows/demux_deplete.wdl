@@ -186,7 +186,7 @@ workflow demux_deplete {
     if (length(flatten(select_all([biosample_map_tsvs]))) > 0) {
         #### merge biosample attribute tsvs (iff provided with more than one)
         if (length(flatten(select_all([biosample_map_tsvs]))) > 1) {
-            call utils.tsv_join as biosample_map_tsv_join{
+            call utils.tsv_join as biosample_map_tsv_join {
                 input:
                     input_tsvs   = flatten([select_first([biosample_map_tsvs,[]])]),
                     id_col       = 'accession',
@@ -198,7 +198,7 @@ workflow demux_deplete {
         #### biosample metadata mapping
         call ncbi.biosample_to_table {
             input:
-                biosample_attributes_tsv = select_first(flatten([[biosample_map_tsv_join.out_tsv], biosample_map_tsvs])),
+                biosample_attributes_tsv = select_first([biosample_map_tsv_join.out_tsv, biosample_map_tsvs]),
                 cleaned_bam_filepaths    = select_all(cleaned_bam_passing),
                 demux_meta_json          = meta_filename.merged_json
         }
@@ -207,7 +207,7 @@ workflow demux_deplete {
         call ncbi.sra_meta_prep {
             input:
                 cleaned_bam_filepaths = select_all(cleaned_bam_passing),
-                biosample_map         = select_first(flatten([[biosample_map_tsv_join.out_tsv], biosample_map_tsvs])),
+                biosample_map         = select_first([biosample_map_tsv_join.out_tsv, biosample_map_tsvs]),
                 library_metadata      = samplesheet_rename_ids.new_sheet,
                 platform              = "ILLUMINA",
                 paired                = (illumina_demux.run_info[0]['indexes'] == '2'),
