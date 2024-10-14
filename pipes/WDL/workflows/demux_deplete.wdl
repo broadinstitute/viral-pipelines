@@ -25,7 +25,7 @@ workflow demux_deplete {
         Boolean      insert_demux_outputs_into_terra_tables=false
 
         File?        sample_rename_map
-        File?        biosample_map
+        Array[File]? biosample_map_tsvs
         Int          min_reads_per_bam = 100
 
         String?      instrument_model_user_specified
@@ -53,12 +53,12 @@ workflow demux_deplete {
             category: "required"
         }
         sample_rename_map: {
-            description: "If 'samples' need to be renamed, provide a two-column tsv that contains at least the following columns: internal_id, external_id. All samples will be renamed prior to analysis. Any samples described in the samplesheets that are not present in sample_rename_map will be unaltered. If this is omitted, no samples will be renamed.",
+            description: "If 'samples' need to be renamed, provide a two-column tsv that contains at least the following columns: 'internal_id', 'external_id'. All samples will be renamed prior to analysis. Any samples described in the samplesheets that are not present in sample_rename_map will be unaltered. If this is omitted, no samples will be renamed.",
             patterns: ["*.txt", "*.tsv"],
             category: "advanced"
         }
-        biosample_map: {
-            description: "A two-column tsv that contains at least the following columns: sample_name, accession. sample_name refers to the external sample id, accession is the NCBI BioSample accession number (SAMNxxx). If this file is omitted, SRA submission prep will be skipped.",
+        biosample_map_tsvs: {
+            description: "One or more tsv files, each containing at least the following columns: 'sample_name', 'accession'. 'sample_name' refers to the external sample id, 'accession' is the NCBI BioSample accession (SAMN########). Recommended input: the BioSample attributes tsv returned by NCBI following successful submission of a new list of BioSample attributes. If this file is omitted, SRA submission prep will be skipped.",
             patterns: ["*.txt", "*.tsv"],
             category: "advanced"
         }
@@ -182,11 +182,22 @@ workflow demux_deplete {
         Pair[String,Int] count_cleaned = (basename(raw_reads, '.bam'), read_count_post_depletion)
     }
 
-    if(defined(biosample_map)) {
+    if (length(flatten(select_all([biosample_map]))) > 0) {
+        #### merge biosample attribute tsvs (iff provided with more than one)
+        if(length(biosample_map_tsvs)>1) {
+            call utils.tsv_join as biosample_map_tsv_join{
+                input:
+                    input_tsvs   = flatten([select_first([biosample_map_tsvs,[]])]),
+                    id_col       = 'accession',
+                    out_suffix   = ".tsv",
+                    out_basename = "biosample-attributes-merged"
+            }
+        }
+
         #### biosample metadata mapping
         call ncbi.biosample_to_table {
             input:
-                biosample_attributes_tsv = select_first([biosample_map]),
+                biosample_attributes_tsv = select_first(flatten([[biosample_map_tsv_join.out_tsv], biosample_map_tsvs])),
                 cleaned_bam_filepaths    = select_all(cleaned_bam_passing),
                 demux_meta_json          = meta_filename.merged_json
         }
@@ -195,7 +206,7 @@ workflow demux_deplete {
         call ncbi.sra_meta_prep {
             input:
                 cleaned_bam_filepaths = select_all(cleaned_bam_passing),
-                biosample_map         = select_first([biosample_map]),
+                biosample_map         = select_first(flatten([[biosample_map_tsv_join.out_tsv], biosample_map_tsvs])),
                 library_metadata      = samplesheet_rename_ids.new_sheet,
                 platform              = "ILLUMINA",
                 paired                = (illumina_demux.run_info[0]['indexes'] == '2'),
@@ -206,7 +217,7 @@ workflow demux_deplete {
         }
     }
 
-    if(insert_demux_outputs_into_terra_tables){
+    if(insert_demux_outputs_into_terra_tables) {
         call terra.check_terra_env
 
         if(check_terra_env.is_running_on_terra) {
@@ -223,7 +234,7 @@ workflow demux_deplete {
                 read_counts_cleaned_json     = write_json(count_cleaned)
             }
 
-            if(defined(biosample_map)) {
+            if (length(flatten(select_all([biosample_map]))) > 0) {
                 call terra.upload_entities_tsv as terra_load_biosample_data {
                     input:
                         workspace_name   = check_terra_env.workspace_name,
