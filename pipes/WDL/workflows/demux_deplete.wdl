@@ -7,6 +7,7 @@ import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_taxon_filter.wdl" as taxon_filter
 import "../tasks/tasks_terra.wdl" as terra
+import "../tasks/tasks_utils.wdl" as utils
 
 workflow demux_deplete {
     meta {
