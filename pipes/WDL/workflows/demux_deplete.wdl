@@ -183,9 +183,9 @@ workflow demux_deplete {
         Pair[String,Int] count_cleaned = (basename(raw_reads, '.bam'), read_count_post_depletion)
     }
 
-    if (length(flatten(select_all([biosample_map]))) > 0) {
+    if (length(flatten(select_all([biosample_map_tsvs]))) > 0) {
         #### merge biosample attribute tsvs (iff provided with more than one)
-        if(length(biosample_map_tsvs)>1) {
+        if (length(flatten(select_all([biosample_map_tsvs]))) > 1) {
             call utils.tsv_join as biosample_map_tsv_join{
                 input:
                     input_tsvs   = flatten([select_first([biosample_map_tsvs,[]])]),
