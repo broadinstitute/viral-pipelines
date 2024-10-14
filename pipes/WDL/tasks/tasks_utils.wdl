@@ -185,6 +185,7 @@ task download_from_web {
         String https_web_address
 
         String request_method = "GET"
+        String? output_filename
         String? additional_wget_opts
 
         Int    disk_size = 50
@@ -194,10 +195,13 @@ task download_from_web {
         description: "The URL to download; this is passed to wget"
       }
       request_method: {
-        description: "The request method (GET,POST,etc.)"
+        description: "The request method ('GET', 'POST', etc.) passed to wget. Optional (default: 'GET')"
       }
       additional_wget_opts: {
         description: "Additional options passed to wget as part of the download command."
+      }
+      output_filename: {
+        description: "The filename to use for the downloaded file. This is optional, though it can be helpful in the event the server does not advise on a filename via the 'Content-Disposition' header."
       }
     }
     command <<<
@@ -206,6 +210,7 @@ task download_from_web {
 
         wget \
         --method ~{request_method} \
+        ~{if defined(output_filename) then "--output-document ~{output_filename}" else ""} \
         ~{additional_wget_opts} \
         ~{https_web_address}
 
