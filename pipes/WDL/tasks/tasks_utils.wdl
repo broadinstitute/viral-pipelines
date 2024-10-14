@@ -176,6 +176,59 @@ task tar_extract {
     }
 }
 
+task download_from_web {
+    meta {
+        description: "Download a URL to a file. This task exists as a workaround until Terra supports this functionality natively (cromwell already does: https://cromwell.readthedocs.io/en/stable/filesystems/HTTP/)."
+        volatile: true
+    }
+    input {
+        String https_web_address
+
+        String request_method = "GET"
+        String? additional_wget_opts
+
+        Int    disk_size = 50
+    }
+    parameter_meta {
+      https_web_address: {
+        description: "The URL to download; this is passed to wget"
+      }
+      request_method: {
+        description: "The request method (GET,POST,etc.)"
+      }
+      additional_wget_opts: {
+        description: "Additional options passed to wget as part of the download command."
+      }
+    }
+    command <<<
+        mkdir "downloaded"
+        pushd "downloaded"
+
+        wget \
+        --method ~{request_method} \
+        ~{additional_wget_opts} \
+        ~{https_web_address}
+
+        popd
+    >>>
+    runtime {
+        docker: "quay.io/broadinstitute/viral-baseimage:0.2.0"
+        memory: "2 GB"
+        cpu:    1
+        disks:  "local-disk " + disk_size + " LOCAL"
+        disk: disk_size + " GB" # TES
+        dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
+        preemptible: 1
+    }
+    output {
+        File downloaded_file = glob("downloaded/*")[0]
+
+        File stdout = stdout()
+        File stderr = stderr()
+    }
+}
+
 task fasta_to_ids {
     meta {
         description: "Return the headers only from a fasta file"
