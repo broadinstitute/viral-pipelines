@@ -13,7 +13,7 @@ workflow terra_tsv_to_table {
     }
 
     input {
-        Array[File]+ tsv_files
+        Array[File?]+ tsv_files
     }
 
     call terra.check_terra_env
