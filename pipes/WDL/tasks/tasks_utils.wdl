@@ -240,6 +240,7 @@ task download_from_url {
         # --trust-server-names = ...and in the event of a redirect, use the value of the final page rather than that of the original url
         # --save-headers = save the headers sent by the HTTP server to the file, preceding the actual contents, with an empty line as the separator.
         wget \
+        --read-timeout 3 --waitretry 30 \
         --no-verbose \
         --method ~{request_method} \
         ~{if defined(output_filename) then "--output-document ~{output_filename}" else ""} \
