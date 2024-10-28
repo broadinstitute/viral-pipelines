@@ -184,9 +184,9 @@ task download_from_url {
     input {
         String url_to_download
 
-        String request_method = "GET"
         String? output_filename
         String? additional_wget_opts
+        String  request_method="GET"
         Int     request_max_retries=1
 
         String? md5_hash_expected
@@ -200,20 +200,24 @@ task download_from_url {
       url_to_download: {
         description: "The URL to download; this is passed to wget"
       }
-      request_method: {
-        description: "The request method ('GET', 'POST', etc.) passed to wget. Optional (default: 'GET')"
+      
+      output_filename: {
+        description: "The filename to use for the downloaded file. This is optional, though it can be helpful in the event the server does not advise on a filename via the 'Content-Disposition' header."
       }
       additional_wget_opts: {
         description: "Additional options passed to wget as part of the download command."
       }
-      output_filename: {
-        description: "The filename to use for the downloaded file. This is optional, though it can be helpful in the event the server does not advise on a filename via the 'Content-Disposition' header."
+      request_method: {
+        description: "The request method ('GET', 'POST', etc.) passed to wget. Optional (default: 'GET')"
+      }
+      request_max_retries: {
+        description: "The maximum number of (additional) re-tries to attempt in the event of failed download."
       }
       md5_hash_expected: {
-        description: "The (binary-mode) md5 hash expected for the file to download. If provided and the value does not match the md5 hash of the downloaded file, the task will fail."
+        description: "The (binary-mode) md5 hash expected for the file to download. If provided and the value does not match the md5 hash of the downloaded file, the task will fail. mutually exclusive with md5_hash_expected_file_url"
       }
       md5_hash_expected_file_url: {
-        description: "The url of a file containing the (binary-mode) md5 hash expected for the file to download. If provided and the value does not match the md5 hash of the downloaded file, the task will fail."
+        description: "The url of a file containing the (binary-mode) md5 hash expected for the file to download. If provided and the value does not match the md5 hash of the downloaded file, the task will fail. mutually exclusive with md5_hash_expected"
       }
       save_response_header_to_file: {
         description: "If save_response_header_to_file=true, http response headers will be saved to an output file. Only applicable for http[s] URLs."
