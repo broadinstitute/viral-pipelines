@@ -15,7 +15,7 @@ task trim_rmdup_subsamp {
         Int cpu            = 16
         Int disk_size_gb   = 100 
 
-        String docker      = "quay.io/broadinstitute/viral-assemble:2.3.2.0"
+        String docker      = "quay.io/broadinstitute/viral-assemble:2.3.6.1"
     }
 
     parameter_meta {
@@ -36,7 +36,7 @@ task trim_rmdup_subsamp {
     command <<<
         set -ex o pipefail
         assembly.py --version | tee VERSION
-        #BAM ->FASTQ-> OutBam? https://github.com/broadinstitute/viral-assemble/blob/80bcc1da5c6a0174362ca9fd8bc0b49ee0b4103b/assembly.py#L91
+        #BAM ->FASTQ-> OutBam? https://github.com/broadinstitute/viral-assemble:2.3.6.1
         assembly.py trim_rmdup_subsamp \
         "~{inBam}" \
         "~{clipDb}" \
