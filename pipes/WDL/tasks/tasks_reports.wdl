@@ -15,7 +15,7 @@ task alignment_metrics {
     Int    max_amplicons=500
 
     Int    machine_mem_gb=32
-    String docker = "quay.io/broadinstitute/viral-core:2.3.2"
+    String docker = "quay.io/broadinstitute/viral-core:2.3.6"
   }
 
   String out_basename = basename(aligned_bam, ".bam")
@@ -28,7 +28,12 @@ task alignment_metrics {
     echo "Requesting $MEM_MB MB of RAM for Java"
 
     # requisite Picard fasta indexing
-    cp "~{ref_fasta}" reference.fasta
+    python3<<CODE
+    import shutil
+    import util.file
+    with util.file.fastas_with_sanitized_ids("~{ref_fasta}", use_tmp=True) as sanitized_fastas:
+        shutil.copyfile(sanitized_fastas[0], 'reference.fasta')
+    CODE
     picard $XMX CreateSequenceDictionary -R reference.fasta
 
     if [ -s "~{ref_fasta}" ]; then
@@ -137,7 +142,7 @@ task plot_coverage {
     String? plotXLimits # of the form "min max" (ints, space between)
     String? plotYLimits # of the form "min max" (ints, space between)
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.3.2"
+    String  docker = "quay.io/broadinstitute/viral-core:2.3.6"
   }
 
   Int disk_size = 375
@@ -284,7 +289,7 @@ task coverage_report {
     Array[File]  mapped_bam_idx # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name = "coverage_report.txt"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.3.2"
+    String       docker = "quay.io/broadinstitute/viral-core:2.3.6"
   }
 
   Int disk_size = 375
@@ -351,7 +356,7 @@ task fastqc {
   input {
     File   reads_bam
 
-    String docker = "quay.io/broadinstitute/viral-core:2.3.2"
+    String docker = "quay.io/broadinstitute/viral-core:2.3.6"
   }
   parameter_meta {
     reads_bam:{ 
@@ -393,13 +398,13 @@ task align_and_count {
     File   ref_db
     Int    topNHits = 3
 
-    Boolean filter_bam_to_proper_primary_mapped_reads         = false
+    Boolean filter_bam_to_proper_primary_mapped_reads         = true
     Boolean do_not_require_proper_mapped_pairs_when_filtering = false
     Boolean keep_singletons_when_filtering                    = false
     Boolean keep_duplicates_when_filtering                    = false
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.3.2"
+    String docker = "quay.io/broadinstitute/viral-core:2.3.6"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
@@ -456,6 +461,8 @@ task align_and_count {
 
     TOTAL_COUNT_OF_TOP_HIT=$(grep -E "^($TOP_HIT)" "~{reads_basename}.count.~{ref_basename}.txt" | cut -f3 | tee TOTAL_COUNT_OF_TOP_HIT)
     TOTAL_COUNT_OF_LESSER_HITS=$((grep -vE "^(\*|$TOP_HIT)" "~{reads_basename}.count.~{ref_basename}.txt" || echo "0" ) | cut -f3 | paste -sd+ - | bc -l | tee TOTAL_COUNT_OF_LESSER_HITS)
+    echo $TOTAL_COUNT_OF_TOP_HIT | tee TOTAL_COUNT_OF_TOP_HIT
+    echo $TOTAL_COUNT_OF_LESSER_HITS | tee TOTAL_COUNT_OF_LESSER_HITS
 
     if [ $TOTAL_COUNT_OF_LESSER_HITS -ne 0 -o $TOTAL_COUNT_OF_TOP_HIT -ne 0 ]; then
       PCT_MAPPING_TO_LESSER_HITS=$( echo "scale=3; 100 * $TOTAL_COUNT_OF_LESSER_HITS / ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT)" | \
@@ -466,6 +473,7 @@ task align_and_count {
     fi
 
     TOTAL_READS_IN_INPUT=$(samtools view -c "~{reads_basename}.bam")
+    echo $TOTAL_READS_IN_INPUT | tee TOTAL_READS_IN_INPUT
     if [ $TOTAL_READS_IN_INPUT -eq 0 ]; then
       echo "no reads in input bam"
       PCT_OF_INPUT_READS_MAPPED=$(echo "0" | tee "~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt")
@@ -480,7 +488,11 @@ task align_and_count {
     
     File   report_top_hits  = "~{reads_basename}.count.~{ref_basename}.top_~{topNHits}_hits.txt"
     String top_hit_id       = read_string("~{reads_basename}.count.~{ref_basename}.top.txt")
-    
+
+    Int    reads_total          = read_int("TOTAL_READS_IN_INPUT")
+    Int    reads_mapped_top_hit = read_int("TOTAL_COUNT_OF_TOP_HIT")
+    Int    reads_mapped         = read_int("TOTAL_COUNT_OF_LESSER_HITS") + read_int("TOTAL_COUNT_OF_TOP_HIT")
+
     String pct_total_reads_mapped    = read_string('~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt')
     String pct_lesser_hits_of_mapped = read_string('~{reads_basename}.count.~{ref_basename}.pct_lesser_hits_of_mapped.txt')
     
@@ -504,7 +516,7 @@ task align_and_count_summary {
 
     String       output_prefix = "count_summary"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.3.2"
+    String       docker = "quay.io/broadinstitute/viral-core:2.3.6"
   }
 
   Int disk_size = 100
@@ -686,7 +698,7 @@ task compare_two_genomes {
     File   genome_two
     String out_basename
 
-    String docker = "quay.io/broadinstitute/viral-assemble:2.3.2.0"
+    String docker = "quay.io/broadinstitute/viral-assemble:2.3.6.1"
   }
 
   Int disk_size = 50

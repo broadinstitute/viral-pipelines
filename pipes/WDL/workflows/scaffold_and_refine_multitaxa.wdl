@@ -1,7 +1,6 @@
 version 1.0
 
 import "../tasks/tasks_assembly.wdl" as assembly
-import "../tasks/tasks_metagenomics.wdl" as metagenomics
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_utils.wdl" as utils
@@ -17,7 +16,7 @@ workflow scaffold_and_refine_multitaxa {
 
     input {
         String  sample_id
-        Array[String] sample_names
+        String? sample_name
         File    reads_unmapped_bam
         File    contigs_fasta
 
@@ -25,7 +24,7 @@ workflow scaffold_and_refine_multitaxa {
     }
 
     Int    min_scaffold_unambig = 10 # in base-pairs; any scaffolded assembly < this length will not be refined/polished
-    String sample_original_name = flatten([sample_names, [sample_id]])[0]
+    String sample_original_name = select_first([sample_name, sample_id])
 
     # download (multi-segment) genomes for each reference, fasta filename = colon-concatenated accession list
     scatter(taxon in read_tsv(taxid_to_ref_accessions_tsv)) {
@@ -151,21 +150,32 @@ workflow scaffold_and_refine_multitaxa {
             "sample":              '{"entityType":"sample","entityName":"' + sample_id + '"}'
         }
 
-        scatter(h in assembly_header) {
-            String stat_by_taxon = stats_by_taxon[h]
+        if(assembly_length_unambiguous > min_scaffold_unambig) {
+            scatter(h in assembly_header) {
+                String stat_by_taxon = stats_by_taxon[h]
+            }
         }
     }
 
     ### summary stats
-    call utils.concatenate {
-      input:
-        infiles     = [write_tsv([assembly_header]), write_tsv(stat_by_taxon)],
-        output_name = "assembly_metadata-~{sample_id}.tsv"
+    if (length(select_all(stat_by_taxon)) > 0) {
+        call utils.concatenate as assembly_stats_non_empty {
+            input:
+                infiles     = [write_tsv([assembly_header]), write_tsv(select_all(stat_by_taxon))],
+                output_name = "assembly_metadata-~{sample_id}.tsv"
+        }
+    }
+    if (length(select_all(stat_by_taxon)) == 0) {
+        call utils.concatenate as assembly_stats_empty {
+            input:
+                infiles     = [write_tsv([assembly_header])],
+                output_name = "assembly_metadata-~{sample_id}.tsv"
+        }
     }
 
     output {
         Array[Map[String,String]] assembly_stats_by_taxon  = stats_by_taxon
-        File   assembly_stats_by_taxon_tsv                 = concatenate.combined
+        File   assembly_stats_by_taxon_tsv                 = select_first([assembly_stats_non_empty.combined, assembly_stats_empty.combined])
         String assembly_method                             = "viral-ngs/scaffold_and_refine_multitaxa"
 
         #String assembly_top_taxon_id               = select_references.top_matches_per_cluster_basenames[0]
