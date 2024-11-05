@@ -11,9 +11,15 @@ task taxid_to_nextclade_dataset_name {
             2697049 : 'sars-cov-2',
             641809  : 'flu_h1n1pdm_ha',
             335341  : 'flu_h3n2_ha',
+            119210  : 'flu_h3n2_ha',
             518987  : 'flu_vic_ha',
             208893  : 'rsv_a',
             208895  : 'rsv_b',
+            11234   : 'nextstrain/measles/N450/WHO-2012',
+            11053   : 'nextstrain/dengue/all',
+            11060   : 'nextstrain/dengue/all',
+            11069   : 'nextstrain/dengue/all',
+            11070   : 'nextstrain/dengue/all',
             10244   : 'MPXV',
             619591  : 'hMPXV'
         }
@@ -43,13 +49,11 @@ task nextclade_one_sample {
         File  genome_fasta
         File? root_sequence
         File? auspice_reference_tree_json
-        File? qc_config_json
+        File? pathogen_json
         File? gene_annotations_json
-        File? pcr_primers_csv
-        File? virus_properties
         String? dataset_name
         Int    disk_size = 50
-        String docker = "nextstrain/nextclade:2.14.0"
+        String docker = "nextstrain/nextclade:3.9.1"
     }
     String basename = basename(genome_fasta, ".fasta")
     command <<<
@@ -67,21 +71,19 @@ task nextclade_one_sample {
             DATASET_ARG="--input-dataset ."
         python3<<CODE1
         import json, os
-        with open('tag.json', 'rt') as inf:
+        with open('pathogen.json', 'rt') as inf:
             datasetinfo = json.load(inf)
         with open('VERSION', 'wt') as outf:
-            outf.write(os.environ['NEXTCLADE_VERSION'] + "; name=" + datasetinfo['name'] + "; tag=" + datasetinfo['tag'] + "\n")
+            outf.write(os.environ['NEXTCLADE_VERSION'] + "; name=" + datasetinfo['attributes']['name'] + "; tag=" + datasetinfo['version']['tag'] + "\n")
         CODE1
         fi
 
         nextclade run \
             $DATASET_ARG \
-            ~{"--input-root-seq " + root_sequence} \
+            ~{"--input-ref " + root_sequence} \
             ~{"--input-tree " + auspice_reference_tree_json} \
-            ~{"--input-qc-config " + qc_config_json} \
-            ~{"--input-gene-map " + gene_annotations_json} \
-            ~{"--input-pcr-primers " + pcr_primers_csv} \
-            ~{"--input-virus-properties " + virus_properties}  \
+            ~{"--input-annotation " + gene_annotations_json} \
+            ~{"--input-pathogen-json " + pathogen_json}  \
             --output-all=. \
             --output-basename "~{basename}" \
             --output-json "~{basename}".nextclade.json \
@@ -136,15 +138,13 @@ task nextclade_many_samples {
         Array[File]+ genome_fastas
         File?        root_sequence
         File?        auspice_reference_tree_json
-        File?        qc_config_json
+        File?        pathogen_json
         File?        gene_annotations_json
-        File?        pcr_primers_csv
-        File?        virus_properties
         String?      dataset_name
         String       basename
         File?        genome_ids_setdefault_blank
         Int          disk_size = 150
-        String       docker = "nextstrain/nextclade:2.14.0"
+        String       docker = "nextstrain/nextclade:3.9.1"
     }
     command <<<
         set -e
@@ -170,12 +170,10 @@ task nextclade_many_samples {
 
         nextclade run \
             $DATASET_ARG \
-            ~{"--input-root-seq " + root_sequence} \
+            ~{"--input-ref " + root_sequence} \
             ~{"--input-tree " + auspice_reference_tree_json} \
-            ~{"--input-qc-config " + qc_config_json} \
-            ~{"--input-gene-map " + gene_annotations_json} \
-            ~{"--input-pcr-primers " + pcr_primers_csv} \
-            ~{"--input-virus-properties " + virus_properties}  \
+            ~{"--input-annotation " + gene_annotations_json} \
+            ~{"--input-pathogen-json " + pathogen_json}  \
             --output-all=. \
             --output-basename "~{basename}" \
             --output-json "~{basename}".nextclade.json \
@@ -323,7 +321,7 @@ task derived_cols {
         String?       lab_highlight_loc
         Array[File]   table_map = []
 
-        String        docker = "quay.io/broadinstitute/viral-core:2.3.3"
+        String        docker = "quay.io/broadinstitute/viral-core:2.4.0"
         Int           disk_size = 50
     }
     parameter_meta {
@@ -891,7 +889,7 @@ task filter_sequences_to_list {
 
         String       out_fname = sub(sub(basename(sequences, ".zst"), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
         # Prior docker image: "nextstrain/base:build-20240318T173028Z"
-        String       docker = "quay.io/broadinstitute/viral-core:2.3.3"
+        String       docker = "quay.io/broadinstitute/viral-core:2.4.0"
         Int          disk_size = 750
     }
     parameter_meta {
@@ -992,7 +990,7 @@ task mafft_one_chr {
         Boolean  large = false
         Boolean  memsavetree = false
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
+        String   docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
         Int      mem_size = 500
         Int      cpus = 64
         Int      disk_size = 750
@@ -1080,7 +1078,7 @@ task mafft_one_chr_chunked {
         Int      batch_chunk_size = 2000
         Int      threads_per_job = 2
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.1.20.2"
+        String   docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
         Int      mem_size = 32
         Int      cpus = 64
         Int      disk_size = 750

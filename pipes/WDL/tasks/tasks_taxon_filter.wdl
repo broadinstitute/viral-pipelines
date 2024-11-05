@@ -213,7 +213,8 @@ task merge_one_per_sample {
     Boolean      rmdup = false
 
     Int          machine_mem_gb = 7
-    String       docker = "quay.io/broadinstitute/viral-core:2.3.3"
+
+    String       docker = "quay.io/broadinstitute/viral-core:2.4.0"
   }
 
   Int disk_size = 750
