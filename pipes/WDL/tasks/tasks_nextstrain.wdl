@@ -53,7 +53,7 @@ task nextclade_one_sample {
         File? gene_annotations_json
         String? dataset_name
         Int    disk_size = 50
-        String docker = "nextstrain/nextclade:3.8.2"
+        String docker = "nextstrain/nextclade:3.9.1"
     }
     String basename = basename(genome_fasta, ".fasta")
     command <<<
@@ -144,7 +144,7 @@ task nextclade_many_samples {
         String       basename
         File?        genome_ids_setdefault_blank
         Int          disk_size = 150
-        String       docker = "nextstrain/nextclade:3.8.2"
+        String       docker = "nextstrain/nextclade:3.9.1"
     }
     command <<<
         set -e
