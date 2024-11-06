@@ -1108,7 +1108,7 @@ task sequence_rename_by_species {
     String taxid
     File   taxdump_tgz
 
-    String docker = "quay.io/broadinstitute/viral-classify:2.2.4.2"
+    String docker = "quay.io/broadinstitute/viral-classify:2.2.5"
   }
   command <<<
     set -e
