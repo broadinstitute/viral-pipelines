@@ -90,7 +90,7 @@ workflow sarscov2_illumina_full {
     call demux_deplete.demux_deplete {
         input:
             flowcell_tgz                    = flowcell_tgz,
-            biosample_map                   = biosample_merge.out_tsv,
+            biosample_map_tsvs              = [biosample_merge.out_tsv],
             instrument_model_user_specified = instrument_model,
             sra_title                       = sra_title,
             read_structure                  = read_structure,
