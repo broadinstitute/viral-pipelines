@@ -67,9 +67,13 @@ workflow augur_from_assemblies {
             sequences_fasta = zcat.combined,
             min_non_N       = min_unambig_genome
     }
+    call nextstrain.nextstrain_deduplicate_sequences as dedup_seqs {
+        input:
+            sequences_fasta = filter_sequences_by_length.filtered_fasta
+    }
     call nextstrain.mafft_one_chr as mafft {
         input:
-            sequences = filter_sequences_by_length.filtered_fasta,
+            sequences = dedup_seqs.sequences_deduplicated_fasta,
             ref_fasta = ref_fasta,
             basename  = "all_samples_aligned.fasta"
     }
