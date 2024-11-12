@@ -67,18 +67,11 @@ workflow augur_from_mltree {
             tree       = raw_tree,
             msa_or_vcf = msa_or_vcf
     }
-    call nextstrain.translate_augur_tree {
-        input:
-            tree       = raw_tree,
-            nt_muts    = ancestral_tree.nt_muts_json,
-            genbank_gb = genbank_gb
-    }
     if(defined(clades_tsv)) {
         call nextstrain.assign_clades_to_nodes {
             input:
                 tree_nwk     = raw_tree,
                 nt_muts_json = ancestral_tree.nt_muts_json,
-                aa_muts_json = translate_augur_tree.aa_muts_json,
                 ref_fasta    = ref_fasta,
                 clades_tsv   = select_first([clades_tsv])
         }
@@ -90,7 +83,6 @@ workflow augur_from_mltree {
             node_data_jsons = select_all([
                                 ancestral_traits.node_data_json,
                                 ancestral_tree.nt_muts_json,
-                                translate_augur_tree.aa_muts_json,
                                 assign_clades_to_nodes.node_clade_data_json]),
             auspice_config  = auspice_config
     }
