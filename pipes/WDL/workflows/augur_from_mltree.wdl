@@ -54,35 +54,29 @@ workflow augur_from_mltree {
         }
     }
 
-    call nextstrain.refine_augur_tree {
-        input:
-            raw_tree   = raw_tree,
-            msa_or_vcf = msa_or_vcf,
-            metadata   = sample_metadata
-    }
     if(defined(ancestral_traits_to_infer) && length(select_first([ancestral_traits_to_infer,[]]))>0) {
         call nextstrain.ancestral_traits {
             input:
-                tree     = refine_augur_tree.tree_refined,
+                tree     = raw_tree,
                 metadata = sample_metadata,
                 columns  = select_first([ancestral_traits_to_infer,[]])
         }
     }
     call nextstrain.ancestral_tree {
         input:
-            tree       = refine_augur_tree.tree_refined,
+            tree       = raw_tree,
             msa_or_vcf = msa_or_vcf
     }
     call nextstrain.translate_augur_tree {
         input:
-            tree       = refine_augur_tree.tree_refined,
+            tree       = raw_tree,
             nt_muts    = ancestral_tree.nt_muts_json,
             genbank_gb = genbank_gb
     }
     if(defined(clades_tsv)) {
         call nextstrain.assign_clades_to_nodes {
             input:
-                tree_nwk     = refine_augur_tree.tree_refined,
+                tree_nwk     = raw_tree,
                 nt_muts_json = ancestral_tree.nt_muts_json,
                 aa_muts_json = translate_augur_tree.aa_muts_json,
                 ref_fasta    = ref_fasta,
@@ -91,10 +85,9 @@ workflow augur_from_mltree {
     }
     call nextstrain.export_auspice_json {
         input:
-            tree            = refine_augur_tree.tree_refined,
+            tree            = raw_tree,
             sample_metadata = sample_metadata,
             node_data_jsons = select_all([
-                                refine_augur_tree.branch_lengths,
                                 ancestral_traits.node_data_json,
                                 ancestral_tree.nt_muts_json,
                                 translate_augur_tree.aa_muts_json,
@@ -103,7 +96,7 @@ workflow augur_from_mltree {
     }
 
     output {
-        File time_tree          = refine_augur_tree.tree_refined
+        File time_tree          = raw_tree
         File auspice_input_json = export_auspice_json.virus_json
     }
 }
