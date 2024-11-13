@@ -1409,7 +1409,6 @@ task refine_augur_tree {
             --metadata "~{metadata}" \
             --output-tree "~{out_basename}_timetree.nwk" \
             --output-node-data "~{out_basename}_branch_lengths.json" \
-            --timetree \
             ~{"--clock-rate " + clock_rate} \
             ~{"--clock-std-dev " + clock_std_dev} \
             ~{"--coalescent " + coalescent} \
