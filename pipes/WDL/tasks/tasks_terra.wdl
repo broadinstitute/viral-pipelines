@@ -391,7 +391,7 @@ task create_or_update_sample_tables {
     String  sample_table_name  = "sample"
     String  library_table_name = "library"
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.4.0"
+    String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
   }
 
   meta {
