@@ -1373,7 +1373,7 @@ task refine_augur_tree {
         File     msa_or_vcf
         File     metadata
 
-        Boolean? generate_timetree = true
+        Boolean  generate_timetree = true
         Int?     gen_per_year
         Float?   clock_rate
         Float?   clock_std_dev
