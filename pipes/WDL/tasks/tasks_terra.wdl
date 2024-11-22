@@ -32,7 +32,7 @@ task gcs_copy {
 
 task check_terra_env {
   input {
-    String docker = "quay.io/broadinstitute/viral-core:2.2.2" #skip-global-version-pin
+    String docker = "quay.io/broadinstitute/viral-core:2.4.0"
   }
   meta {
     description: "task for inspection of backend to determine whether the task is running on Terra and/or GCP"
