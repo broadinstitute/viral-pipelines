@@ -746,11 +746,13 @@ task biosample_to_genbank {
                     'Severe acute respiratory syndrome coronavirus 2',
                     'Norovirus', 'Dengue virus'):
         if any(row['organism'] == special for row in biosample_attributes):
+          print("special organism found " + special)
           assert all(row['organism'] == special for row in biosample_attributes), "if any samples are {}, all samples must be {}".format(special, special)
           if 'serotype' not in out_headers_total:
             out_headers_total.append('serotype')
           ### Influenza-specific requirements
           if special.startswith('Influenza'):
+            print("special organism is Influenza A/B/C")
             # simplify isolate name
             header_key_map['isolate'] = 'strain'
             for row in biosample_attributes:
@@ -758,15 +760,18 @@ task biosample_to_genbank {
               match = re.search(r'\(([^()]+)\)+$', row['sample_name'])
               if match:
                   row['serotype'] = match.group(1)
+                  print("found serotype {}". format(row['serotype']))
               # populate host field from name parsing if empty, override milk
-              if 'host' not in row:
+              if not row.get('host','').strip():
                 match = re.search(r'[^/]+/([^/]+)/[^/]+/[^/]+/[^/]+', row['sample_name'])
                 if match:
                     row['host'] = match.group(1)
                     if row['host'] == 'bovine_milk':
                       row['host'] = 'Cattle'
+                    assert host in out_headers_total
               # override geo_loc_name if food_origin exists
               if row.get('food_origin','').strip():
+                  print("overriding geo_loc_name with food_origin")
                   row['geo_loc_name'] = row['food_origin']
 
     with open("~{base}.genbank.src", 'wt') as outf_smt:
