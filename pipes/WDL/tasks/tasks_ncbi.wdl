@@ -75,6 +75,329 @@ task download_annotations {
   }
 }
 
+task download_viral_taxon_genomes {
+  # Download viral genomes for a given taxid from NCBI using the NCBI Datasets tool
+  #   see:
+  #     https://www.ncbi.nlm.nih.gov/datasets/docs/v2/how-tos/virus/
+  #     https://www.ncbi.nlm.nih.gov/datasets/docs/v2/reference-docs/data-packages/virus-genome/
+
+  input {
+    String  taxid_or_organism_name
+    String? date_released_after
+    String? date_released_before
+    String? geo_location_country
+    String? geo_location_us_state
+
+    String? segment_num_or_name
+    
+    String? host_taxid_or_organism_name     = "Homo sapiens"
+    Int?    max_num_ambig_bases
+    Int?    min_sequence_length_end_to_end
+
+    String?  pango_lineage
+    String?  genotype_or_subtype_name_query
+
+    Boolean refseq_only                     = false
+    Boolean exclude_lab_passaged            = true
+    Boolean exclude_vaccine_strains         = true
+    Boolean exclude_environmental_specimens = true
+
+    String? ncbi_api_key
+
+    String metadata_columns = "accession,length,isolate-collection-date,geo-location,geo-region,geo-state,biosample-acc,sra-accs,completeness,isolate-lineage-source,release-date,host-common-name,virus-common-name,virus-name,virus-intraspecific-strain,virus-tax-id,is-vaccine-strain,is-lab-host,purpose-of-sequencing,submitter-names,submitter-affiliation"
+
+    String data_package_basename = taxid_or_organism_name+"genome_data_package"
+
+
+    # ncbi datasets is in the viral-core image but could also use:
+    #   quay.io/biocontainers/ncbi-datasets-cli:14.26.0
+    String docker = "quay.io/biocontainers/ncbi-datasets-cli:14.26.0"
+  }
+
+  meta {
+        description: "This uses the NCBI datasets CLI tool to download a set of genomes for a given taxonomic ID or organism name."
+        volatile: true
+  }
+
+  parameter_meta {
+    taxid_or_organism_name: {
+      description: "The taxonomic ID or taxnomic name for which genomes should be downloaded. This must match a value in NCBI Taxonomy.",
+    }
+    date_released_after: {
+      description: "Only include sequences released after this date ('YYYY-MM-DD' format).",
+    }
+    ncbi_api_key: {
+      description: "NCBI API key; request volume limited to 5 rps without an API key, 10+ with an API key. To obtain a key, see: https://support.nlm.nih.gov/kbArticle/?pn=KA-05317"
+    }
+    metadata_columns: {
+      description: "Columns to include in the metadata output. For valid column names, see the 'Table Field Mnemonic' values in the Virus data package report schema: https://www.ncbi.nlm.nih.gov/datasets/docs/v2/reference-docs/data-reports/virus/"
+    }
+    segment_num_or_name: {
+        description: "limit to sequences of a specified segment number (ex. '4','6' for Influenza A) or name ('L' for Lassa mammarenavirus); this finds sequences where each has a '/segment' field in the GenBank record and the value of '/segment' matches exactly with the desired segment number or name. Values of '/segment' are entered at sequence submission and are not curated or canonicalized. NB: not all sequences have '/segment' metadata, and the values do not currently conform to a controlled vocabulary. Specifying a segment may unintentionally exclude sequences if they lack metadata or the '/segment' value differs from the requested segment number or name."
+    }
+    refseq_only: {
+      description: "limit to only refseq sequences"
+    }
+    genotype_or_subtype_name_query: {
+        description: "limit to sequences with a specified genotype or subtype name; wildcards allowed. (Ex. 'H*N1')"
+    }
+    host_taxid_or_organism_name: {
+      description: "Limit to virus genomes isolated from a specified host species (organism name, or its numeric taxid)"
+    }
+    geo_location_country: {
+      description: "Limit to virus genomes isolated from the specified country or countries"
+    }
+    geo_location_state: {
+      description: "Two letter abbreviation of the state of the virus specifime collection (if United States)"
+    }
+  }
+
+  command <<<
+    export NCBI_API_KEY="~{ncbi_api_key}"
+
+    
+
+    
+
+
+    
+    function get_tax_id_for_organism_name_or_taxid_input {
+        requested_taxid_or_organism_name="$1"
+
+        tax_id_to_download=""
+        # check if the input is a numeric taxid or an organism name
+        int_validation_re='^[0-9]+$'
+        if ! [[ $requested_taxid_or_organism_name =~ $int_validation_re ]] ; then
+            echo "Warning: taxid_or_organism_name '"${requested_taxid_or_organism_name}"' does not look like a numeric NCBI taxonomy ID; treating as organism name and attempting to look up a taxid via entrez" >&2; exit 1
+
+            # look up taxid from organism name using esearch, efetch, and xtract
+            # currently disabled since NCBI tools are not available in the viral-core docker image
+            # taxid="$(esearch -db taxonomy -query '~{taxid_or_organism_name}' | efetch -format docsum | xtract -pattern DocumentSummary -element TaxId)"
+            
+            # use esearch to query NCBI Taxonomy for the organism name specified
+            # then use jq to parse out the result count and ID, 
+            # and pass to read as a pipe-delimited string,
+            # which in turn stores the values in bash variables
+            IFS='|' read esearch_count esearch_taxid < <(curl --silent 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=taxonomy&retmax=1&retmode=json&term="'${requested_taxid_or_organism_name}'"&field=name~{"&api_key=" + ncbi_api_key}' | jq -r '. | [.esearchresult] | map(.count?,.idlist?[0]) | join("|")')
+            # check if the esearch results include only one result and that the taxid is defined
+            if [ ! -z $esearch_taxid ] && [ $esearch_count -eq 1 ]; then 
+                echo "taxid is present as one value"
+                tax_id_to_download="$esearch_taxid"
+            else 
+                echo "Error: could not find a single taxid for organism name '~{taxid_or_organism_name}'" >&2; exit 1
+            fi
+        else
+          # treat as numeric taxid
+          tax_id_to_download="$requested_taxid_or_organism_name"
+        fi
+        echo $tax_id_to_download
+    }
+
+    tax_id_to_download=$(get_tax_id_for_organism_name_or_taxid_input "~{taxid_or_organism_name}")
+
+    # use the NCBI Virus API to obtain a list of accessions for the given taxid
+    # this is a workaround for the lack of filtering options in NCBI datasets CLI
+    #accession_list_download_url='https://www.ncbi.nlm.nih.gov/genomes/VirusVariation/vvsearch2/?fq={!tag=SeqType_s}SeqType_s:("Nucleotide")&fq=VirusLineageId_ss:(2697049)&fq={!tag=CollectionDate_dr}CollectionDate_dr:[2024-11-01T00:00:00.00Z TO 2024-11-15T23:59:59.00Z]&fq={!tag=LabHost_s} NOT LabHost_s:*&fq={!tag=VacStrain_s} NOT VacStrain_s:*&fq={!tag=EnvSample_s} NOT EnvSample_s:*&fq=HostLineageId_ss:(9606)&fq={!tag=SLen_i}SLen_i:([26000 TO 3000000])&fq={!tag=QualNum_i}QualNum_i:([0 TO 1400])&cmd=download&sort=SourceDB_s desc,CreateDate_dt desc,id asc&dlfmt=acc&fl=AccVer_s'
+    #https://www.ncbi.nlm.nih.gov/genomes/VirusVariation/vvsearch2/?fq=%7B!tag=SeqType_s%7DSeqType_s:(%22Nucleotide%22)&fq=VirusLineageId_ss:(2697049)&fq=%7B!tag=CollectionDate_dr%7DCollectionDate_dr:%5B2024-11-01T00:00:00.00Z%20TO%202024-11-15T23:59:59.00Z%5D&fq=%7B!tag=LabHost_s%7D%20NOT%20LabHost_s:*&fq=%7B!tag=VacStrain_s%7D%20NOT%20VacStrain_s:*&fq=%7B!tag=EnvSample_s%7D%20NOT%20EnvSample_s:*&fq=HostLineageId_ss:(9606)&fq=%7B!tag=SLen_i%7DSLen_i:(%5B26000%20TO%203000000%5D)&fq=%7B!tag=QualNum_i%7DQualNum_i:(%5B0%20TO%201400%5D)&cmd=download&sort=SourceDB_s%20desc,CreateDate_dt%20desc,id%20asc&dlfmt=acc&fl=AccVer_s
+
+
+    # backup of working before variables added
+    # accession_list_download_query=(
+    #     'q=*:*'
+    #     'fq={!tag=SeqType_s}SeqType_s:("Nucleotide")'
+    #     'fq=VirusLineageId_ss:('${tax_id_to_download}')'
+    #     'fq={!tag=CollectionDate_dr}CollectionDate_dr:[2024-11-01T00:00:00.00Z TO 2024-11-15T23:59:59.00Z]'
+    #     'fq={!tag=LabHost_s} NOT LabHost_s:*'
+    #     'fq={!tag=VacStrain_s} NOT VacStrain_s:*'
+    #     'fq={!tag=EnvSample_s} NOT EnvSample_s:*'
+    #     'fq=HostLineageId_ss:(9606)'
+    #     'fq={!tag=SLen_i}SLen_i:([26000 TO 3000000])'
+    #     'fq={!tag=QualNum_i}QualNum_i:([0 TO 1400])'
+    #     'cmd=download'
+    #     'sort=SourceDB_s desc,CreateDate_dt desc,id asc'
+    #     'dlfmt=acc'
+    #     'fl=AccVer_s'
+    # )
+
+    
+
+    # ToDo: add parameters to array iff they are defined WDL inputs
+
+    accession_list_download_query=(
+        'q=*:*'
+        'fq={!tag=SeqType_s}SeqType_s:("Nucleotide")'
+        'cmd=download'
+        'sort=SourceDB_s desc,CreateDate_dt desc,id asc'
+        'dlfmt=acc'
+        'fl=AccVer_s'
+    )
+
+    accession_list_download_query+=('fq=VirusLineageId_ss:('${tax_id_to_download}')')
+    
+    # limit by date only if a lower or upper bound is specified
+    if ~{if defined(date_released_before) || defined(date_released_after) then "true" else "false"}; then {
+        # use 1900-01-01 as the start date if no start date is specified
+        after_date_to_format=~{if defined(date_released_after) then "-d'~{date_released_before}'" else "1900-01-01"}
+        date_released_after_formatted="$(date ${after_date_to_format} +%Y-%m-%d)"
+        # use the current date as the end date if no end date is specified
+        before_date_to_format=~{if defined(date_released_before) then "-d'~{date_released_before}'" else ""}
+        date_released_before_formatted="$(date ${before_date_to_format} +%Y-%m-%d)"
+
+        # add the date range filter to the query
+        accession_list_download_query+=('fq={!tag=CollectionDate_dr}CollectionDate_dr:['${date_released_after_formatted}' TO '${date_released_before_formatted}']')
+    }
+    
+    # exclude lab passaged, vaccine strains, or environmental specimens, if specified
+    if ~{if exclude_lab_passaged then "true" else "false"}; then {
+        accession_list_download_query+=('fq={!tag=LabHost_s} NOT LabHost_s:*')
+    }
+    if ~{if exclude_vaccine_strains then "true" else "false"}; then {
+        accession_list_download_query+=('fq={!tag=VacStrain_s} NOT VacStrain_s:*')    
+    }
+    if ~{if exclude_environmental_specimens then "true" else "false"}; then {
+        accession_list_download_query+=('fq={!tag=EnvSample_s} NOT EnvSample_s:*')
+    }
+
+    # limit to virus genomes isolated from a specified host species if specified
+    if ~{if defined(host_taxid_or_organism_name) then "true" else "false"}; then {
+        tax_id_of_host=$(get_tax_id_for_organism_name_or_taxid_input "~{host_taxid_or_organism_name}")
+        accession_list_download_query+=('fq=HostLineageId_ss:('tax_id_of_host')')
+    }
+
+    # limit to sequences above a minimum length, if specified
+    if ~{if defined(min_sequence_length_end_to_end) then "true" else "false"}; then {
+        accession_list_download_query+=('fq={!tag=SLen_i}SLen_i:([~{min_sequence_length_end_to_end} TO 3000000])')
+    }
+
+
+    # limit to sequences below a maximum number of ambiguous bases, if specified
+    if ~{if defined(max_num_ambig_bases) then "true" else "false"}; then {
+        accession_list_download_query+=('fq={!tag=QualNum_i}QualNum_i:([0 TO ~{max_num_ambig_bases}])')
+    }
+    
+    # limit to sequences of a specified pangolin lineage, if specified
+    if ~{if defined(pango_lineage) then "true" else "false"}; then {
+        accession_list_download_query+=('fq={!tag=Lineage_s}Lineage_s:("~{pango_lineage}")')
+    }
+
+    # limit to refseq sequences only, if specified
+    if ~{if refseq_only then "true" else "false"}; then {
+        accession_list_download_query+=('fq={!tag=SourceDB_s}SourceDB_s:("RefSeq")')
+    }
+
+    # limit to sequences with a specified genotype or subtype name, if specified
+    if ~{if defined(genotype_or_subtype_name_query) then "true" else "false"}; then {
+        accession_list_download_query+=('fq={!edismax qf=Serotype_s}~{genotype_or_subtype_name_query}')
+    }
+
+    # limit to sequences of a specified segment number or name, if specified
+    # this finds sequences where each has a '/segment' field in the GenBank record
+    # and the value of '/segment' matches exactly with the desired segment number or name.
+    # it falls back to 'genome' if no segment is specified
+    if ~{if defined(segment_num_or_name) then "true" else "false"}; then {
+        accession_list_download_query+=('fq={!tag=Segment_s}Segment_s:("~{segment_num_or_name}")')
+    } else {
+        accession_list_download_query+=('fq={!tag=Segment_s}Segment_s:("genome")')
+    }
+
+    # template
+    # if ~{if defined() then "true" else "false"}; then {
+    #     accession_list_download_query+=('fq=')
+    # }
+
+    # join the url parameters above with the particular url encoding expected by NCBI VirusVariation 'API'
+    IFS='' accession_list_download_query_str="$(printf '%s&' ${accession_list_download_query[@]} | jq -sRr @uri | sed 's/%26/\&/g' | sed 's/%3D/=/g' | sed 's/%21/!/g' | sed 's/%3A/:/g' | sed 's/%2A/\*/g' | sed 's/%28/\(/g' | sed 's/%29/\)/g' | sed 's/%2C/,/g')"
+    accession_list_download_url='https://www.ncbi.nlm.nih.gov/genomes/VirusVariation/vvsearch2/?'"${accession_list_download_query_str}"
+    echo ${accession_list_download_url}
+
+    curl --silent --retry 3 -L "${accession_list_download_url}" > acc_list.txt
+
+    # check if the accession list download failed or is empty
+    if [ ! -s acc_list.txt ]; then
+        echo "Error: accession list download failed or is empty" >&2; exit 1
+    fi
+
+
+    #WORKING curl --silent --http1.1 --retry 5 -L 'https://www.ncbi.nlm.nih.gov/genomes/VirusVariation/vvsearch2/?q=*:*&fq=%7B!tag=SeqType_s%7DSeqType_s:(%22Nucleotide%22)&fq=VirusLineageId_ss:(2697049)&fq=%7B!tag=CollectionDate_dr%7DCollectionDate_dr:%5B2024-11-01T00:00:00.00Z%20TO%202024-11-15T23:59:59.00Z%5D&fq=%7B!tag=LabHost_s%7D%20NOT%20LabHost_s:*&fq=%7B!tag=VacStrain_s%7D%20NOT%20VacStrain_s:*&fq=%7B!tag=EnvSample_s%7D%20NOT%20EnvSample_s:*&fq=HostLineageId_ss:(9606)&fq=%7B!tag=SLen_i%7DSLen_i:(%5B26000%20TO%203000000%5D)&fq=%7B!tag=QualNum_i%7DQualNum_i:(%5B0%20TO%201400%5D)&cmd=download&sort=SourceDB_s%20desc,CreateDate_dt%20desc,id%20asc&dlfmt=acc&fl=AccVer_s' > acc_list.txt
+    
+    # set the number of workers for downloading data to nproc (-1 core for OS overhead), 
+    # with an upper bound of 30 cores as specified by NCBI datasets
+    NUM_WORKERS=$(nproc --ignore 1)
+    NUM_WORKERS=$((NUM_WORKERS<31 ? NUM_WORKERS : 30))
+
+    # until NCBI datasets offers filters for collection date and segment, we can obtain a list of accessions
+    # from the NCBI Virus API and then pass that to NCBI datasets for download via:
+    #   datasets download virus genome accession --inputfile acc_list.txt
+    # (NCBI datasets CLI filters still apply)
+    datasets download virus genome accession --inputfile acc_list.txt \
+        --no-progressbar \
+        --dehydrated \
+        --include genome,biosample \
+        --max-workers $NUM_WORKERS \
+        ~{"--geo-location" + geo_location_country} \
+        ~{"--usa-state" + geo_location_state} \
+        --filename ~{data_package_basename}.zip
+
+
+    # format yyyy-mm-dd to mm/dd/yyyy $(date -d"~{date_released_after}" +%m/%d/%Y)
+    # Note: the datasets documentation indictes support for ISO8601 
+    #       dates however this does not yet appear to be the case
+    #date_released_after_formatted="$(date -d'~{date_released_after}' +%m/%d/%Y)"
+    #date_released_before_formatted="$(date -d'~{date_released_after}' +%m/%d/%Y)"
+
+    # download a "dehydrated" data package with metadata but no sequence data
+    # datasets download virus genome taxon ~{taxid_or_organism_name} \
+    #   --no-progressbar \
+    #   --dehydrated \
+    #   ~{if defined(date_released_after) then "--released-after" else ""} ${date_released_after_formatted} \
+    #   ~{"--refseq" + refseq_only} \
+    #   ~{"--host" + host_species_name} \
+    #   ~{"--geo-location" + geo_location_country} \
+    #   ~{"--usa-state" + geo_location_state} \
+    #   --filename ~{data_package_basename}.zip \
+    #   --include genome,biosample
+      
+    # can also use (after obtaining accessions from NCBI Virus API w/ segment filtering):
+    #   datasets download virus genome accession --inputfile accessions.txt
+    # accession list download example:
+    #   https://www.ncbi.nlm.nih.gov/genomes/VirusVariation/vvsearch2/?fq=%7B!tag=SeqType_s%7DSeqType_s:(%22Nucleotide%22)&fq=VirusLineageId_ss:(102793)&fq=%7B!tag=Segment_s%7DSegment_s:(%226%22)&cmd=download&sort=SourceDB_s%20desc,CreateDate_dt%20desc,id%20asc&dlfmt=acc&fl=AccVer_s
+
+    # decompress the data package
+    unzip ~{data_package_basename}.zip -d ~{data_package_basename}
+
+    # download the sequence data described within the data package
+    datasets rehydrate \
+      --gzip \
+      --max-workers $NUM_WORKERS \
+      --directory "~{data_package_basename}/"
+
+    # rename the fasta file containing the sequence data
+    mv "~{data_package_basename}/ncbi_dataset/data/genomic.fna" \
+       "~{data_package_basename}/ncbi_dataset/data/~{data_package_basename}.fasta"
+
+    # output sequence metadata in tsv format, with the desired columns specified via ~{metadata_columns}
+    dataformat tsv virus-genome \
+      --inputfile "~{data_package_basename}/ncbi_dataset/data/data_report.jsonl" \
+      --fields "~{metadata_columns}" > "~{data_package_basename}_metadata.tsv"
+
+    #~{data_package_basename}/ncbi_dataset/data/data_report.jsonl
+  >>>
+
+  output {
+    File viral_genomes_fasta                = "~{data_package_basename}/ncbi_dataset/data/~{data_package_basename}.fasta"
+    File viral_genomes_metadata_report_json = "~{data_package_basename}/ncbi_dataset/data/data_report.jsonl"
+    File viral_genomes_metadata_tsv         = "~{data_package_basename}_metadata.tsv"
+  }
+
+  runtime {
+    docker: docker
+    memory: "7 GB"
+    cpu: 2
+    dx_instance_type: "mem2_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
 task annot_transfer {
   meta {
     description: "Given a reference genome annotation in TBL format (e.g. from Genbank or RefSeq) and a multiple alignment of that reference to other genomes, produce new annotation files (TBL format with appropriate coordinate conversions) for each sequence in the multiple alignment. Resulting output can be fed to tbl2asn for Genbank submission."
