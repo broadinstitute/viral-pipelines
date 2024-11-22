@@ -18,6 +18,7 @@ workflow augur_from_assemblies {
         File           ref_fasta
 
         Int            min_unambig_genome
+        Int?           segment_num
 
         File?          clades_tsv
         Array[String]? ancestral_traits_to_infer
@@ -27,7 +28,7 @@ workflow augur_from_assemblies {
 
     parameter_meta {
         assembly_fastas: {
-          description: "Set of assembled genomes to align and build trees. These must represent a single chromosome/segment of a genome only. Fastas may be one-sequence-per-individual or a concatenated multi-fasta (unaligned) or a mixture of the two. They may be compressed (gz, bz2, zst, lz4), uncompressed, or a mixture.",
+          description: "Set of assembled genomes to align and build trees. These must represent a single chromosome/segment of a genome only, or if multiple segments are provided, each sequence header must end with a numeric suffix of the form '-N' (ex. '-3' for the third segment). Fastas may be one-sequence-per-individual or a concatenated multi-fasta (unaligned) or a mixture of the two. They may be compressed (gz, bz2, zst, lz4), uncompressed, or a mixture.",
           patterns: ["*.fasta", "*.fa", "*.fasta.gz", "*.fasta.zst"]
         }
         contextual_genome_fastas: {
@@ -57,14 +58,38 @@ workflow augur_from_assemblies {
 
     #### mafft_and_snp
 
-    call utils.zcat {
+    # join one or more assemblies into a single fasta
+    call utils.zcat as gather_assemblies {
         input:
-            infiles     = flatten([assembly_fastas, select_first([contextual_genome_fastas,[]])]),
+            infiles     = assembly_fastas,
             output_name = "all_samples_combined_assembly.fasta"
     }
+
+    if defined(segment_num){
+        # extract the specified segment from the provided assembies 
+        # based on numeric suffix in header (ex. '-3' for the third segment)
+        call nextstrain.filter_segments as extract_segment {
+            input:
+                all_samples_fasta = gather_assemblies.combined,
+                segment = segment_num
+        }
+    }
+    # return only the faster headers (sans '>') in a text file as 
+    # the output assembly_ids.ids_txt
+    call utils.fasta_to_ids as assembly_ids {
+        input:
+            sequences_fasta = select_first(extract_segment.assembly_of_segment,gather_assemblies.combined)
+    }
+
+    call utils.zcat as gather_assemblies_and_contextual {
+        input:
+            infiles     = flatten([select_first(extract_segment.assembly_of_segment,gather_assemblies.combined), select_first([contextual_genome_fastas,[]])]),
+            output_name = "all_samples_combined_assembly.fasta"
+    }
+    
     call utils.filter_sequences_by_length {
         input:
-            sequences_fasta = zcat.combined,
+            sequences_fasta = gather_assemblies_and_contextual.combined,
             min_non_N       = min_unambig_genome
     }
     call nextstrain.mafft_one_chr as mafft {
@@ -103,6 +128,8 @@ workflow augur_from_assemblies {
             sample_metadata_tsv = derived_cols.derived_metadata
     }
 
+    # return only the faster headers (sans '>') in a text file as 
+    # the output fasta_to_ids.ids_txt
     call utils.fasta_to_ids {
         input:
             sequences_fasta = prefilter.filtered_fasta

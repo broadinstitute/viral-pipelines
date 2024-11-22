@@ -186,7 +186,7 @@ task fasta_to_ids {
     Int disk_size = 375
     String basename = basename(sequences_fasta, ".fasta")
     command {
-        cat "~{sequences_fasta}" | grep \> | cut -c 2- > "~{basename}.txt"
+        cat "~{sequences_fasta}" | grep '>' | cut -c 2- > "~{basename}.txt"
     }
     runtime {
         docker: "ubuntu"

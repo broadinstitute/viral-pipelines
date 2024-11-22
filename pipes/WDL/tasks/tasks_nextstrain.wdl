@@ -451,7 +451,7 @@ task filter_segments {
                 if len(r.split("\n")) > 1:
                     header = r.split("\n")[0]
 
-                    if segment in header:
+                    if header.endswith(segment):
                         new_header = header.replace(segment, "")
                         contents = r.replace(header, new_header)
                         segment_fasta += ">"+contents
