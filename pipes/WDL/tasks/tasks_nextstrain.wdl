@@ -53,7 +53,7 @@ task nextclade_one_sample {
         File? gene_annotations_json
         String? dataset_name
         Int    disk_size = 50
-        String docker = "nextstrain/nextclade:3.8.2"
+        String docker = "nextstrain/nextclade:3.9.1"
     }
     String basename = basename(genome_fasta, ".fasta")
     command <<<
@@ -144,7 +144,7 @@ task nextclade_many_samples {
         String       basename
         File?        genome_ids_setdefault_blank
         Int          disk_size = 150
-        String       docker = "nextstrain/nextclade:3.8.2"
+        String       docker = "nextstrain/nextclade:3.9.1"
     }
     command <<<
         set -e
@@ -321,7 +321,7 @@ task derived_cols {
         String?       lab_highlight_loc
         Array[File]   table_map = []
 
-        String        docker = "quay.io/broadinstitute/viral-core:2.3.6"
+        String        docker = "quay.io/broadinstitute/viral-core:2.4.0"
         Int           disk_size = 50
     }
     parameter_meta {
@@ -889,7 +889,7 @@ task filter_sequences_to_list {
 
         String       out_fname = sub(sub(basename(sequences, ".zst"), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
         # Prior docker image: "nextstrain/base:build-20240318T173028Z"
-        String       docker = "quay.io/broadinstitute/viral-core:2.3.6"
+        String       docker = "quay.io/broadinstitute/viral-core:2.4.0"
         Int          disk_size = 750
     }
     parameter_meta {
@@ -1373,6 +1373,7 @@ task refine_augur_tree {
         File     msa_or_vcf
         File     metadata
 
+        Boolean  generate_timetree = true
         Int?     gen_per_year
         Float?   clock_rate
         Float?   clock_std_dev
@@ -1409,7 +1410,7 @@ task refine_augur_tree {
             --metadata "~{metadata}" \
             --output-tree "~{out_basename}_timetree.nwk" \
             --output-node-data "~{out_basename}_branch_lengths.json" \
-            --timetree \
+            ~{true="--timetree" false="" generate_timetree} \
             ~{"--clock-rate " + clock_rate} \
             ~{"--clock-std-dev " + clock_std_dev} \
             ~{"--coalescent " + coalescent} \

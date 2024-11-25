@@ -13,6 +13,7 @@ workflow augur_from_assemblies {
 
     input {
         Array[File]+   assembly_fastas
+        Array[File]?   contextual_genome_fastas
         Array[File]+   sample_metadata_tsvs
         File           ref_fasta
 
@@ -27,6 +28,10 @@ workflow augur_from_assemblies {
     parameter_meta {
         assembly_fastas: {
           description: "Set of assembled genomes to align and build trees. These must represent a single chromosome/segment of a genome only. Fastas may be one-sequence-per-individual or a concatenated multi-fasta (unaligned) or a mixture of the two. They may be compressed (gz, bz2, zst, lz4), uncompressed, or a mixture.",
+          patterns: ["*.fasta", "*.fa", "*.fasta.gz", "*.fasta.zst"]
+        }
+        contextual_genome_fastas: {
+          description: "Set of near-complete contextual genomes to include in tree build. Each fasta provided must represent a single chromosome/segment of a genome. Fastas may be one-sequence-per-individual or a concatenated multi-fasta (unaligned) or a mixture of the two. They may be compressed (gz, bz2, zst, lz4), uncompressed, or a mixture. ",
           patterns: ["*.fasta", "*.fa", "*.fasta.gz", "*.fasta.zst"]
         }
         sample_metadata_tsvs: {
@@ -54,7 +59,7 @@ workflow augur_from_assemblies {
 
     call utils.zcat {
         input:
-            infiles     = assembly_fastas,
+            infiles     = flatten([assembly_fastas, select_first([contextual_genome_fastas,[]])]),
             output_name = "all_samples_combined_assembly.fasta"
     }
     call utils.filter_sequences_by_length {
@@ -62,9 +67,13 @@ workflow augur_from_assemblies {
             sequences_fasta = zcat.combined,
             min_non_N       = min_unambig_genome
     }
+    call nextstrain.nextstrain_deduplicate_sequences as dedup_seqs {
+        input:
+            sequences_fasta = filter_sequences_by_length.filtered_fasta
+    }
     call nextstrain.mafft_one_chr as mafft {
         input:
-            sequences = filter_sequences_by_length.filtered_fasta,
+            sequences = dedup_seqs.sequences_deduplicated_fasta,
             ref_fasta = ref_fasta,
             basename  = "all_samples_aligned.fasta"
     }
