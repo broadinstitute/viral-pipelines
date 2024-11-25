@@ -718,6 +718,7 @@ task refine_assembly_with_aligned_reads {
       Boolean  mark_duplicates = false
       Float    major_cutoff = 0.5
       Int      min_coverage = 3
+      Int?     max_coverage
 
       Int      machine_mem_gb = 15
       String   docker = "quay.io/broadinstitute/viral-assemble:2.3.6.1"
@@ -757,9 +758,20 @@ task refine_assembly_with_aligned_reads {
 
         assembly.py --version | tee VERSION
 
+        if [[ ~{default="0" max_coverage} -gt 0 ]]; then
+          rasusa aln -O sam \
+            --step-size 200 \
+            --coverage ~{max_coverage} \
+            "~{reads_aligned_bam}" \
+            | samtools sort -o temp_maxcov.bam -@ $(nproc) -l 1
+        else
+          ln -s "~{reads_aligned_bam}" temp_maxcov.bam
+        fi
+        samtools index -@ $(nproc) temp_maxcov.bam temp_maxcov.bai
+
         if [ ~{true='true' false='false' mark_duplicates} == "true" ]; then
           read_utils.py mkdup_picard \
-            ~{reads_aligned_bam} \
+            temp_maxcov.bam \
             temp_markdup.bam \
             --JVMmemory "$mem_in_mb"m \
             --loglevel=DEBUG
