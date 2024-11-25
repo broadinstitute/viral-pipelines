@@ -768,7 +768,7 @@ task biosample_to_genbank {
                     row['host'] = match.group(1)
                     if row['host'] == 'bovine_milk':
                       row['host'] = 'Cattle'
-                    assert host in out_headers_total
+                    assert 'host' in out_headers_total
               # override geo_loc_name if food_origin exists
               if row.get('food_origin','').strip():
                   print("overriding geo_loc_name with food_origin")
