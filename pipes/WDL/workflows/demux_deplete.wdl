@@ -243,7 +243,7 @@ workflow demux_deplete {
                 input:
                     workspace_name   = select_first([check_terra_env.workspace_name]),
                     terra_project    = select_first([check_terra_env.workspace_namespace]),
-                    tsv_file         = biosample_map_tsv
+                    tsv_file         = biosample_to_table.sample_meta_tsv
             }
         }
     }
