@@ -26,7 +26,7 @@ workflow demux_deplete {
         Boolean      insert_demux_outputs_into_terra_tables=false
 
         File?        sample_rename_map
-        Array[File]? biosample_map_tsvs
+        Array[File]  biosample_map_tsvs = []
         Int          min_reads_per_bam = 100
 
         String?      instrument_model_user_specified
@@ -183,41 +183,6 @@ workflow demux_deplete {
         Pair[String,Int] count_cleaned = (basename(raw_reads, '.bam'), read_count_post_depletion)
     }
 
-    if (length(flatten(select_all([biosample_map_tsvs]))) > 0) {
-        #### merge biosample attribute tsvs (iff provided with more than one)
-        if (length(flatten(select_all([biosample_map_tsvs]))) > 1) {
-            call utils.tsv_join as biosample_map_tsv_join {
-                input:
-                    input_tsvs   = flatten([select_first([biosample_map_tsvs,[]])]),
-                    id_col       = 'accession',
-                    out_suffix   = ".tsv",
-                    out_basename = "biosample-attributes-merged"
-            }
-        }
-
-        #### biosample metadata mapping
-        call ncbi.biosample_to_table {
-            input:
-                biosample_attributes_tsv = select_first([biosample_map_tsv_join.out_tsv, biosample_map_tsvs]),
-                cleaned_bam_filepaths    = select_all(cleaned_bam_passing),
-                demux_meta_json          = meta_filename.merged_json
-        }
-
-        #### SRA submission prep
-        call ncbi.sra_meta_prep {
-            input:
-                cleaned_bam_filepaths = select_all(cleaned_bam_passing),
-                biosample_map         = select_first([biosample_map_tsv_join.out_tsv, biosample_map_tsvs]),
-                library_metadata      = samplesheet_rename_ids.new_sheet,
-                platform              = "ILLUMINA",
-                paired                = (illumina_demux.run_info[0]['indexes'] == '2'),
-
-                out_name              = "sra_metadata-~{illumina_demux.run_info[0]['run_id']}.tsv",
-                instrument_model      = select_first(flatten([[instrument_model_user_specified],[illumina_demux.run_info[0]['sequencer_model']]])),
-                title                 = select_first([sra_title])
-        }
-    }
-
     if(insert_demux_outputs_into_terra_tables) {
         call terra.check_terra_env
 
@@ -234,14 +199,51 @@ workflow demux_deplete {
                 read_counts_raw_json         = write_json(count_raw),
                 read_counts_cleaned_json     = write_json(count_cleaned)
             }
+        }
+    }
 
-            if (length(flatten(select_all([biosample_map_tsvs]))) > 0) {
-                call terra.upload_entities_tsv as terra_load_biosample_data {
-                    input:
-                        workspace_name   = check_terra_env.workspace_name,
-                        terra_project    = check_terra_env.workspace_namespace,
-                        tsv_file         = select_first([biosample_to_table.sample_meta_tsv])
-                }
+
+    if (length(biosample_map_tsvs) > 0) {
+        #### merge biosample attribute tsvs (iff provided with more than one)
+        if (length(biosample_map_tsvs) > 1) {
+            call utils.tsv_join as biosample_map_tsv_join {
+                input:
+                    input_tsvs   = biosample_map_tsvs,
+                    id_col       = 'accession',
+                    out_suffix   = ".tsv",
+                    out_basename = "biosample-attributes-merged"
+            }
+        }
+        File biosample_map_tsv = select_first(flatten([[biosample_map_tsv_join.out_tsv], biosample_map_tsvs]))
+
+        #### biosample metadata mapping
+        call ncbi.biosample_to_table {
+            input:
+                biosample_attributes_tsv = biosample_map_tsv,
+                cleaned_bam_filepaths    = select_all(cleaned_bam_passing),
+                demux_meta_json          = meta_filename.merged_json
+        }
+
+        #### SRA submission prep
+        call ncbi.sra_meta_prep {
+            input:
+                cleaned_bam_filepaths = select_all(cleaned_bam_passing),
+                biosample_map         = biosample_map_tsv,
+                library_metadata      = samplesheet_rename_ids.new_sheet,
+                platform              = "ILLUMINA",
+                paired                = (illumina_demux.run_info[0]['indexes'] == '2'),
+
+                out_name              = "sra_metadata-~{illumina_demux.run_info[0]['run_id']}.tsv",
+                instrument_model      = select_first(flatten([[instrument_model_user_specified],[illumina_demux.run_info[0]['sequencer_model']]])),
+                title                 = select_first([sra_title])
+        }
+
+        if(insert_demux_outputs_into_terra_tables && select_first([check_terra_env.is_running_on_terra])) {
+            call terra.upload_entities_tsv as terra_load_biosample_data {
+                input:
+                    workspace_name   = select_first([check_terra_env.workspace_name]),
+                    terra_project    = select_first([check_terra_env.workspace_namespace]),
+                    tsv_file         = biosample_to_table.sample_meta_tsv
             }
         }
     }
