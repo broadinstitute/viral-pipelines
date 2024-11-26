@@ -418,6 +418,7 @@ task read_depths {
     File      aligned_bam
 
     String    out_basename = basename(aligned_bam, '.bam')
+    
     String    docker = "quay.io/broadinstitute/viral-core:2.4.0"
   }
   Int disk_size = 200

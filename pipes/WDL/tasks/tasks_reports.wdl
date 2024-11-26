@@ -15,6 +15,7 @@ task alignment_metrics {
     Int    max_amplicons=500
 
     Int    machine_mem_gb=32
+
     String docker = "quay.io/broadinstitute/viral-core:2.4.0"
   }
 
@@ -371,6 +372,7 @@ task fastqc {
 
   command {
     set -ex -o pipefail
+    export OPENBLAS_NUM_THREADS=1
     reports.py --version | tee VERSION
     reports.py fastqc ${reads_bam} ${reads_basename}_fastqc.html --out_zip ${reads_basename}_fastqc.zip
   }

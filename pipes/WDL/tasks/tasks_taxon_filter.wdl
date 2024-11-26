@@ -38,6 +38,8 @@ task deplete_taxa {
 
   command <<<
     set -ex -o pipefail
+    export OPENBLAS_NUM_THREADS=1
+
     taxon_filter.py --version | tee VERSION
 
     if [ -z "$TMPDIR" ]; then
@@ -211,6 +213,7 @@ task merge_one_per_sample {
     Boolean      rmdup = false
 
     Int          machine_mem_gb = 7
+
     String       docker = "quay.io/broadinstitute/viral-core:2.4.0"
   }
 

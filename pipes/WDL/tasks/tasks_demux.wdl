@@ -186,6 +186,8 @@ task illumina_demux {
   command <<<
     set -ex -o pipefail
 
+    export OPENBLAS_NUM_THREADS=1
+
     # find N% memory
     mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 85)
 
