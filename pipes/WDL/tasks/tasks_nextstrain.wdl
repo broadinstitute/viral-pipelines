@@ -1373,6 +1373,7 @@ task refine_augur_tree {
         File     msa_or_vcf
         File     metadata
 
+        Boolean  generate_timetree = true
         Int?     gen_per_year
         Float?   clock_rate
         Float?   clock_std_dev
@@ -1409,7 +1410,7 @@ task refine_augur_tree {
             --metadata "~{metadata}" \
             --output-tree "~{out_basename}_timetree.nwk" \
             --output-node-data "~{out_basename}_branch_lengths.json" \
-            --timetree \
+            ~{true="--timetree" false="" generate_timetree} \
             ~{"--clock-rate " + clock_rate} \
             ~{"--clock-std-dev " + clock_std_dev} \
             ~{"--coalescent " + coalescent} \
