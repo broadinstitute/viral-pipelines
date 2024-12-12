@@ -52,7 +52,7 @@ task unpack_archive_to_bucket_path {
         # execution and resource requirements
         Int    disk_size      = 500
         Int    machine_mem_gb = 128
-        String docker         = "quay.io/broadinstitute/viral-core:2.4.0"
+        String docker         = "quay.io/broadinstitute/viral-core:2.4.1"
     }
 
     parameter_meta {
