@@ -32,12 +32,10 @@ workflow sarscov2_illumina_full {
             description: "amplicon primers to trim in reference coordinate space (0-based BED format)",
             patterns: ["*.bed"]
         }
-
         biosample_attributes: {
           description: "A post-submission attributes file from NCBI BioSample, which is available at https://submit.ncbi.nlm.nih.gov/subs/ and clicking on 'Download attributes file with BioSample accessions'. The 'sample_name' column must match the external_ids used in sample_rename_map (or internal ids if sample_rename_map is omitted).",
           patterns: ["*.txt", "*.tsv"]
         }
-
     }
 
     input {

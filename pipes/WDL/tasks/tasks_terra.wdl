@@ -48,6 +48,7 @@ task check_terra_env {
 
     # create Terra-related output files
     touch user_email.txt
+    touch workspace_id.txt
     touch workspace_name.txt
     touch workspace_namespace.txt
     touch workspace_bucket_path.txt
@@ -56,6 +57,7 @@ task check_terra_env {
     touch method_version.txt
     touch method_source.txt
     touch method_path.txt
+    touch top_level_submission_id.txt
 
     # disable the version update alert messages gcloud sometimes emits when executing any command
     gcloud config set component_manager/disable_update_check true
@@ -134,7 +136,7 @@ task check_terra_env {
       WORKSPACE_NAME="$(jq -cr '.workspace.name | select (.!=null)' workspace_info.json | tee workspace_name.txt)"
       WORKSPACE_NAME_URL_ENCODED="$(jq -rn --arg x "${WORKSPACE_NAME}" '$x|@uri')"
       WORKSPACE_NAMESPACE="$(jq -cr '.workspace.namespace | select (.!=null)' workspace_info.json | tee workspace_namespace.txt)"
-      WORKSPACE_BUCKET="$(echo gs://${WORKSPACE_ID} | tee workspace_bucket_path.txt)"
+      WORKSPACE_BUCKET="$(echo "gs://${WORKSPACE_ID}" | tee workspace_bucket_path.txt)"
 
       echo "WORKSPACE_NAME:      ${WORKSPACE_NAME}"
       echo "WORKSPACE_NAMESPACE: ${WORKSPACE_NAMESPACE}"
@@ -194,15 +196,6 @@ task check_terra_env {
     else 
       echo "Not running on Terra+GCP"
     fi
-    ls -1 /sys
-    echo "--"
-    ls -1 /sys/fs
-    echo "--"
-    ls -1 /sys/fs/cgroup
-    echo "-- memory.peak:"
-    cat /sys/fs/cgroup/memory.peak
-    echo "--"
-    #ls -1 /sys/fs/cgroup/memory
     echo -n'' "MEM_BYTES: "; { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } | tee MEM_BYTES
   >>>
   output {

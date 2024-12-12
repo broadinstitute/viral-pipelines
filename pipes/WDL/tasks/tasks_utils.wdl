@@ -39,22 +39,24 @@ task unpack_archive_to_bucket_path {
         String  bucket_path_prefix
         String? out_dir_name
         
-        # gcloud storage options
-        Boolean clobber_existing = false
-        String? gcloud_access_token
-        
         # tar options
         Boolean bypass_disk_and_unpack_directly_to_bucket = false
         Int?    archive_wrapper_directories_to_strip
         String  tar_opts = "-v --ignore-zeros --no-ignore-command-error"
+        
+        # gcloud storage options
+        Boolean clobber_existing = false
+        String? gcloud_access_token
+        String  gcloud_storage_cp_opts = ""
 
-        # resource requirements
+        # execution and resource requirements
         Int    disk_size      = 500
         Int    machine_mem_gb = 128
         String docker         = "quay.io/broadinstitute/viral-core:2.4.0"
     }
 
     parameter_meta {
+        # data I/O inputs
         input_archive_files: {
             description: "List of input archive files to unpack.",
             patterns: ["*.tar", "*.tar.gz", "*.tgz", "*.tar.bz2", "*.tbz2", "*.tar.xz", "*.txz", "*.tar.lz4", "*.tar.zst"]
@@ -65,26 +67,39 @@ task unpack_archive_to_bucket_path {
         out_dir_name: {
             description: "Name of the (sub-)directory to unpack the archive contents to within the bucket prefix specified. If not provided, the contents will be unpacked to the bucket prefix."
         }
-        gcloud_access_token: {
-            description: "Access token for the Google Cloud Storage bucket, if needed to write to the bucket specified by 'bucket_path_prefix'. If not provided, the gcloud auth configuration of the execution environment will be used (service/pet account on Terra)."
+        
+        # tar params
+        bypass_disk_and_unpack_directly_to_bucket: {
+            description: "(tar) If true, unpack the archive(s) and pipe the contents directly to the gcloud storage upload process, without writing to the disk between extraction and upload. If enabled, minimal disk space will be used beyond storage needed to localize the specified input archive(s), but the task may take significantly longer as each file is uploaded using an independent gcloud storage invocation."
         }
         archive_wrapper_directories_to_strip: {
-            description: "If specified, tar extraction excludes this many top-level directories. (i.e. if all files of a tarball are containined within a top-level subdirectory, and archive_wrapper_directories_to_strip=1, the files files will be extracted without being placed into a corresponding output sub-directory. Equivalent to the parameter '--strip-components' of GNU tar."
-        }
-        clobber_existing: {
-            description: "If true, overwrite files in the target directory of the bucket if they already exist."
-        }
-        bypass_disk_and_unpack_directly_to_bucket: {
-            description: "If true, unpack the archive(s) and pipe the contents directly to the gcloud storage upload process, without writing to the disk between extraction and upload. If enabled, minimal disk space will be used beyond storage needed to localize the specified input archive(s), but the task may take significantly longer as each file is uploaded using an independent gcloud storage invocation."
+            description: "(tar) If specified, tar extraction excludes this many top-level directories. (i.e. if all files of a tarball are containined within a top-level subdirectory, and archive_wrapper_directories_to_strip=1, the files files will be extracted without being placed into a corresponding output sub-directory. Equivalent to the parameter '--strip-components' of GNU tar."
         }
         tar_opts: {
-            description: "Options to pass to the tar command during extraction. By default includes: '-v --ignore-zeros --no-ignore-command-error'"
+            description: "(tar) Options to pass to GNU tar during extraction. By default includes: '-v --ignore-zeros --no-ignore-command-error'"
         }
+
+        # 'gcloud storage cp' params
+        clobber_existing: {
+            description: "(gcloud storage cp) If true, overwrite files in the target directory of the bucket if they already exist."
+        }
+        gcloud_access_token: {
+            description: "(gcloud storage cp) Access token for the Google Cloud Storage bucket, for account authorized to write to the bucket specified by 'bucket_path_prefix'. If not provided, the gcloud auth configuration of the execution environment will be obtained via 'gcloud auth print-access-token' for the active authenticated user (on Terra, the service worker/'pet' account)."
+        }
+        gcloud_storage_cp_opts: {
+            description: "(gcloud storage cp) Additional options to pass to the 'gcloud storage cp' command at the time of upload."
+        }
+        
+
+        # execution and resource requirements
         disk_size: {
             description: "Size of the disk to allocate for the task, in GB. Note that if multiple files are provided to 'input_archive_files', and extracted data is written to the disk (bypass_disk_and_unpack_directly_to_bucket=false), the extracted data from one archive will be removed before extracting and uploading data from the next input archive."
         }
         machine_mem_gb: {
             description: "Memory to allocate for the task, in GB."
+        }
+        docker: {
+            description: "Docker image to use for the task. For this task, the image must provide GNU tar and the google-cloud-cli ('gcloud' command)"
         }
     }
 
@@ -98,10 +113,11 @@ task unpack_archive_to_bucket_path {
         if ~{if(defined(gcloud_access_token)) then 'true' else 'false'}; then
             # set access token env var expected by gcloud,
             # if provided by the user
-            export CLOUDSDK_AUTH_ACCESS_TOKEN="~{gcloud_access_token}"
+            CLOUDSDK_AUTH_ACCESS_TOKEN="~{gcloud_access_token}"
         else
-            export CLOUDSDK_AUTH_ACCESS_TOKEN="$(gcloud auth print-access-token)"
+            CLOUDSDK_AUTH_ACCESS_TOKEN="$(gcloud auth print-access-token)"
         fi
+        export CLOUDSDK_AUTH_ACCESS_TOKEN
 
         # check that the gcloud access token is populated
         if [ -z "${CLOUDSDK_AUTH_ACCESS_TOKEN}" ]; then
@@ -124,7 +140,7 @@ task unpack_archive_to_bucket_path {
         # by trying  a simple write action, since we cannot rely on
         # the user having the permissions needed to view the IAM policies
         # that determine their (write) access to the bucket 
-        if ! echo "write_test" | gcloud storage cp - "${bucket_path_prefix}/.tmp/test-write-access.txt" --quiet; then
+        if ! echo "write_test" | gcloud storage cp --verbosity error - "${bucket_path_prefix}/.tmp/test-write-access.txt" --quiet; then
             echo "ERROR: user does not have write access to the target bucket: ~{bucket_path_prefix}" >&2
             exit 1
         else
@@ -152,12 +168,12 @@ task unpack_archive_to_bucket_path {
                 #     https://www.gnu.org/software/tar/manual/html_section/extract-options.html#Writing-to-an-External-Program
                 tar ~{tar_opts} -x \
                     ~{if(defined(archive_wrapper_directories_to_strip)) then "--strip-components=~{archive_wrapper_directories_to_strip}" else ""} \
-                    --to-command='gcloud storage cp ~{if clobber_existing then "" else "--no-clobber"} --verbosity error - '"${bucket_path_prefix}~{if(defined(out_dir_name)) then '/~{out_dir_name}' else ''}/"'${TAR_REALNAME}' \
+                    --to-command='gcloud storage cp ~{gcloud_storage_cp_opts} ~{if clobber_existing then "" else "--no-clobber"} --verbosity error - '"${bucket_path_prefix}~{if(defined(out_dir_name)) then '/~{out_dir_name}' else ''}/"'${TAR_REALNAME}' \
                     -f "${input_archive}"
             
             # otherwise extract to disk and then upload to the bucket
             else
-                echo 'Extracting archive '$(basename "${input_archive}")' to disk before upload...'
+                echo 'Extracting archive '"$(basename "${input_archive}")"' to disk before upload...'
 
                 # create a temporary directory to extract the archive contents to
                 mkdir -p extracted_tmp
@@ -177,6 +193,7 @@ task unpack_archive_to_bucket_path {
                     --recursive \
                     ~{if clobber_existing then "" else "--no-clobber"} \
                     --verbosity warning \
+                    ~{gcloud_storage_cp_opts} \
                     ./ "${bucket_path_prefix}~{if(defined(out_dir_name)) then '/~{out_dir_name}' else ''}"
 
                 popd 
@@ -452,7 +469,7 @@ task download_from_url {
                 mv response01 "${downloaded_file_name}" && \
                 rm "tmp/$downloaded_file_name"
         else
-            mv "tmp/${downloaded_file_name} ${downloaded_file_name}"
+            mv "tmp/${downloaded_file_name}" "${downloaded_file_name}"
         fi
         # alternative python implementation to split response headers from body
         #   via https://stackoverflow.com/a/75483099
@@ -490,11 +507,11 @@ task download_from_url {
 
         if ~{if defined(md5_hash_expected) then 'true' else 'false'}; then
             md5_hash_expected="~{md5_hash_expected}"
-            check_md5_sum $md5_hash_expected $md5sum_of_downloaded
+            check_md5_sum "$md5_hash_expected" "$md5sum_of_downloaded"
         fi
         if ~{if defined(md5_hash_expected_file_url) then 'true' else 'false'}; then
             md5_hash_expected="$(curl --silent ~{md5_hash_expected_file_url} | cut -f1 -d' ')"
-            check_md5_sum $md5_hash_expected $md5sum_of_downloaded
+            check_md5_sum "$md5_hash_expected" "$md5sum_of_downloaded"
         fi
 
         # report the file size, in bytes
