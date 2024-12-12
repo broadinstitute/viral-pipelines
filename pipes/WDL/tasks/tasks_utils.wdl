@@ -89,15 +89,29 @@ task unpack_archive_to_bucket_path {
     }
 
     command <<<
+        # verify gcloud is installed (it should be, if the default docker image is used)
+        if ! command -v gcloud &> /dev/null; then
+            echo "ERROR: gcloud is not installed; it is required to authenticate to Google Cloud Storage" >&2
+            exit 1
+        fi
+
         if ~{if(defined(gcloud_access_token)) then 'true' else 'false'}; then
             # set access token env var expected by gcloud,
             # if provided by the user
             export CLOUDSDK_AUTH_ACCESS_TOKEN="~{gcloud_access_token}"
+        else
+            export CLOUDSDK_AUTH_ACCESS_TOKEN="$(gcloud auth print-access-token)"
+        fi
+
+        # check that the gcloud access token is populated
+        if [ -z "${CLOUDSDK_AUTH_ACCESS_TOKEN}" ]; then
+            echo "ERROR: gcloud access token not found; it must either be provided via the 'gcloud_access_token' input, or made available within the execution environment (via 'gcloud auth print-access-token')" >&2
+            exit 1
         fi
 
         # check whether the bucket path prefix begins with "gs://" and if not, 
         # prepend the 'protocol'; also strip leading or trailing slash if present
-        # (for flexibility—the user can specify the bucket path prefix with or without the protocol)
+        # (for flexibility; this way the user can specify the bucket path prefix with or without the protocol)
         bucket_path_prefix=$(echo "~{bucket_path_prefix}" | sed -e 's|^gs://||' -e 's|/$||' -e 's|^/*||' -e 's|^|gs://|')
         
         # check that, excluding the gs:// 'protocol' prefix, the bucket path prefix is not empty
@@ -108,8 +122,8 @@ task unpack_archive_to_bucket_path {
 
         # check whether the user can write to the target bucket
         # by trying  a simple write action, since we cannot rely on
-        # the user having the permissions needed to view the IAM policie(ss) that
-        # determine their (write) access to the bucket
+        # the user having the permissions needed to view the IAM policies
+        # that determine their (write) access to the bucket 
         if ! echo "write_test" | gcloud storage cp - "${bucket_path_prefix}/.tmp/test-write-access.txt" --quiet; then
             echo "ERROR: user does not have write access to the target bucket: ~{bucket_path_prefix}" >&2
             exit 1

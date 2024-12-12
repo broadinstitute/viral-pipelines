@@ -19,6 +19,9 @@ workflow unpack_archive_to_bucket {
     call tasks_terra.check_terra_env
 
     if( (check_terra_env.is_running_on_terra && check_terra_env.is_backed_by_gcp) || defined(gcloud_auth_token) ) {
-        call tasks_utils.unpack_archive_to_bucket_path
+        call tasks_utils.unpack_archive_to_bucket_path {
+            input:
+                gcloud_access_token = gcloud_auth_token
+        }
     }
 }
