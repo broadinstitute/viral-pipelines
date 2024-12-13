@@ -136,7 +136,7 @@ task check_terra_env {
       WORKSPACE_NAME="$(jq -cr '.workspace.name | select (.!=null)' workspace_info.json | tee workspace_name.txt)"
       WORKSPACE_NAME_URL_ENCODED="$(jq -rn --arg x "${WORKSPACE_NAME}" '$x|@uri')"
       WORKSPACE_NAMESPACE="$(jq -cr '.workspace.namespace | select (.!=null)' workspace_info.json | tee workspace_namespace.txt)"
-      WORKSPACE_BUCKET="$(echo "gs://${WORKSPACE_ID}" | tee workspace_bucket_path.txt)"
+      WORKSPACE_BUCKET="$(echo "gs://fc-${WORKSPACE_ID}" | tee workspace_bucket_path.txt)"
 
       echo "WORKSPACE_NAME:      ${WORKSPACE_NAME}"
       echo "WORKSPACE_NAMESPACE: ${WORKSPACE_NAMESPACE}"
