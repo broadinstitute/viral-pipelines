@@ -62,7 +62,7 @@ task unpack_archive_to_bucket_path {
             patterns: ["*.tar", "*.tar.gz", "*.tgz", "*.tar.bz2", "*.tbz2", "*.tar.xz", "*.txz", "*.tar.lz4", "*.tar.zst"]
         }
         bucket_path_prefix: {
-            description: "The path prefix to the Google Storage bucket location where the archive contents will be unpacked. This must begin with the bucket name, should start with 'gs://', and can include as many sub-directories as desired."
+            description: "The path prefix to the Google Storage bucket location where the archive contents will be unpacked. This must begin with the bucket name, should start with 'gs://', and can include as many sub-directories as desired. If not provided and the job is running on a GCP-backed Terra instance, the bucket of the associated workspace will be inferred via introspection."
         }
         out_dir_name: {
             description: "Name of the (sub-)directory to unpack the archive contents to within the bucket prefix specified. If not provided, the contents will be unpacked to the bucket prefix."
