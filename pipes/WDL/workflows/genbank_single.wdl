@@ -74,13 +74,13 @@ workflow genbank_single {
 
     # fetch biosample metadata from NCBI if it's not given to us in tsv form
     if(!defined(biosample_attributes_tsv)) {
-        call ncbi.fetch_biosamples {
+        call ncbi_tools.fetch_biosamples {
             input:
                 biosample_ids = [biosample_accession],
                 out_basename = "biosample_attributes-~{biosample_accession}"
         }
     }
-    File biosample_attributes = select_first([biosample_attributes_tsv, ncbi_tools.fetch_biosamples.biosample_attributes_tsv])
+    File biosample_attributes = select_first([biosample_attributes_tsv, fetch_biosamples.biosample_attributes_tsv])
 
     scatter(segment_acc in reference_accessions) {
       # scatter these calls in order to preserve original order
