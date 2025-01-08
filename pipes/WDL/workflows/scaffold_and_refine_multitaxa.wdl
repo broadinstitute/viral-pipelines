@@ -21,6 +21,8 @@ workflow scaffold_and_refine_multitaxa {
         File    contigs_fasta
 
         File    taxid_to_ref_accessions_tsv
+
+        String? biosample_accession
     }
 
     Int    min_scaffold_unambig = 10 # in base-pairs; any scaffolded assembly < this length will not be refined/polished
@@ -49,7 +51,7 @@ workflow scaffold_and_refine_multitaxa {
     }
 
     # assemble and produce stats for every reference cluster
-    Array[String] assembly_header = ["entity:assembly_id", "assembly_name", "sample_id", "sample_name", "taxid", "tax_name", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "scaffolding_num_segments_recovered", "reference_num_segments_required", "reference_length", "reference_accessions", "skani_num_ref_clusters", "skani_this_cluster_num_refs", "skani_dist_tsv", "scaffolding_ani", "scaffolding_pct_ref_cov", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned", "coverage_genbank", "assembly_method", "sample"]
+    Array[String] assembly_header = ["entity:assembly_id", "assembly_name", "sample_id", "sample_name", "taxid", "tax_name", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "scaffolding_num_segments_recovered", "reference_num_segments_required", "reference_length", "reference_accessions", "skani_num_ref_clusters", "skani_this_cluster_num_refs", "skani_dist_tsv", "scaffolding_ani", "scaffolding_pct_ref_cov", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned", "coverage_genbank", "assembly_method", "assembly_method_version", "biosample_accession", "sample"]
     scatter(ref_cluster_tar in select_references.matched_reference_clusters_fastas_tars) {
 
         call utils.tar_extract {
@@ -145,7 +147,10 @@ workflow scaffold_and_refine_multitaxa {
             "bases_aligned" :      select_first([refine.align_to_self_merged_bases_aligned, "0"]),
             "coverage_genbank" :   select_first([coverage_two_col.out_tsv, ""]),
 
-            "assembly_method" :    "viral-ngs/assemble_denovo",
+            "assembly_method" :         "viral-ngs/assemble_denovo",
+            "assembly_method_version" : scaffold.viralngs_version,
+
+            "biosample_accession" :     select_first([biosample_accession, ""]),
 
             "sample":              '{"entityType":"sample","entityName":"' + sample_id + '"}'
         }
