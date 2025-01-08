@@ -26,9 +26,7 @@ workflow genbank_single {
         String        assembly_method_version
 
         String        email_address # required for fetching data from NCBI APIs
-        String?       author_list # of the form "Lastname,A.B., Lastname,C.,"; optional alternative to names in author_sbt_defaults_yaml
-        File?         author_sbt_defaults_yaml # defaults to fill in for author_sbt file (including both author and non-author fields)
-        File          author_sbt_j2_template # an sbt file (optionally) with Jinja2 variables filled in based on author_sbt_defaults_yaml if provided
+        File          authors_sbt
         File?         biosample_attributes_tsv # if empty, we will fetch from NCBI via accession
         String?       comment
         String        molType='cRNA'
@@ -125,23 +123,16 @@ workflow genbank_single {
             reference_feature_tables = flatten(download_annotations.features_tbl)
     }
 
-    call ncbi.generate_author_sbt_file as generate_author_sbt {
-        input:
-            author_list   = author_list,
-            defaults_yaml = author_sbt_defaults_yaml,
-            j2_template   = author_sbt_j2_template
-    }
-
     # TO DO: create entirely different branch of pipeline for special viruses (SC2, Flu A/B/C, Noro, DENV)
     # those viruses need only: fasta, source modifier table, "source info"?, "references"?, "sequence processing"?
     # concatenated fastas are useful for bulk submission
     # table2asn outputs are not accepted by Genbank for these
     call ncbi.prepare_genbank_single as prep_genbank {
         input:
-            assemblies_fasta   = [assembly_fasta],
+            assembly_fastas    = annot.genome_per_chr_fastas,
             annotations_tbl    = annot.genome_per_chr_tbls,
-            authors_sbt        = generate_author_sbt.sbt_file,
-            biosampleMap       = biosample_to_genbank.biosample_map,
+            authors_sbt        = authors_sbt,
+            biosample_accession= biosample_accession,
             genbankSourceTable = biosample_to_genbank.genbank_source_modifier_table,
             coverage_table     = coverage_two_col.out_tsv,
             sequencingTech     = sequencing_platform_from_bam.genbank_sequencing_technology,

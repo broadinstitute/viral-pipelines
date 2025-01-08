@@ -1128,29 +1128,29 @@ task prepare_genbank {
 
 task prepare_genbank_single {
   meta {
-    description: "this task runs NCBI's table2asn"
+    description: "this task runs NCBI's table2asn (unless the organism is flu/sc2/noro/dengue)"
   }
 
   input {
-    Array[File]+ assemblies_fasta
+    Array[File]  assembly_fastas
     Array[File]  annotations_tbl
     File         authors_sbt
-    File?        biosampleMap
-    File?        genbankSourceTable
-    File?        coverage_table
-    String?      sequencingTech
+    String       biosample_accession
+    File         genbankSourceTable
+    File         coverage_table
+    String       sequencingTech
     String?      comment
-    String?      organism
-    String?      molType
-    String?      assembly_method
-    String?      assembly_method_version
+    String       organism
+    String       molType
+    String       assembly_method
+    String       assembly_method_version
 
-    Int?         machine_mem_gb
+    Int          machine_mem_gb = 3
     String       docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
   }
 
   parameter_meta {
-    assemblies_fasta: {
+    assembly_fastas: {
       description: "Assembled genomes. One chromosome/segment per fasta file.",
       patterns: ["*.fasta"]
     }
@@ -1161,10 +1161,6 @@ task prepare_genbank_single {
     authors_sbt: {
       description: "A genbank submission template file (SBT) with the author list, created at https://submit.ncbi.nlm.nih.gov/genbank/template/submission/",
       patterns: ["*.sbt"]
-    }
-    biosampleMap: {
-      description: "A two column tab text file mapping sample IDs (first column) to NCBI BioSample accession numbers (second column). These typically take the format 'SAMN****' and are obtained by registering your samples first at https://submit.ncbi.nlm.nih.gov/",
-      patterns: ["*.txt", "*.tsv"]
     }
     genbankSourceTable: {
       description: "A tab-delimited text file containing requisite metadata for Genbank (a 'source modifier table'). https://www.ncbi.nlm.nih.gov/WebSub/html/help/genbank-source-table.html",
@@ -1195,69 +1191,54 @@ task prepare_genbank_single {
 
   }
 
-  command {
+  command <<<
     set -ex -o pipefail
     ncbi.py --version | tee VERSION
-    cp ${sep=' ' annotations_tbl} .
+    cp ~{sep=' ' annotations_tbl} .
 
     touch special_args
-    if [ -n "${comment}" ]; then
+    if [ -n "~{comment}" ]; then
       echo "--comment" >> special_args
-      echo "${comment}" >> special_args
+      echo "~{comment}" >> special_args
     fi
-    if [ -n "${sequencingTech}" ]; then
-      echo "--sequencing_tech" >> special_args
-      echo "${sequencingTech}" >> special_args
-    fi
-    if [ -n "${organism}" ]; then
-      echo "--organism" >> special_args
-      echo "${organism}" >> special_args
-    fi
-    if [ -n "${molType}" ]; then
-      echo "--mol_type" >> special_args
-      echo "${molType}" >> special_args
-    fi
-    if [ -n "${assembly_method}" -a -n "${assembly_method_version}" ]; then
-      echo "--assembly_method" >> special_args
-      echo "${assembly_method}" >> special_args
-      echo "--assembly_method_version" >> special_args
-      echo "${assembly_method_version}" >> special_args
-    fi
-    if [ -n "${coverage_table}" ]; then
-      echo -e "sample\taln2self_cov_median" > coverage_table.txt
-      cat ${coverage_table} >> coverage_table.txt
-      echo "--coverage_table" >> special_args
-      echo coverage_table.txt >> special_args
-    fi
+
+    echo "--sequencing_tech" >> special_args
+    echo "~{sequencingTech}" >> special_args
+    echo "--organism" >> special_args
+    echo "~{organism}" >> special_args
+    echo "--mol_type" >> special_args
+    echo "~{molType}" >> special_args
+    echo "--assembly_method" >> special_args
+    echo "~{assembly_method}" >> special_args
+    echo "--assembly_method_version" >> special_args
+    echo "~{assembly_method_version}" >> special_args
+    echo -e "sample\taln2self_cov_median" > coverage_table.txt
+    cat "~{coverage_table}" >> coverage_table.txt
+    echo "--coverage_table" >> special_args
+    echo coverage_table.txt >> special_args
 
     cat special_args | xargs -d '\n' ncbi.py prep_genbank_files \
-        ${authors_sbt} \
-        ${sep=' ' assemblies_fasta} \
+        ~{authors_sbt} \
+        ~{sep=' ' assembly_fastas} \
         . \
-        ${'--biosample_map ' + biosampleMap} \
-        ${'--master_source_table ' + genbankSourceTable} \
+        ~{'--biosample_map ' + biosampleMap} \
+        ~{'--master_source_table ' + genbankSourceTable} \
         --loglevel DEBUG
-    zip sequins_only.zip *.sqn
-    zip all_files.zip *.sqn *.cmt *.gbf *.src *.fsa *.val
+    zip genbank_debug-all_files.zip *.sqn *.cmt *.gbf *.src *.fsa *.val
     mv errorsummary.val errorsummary.val.txt # to keep it separate from the glob
-  }
+  >>>
 
   output {
-    File        submission_zip           = "sequins_only.zip"
-    File        archive_zip              = "all_files.zip"
-    Array[File] sequin_files             = glob("*.sqn")
-    Array[File] structured_comment_files = glob("*.cmt")
-    Array[File] genbank_preview_files    = glob("*.gbf")
-    Array[File] source_table_files       = glob("*.src")
-    Array[File] fasta_per_chr_files      = glob("*.fsa")
-    Array[File] validation_files         = glob("*.val")
+    File        archive_zip              = "genbank_debug-all_files.zip"
+    File        genbank_submission_sqn   = glob("*.sqn")[0]
+    File        genbank_preview_file     = glob("*.gbf")[0]
     File        errorSummary             = "errorsummary.val.txt"
     String      viralngs_version         = read_string("VERSION")
   }
 
   runtime {
-    docker: "${docker}"
-    memory: select_first([machine_mem_gb, 3]) + " GB"
+    docker: docker
+    memory: machine_mem_gb + " GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
