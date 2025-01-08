@@ -72,7 +72,7 @@ workflow genbank_single {
     }
 
     # fetch biosample metadata from NCBI if it's not given to us in tsv form
-    if(not(defined(biosample_attributes_tsv))) {
+    if(!defined(biosample_attributes_tsv)) {
         call ncbi.fetch_biosamples {
             input:
                 biosample_ids = [biosample_accession],
