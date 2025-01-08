@@ -1128,7 +1128,7 @@ task prepare_genbank {
 
 task prepare_genbank_single {
   meta {
-    description: "this task runs NCBI's tbl2asn"
+    description: "this task runs NCBI's table2asn"
   }
 
   input {

@@ -15,9 +15,10 @@ workflow genbank_single {
 
     input {
         File            assembly_fasta
-        Array[String]+  reference_accessions
+        Array[String]+  reference_accessions ### TO DO: take a colon-delim list instead?
 
         File          aligned_reads_bam
+        String        biosample_accession
         Int           tax_id
         String        organism_name
         String        assembly_method
@@ -27,7 +28,7 @@ workflow genbank_single {
         String?       author_list # of the form "Lastname,A.B., Lastname,C.,"; optional alternative to names in author_sbt_defaults_yaml
         File?         author_sbt_defaults_yaml # defaults to fill in for author_sbt file (including both author and non-author fields)
         File          author_sbt_j2_template # an sbt file (optionally) with Jinja2 variables filled in based on author_sbt_defaults_yaml if provided
-        File          biosample_attributes
+        File?         biosample_attributes_tsv # if empty, we will fetch from NCBI via accession
         String?       comment
         String        molType='cRNA'
     }
@@ -51,7 +52,7 @@ workflow genbank_single {
         author_sbt_j2_template: {
           description: "an sbt file (optionally) with Jinja2 variables to be filled in based on values present in author_sbt_defaults_yaml, if provided. If author_list is blank and author_sbt_defaults_yaml is not provided (or is blank), this file is passed through verbatim. Example: gs://pathogen-public-dbs/other-related/author_template.sbt.j2"
         }
-        biosample_attributes: {
+        biosample_attributes_tsv: {
           description: "A post-submission attributes file from NCBI BioSample, which is available at https://submit.ncbi.nlm.nih.gov/subs/ and clicking on 'Download attributes file with BioSample accessions'.",
           patterns: ["*.txt", "*.tsv"]
         }
@@ -69,6 +70,16 @@ workflow genbank_single {
         }
 
     }
+
+    # fetch biosample metadata from NCBI if it's not given to us in tsv form
+    if(not(defined(biosample_attributes_tsv))) {
+        call ncbi.fetch_biosamples {
+            input:
+                biosample_ids = [biosample_accession],
+                out_basename = "biosample_attributes-~{biosample_accession}"
+        }
+    }
+    File biosample_attributes = select_first([biosample_attributes_tsv, ncbi.fetch_biosamples.biosample_attributes_tsv])
 
     scatter(segment_acc in reference_accessions) {
       # scatter these calls in order to preserve original order
