@@ -1,6 +1,7 @@
 version 1.0
 
 import "../tasks/tasks_ncbi.wdl" as ncbi
+import "../tasks/tasks_ncbi_tools.wdl" as ncbi_tools
 import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_utils.wdl" as utils
 
@@ -79,7 +80,7 @@ workflow genbank_single {
                 out_basename = "biosample_attributes-~{biosample_accession}"
         }
     }
-    File biosample_attributes = select_first([biosample_attributes_tsv, ncbi.fetch_biosamples.biosample_attributes_tsv])
+    File biosample_attributes = select_first([biosample_attributes_tsv, ncbi_tools.fetch_biosamples.biosample_attributes_tsv])
 
     scatter(segment_acc in reference_accessions) {
       # scatter these calls in order to preserve original order
