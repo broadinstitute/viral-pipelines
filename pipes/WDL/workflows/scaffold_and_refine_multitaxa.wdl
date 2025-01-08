@@ -21,9 +21,6 @@ workflow scaffold_and_refine_multitaxa {
         File    contigs_fasta
 
         File    taxid_to_ref_accessions_tsv
-
-        String? biosample_accession
-        File?   biosample_attributes_tsv
     }
 
     Int    min_scaffold_unambig = 10 # in base-pairs; any scaffolded assembly < this length will not be refined/polished

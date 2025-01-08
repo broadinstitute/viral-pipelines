@@ -79,7 +79,7 @@ task sequencing_platform_from_bam {
   input {
     File    bam
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.4.0"
+    String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
   }
 
   command <<<
