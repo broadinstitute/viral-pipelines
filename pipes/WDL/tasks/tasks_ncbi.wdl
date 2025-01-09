@@ -1229,9 +1229,10 @@ task prepare_genbank_single {
   >>>
 
   output {
-    File        archive_zip              = "genbank_debug-all_files.zip"
+    File        debug_zip                = "genbank_debug-all_files.zip"
     File        genbank_submission_sqn   = glob("*.sqn")[0]
     File        genbank_preview_file     = glob("*.gbf")[0]
+    File        genbank_comment_file     = glob("*.cmt")[0]
     File        errorSummary             = "errorsummary.val.txt"
     String      viralngs_version         = read_string("VERSION")
   }
@@ -1315,35 +1316,103 @@ task package_sc2_genbank_ftp_submission {
   }
 }
 
+task genbank_special_taxa {
+  meta {
+    description: "this task tells you if you have a special taxon that NCBI treats differently"
+  }
+
+  input {
+    Int     taxid
+    File    taxdump_tgz
+    String  docker = "quay.io/broadinstitute/viral-classify:2.2.5"
+  }
+
+  command <<<
+    set -e
+    python3 << CODE
+    # Genbank prohibits normal submissions for SC2, Flu A/B/C, Noro, and Dengue
+    table2asn_prohibited = {
+      11118: "Influenza A virus",
+      11520: "Influenza B virus",
+      11521: "Influenza C virus",
+      2697049: "Severe acute respiratory syndrome coronavirus 2",
+      11974: "Norovirus",
+      12637: "Dengue virus"
+    }
+    # VADR is an annotation tool that supports SC2, Flu A/B/C/D, Noro, Dengue, RSV A/B, MPXV, etc
+    # https://github.com/ncbi/vadr/wiki/Available-VADR-model-files
+    vadr_supported = {
+      1: ("Influenza A/B/C", 15000, "--mkey flu -r --atgonly --xnocomp --nomisc --alt_fail extrant5,extrant3", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/flu/1.6.3-2/vadr-models-flu-1.6.3-2.tar.gz"),
+      11974: ("Norovirus", 9000, "--group Norovirus --nomisc --noprotid", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/caliciviridae/1.2-1/vadr-models-calici-1.2-1.tar.gz"),
+      1: ("Caliciviridae", 10000, "--nomisc --noprotid", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/caliciviridae/1.2-1/vadr-models-calici-1.2-1.tar.gz"),
+      12637: ("Dengue virus", 12000, "--mkey flavi --group Dengue --nomisc --noprotid", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/flaviviridae/1.2-1/vadr-models-flavi-1.2-1.tar.gz"),
+      1: ("Flaviviridae", 14000, "--mkey flavi --nomisc --noprotid", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/flaviviridae/1.2-1/vadr-models-flavi-1.2-1.tar.gz"),
+      2697049: ("SARS-CoV-2", 30000, "--mkey sarscov2 --glsearch -s -r --nomisc --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/sarscov2/1.3-2/vadr-models-sarscov2-1.3-2.tar.gz"),
+      1: ("Coronaviridae", 32000, "--mkey corona --glsearch -s -r --nomisc --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/coronaviridae/1.3-3/vadr-models-corona-1.3-3.tar.gz"),
+      1: ("hRSV A/B", 16000, "--mkey rsv --xnocomp -r", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/rsv/1.5-2/vadr-models-rsv-1.5-2.tar.gz"),
+      1: ("MPXV", 230000, "--mkey mpxv --glsearch --minimap2 -s -r --nomisc --r_lowsimok --r_lowsimxd 100 --r_lowsimxl 2000 --alt_pass discontn,dupregin --s_overhang 150", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/mpxv/1.4.2-1/vadr-models-mpxv-1.4.2-1.tar.gz"),
+      1: ("hMPV", 14000, "--mkey hmpv -r", "https://github.com/greninger-lab/vadr-models-hmpv/archive/refs/tags/v1.0.tar.gz"),
+      1: ("HHV1", 170000, "--mkey NC_001806.vadr -s --glsearch -r --alt_pass dupregin,discontn,indfstrn,indfstrp --alt_mnf_yes insertnp --r_lowsimok --nmiscftrthr 10 -f --keep", "https://github.com/greninger-lab/vadr-models-hsv/archive/refs/tags/v1.0.tar.gz"),
+      1: ("HHV2", 170000, "--mkey NC_001798.vadr -s --glsearch -r --alt_pass dupregin,discontn,indfstrn,indfstrp --alt_mnf_yes insertnp --r_lowsimok --nmiscftrthr 10 -f --keep", "https://github.com/greninger-lab/vadr-models-hsv/archive/refs/tags/v1.0.tar.gz"),
+    }
+
+    CODE
+  >>>
+
+  output {
+    Boolean  table2asn_allowed
+    Boolean  vadr_supported
+    String?  vadr_cli_options
+    File?    vadr_model_tar
+  }
+
+  runtime {
+    docker: docker
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
 task vadr {
   meta {
-    description: "Runs NCBI's Viral Annotation DefineR for annotation and QC. Defaults here are for SARS-CoV-2 (see https://github.com/ncbi/vadr/wiki/Coronavirus-annotation), but VADR itself is applicable to a larger number of viral taxa (change the vadr_opts accordingly)."
+    description: "Runs NCBI's Viral Annotation DefineR for annotation and QC."
   }
   input {
     File   genome_fasta
-    String vadr_opts = "--glsearch -s -r --nomisc --mkey sarscov2 --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn"
+    String vadr_opts = ""
+    Int?   minlen
+    Int?   maxlen
+    File?  vadr_model_tar
 
     String docker = "quay.io/staphb/vadr:1.6.3"
-    Int    minlen = 50
-    Int    maxlen = 30000
     Int    mem_size = 4
     Int    cpus = 2
   }
   String out_base = basename(genome_fasta, '.fasta')
   command <<<
     set -e
+    # unpack custom VADR models or use default
+    if [ -n "~{vadr_model_tar}" ]; then
+      mkdir -p vadr_models
+      tar -C vadr_models -xzvf "~{vadr_model_tar}"
+    else
+      ln -s /opt/vadr/vadr-models vadr_models
+    fi
 
     # remove terminal ambiguous nucleotides
     /opt/vadr/vadr/miniscripts/fasta-trim-terminal-ambigs.pl \
       "~{genome_fasta}" \
-      --minlen ~{minlen} \
-      --maxlen ~{maxlen} \
+      ~{'--minlen ' + minlen} \
+      ~{'--maxlen ' + maxlen} \
       > "~{out_base}.fasta"
 
     # run VADR
     v-annotate.pl \
       ~{vadr_opts} \
-      --mdir /opt/vadr/vadr-models/ \
+      --cpu `nproc` \
+      --mdir vadr-models \
       "~{out_base}.fasta" \
       "~{out_base}"
 

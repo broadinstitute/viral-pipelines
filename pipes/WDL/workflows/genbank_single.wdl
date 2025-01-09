@@ -124,7 +124,7 @@ workflow genbank_single {
     }
 
     # TO DO: create entirely different branch of pipeline for special viruses (SC2, Flu A/B/C, Noro, DENV)
-    # those viruses need only: fasta, source modifier table, "source info"?, "references"?, "sequence processing"?
+    # those viruses need only: fasta, source modifier table
     # concatenated fastas are useful for bulk submission
     # table2asn outputs are not accepted by Genbank for these
     call ncbi.prepare_genbank_single as prep_genbank {
@@ -144,17 +144,13 @@ workflow genbank_single {
     }
 
     output {
-        File        submission_zip         = prep_genbank.submission_zip
-        File        archive_zip            = prep_genbank.archive_zip
-        File        errorSummary           = prep_genbank.errorSummary
-        
+        File?       genbank_submission_sqn = prep_genbank.genbank_submission_sqn
+        File?       genbank_preview_file   = prep_genbank.genbank_preview_file
+        File?       genbank_comment_file   = prep_genbank.genbank_comment_file
+        File?       table2asn_errors       = prep_genbank.errorSummary
+
         File        genbank_source_table   = biosample_to_genbank.genbank_source_modifier_table
-        
-        Array[File] transferred_annot_tbls = annot.genome_per_chr_tbls
-        Array[File] genbank_preview_files  = prep_genbank.genbank_preview_files
-        Array[File] validation_files       = prep_genbank.validation_files
-        
-        String      viral_phylo_version    = prep_genbank.viralngs_version
+        Array[File] annotation_tbls        = annot.genome_per_chr_tbls
     }
 
 }
