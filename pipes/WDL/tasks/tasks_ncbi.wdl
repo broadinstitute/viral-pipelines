@@ -1330,6 +1330,12 @@ task genbank_special_taxa {
   command <<<
     set -e
     python3 << CODE
+    import metagenomics
+
+    # load taxdb and retrieve full hierarchy leading to this taxid
+    taxdb = metagenomics.TaxonomyDb(tax_dir=taxdb_dir, load_nodes=True, load_gis=False)
+    ancestors = taxdb.get_ordered_ancestors(taxid)
+
     # Genbank prohibits normal submissions for SC2, Flu A/B/C, Noro, and Dengue
     table2asn_prohibited = {
       11118: "Influenza A virus",
@@ -1339,6 +1345,8 @@ task genbank_special_taxa {
       11974: "Norovirus",
       12637: "Dengue virus"
     }
+    # any(node in hits for node in [taxid] + ancestors)
+
     # VADR is an annotation tool that supports SC2, Flu A/B/C/D, Noro, Dengue, RSV A/B, MPXV, etc
     # https://github.com/ncbi/vadr/wiki/Available-VADR-model-files
     vadr_supported = {
