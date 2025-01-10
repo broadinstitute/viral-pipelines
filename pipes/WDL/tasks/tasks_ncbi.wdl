@@ -1372,6 +1372,7 @@ task genbank_special_taxa {
     Boolean  vadr_supported
     String?  vadr_cli_options
     File?    vadr_model_tar
+    Int?     max_genome_length
   }
 
   runtime {
@@ -1388,11 +1389,11 @@ task vadr {
     description: "Runs NCBI's Viral Annotation DefineR for annotation and QC."
   }
   input {
-    File   genome_fasta
-    String vadr_opts = ""
-    Int?   minlen
-    Int?   maxlen
-    File?  vadr_model_tar
+    File    genome_fasta
+    String? vadr_opts
+    Int?    minlen
+    Int?    maxlen
+    File?   vadr_model_tar
 
     String docker = "quay.io/staphb/vadr:1.6.3"
     Int    mem_size = 4
@@ -1418,7 +1419,7 @@ task vadr {
 
     # run VADR
     v-annotate.pl \
-      ~{vadr_opts} \
+      ~{default='' vadr_opts} \
       --cpu `nproc` \
       --mdir vadr-models \
       "~{out_base}.fasta" \
