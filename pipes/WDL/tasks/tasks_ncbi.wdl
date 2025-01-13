@@ -827,7 +827,7 @@ task biosample_to_genbank {
             outrow['note'] = row.get('purpose_of_sequencing', row.get('purpose_of_sampling', ''))
 
             # sanitize sequence IDs to match fasta headers
-            if ~{sanitize_seq_ids}.lower() == 'true':
+            if "~{sanitize_seq_ids}".lower() == 'true':
                 outrow['Sequence_ID'] = re.sub(r'[^0-9A-Za-z!#$%&+./:;?@^_|~-]', '_', outrow['Sequence_ID'])
 
             # write entry for this sample
