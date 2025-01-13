@@ -701,7 +701,10 @@ task biosample_to_genbank {
     String  biosample_col_for_fasta_headers = "sample_name"
 
     File?   filter_to_ids
+    String? filter_to_accession
     Map[String,String] src_to_attr_map = {}
+
+    Boolean sanitize_seq_ids = true
 
     String  docker = "python:slim"
   }
@@ -733,6 +736,9 @@ task biosample_to_genbank {
         with open("~{filter_to_ids}", 'rt') as inf:
             samples_to_filter_to = set(line.strip() for line in inf)
             print("filtering to samples: {}".format(samples_to_filter_to))
+    only_accession = "~{default='' filter_to_accession}" if "~{default='' filter_to_accession}" else None
+    if only_accession:
+        print("filtering to biosample: {}".format(only_accession))
 
     # read entire tsv -> biosample_attributes, filtered to only the entries we keep
     with open("~{biosample_attributes}", 'rt') as inf_biosample:
@@ -740,6 +746,7 @@ task biosample_to_genbank {
       in_headers = biosample_attributes_reader.fieldnames
       biosample_attributes = list(row for row in biosample_attributes_reader
         if row['message'].startswith('Success')
+        and (not only_accession or row['accession'] == only_accession)
         and (not samples_to_filter_to or row[header_key_map['Sequence_ID']] in samples_to_filter_to))
       print("filtered to {} samples".format(len(biosample_attributes)))
 
@@ -818,6 +825,10 @@ task biosample_to_genbank {
 
             # load the purpose of sequencing (or if not, the purpose of sampling) in the note field
             outrow['note'] = row.get('purpose_of_sequencing', row.get('purpose_of_sampling', ''))
+
+            # sanitize sequence IDs to match fasta headers
+            if ~{sanitize_seq_ids}.lower() == 'true':
+                outrow['Sequence_ID'] = re.sub(r'[^0-9A-Za-z!#$%&+./:;?@^_|~-]', '_', outrow['Sequence_ID'])
 
             # write entry for this sample
             sample_name = outrow['Sequence_ID']

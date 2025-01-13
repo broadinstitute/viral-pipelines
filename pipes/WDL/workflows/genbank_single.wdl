@@ -73,6 +73,7 @@ workflow genbank_single {
     call reports.coverage_report {
       input:
         mapped_bams = [aligned_reads_bam]
+        out_report_name = "coverage_report-~{basename(aligned_reads_bam, '.bam')}.txt"
     }
 
     # create genbank source modifier table from biosample metadata
