@@ -65,12 +65,29 @@ task check_terra_env {
     # write system environment variables to output file
     env | tee -a env_info.log
 
+    echo "false" > RUNNING_ON_GCP_PAPIv2
+    echo "false" > RUNNING_ON_GCP_BATCH
+
     # check if running on GCP
     if curl -s metadata.google.internal -i | grep -E 'Metadata-Flavor:\s+Google'; then 
       echo "Cloud platform appears to be GCP"; 
       echo "true" > RUNNING_ON_GCP
 
       GCLOUD_OAUTH_BEARER_TOKEN="$(gcloud auth print-access-token)"
+
+      # if BATCH_JOB_UID has a value the job is running on GCP Batch
+      # NOTE: PAPIv2 is deprecated and will be removed in the future
+      if [ -n "$BATCH_JOB_UID" ]; then
+        echo "Job appears to be running on GCP Batch"
+        echo "true"  > RUNNING_ON_GCP_BATCH
+      else
+        echo "Job appears to be running on GCP via PAPIv2"
+        echo "true"  > RUNNING_ON_GCP_PAPIv2
+      fi
+
+      # Additional introspection can be performed on GCP by querying the internal metadata server
+      #   for details see:
+      #     https://cloud.google.com/compute/docs/metadata/predefined-metadata-keys
 
       # write gcloud env info to output files
       gcloud info | tee -a gcloud_config_info.log
@@ -106,20 +123,8 @@ task check_terra_env {
 
       # === Determine Terra workspace ID and submission ID for the workspace responsible for this job
 
-      # determine location of (de)localization scripts
-      # this may differ whether running on GCP via PAPIv2 or via Google batch
-      # terra_localization_script_location=""
-      # if [ -f /cromwell_root/gcs_delocalization.sh ]; then
-      #   terra_localization_script_location="/cromwell_root"
-      # elif [ -f /mnt/disks/cromwell_root/gcs_delocalization.sh ]; then
-      #   terra_localization_script_location="/mnt/disks/cromwell_root"
-      # else
-      #   echo "ERROR: Could not find gcs_delocalization.sh script"
-      #   exit 1
-      # fi
-
       # locate the Terra (de)localiztion scripts by running find on one of several known potential locations
-      # limiting the search depth to three levels below the specified paths
+      # the location may/does differ when running on GCP via PAPIv2 or via Google batch
       known_possible_terra_script_locations=(
                                               "/cromwell_root"
                                               "/mnt/disks/cromwell_root"
@@ -227,7 +232,10 @@ task check_terra_env {
   >>>
   output {
     Boolean is_running_on_terra    = read_boolean("RUNNING_ON_TERRA")
-    Boolean is_backed_by_gcp       = read_boolean("RUNNING_ON_GCP")
+
+    Boolean is_backed_by_gcp          = read_boolean("RUNNING_ON_GCP")
+    Boolean is_running_via_gcp_batch  = read_boolean("RUNNING_ON_GCP_BATCH")
+    Boolean is_running_via_gcp_papiv2 = read_boolean("RUNNING_ON_GCP_PAPIv2")
 
     String google_project_id       = read_string("google_project_id.txt")
 
