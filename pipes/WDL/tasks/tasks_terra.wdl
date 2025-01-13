@@ -106,17 +106,44 @@ task check_terra_env {
 
       # === Determine Terra workspace ID and submission ID for the workspace responsible for this job
 
+      # determine location of (de)localization scripts
+      # this may differ whether running on GCP via PAPIv2 or via Google batch
+      # terra_localization_script_location=""
+      # if [ -f /cromwell_root/gcs_delocalization.sh ]; then
+      #   terra_localization_script_location="/cromwell_root"
+      # elif [ -f /mnt/disks/cromwell_root/gcs_delocalization.sh ]; then
+      #   terra_localization_script_location="/mnt/disks/cromwell_root"
+      # else
+      #   echo "ERROR: Could not find gcs_delocalization.sh script"
+      #   exit 1
+      # fi
+
+      # locate the Terra (de)localiztion scripts by running find on one of several known potential locations
+      # limiting the search depth to three levels below the specified paths
+      known_possible_terra_script_locations=(
+                                              "/cromwell_root"
+                                              "/mnt/disks/cromwell_root"
+                                            )
+      terra_localization_script_dirpath="$(dirname $(realpath $(find "${known_possible_terra_script_locations[@]}" -maxdepth 3 -iname gcs_delocalization.sh -print -quit)))"
+
+
       # Scrape various workflow / workspace info from the localization and delocalization scripts.
       #   from: https://github.com/broadinstitute/gatk/blob/ah_var_store/scripts/variantstore/wdl/GvsUtils.wdl#L35-L40
-      WORKSPACE_ID="$(sed -n -E 's!.*gs://fc-(secure-)?([^\/]+).*!\2!p' /cromwell_root/gcs_delocalization.sh | sort -u | tee workspace_id.txt)"
+      WORKSPACE_ID="$(sed -n -E 's!.*gs://fc-(secure-)?([^\/]+).*!\2!p' ${terra_localization_script_dirpath}/gcs_delocalization.sh | sort -u | tee workspace_id.txt)"
       echo "WORKSPACE_ID:            ${WORKSPACE_ID}"
+
+      # check that workspace ID is a valid UUID
+      if ! [[ "$WORKSPACE_ID" =~ ^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$ ]]; then
+        echo "ERROR: WORKSPACE_ID identified by parsing ${terra_localization_script_dirpath}/gcs_delocalization.sh is not a valid UUID"
+        exit 1
+      fi
 
       # bucket path prefix
       #BUCKET_PREFIX="$(sed -n -E 's!.*(gs://(fc-(secure-)?[^\/]+)).*!\1!p' /cromwell_root/gcs_delocalization.sh | sort -u | tee bucket_prefix.txt)"
       #echo "BUCKET_PREFIX: ${BUCKET_PREFIX}"
 
       # top-level submission ID
-      TOP_LEVEL_SUBMISSION_ID="$(sed -n -E 's!.*gs://fc-(secure-)?([^\/]+)/submissions/([^\/]+).*!\3!p' /cromwell_root/gcs_delocalization.sh | sort -u | tee top_level_submission_id.txt)"
+      TOP_LEVEL_SUBMISSION_ID="$(sed -n -E 's!.*gs://fc-(secure-)?([^\/]+)/submissions/([^\/]+).*!\3!p' ${terra_localization_script_dirpath}/gcs_delocalization.sh | sort -u | tee top_level_submission_id.txt)"
       echo "TOP_LEVEL_SUBMISSION_ID: ${TOP_LEVEL_SUBMISSION_ID}"
 
       # workflow job ID within submission
