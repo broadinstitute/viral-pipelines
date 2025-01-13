@@ -188,6 +188,7 @@ task align_and_annot_transfer_single {
 
     String       docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
   }
+  String out_base = basename(genome_fasta, '.fasta')
 
   parameter_meta {
     genome_fasta: {
@@ -204,21 +205,22 @@ task align_and_annot_transfer_single {
     }
   }
 
-  command {
+  command <<<
     set -e
     ncbi.py --version | tee VERSION
     mkdir -p out
     ncbi.py tbl_transfer_multichr \
-        "${genome_fasta}" \
+        "~{genome_fasta}" \
         out \
-        --ref_fastas ${sep=' ' reference_fastas} \
-        --ref_tbls ${sep=' ' reference_feature_tables} \
+        --ref_fastas ~{sep=' ' reference_fastas} \
+        --ref_tbls ~{sep=' ' reference_feature_tables} \
         --oob_clip \
         --loglevel DEBUG
-  }
+    cat out/*.tbl > "~{out_base}.tbl"
+  >>>
 
   output {
-    Array[File]+ genome_per_chr_tbls   = glob("out/*.tbl")
+    File         feature_tbl           = "~{out_base}.tbl"
     Array[File]+ genome_per_chr_fastas = glob("out/*.fasta")
     String       viralngs_version      = read_string("VERSION")
   }
@@ -1132,11 +1134,11 @@ task prepare_genbank_single {
   }
 
   input {
-    Array[File]  assembly_fastas
-    Array[File]  annotations_tbl
+    File         assembly_fasta
+    File         annotations_tbl
     File         authors_sbt
     String       biosample_accession
-    File         genbankSourceTable
+    File         source_modifier_table
     File         coverage_table
     String       sequencingTech
     String?      comment
@@ -1150,8 +1152,8 @@ task prepare_genbank_single {
   }
 
   parameter_meta {
-    assembly_fastas: {
-      description: "Assembled genomes. One chromosome/segment per fasta file.",
+    assembly_fasta: {
+      description: "Assembled genome. All chromosomes/segments in one file.",
       patterns: ["*.fasta"]
     }
     annotations_tbl: {
@@ -1192,8 +1194,83 @@ task prepare_genbank_single {
   }
 
   command <<<
-    set -ex -o pipefail
-    ncbi.py --version | tee VERSION
+    set -e
+    table2asn -version | cut -f 2 -d ' ' > TABLE2ASN_VERSION
+
+    python3 << CODE
+    import ncbi
+    import util.file
+    import Bio.SeqIO
+
+    # get coverage map
+    coverage = {}
+    if coverage_table:
+        for row in util.file.read_tabfile_dict(coverage_table):
+            if row.get('sample') and row.get('aln2self_cov_median'):
+                coverage[row['sample']] = row['aln2self_cov_median']
+
+    # get biosample id map
+    biosample = {}
+    if biosample_map:
+        for row in util.file.read_tabfile_dict(biosample_map):
+            if row.get('sample') and row.get('BioSample'):
+                biosample[row['sample']] = row['BioSample']
+
+    # make output directory
+    util.file.mkdir_p(annotDir)
+    for fn in fasta_files:
+        if not fn.endswith('.fasta'):
+            raise Exception("fasta files must end in .fasta")
+        sample_base = os.path.basename(fn)[:-6]
+
+        # for each segment/chromosome in the fasta file,
+        # create a separate new *.fsa file
+        n_segs = util.file.fasta_length(fn)
+        with open(fn, "r") as inf:
+            asm_fasta = Bio.SeqIO.parse(inf, 'fasta')
+            for idx, seq_obj in enumerate(asm_fasta):
+                seq_obj.id
+                if n_segs>1:
+                    sample = sample_base + "-" + str(idx+1)
+                else:
+                    sample = sample_base
+
+                # write the segment to a temp .fasta file
+                # in the same dir so fasta2fsa functions as expected
+                with util.file.tmp_dir() as tdir:
+                    temp_fasta_fname = os.path.join(tdir,util.file.string_to_file_name(seq_obj.id)+".fasta")
+                    with open(temp_fasta_fname, "w") as out_chr_fasta:
+                        Bio.SeqIO.write(seq_obj, out_chr_fasta, "fasta")
+                    # make .fsa files
+                    ncbi.fasta2fsa(temp_fasta_fname, annotDir, biosample=biosample.get(seq_obj.id))
+
+                # make .src files
+                if master_source_table:
+                    out_src_fname = os.path.join(annotDir, util.file.string_to_file_name(seq_obj.id) + '.src')
+                    with open(master_source_table, 'rt') as inf:
+                        with open(out_src_fname, 'wt') as outf:
+                            outf.write(inf.readline())
+                            for line in inf:
+                                row = line.rstrip('\n').split('\t')
+                                if row[0] in set((seq_obj.id, sample_base, util.file.string_to_file_name(seq_obj.id))):
+                                    row[0] = seq_obj.id
+                                    outf.write('\t'.join(row) + '\n')
+
+                # make .cmt files
+                ncbi.make_structured_comment_file(os.path.join(annotDir, util.file.string_to_file_name(seq_obj.id) + '.cmt'),
+                                             name=seq_obj.id,
+                                             coverage=coverage.get(seq_obj.id, coverage.get(sample_base, coverage.get(util.file.string_to_file_name(seq_obj.id)))),
+                                             seq_tech=sequencing_tech,
+                                             assembly_method=assembly_method,
+                                             assembly_method_version=assembly_method_version)
+
+
+
+    CODE
+
+
+
+
     cp ~{sep=' ' annotations_tbl} .
 
     touch special_args
@@ -1226,7 +1303,7 @@ task prepare_genbank_single {
         ~{sep=' ' assembly_fastas} \
         . \
         --biosample_map biosample_map.txt \
-        --master_source_table "~{genbankSourceTable}" \
+        --master_source_table "~{source_modifier_table}" \
         --loglevel DEBUG
     zip genbank_debug-all_files.zip *.sqn *.cmt *.gbf *.src *.fsa *.val
     mv errorsummary.val errorsummary.val.txt # to keep it separate from the glob
@@ -1238,7 +1315,7 @@ task prepare_genbank_single {
     File        genbank_preview_file     = glob("*.gbf")[0]
     File        genbank_comment_file     = glob("*.cmt")[0]
     File        errorSummary             = "errorsummary.val.txt"
-    String      viralngs_version         = read_string("VERSION")
+    String      table2asn_version        = read_string("TABLE2ASN_VERSION")
   }
 
   runtime {

@@ -127,22 +127,22 @@ workflow genbank_single {
           vadr_model_tar  = genbank_special_taxa.vadr_model_tar,
       }
     }
-    Array[File] genome_per_chr_tbls   = select_first([vadr.feature_tbl, annot.genome_per_chr_tbls])
+    File feature_tbl   = select_first([vadr.feature_tbl, annot.feature_tbl])
 
     if(genbank_special_taxa.table2asn_allowed) {
       call ncbi.prepare_genbank_single as prep_genbank {
         input:
-            assembly_fastas    = annot.genome_per_chr_fastas,
-            annotations_tbl    = genome_per_chr_tbls,
-            authors_sbt        = authors_sbt,
-            biosample_accession= biosample_accession,
-            genbankSourceTable = biosample_to_genbank.genbank_source_modifier_table,
-            coverage_table     = coverage_two_col.out_tsv,
-            sequencingTech     = sequencing_platform_from_bam.genbank_sequencing_technology,
-            comment            = comment,
-            organism           = organism_name,
-            molType            = molType,
-            assembly_method    = assembly_method,
+            assembly_fasta          = assembly_fasta,
+            annotations_tbl         = feature_tbl,
+            authors_sbt             = authors_sbt,
+            biosample_accession     = biosample_accession,
+            source_modifier_table   = biosample_to_genbank.genbank_source_modifier_table,
+            coverage_table          = coverage_two_col.out_tsv,
+            sequencingTech          = sequencing_platform_from_bam.genbank_sequencing_technology,
+            comment                 = comment,
+            organism                = organism_name,
+            molType                 = molType,
+            assembly_method         = assembly_method,
             assembly_method_version = assembly_method_version
       }
     }
@@ -155,7 +155,7 @@ workflow genbank_single {
         Boolean?    vadr_pass              = vadr.pass
 
         File        genbank_source_table   = biosample_to_genbank.genbank_source_modifier_table
-        Array[File] annotation_tbls        = genome_per_chr_tbls
+        File        annotation_tbl         = feature_tbl
     }
 
 }
