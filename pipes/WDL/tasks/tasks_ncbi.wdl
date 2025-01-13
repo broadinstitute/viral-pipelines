@@ -1442,10 +1442,19 @@ task vadr {
     set -e
     # unpack custom VADR models or use default
     if [ -n "~{vadr_model_tar}" ]; then
-      mkdir -p vadr_models
-      tar -C vadr_models -xzvf "~{vadr_model_tar}"
+      mkdir -p vadr-untar
+      tar -C vadr-untar -xzvf "~{vadr_model_tar}"
+      if [ -n "vadr-untar/vadr-models-hsv-1.0" ]; then
+        # this HSV tarball is structured weird, collapse its contents
+        mkdir -p vadr-models
+        ln -s vadr-untar/vadr-models-hsv-1.0/hsv?/* vadr-models
+      else
+        # this is a normal model tarball, just link the model subdirectory, not the outer wrapper
+        ln -s vadr-untar/*/ vadr-models
+      fi
     else
-      ln -s /opt/vadr/vadr-models vadr_models
+      # use default (distributed with docker image) models
+      ln -s /opt/vadr/vadr-models vadr-models
     fi
 
     # remove terminal ambiguous nucleotides
