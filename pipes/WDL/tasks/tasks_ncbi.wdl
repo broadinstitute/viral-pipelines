@@ -1139,7 +1139,7 @@ task prepare_genbank_single {
     File         authors_sbt
     String       biosample_accession
     File         source_modifier_table
-    File         coverage_table
+    File?        coverage_table
     String       sequencingTech
     String?      comment
     String       organism
@@ -1202,10 +1202,20 @@ task prepare_genbank_single {
     import util.file
     import Bio.SeqIO
 
-    # get coverage map
+    # process assembly fasta
+    fn = '~{assembly_fasta}'
+    if not fn.endswith('.fasta'):
+        raise Exception("fasta file must end in .fasta")
+    sample_base = os.path.basename(fn)[:-6]
+    with open(fn, "r") as inf:
+        seq_ids = list(seq.id for seq in Bio.SeqIO.parse(inf, 'fasta'))
+    n_segs = len(seq_ids)
+
+    # get coverage map per segment
     coverage = {}
-    if coverage_table:
-        for row in util.file.read_tabfile_dict(coverage_table):
+    coverage_table_file = '~{default="" coverage_table}'
+    if coverage_table_file:
+        for row in util.file.read_tabfile_dict(coverage_table_file):
             if row.get('sample') and row.get('aln2self_cov_median'):
                 coverage[row['sample']] = row['aln2self_cov_median']
 
@@ -1218,51 +1228,46 @@ task prepare_genbank_single {
 
     # make output directory
     util.file.mkdir_p(annotDir)
-    for fn in fasta_files:
-        if not fn.endswith('.fasta'):
-            raise Exception("fasta files must end in .fasta")
-        sample_base = os.path.basename(fn)[:-6]
 
-        # for each segment/chromosome in the fasta file,
-        # create a separate new *.fsa file
-        n_segs = util.file.fasta_length(fn)
-        with open(fn, "r") as inf:
-            asm_fasta = Bio.SeqIO.parse(inf, 'fasta')
-            for idx, seq_obj in enumerate(asm_fasta):
-                seq_obj.id
-                if n_segs>1:
-                    sample = sample_base + "-" + str(idx+1)
-                else:
-                    sample = sample_base
+    # for each segment/chromosome in the fasta file,
+    # create a separate new *.fsa file
+    with open(fn, "r") as inf:
+        asm_fasta = Bio.SeqIO.parse(inf, 'fasta')
+        for idx, seq_obj in enumerate(asm_fasta):
+            seq_obj.id
+            if n_segs>1:
+                sample = sample_base + "-" + str(idx+1)
+            else:
+                sample = sample_base
 
-                # write the segment to a temp .fasta file
-                # in the same dir so fasta2fsa functions as expected
-                with util.file.tmp_dir() as tdir:
-                    temp_fasta_fname = os.path.join(tdir,util.file.string_to_file_name(seq_obj.id)+".fasta")
-                    with open(temp_fasta_fname, "w") as out_chr_fasta:
-                        Bio.SeqIO.write(seq_obj, out_chr_fasta, "fasta")
-                    # make .fsa files
-                    ncbi.fasta2fsa(temp_fasta_fname, annotDir, biosample=biosample.get(seq_obj.id))
+            # write the segment to a temp .fasta file
+            # in the same dir so fasta2fsa functions as expected
+            with util.file.tmp_dir() as tdir:
+                temp_fasta_fname = os.path.join(tdir,util.file.string_to_file_name(seq_obj.id)+".fasta")
+                with open(temp_fasta_fname, "w") as out_chr_fasta:
+                    Bio.SeqIO.write(seq_obj, out_chr_fasta, "fasta")
+                # make .fsa files
+                ncbi.fasta2fsa(temp_fasta_fname, annotDir, biosample=biosample.get(seq_obj.id))
 
-                # make .src files
-                if master_source_table:
-                    out_src_fname = os.path.join(annotDir, util.file.string_to_file_name(seq_obj.id) + '.src')
-                    with open(master_source_table, 'rt') as inf:
-                        with open(out_src_fname, 'wt') as outf:
-                            outf.write(inf.readline())
-                            for line in inf:
-                                row = line.rstrip('\n').split('\t')
-                                if row[0] in set((seq_obj.id, sample_base, util.file.string_to_file_name(seq_obj.id))):
-                                    row[0] = seq_obj.id
-                                    outf.write('\t'.join(row) + '\n')
+            # make .src files
+            if master_source_table:
+                out_src_fname = os.path.join(annotDir, util.file.string_to_file_name(seq_obj.id) + '.src')
+                with open(master_source_table, 'rt') as inf:
+                    with open(out_src_fname, 'wt') as outf:
+                        outf.write(inf.readline())
+                        for line in inf:
+                            row = line.rstrip('\n').split('\t')
+                            if row[0] in set((seq_obj.id, sample_base, util.file.string_to_file_name(seq_obj.id))):
+                                row[0] = seq_obj.id
+                                outf.write('\t'.join(row) + '\n')
 
-                # make .cmt files
-                ncbi.make_structured_comment_file(os.path.join(annotDir, util.file.string_to_file_name(seq_obj.id) + '.cmt'),
-                                             name=seq_obj.id,
-                                             coverage=coverage.get(seq_obj.id, coverage.get(sample_base, coverage.get(util.file.string_to_file_name(seq_obj.id)))),
-                                             seq_tech=sequencing_tech,
-                                             assembly_method=assembly_method,
-                                             assembly_method_version=assembly_method_version)
+            # make .cmt files
+            ncbi.make_structured_comment_file(os.path.join(annotDir, util.file.string_to_file_name(seq_obj.id) + '.cmt'),
+                                          name=seq_obj.id,
+                                          coverage=coverage.get(seq_obj.id, coverage.get(sample_base, coverage.get(util.file.string_to_file_name(seq_obj.id)))),
+                                          seq_tech=sequencing_tech,
+                                          assembly_method=assembly_method,
+                                          assembly_method_version=assembly_method_version)
 
 
 
@@ -1271,7 +1276,7 @@ task prepare_genbank_single {
 
 
 
-    cp ~{sep=' ' annotations_tbl} .
+    cp "~{annotations_tbl}" .
 
     touch special_args
     if [ -n "~{comment}" ]; then
@@ -1294,13 +1299,13 @@ task prepare_genbank_single {
     echo "--coverage_table" >> special_args
     echo coverage_table.txt >> special_args
 
-    for i in `cat ~{sep=' ' assembly_fastas} | grep \> | cut -c 2-`; do
+    for i in `cat "~{assembly_fasta}" | grep \> | cut -c 2-`; do
       echo -e "~{biosample_accession}\t$i" >> biosample_map.txt
     done
 
     cat special_args | xargs -d '\n' ncbi.py prep_genbank_files \
-        ~{authors_sbt} \
-        ~{sep=' ' assembly_fastas} \
+        "~{authors_sbt}" \
+        "~{assembly_fasta}" \
         . \
         --biosample_map biosample_map.txt \
         --master_source_table "~{source_modifier_table}" \

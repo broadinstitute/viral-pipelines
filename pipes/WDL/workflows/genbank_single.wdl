@@ -72,13 +72,7 @@ workflow genbank_single {
     }
     call reports.coverage_report {
       input:
-        mapped_bams = [aligned_reads_bam],
-        mapped_bam_idx = []
-    }
-    call utils.tsv_drop_cols as coverage_two_col {
-      input:
-        in_tsv = coverage_report.coverage_report,
-        drop_cols = ["aln2self_cov_median", "aln2self_cov_mean_non0", "aln2self_cov_1X", "aln2self_cov_5X", "aln2self_cov_20X", "aln2self_cov_100X"]
+        mapped_bams = [aligned_reads_bam]
     }
 
     # create genbank source modifier table from biosample metadata
@@ -137,7 +131,7 @@ workflow genbank_single {
             authors_sbt             = authors_sbt,
             biosample_accession     = biosample_accession,
             source_modifier_table   = biosample_to_genbank.genbank_source_modifier_table,
-            coverage_table          = coverage_two_col.out_tsv,
+            coverage_table          = coverage_report.coverage_report,
             sequencingTech          = sequencing_platform_from_bam.genbank_sequencing_technology,
             comment                 = comment,
             organism                = organism_name,
