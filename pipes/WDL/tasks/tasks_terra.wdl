@@ -241,7 +241,7 @@ task check_terra_env {
 
     String user_email              = read_string("user_email.txt")
 
-    String workspace_id            = read_string("workspace_id.txt")
+    String workspace_uuid            = read_string("workspace_id.txt")
     String workspace_name          = read_string("workspace_name.txt")
     String workspace_namespace     = read_string("workspace_namespace.txt")
     String workspace_bucket_path   = read_string("workspace_bucket_path.txt")
