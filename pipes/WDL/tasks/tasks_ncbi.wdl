@@ -1458,7 +1458,7 @@ task vadr {
     # run VADR
     v-annotate.pl \
       ~{default='' vadr_opts} \
-      --cpu `nproc` \
+      --split --cpu `nproc` \
       --mdir vadr-models \
       "~{out_base}.fasta" \
       "~{out_base}"
