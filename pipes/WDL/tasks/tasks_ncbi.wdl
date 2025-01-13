@@ -1149,7 +1149,7 @@ task prepare_genbank_single {
     File         annotations_tbl
     File         authors_sbt
     String       biosample_accession
-    File         source_modifier_table
+    File?        source_modifier_table
     File?        coverage_table
     String       sequencingTech
     String?      comment
@@ -1251,27 +1251,6 @@ task prepare_genbank_single {
             else:
                 sample = sample_base
 
-            # write the segment to a temp .fasta file
-            # in the same dir so fasta2fsa functions as expected
-            with util.file.tmp_dir() as tdir:
-                temp_fasta_fname = os.path.join(tdir,util.file.string_to_file_name(seq_obj.id)+".fasta")
-                with open(temp_fasta_fname, "w") as out_chr_fasta:
-                    Bio.SeqIO.write(seq_obj, out_chr_fasta, "fasta")
-                # make .fsa files
-                ncbi.fasta2fsa(temp_fasta_fname, annotDir, biosample=biosample.get(seq_obj.id))
-
-            # make .src files
-            if master_source_table:
-                out_src_fname = os.path.join(annotDir, util.file.string_to_file_name(seq_obj.id) + '.src')
-                with open(master_source_table, 'rt') as inf:
-                    with open(out_src_fname, 'wt') as outf:
-                        outf.write(inf.readline())
-                        for line in inf:
-                            row = line.rstrip('\n').split('\t')
-                            if row[0] in set((seq_obj.id, sample_base, util.file.string_to_file_name(seq_obj.id))):
-                                row[0] = seq_obj.id
-                                outf.write('\t'.join(row) + '\n')
-
             # make .cmt files
             ncbi.make_structured_comment_file(os.path.join(annotDir, util.file.string_to_file_name(seq_obj.id) + '.cmt'),
                                           name=seq_obj.id,
@@ -1284,10 +1263,16 @@ task prepare_genbank_single {
 
     CODE
 
+    cp "~{assembly_fasta}" .
+    IN_FASTA=$(basename "~{assembly_fasta}")
+    table2asn \
+      -t "~{authors_sbt}" \
+      -i "$IN_FASTA" \
+      -f "~{annotations_tbl}" \
+      "~{'-src-file ' + source_modifier_table}" \
+      -a s -V vb
 
-
-
-    cp "~{annotations_tbl}" .
+    # need to convey coverage table / structured comment field, genetic code, organism, moltype, etc
 
     touch special_args
     if [ -n "~{comment}" ]; then
