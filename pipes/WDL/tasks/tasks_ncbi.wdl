@@ -1444,7 +1444,7 @@ task vadr {
     if [ -n "~{vadr_model_tar}" ]; then
       mkdir -p vadr-untar
       tar -C vadr-untar -xzvf "~{vadr_model_tar}"
-      if [ -n "vadr-untar/vadr-models-hsv-1.0" ]; then
+      if [ -f "vadr-untar/vadr-models-hsv-1.0" ]; then
         # this HSV tarball is structured weird, collapse its contents
         mkdir -p vadr-models
         ln -s vadr-untar/vadr-models-hsv-1.0/hsv?/* vadr-models
