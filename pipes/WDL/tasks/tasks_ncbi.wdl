@@ -1217,12 +1217,16 @@ task prepare_genbank_single {
     echo "--coverage_table" >> special_args
     echo coverage_table.txt >> special_args
 
+    for i in `cat ~{sep=' ' assembly_fastas} | grep \> | cut -c 2-`; do
+      echo -e "~{biosample_accession}\t$i" >> biosample_map.txt
+    done
+
     cat special_args | xargs -d '\n' ncbi.py prep_genbank_files \
         ~{authors_sbt} \
         ~{sep=' ' assembly_fastas} \
         . \
-        ~{'--biosample_map ' + biosampleMap} \
-        ~{'--master_source_table ' + genbankSourceTable} \
+        --biosample_map biosample_map.txt \
+        --master_source_table "~{genbankSourceTable}" \
         --loglevel DEBUG
     zip genbank_debug-all_files.zip *.sqn *.cmt *.gbf *.src *.fsa *.val
     mv errorsummary.val errorsummary.val.txt # to keep it separate from the glob
@@ -1331,11 +1335,14 @@ task genbank_special_taxa {
     set -e
     python3 << CODE
     import metagenomics
+    import tarfile
+    import urllib.request
     taxid = ~{taxid}
 
     # load taxdb and retrieve full hierarchy leading to this taxid
     taxdb = metagenomics.TaxonomyDb(tax_dir="~{taxdump_tgz}", load_nodes=True, load_gis=False)
     ancestors = taxdb.get_ordered_ancestors(taxid)
+    this_and_ancestors = [taxid] + ancestors
 
     # Genbank prohibits normal submissions for SC2, Flu A/B/C, Noro, and Dengue
     table2asn_prohibited = {
@@ -1346,34 +1353,64 @@ task genbank_special_taxa {
       11983: "Norovirus",
       3052464: "Dengue virus"
     }
-    prohibited = any(node in table2asn_prohibited for node in [taxid] + ancestors)
+    prohibited = any(node in table2asn_prohibited for node in this_and_ancestors)
+    with open("table2asn_allowed.boolean", "wt") as outf:
+      outf.write("false" if prohibited else "true")
 
     # VADR is an annotation tool that supports SC2, Flu A/B/C/D, Noro, Dengue, RSV A/B, MPXV, etc
     # https://github.com/ncbi/vadr/wiki/Available-VADR-model-files
-    vadr_supported = {
-      11308: ("Orthomyxoviridae", 15000, "--mkey flu -r --atgonly --xnocomp --nomisc --alt_fail extrant5,extrant3", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/flu/1.6.3-2/vadr-models-flu-1.6.3-2.tar.gz"),
-      11983: ("Norovirus", 9000, "--group Norovirus --nomisc --noprotid", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/caliciviridae/1.2-1/vadr-models-calici-1.2-1.tar.gz"),
-      11974: ("Caliciviridae", 10000, "--nomisc --noprotid", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/caliciviridae/1.2-1/vadr-models-calici-1.2-1.tar.gz"),
-      3052464: ("Dengue virus", 12000, "--mkey flavi --group Dengue --nomisc --noprotid", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/flaviviridae/1.2-1/vadr-models-flavi-1.2-1.tar.gz"),
-      11050: ("Flaviviridae", 14000, "--mkey flavi --nomisc --noprotid", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/flaviviridae/1.2-1/vadr-models-flavi-1.2-1.tar.gz"),
-      2697049: ("SARS-CoV-2", 30000, "--mkey sarscov2 --glsearch -s -r --nomisc --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/sarscov2/1.3-2/vadr-models-sarscov2-1.3-2.tar.gz"),
-      11118: ("Coronaviridae", 32000, "--mkey corona --glsearch -s -r --nomisc --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/coronaviridae/1.3-3/vadr-models-corona-1.3-3.tar.gz"),
-      1868215: ("Orthopneumovirus", 16000, "--mkey rsv --xnocomp -r", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/rsv/1.5-2/vadr-models-rsv-1.5-2.tar.gz"),
-      10244: ("MPXV", 230000, "--mkey mpxv --glsearch --minimap2 -s -r --nomisc --r_lowsimok --r_lowsimxd 100 --r_lowsimxl 2000 --alt_pass discontn,dupregin --s_overhang 150", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/mpxv/1.4.2-1/vadr-models-mpxv-1.4.2-1.tar.gz"),
-      3048148: ("hMPV", 14000, "--mkey hmpv -r", "https://github.com/greninger-lab/vadr-models-hmpv/archive/refs/tags/v1.0.tar.gz"),
-      3050292: ("HHV1", 170000, "--mkey NC_001806.vadr -s --glsearch -r --alt_pass dupregin,discontn,indfstrn,indfstrp --alt_mnf_yes insertnp --r_lowsimok --nmiscftrthr 10 -f --keep", "https://github.com/greninger-lab/vadr-models-hsv/archive/refs/tags/v1.0.tar.gz"),
-      3050293: ("HHV2", 170000, "--mkey NC_001798.vadr -s --glsearch -r --alt_pass dupregin,discontn,indfstrn,indfstrp --alt_mnf_yes insertnp --r_lowsimok --nmiscftrthr 10 -f --keep", "https://github.com/greninger-lab/vadr-models-hsv/archive/refs/tags/v1.0.tar.gz"),
-    }
+    # Note this table includes some taxa that are subtaxa of others and in those cases, it is ORDERED from
+    # more specific to less specific (e.g. noro before calici, dengue before flavi, sc2 before corona)
+    # so use the *first* hit in the table.
+    # table entries: (taxid, taxon_name, max_genome_length, vadr_cli_options, vadr_model_tar_url)
+    vadr_supported = (
+      (11308, "Orthomyxoviridae", 15000, "--mkey flu -r --atgonly --xnocomp --nomisc --alt_fail extrant5,extrant3", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/flu/1.6.3-2/vadr-models-flu-1.6.3-2.tar.gz"),
+      (11983, "Norovirus", 9000, "--group Norovirus --nomisc --noprotid", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/caliciviridae/1.2-1/vadr-models-calici-1.2-1.tar.gz"),
+      (11974, "Caliciviridae", 10000, "--nomisc --noprotid", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/caliciviridae/1.2-1/vadr-models-calici-1.2-1.tar.gz"),
+      (3052464, "Dengue virus", 12000, "--mkey flavi --group Dengue --nomisc --noprotid", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/flaviviridae/1.2-1/vadr-models-flavi-1.2-1.tar.gz"),
+      (11050, "Flaviviridae", 14000, "--mkey flavi --nomisc --noprotid", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/flaviviridae/1.2-1/vadr-models-flavi-1.2-1.tar.gz"),
+      (2697049, "SARS-CoV-2", 30000, "--mkey sarscov2 --glsearch -s -r --nomisc --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/sarscov2/1.3-2/vadr-models-sarscov2-1.3-2.tar.gz"),
+      (11118, "Coronaviridae", 32000, "--mkey corona --glsearch -s -r --nomisc --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/coronaviridae/1.3-3/vadr-models-corona-1.3-3.tar.gz"),
+      (1868215, "Orthopneumovirus", 16000, "--mkey rsv --xnocomp -r", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/rsv/1.5-2/vadr-models-rsv-1.5-2.tar.gz"),
+      (10244, "MPXV", 230000, "--mkey mpxv --glsearch --minimap2 -s -r --nomisc --r_lowsimok --r_lowsimxd 100 --r_lowsimxl 2000 --alt_pass discontn,dupregin --s_overhang 150", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/mpxv/1.4.2-1/vadr-models-mpxv-1.4.2-1.tar.gz"),
+      (3048148, "hMPV", 14000, "--mkey hmpv -r", "https://github.com/greninger-lab/vadr-models-hmpv/archive/refs/tags/v1.0.tar.gz"),
+      (3050292, "HHV1", 170000, "--mkey NC_001806.vadr -s --glsearch -r --alt_pass dupregin,discontn,indfstrn,indfstrp --alt_mnf_yes insertnp --r_lowsimok --nmiscftrthr 10 -f --keep", "https://github.com/greninger-lab/vadr-models-hsv/archive/refs/tags/v1.0.tar.gz"),
+      (3050293, "HHV2", 170000, "--mkey NC_001798.vadr -s --glsearch -r --alt_pass dupregin,discontn,indfstrn,indfstrp --alt_mnf_yes insertnp --r_lowsimok --nmiscftrthr 10 -f --keep", "https://github.com/greninger-lab/vadr-models-hsv/archive/refs/tags/v1.0.tar.gz"),
+    )
+
+    out_vadr_supported = false
+    out_vadr_cli_options = ""
+    out_vadr_model_tar_url = ""
+    out_max_genome_length = 1000000
+    for taxid, taxon_name, max_genome_length, vadr_cli_options, vadr_model_tar_url in vadr_supported:
+      if any(node == taxid for node in this_and_ancestors):
+        out_vadr_supported = true
+        out_vadr_cli_options = vadr_cli_options
+        out_vadr_model_tar_url = vadr_model_tar_url
+        out_max_genome_length = max_genome_length
+        break
+    with open("vadr_supported.boolean", "wt") as outf:
+      outf.write("true" if out_vadr_supported else "false")
+    with open("vadr_cli_options.string", "wt") as outf:
+      outf.write(out_vadr_cli_options)
+    with open("max_genome_length.int", "wt") as outf:
+      outf.write(str(out_max_genome_length))
+
+    if out_vadr_model_tar_url:
+      urllib.request.urlretrieve(out_vadr_model_tar_url, "vadr_model-~{taxid}.tar.gz")
+    else:
+      with tarfile.open("vadr_model-~{taxid}.tar.gz", "w:gz") as out_tar:
+        pass
 
     CODE
   >>>
 
   output {
-    Boolean  table2asn_allowed
-    Boolean  vadr_supported
-    String?  vadr_cli_options
-    File?    vadr_model_tar
-    Int?     max_genome_length
+    Boolean  table2asn_allowed  = read_boolean("table2asn_allowed.boolean")
+    Boolean  vadr_supported     = read_boolean("vadr_supported.boolean")
+    String   vadr_cli_options   = read_string("vadr_cli_options.string")
+    File     vadr_model_tar     = "vadr_model-~{taxid}.tar.gz"
+    Int      max_genome_length  = read_int("max_genome_length.int")
   }
 
   runtime {
