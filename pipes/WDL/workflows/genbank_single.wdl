@@ -23,7 +23,10 @@ workflow genbank_single {
         Int           tax_id
 
         String        email_address # required for fetching data from NCBI APIs
-        File?         biosample_attributes_tsv # if empty, we will fetch from NCBI via accession
+
+        #String?       biosample_attributes_json # if this is used, we will use this first
+        File?         biosample_attributes_tsv # if no json, we will read this tsv
+        # if both are unspecified, we will fetch from NCBI via biosample_accession
     }
 
     parameter_meta {

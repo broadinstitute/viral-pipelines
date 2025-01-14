@@ -764,6 +764,7 @@ task biosample_to_genbank {
     File?   filter_to_ids
     String? filter_to_accession
     Map[String,String] src_to_attr_map = {}
+    String?  organism_name_override
 
     Boolean sanitize_seq_ids = true
 
@@ -811,10 +812,24 @@ task biosample_to_genbank {
         and (not samples_to_filter_to or row[header_key_map['Sequence_ID']] in samples_to_filter_to))
       print("filtered to {} samples".format(len(biosample_attributes)))
 
+    # override organism_name if provided (this allows us to submit Genbank assemblies for
+    # specific species even though the metagenomic BioSample may have been registered with a different
+    # species or none at all)
+    if "~{default='' organism_name_override}":
+        for row in biosample_attributes:
+            row['organism'] = "~{default='' organism_name_override}"
+
     # handle special submission types: flu, sc2, noro, dengue
-    for special in ('Influenza A virus', 'Influenza B virus', 'Influenza C virus',
+    special_bugs = ('Influenza A virus', 'Influenza B virus', 'Influenza C virus',
                     'Severe acute respiratory syndrome coronavirus 2',
-                    'Norovirus', 'Dengue virus'):
+                    'Norovirus', 'Dengue virus')
+    for special in special_bugs:
+        # sanitize organism name if it's a special one
+        for row in biosample_attributes:
+          if row['organism'].startswith(special):
+              row['organism'] = special
+
+        # enforce that special submissions are all the same special thing
         if any(row['organism'] == special for row in biosample_attributes):
           print("special organism found " + special)
           assert all(row['organism'] == special for row in biosample_attributes), "if any samples are {}, all samples must be {}".format(special, special)
