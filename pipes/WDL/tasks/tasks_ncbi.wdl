@@ -286,42 +286,72 @@ task structured_comments {
   }
 }
 
-task structured_comments_from_coverage_report {
+task structured_comments_from_aligned_bam {
   input {
-    File    coverage_report
-    File    assembly_fasta
+    File    aligned_bam
     String  assembly_method
     String  assembly_method_version
-    String  sequencing_tech
 
     Boolean is_genome_assembly = true
-
-    String  docker = "quay.io/broadinstitute/py3-bio:0.1.2"
+    String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
   }
-  String out_basename = basename(coverage_report, '.txt')
+  String out_basename = basename(aligned_bam, '.bam')
   # see https://www.ncbi.nlm.nih.gov/genbank/structuredcomment/
   command <<<
     set -e
+
+    reports.py coverage_only "~{aligned_bam}" coverage.txt
+
+    samtools view -H USA-MA-Broad_BWH-20907-2024.l000013250703_C8.H5FWNDRX5.1.hs_depleted.mapped.bam  | grep '^@SQ' | grep -o 'SN:[^[:space:]]*' | cut -d':' -f2 > SEQ_IDS
+
+    samtools view -H "~{aligned_bam}" | grep '^@RG' | grep -o 'PL:[^[:space:]]*' | cut -d':' -f2 | sort | uniq > BAM_PLATFORMS
+    if [ $(wc -l < BAM_PLATFORMS) -ne 1 ]; then
+      echo "Other: hybrid" > GENBANK_SEQ_TECH
+    elif grep -qi 'ILLUMINA' BAM_PLATFORMS; then
+      echo "Illumina" > GENBANK_SEQ_TECH
+    elif grep -qi 'ONT' BAM_PLATFORMS; then
+      echo "Oxford Nanopore" > GENBANK_SEQ_TECH
+    elif grep -qi 'PACBIO' BAM_PLATFORMS; then
+      echo "PacBio" > GENBANK_SEQ_TECH
+    elif grep -qi 'IONTORRENT' BAM_PLATFORMS; then
+      echo "IonTorrent" > GENBANK_SEQ_TECH
+    elif grep -qi 'SOLID' BAM_PLATFORMS; then
+      echo "SOLiD" > GENBANK_SEQ_TECH
+    elif grep -qi 'ULTIMA' BAM_PLATFORMS; then
+      echo "Ultima" > GENBANK_SEQ_TECH
+    elif grep -qi 'ELEMENT' BAM_PLATFORMS; then
+      echo "Element" > GENBANK_SEQ_TECH
+    elif grep -qi 'CAPILLARY' BAM_PLATFORMS; then
+      echo "Sanger" > GENBANK_SEQ_TECH
+    else
+      echo "Haven't seen this one before!"
+      exit 1
+    fi
+
     python3 << CODE
     import Bio.SeqIO
     import csv
 
-    # get list of sequence IDs in fasta
-    with open("~{assembly_fasta}", "rt") as inf:
-        seqids = set(seq.id for seq in Bio.SeqIO.parse(inf, "fasta"))
+    # get list of sequence IDs from BAM header
+    with open("SEQ_IDS") as inf:
+        seqids = set(line.strip() for line in inf)
+
+    # get sequencing technology from BAM header    
+    with open("GENBANK_SEQ_TECH", "rt") as inf:
+        sequencing_tech = inf.read().strip()
 
     # this header has to be in this specific order -- don't reorder the columns!
     out_headers = ('SeqID', 'StructuredCommentPrefix', 'Assembly Method', "~{true='Genome ' false='' is_genome_assembly}Coverage", 'Sequencing Technology', 'StructuredCommentSuffix')
     with open("~{out_basename}.cmt", 'wt') as outf:
       outf.write('\t'.join(out_headers)+'\n')
 
-      with open("~{coverage_report}", "rt") as inf:
+      with open("coverage.txt", "rt") as inf:
         for row in csv.DictReader(inf, delimiter='\t'):
           if row.get('sample') and row.get('aln2self_cov_median') and row['sample'] in seqids:
             outrow = {
               'SeqID': row['sample'],
               'Assembly Method': "~{assembly_method} v. ~{assembly_method_version}",  # note: the <tool name> v. <version name> format is required by NCBI, don't remove the " v. "
-              'Sequencing Technology': "~{sequencing_tech}",
+              'Sequencing Technology': sequencing_tech,
               "~{true='Genome ' false='' is_genome_assembly}Coverage": "{}x".format(round(float(row['aln2self_cov_median']))),
               'StructuredCommentPrefix': "~{true='Genome-' false='' is_genome_assembly}Assembly-Data",
               'StructuredCommentSuffix': "~{true='Genome-' false='' is_genome_assembly}Assembly-Data",
@@ -334,8 +364,8 @@ task structured_comments_from_coverage_report {
   }
   runtime {
     docker: docker
-    memory: "1 GB"
-    cpu: 1
+    memory: "2 GB"
+    cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }

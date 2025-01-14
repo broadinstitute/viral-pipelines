@@ -18,9 +18,9 @@ workflow genbank_single {
         File          assembly_fasta
         String        ref_accessions_colon_delim
 
-        File          aligned_reads_bam
         String        biosample_accession
         Int           tax_id
+        String        organism_name
 
         String        email_address # required for fetching data from NCBI APIs
 
@@ -54,17 +54,6 @@ workflow genbank_single {
     }
     File biosample_attributes = select_first([biosample_attributes_tsv, fetch_biosamples.biosample_attributes_tsv])
 
-    # extract info from aligned bams (coverage, seq tech)
-    call ncbi.sequencing_platform_from_bam {
-      input:
-        bam = aligned_reads_bam
-    }
-    call reports.coverage_report {
-      input:
-        mapped_bams = [aligned_reads_bam],
-        out_report_name = "coverage_report-~{basename(aligned_reads_bam, '.bam')}.txt"
-    }
-
     # Is this a special virus that NCBI handles differently?
     call ncbi.genbank_special_taxa {
       input:
@@ -90,10 +79,11 @@ workflow genbank_single {
     # create genbank source modifier table from biosample metadata
     call ncbi.biosample_to_genbank {
         input:
-            biosample_attributes = biosample_attributes,
-            num_segments         = length(string_split.tokens),
-            taxid                = tax_id,
-            filter_to_accession  = biosample_accession
+            biosample_attributes   = biosample_attributes,
+            num_segments           = length(string_split.tokens),
+            taxid                  = tax_id,
+            organism_name_override = organism_name,
+            filter_to_accession    = biosample_accession
     }
     ## naive liftover of gene coordinates by alignment
     call ncbi.align_and_annot_transfer_single as annot {
@@ -113,12 +103,7 @@ workflow genbank_single {
     }
     File feature_tbl   = select_first([vadr.feature_tbl, annot.feature_tbl])
 
-    call ncbi.structured_comments_from_coverage_report {
-      input:
-            coverage_report         = coverage_report.coverage_report,
-            assembly_fasta          = assembly_fasta,
-            sequencing_tech         = sequencing_platform_from_bam.genbank_sequencing_technology
-    }
+    call ncbi.structured_comments_from_aligned_bam
 
     if(genbank_special_taxa.table2asn_allowed) {
       call ncbi.table2asn {
@@ -126,7 +111,8 @@ workflow genbank_single {
             assembly_fasta          = assembly_fasta,
             annotations_tbl         = feature_tbl,
             source_modifier_table   = biosample_to_genbank.genbank_source_modifier_table,
-            structured_comment_file = structured_comments_from_coverage_report.structured_comment_file
+            structured_comment_file = structured_comments_from_aligned_bam.structured_comment_file,
+            organism                = organism_name
       }
     }
 
@@ -134,7 +120,7 @@ workflow genbank_single {
         File?       genbank_submission_sqn = table2asn.genbank_submission_sqn
         File?       genbank_preview_file   = table2asn.genbank_preview_file
         File?       table2asn_errors       = table2asn.genbank_validation_file
-        File        genbank_comment_file   = structured_comments_from_coverage_report.structured_comment_file
+        File        genbank_comment_file   = structured_comments_from_aligned_bam.structured_comment_file
         Boolean?    vadr_pass              = vadr.pass
 
         File        genbank_source_table   = biosample_to_genbank.genbank_source_modifier_table
