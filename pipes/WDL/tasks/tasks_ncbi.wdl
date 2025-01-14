@@ -724,6 +724,11 @@ task biosample_to_table {
     samples_seen_without_biosample = set(sample_names_seen) - set(row['sample_name'] for row in biosample_attributes)
     print("samples seen in bams without biosample entries ({}): {}".format(len(samples_seen_without_biosample), sorted(samples_seen_without_biosample)))
 
+    # add biosample json payload to output table
+    for row in biosample_attributes:
+      row['biosample_json'] = json.dumps({k: v for k,v in row.items() if k in biosample_headers})
+    biosample_headers.append('biosample_json')
+
     # write reformatted table
     with open('~{base}.entities.tsv', 'w', newline='') as outf:
       writer = csv.DictWriter(outf, delimiter='\t', fieldnames=["~{sanitized_id_col}"]+biosample_headers, dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
