@@ -1414,13 +1414,13 @@ task genbank_special_taxa {
       (3050293, "HHV2", 170000, "--mkey NC_001798.vadr -s --glsearch -r --alt_pass dupregin,discontn,indfstrn,indfstrp --alt_mnf_yes insertnp --r_lowsimok --nmiscftrthr 10 -f --keep", "https://github.com/greninger-lab/vadr-models-hsv/archive/refs/tags/v1.0.tar.gz"),
     )
 
-    out_vadr_supported = false
+    out_vadr_supported = False
     out_vadr_cli_options = ""
     out_vadr_model_tar_url = ""
     out_max_genome_length = 1000000
     for taxid, taxon_name, max_genome_length, vadr_cli_options, vadr_model_tar_url in vadr_supported:
       if any(node == taxid for node in this_and_ancestors):
-        out_vadr_supported = true
+        out_vadr_supported = True
         out_vadr_cli_options = vadr_cli_options
         out_vadr_model_tar_url = vadr_model_tar_url
         out_max_genome_length = max_genome_length
