@@ -285,6 +285,61 @@ task structured_comments {
   }
 }
 
+task structured_comments_from_coverage_report {
+  input {
+    File    coverage_report
+    File    assembly_fasta
+    String  assembly_method
+    String  assembly_method_version
+    String  sequencing_tech
+
+    Boolean is_genome_assembly = true
+
+    String  docker = "quay.io/broadinstitute/py3-bio:0.1.2"
+  }
+  String out_basename = basename(coverage_report, '.txt')
+  # see https://www.ncbi.nlm.nih.gov/genbank/structuredcomment/
+  command <<<
+    set -e
+    python3 << CODE
+    import Bio.SeqIO
+    import csv
+
+    # get list of sequence IDs in fasta
+    with open("~{assembly_fasta}", "rt") as inf:
+        seqids = set(seq.id for seq in Bio.SeqIO.parse(inf, "fasta"))
+
+    # this header has to be in this specific order -- don't reorder the columns!
+    out_headers = ('SeqID', 'StructuredCommentPrefix', 'Assembly Method', "~{true='Genome ' false='' is_genome_assembly}Coverage", 'Sequencing Technology', 'StructuredCommentSuffix')
+    with open("~{out_basename}.cmt", 'wt') as outf:
+      outf.write('\t'.join(out_headers)+'\n')
+
+      with open("~{coverage_report}", "rt") as inf:
+        for row in csv.DictReader(inf, delimiter='\t'):
+          if row.get('sample') and row.get('aln2self_cov_median') and row['sample'] in seqids:
+            outrow = {
+              'SeqID': row['sample'],
+              'Assembly Method': "~{assembly_method} v. ~{assembly_method_version}",  # note: the <tool name> v. <version name> format is required by NCBI, don't remove the " v. "
+              'Sequencing Technology': "~{sequencing_tech}",
+              "~{true='Genome ' false='' is_genome_assembly}Coverage": "{}x".format(round(float(row['aln2self_cov_median']))),
+              'StructuredCommentPrefix': "~{true='Genome-' false='' is_genome_assembly}Assembly-Data",
+              'StructuredCommentSuffix': "~{true='Genome-' false='' is_genome_assembly}Assembly-Data",
+            }
+            outf.write('\t'.join(outrow[h] for h in out_headers)+'\n')
+    CODE
+  >>>
+  output {
+    File   structured_comment_file = "~{out_basename}.cmt"
+  }
+  runtime {
+    docker: docker
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
 task prefix_fasta_header {
   input {
     File   genome_fasta
@@ -865,7 +920,7 @@ task generate_author_sbt_file {
     String? author_list
     File    j2_template
     File?   defaults_yaml
-    String? out_base = "authors"
+    String  out_base = "authors"
 
     String  docker = "quay.io/broadinstitute/py3-bio:0.1.2"
   }
@@ -1139,28 +1194,27 @@ task prepare_genbank {
   }
 }
 
-task prepare_genbank_single {
+task table2asn {
   meta {
-    description: "this task runs NCBI's table2asn (unless the organism is flu/sc2/noro/dengue)"
+    description: "This task runs NCBI's table2asn, the artist formerly known as tbl2asn"
   }
 
   input {
     File         assembly_fasta
     File         annotations_tbl
     File         authors_sbt
-    String       biosample_accession
     File?        source_modifier_table
-    File?        coverage_table
-    String       sequencingTech
+    File?        structured_comment_file
     String?      comment
     String       organism
-    String       molType
-    String       assembly_method
-    String       assembly_method_version
+    String       mol_type = "cRNA"
+    Int          genetic_code = 1
 
     Int          machine_mem_gb = 3
     String       docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
   }
+
+  String out_basename = basename(assembly_fasta, ".fasta")
 
   parameter_meta {
     assembly_fasta: {
@@ -1175,16 +1229,12 @@ task prepare_genbank_single {
       description: "A genbank submission template file (SBT) with the author list, created at https://submit.ncbi.nlm.nih.gov/genbank/template/submission/",
       patterns: ["*.sbt"]
     }
-    genbankSourceTable: {
+    source_modifier_table: {
       description: "A tab-delimited text file containing requisite metadata for Genbank (a 'source modifier table'). https://www.ncbi.nlm.nih.gov/WebSub/html/help/genbank-source-table.html",
-      patterns: ["*.txt", "*.tsv"]
+      patterns: ["*.src"]
     }
-    coverage_table: {
-      description: "A two column tab text file mapping sample IDs (first column) to average sequencing coverage (second column, floating point number).",
-      patterns: ["*.txt", "*.tsv"]
-    }
-    sequencingTech: {
-      description: "The type of sequencer used to generate reads. NCBI has a controlled vocabulary for this value which can be found here: https://submit.ncbi.nlm.nih.gov/structcomment/nongenomes/"
+    structured_comment_file: {
+      patterns: ["*.cmt"]
     }
     organism: {
       description: "The scientific name for the organism being submitted. This is typically the species name and should match the name given by the NCBI Taxonomy database. For more info, see: https://www.ncbi.nlm.nih.gov/Sequin/sequin.hlp.html#Organism"
@@ -1192,130 +1242,32 @@ task prepare_genbank_single {
     molType: {
       description: "The type of molecule being described. Any value allowed by the INSDC controlled vocabulary may be used here. Valid values are described at http://www.insdc.org/controlled-vocabulary-moltype-qualifier"
     }
-    assembly_method: {
-      description: "Very short description of the software approach used to assemble the genome. We typically provide a github link here. If this is specified, assembly_method_version should also be specified."
-    }
-    assembly_method_version: {
-      description: "The version of the software used. If this is specified, assembly_method should also be specified."
-    }
     comment: {
       description: "Optional comments that can be displayed in the COMMENT section of the Genbank record. This may include any disclaimers about assembly quality or notes about pre-publication availability or requests to discuss pre-publication use with authors."
     }
-
   }
 
   command <<<
     set -e
     table2asn -version | cut -f 2 -d ' ' > TABLE2ASN_VERSION
+    cp "~{assembly_fasta}" "~{out_basename}.fsa" # input fasta must be in CWD so output files end up next to it
+    touch "~{out_basename}.val"  # this file isn't produced if no errors/warnings
 
-    python3 << CODE
-    import ncbi
-    import util.file
-    import Bio.SeqIO
-
-    # process assembly fasta
-    fn = '~{assembly_fasta}'
-    if not fn.endswith('.fasta'):
-        raise Exception("fasta file must end in .fasta")
-    sample_base = os.path.basename(fn)[:-6]
-    with open(fn, "r") as inf:
-        seq_ids = list(seq.id for seq in Bio.SeqIO.parse(inf, 'fasta'))
-    n_segs = len(seq_ids)
-
-    # get coverage map per segment
-    coverage = {}
-    coverage_table_file = '~{default="" coverage_table}'
-    if coverage_table_file:
-        for row in util.file.read_tabfile_dict(coverage_table_file):
-            if row.get('sample') and row.get('aln2self_cov_median'):
-                coverage[row['sample']] = row['aln2self_cov_median']
-
-    # get biosample id map
-    biosample = {}
-    if biosample_map:
-        for row in util.file.read_tabfile_dict(biosample_map):
-            if row.get('sample') and row.get('BioSample'):
-                biosample[row['sample']] = row['BioSample']
-
-    # make output directory
-    util.file.mkdir_p(annotDir)
-
-    # for each segment/chromosome in the fasta file,
-    # create a separate new *.fsa file
-    with open(fn, "r") as inf:
-        asm_fasta = Bio.SeqIO.parse(inf, 'fasta')
-        for idx, seq_obj in enumerate(asm_fasta):
-            seq_obj.id
-            if n_segs>1:
-                sample = sample_base + "-" + str(idx+1)
-            else:
-                sample = sample_base
-
-            # make .cmt files
-            ncbi.make_structured_comment_file(os.path.join(annotDir, util.file.string_to_file_name(seq_obj.id) + '.cmt'),
-                                          name=seq_obj.id,
-                                          coverage=coverage.get(seq_obj.id, coverage.get(sample_base, coverage.get(util.file.string_to_file_name(seq_obj.id)))),
-                                          seq_tech=sequencing_tech,
-                                          assembly_method=assembly_method,
-                                          assembly_method_version=assembly_method_version)
-
-
-
-    CODE
-
-    cp "~{assembly_fasta}" .
-    IN_FASTA=$(basename "~{assembly_fasta}")
     table2asn \
       -t "~{authors_sbt}" \
-      -i "$IN_FASTA" \
+      -i "~{out_basename}.fsa" \
       -f "~{annotations_tbl}" \
-      "~{'-src-file ' + source_modifier_table}" \
+      "~{'-w ' + structured_comment_file}" \
+      -j '[gcode=~{genetic_code}][moltype=~{mol_type}][organism=~{organism}]' \
+      ~{'-src-file ' + source_modifier_table} \
+      ~{'-y "' + comment + '"'} \
       -a s -V vb
-
-    # need to convey coverage table / structured comment field, genetic code, organism, moltype, etc
-
-    touch special_args
-    if [ -n "~{comment}" ]; then
-      echo "--comment" >> special_args
-      echo "~{comment}" >> special_args
-    fi
-
-    echo "--sequencing_tech" >> special_args
-    echo "~{sequencingTech}" >> special_args
-    echo "--organism" >> special_args
-    echo "~{organism}" >> special_args
-    echo "--mol_type" >> special_args
-    echo "~{molType}" >> special_args
-    echo "--assembly_method" >> special_args
-    echo "~{assembly_method}" >> special_args
-    echo "--assembly_method_version" >> special_args
-    echo "~{assembly_method_version}" >> special_args
-    echo -e "sample\taln2self_cov_median" > coverage_table.txt
-    cat "~{coverage_table}" >> coverage_table.txt
-    echo "--coverage_table" >> special_args
-    echo coverage_table.txt >> special_args
-
-    for i in `cat "~{assembly_fasta}" | grep \> | cut -c 2-`; do
-      echo -e "~{biosample_accession}\t$i" >> biosample_map.txt
-    done
-
-    cat special_args | xargs -d '\n' ncbi.py prep_genbank_files \
-        "~{authors_sbt}" \
-        "~{assembly_fasta}" \
-        . \
-        --biosample_map biosample_map.txt \
-        --master_source_table "~{source_modifier_table}" \
-        --loglevel DEBUG
-    zip genbank_debug-all_files.zip *.sqn *.cmt *.gbf *.src *.fsa *.val
-    mv errorsummary.val errorsummary.val.txt # to keep it separate from the glob
   >>>
 
   output {
-    File        debug_zip                = "genbank_debug-all_files.zip"
-    File        genbank_submission_sqn   = glob("*.sqn")[0]
-    File        genbank_preview_file     = glob("*.gbf")[0]
-    File        genbank_comment_file     = glob("*.cmt")[0]
-    File        errorSummary             = "errorsummary.val.txt"
+    File        genbank_submission_sqn   = "~{out_basename}.sqn"
+    File        genbank_preview_file     = "~{out_basename}.gbf"
+    File        genbank_validation_file  = "~{out_basename}.val"
     String      table2asn_version        = read_string("TABLE2ASN_VERSION")
   }
 

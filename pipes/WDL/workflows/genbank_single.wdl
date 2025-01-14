@@ -21,15 +21,9 @@ workflow genbank_single {
         File          aligned_reads_bam
         String        biosample_accession
         Int           tax_id
-        String        organism_name
-        String        assembly_method
-        String        assembly_method_version
 
         String        email_address # required for fetching data from NCBI APIs
-        File          authors_sbt
         File?         biosample_attributes_tsv # if empty, we will fetch from NCBI via accession
-        String?       comment
-        String        molType='cRNA'
     }
 
     parameter_meta {
@@ -45,14 +39,6 @@ workflow genbank_single {
           description: "A post-submission attributes file from NCBI BioSample, which is available at https://submit.ncbi.nlm.nih.gov/subs/ and clicking on 'Download attributes file with BioSample accessions'.",
           patterns: ["*.txt", "*.tsv"]
         }
-        molType: {
-          description: "The type of molecule being described. This defaults to 'cRNA' as this pipeline is most commonly used for viral submissions, but any value allowed by the INSDC controlled vocabulary may be used here. Valid values are described at http://www.insdc.org/controlled-vocabulary-moltype-qualifier",
-          category: "common"
-        }
-        comment: {
-          description: "Optional comments that can be displayed in the COMMENT section of the Genbank record. This may include any disclaimers about assembly quality or notes about pre-publication availability or requests to discuss pre-publication use with authors."
-        }
-
     }
 
     # fetch biosample metadata from NCBI if it's not given to us in tsv form
@@ -72,16 +58,8 @@ workflow genbank_single {
     }
     call reports.coverage_report {
       input:
-        mapped_bams = [aligned_reads_bam]
+        mapped_bams = [aligned_reads_bam],
         out_report_name = "coverage_report-~{basename(aligned_reads_bam, '.bam')}.txt"
-    }
-
-    # create genbank source modifier table from biosample metadata
-    call ncbi.biosample_to_genbank {
-        input:
-            biosample_attributes = biosample_attributes,
-            num_segments         = length(reference_accessions),
-            taxid                = tax_id
     }
 
     # Is this a special virus that NCBI handles differently?
@@ -106,6 +84,13 @@ workflow genbank_single {
           combined_out_prefix = segment_acc
       }
     }
+    # create genbank source modifier table from biosample metadata
+    call ncbi.biosample_to_genbank {
+        input:
+            biosample_attributes = biosample_attributes,
+            num_segments         = length(string_split.tokens),
+            taxid                = tax_id
+    }
     ## naive liftover of gene coordinates by alignment
     call ncbi.align_and_annot_transfer_single as annot {
         input:
@@ -124,29 +109,28 @@ workflow genbank_single {
     }
     File feature_tbl   = select_first([vadr.feature_tbl, annot.feature_tbl])
 
+    call ncbi.structured_comments_from_coverage_report {
+      input:
+            coverage_report         = coverage_report.coverage_report,
+            assembly_fasta          = assembly_fasta,
+            sequencing_tech         = sequencing_platform_from_bam.genbank_sequencing_technology
+    }
+
     if(genbank_special_taxa.table2asn_allowed) {
-      call ncbi.prepare_genbank_single as prep_genbank {
+      call ncbi.table2asn {
         input:
             assembly_fasta          = assembly_fasta,
             annotations_tbl         = feature_tbl,
-            authors_sbt             = authors_sbt,
-            biosample_accession     = biosample_accession,
             source_modifier_table   = biosample_to_genbank.genbank_source_modifier_table,
-            coverage_table          = coverage_report.coverage_report,
-            sequencingTech          = sequencing_platform_from_bam.genbank_sequencing_technology,
-            comment                 = comment,
-            organism                = organism_name,
-            molType                 = molType,
-            assembly_method         = assembly_method,
-            assembly_method_version = assembly_method_version
+            structured_comment_file = structured_comments_from_coverage_report.structured_comment_file
       }
     }
 
     output {
-        File?       genbank_submission_sqn = prep_genbank.genbank_submission_sqn
-        File?       genbank_preview_file   = prep_genbank.genbank_preview_file
-        File?       genbank_comment_file   = prep_genbank.genbank_comment_file
-        File?       table2asn_errors       = prep_genbank.errorSummary
+        File?       genbank_submission_sqn = table2asn.genbank_submission_sqn
+        File?       genbank_preview_file   = table2asn.genbank_preview_file
+        File?       table2asn_errors       = table2asn.genbank_validation_file
+        File        genbank_comment_file   = structured_comments_from_coverage_report.structured_comment_file
         Boolean?    vadr_pass              = vadr.pass
 
         File        genbank_source_table   = biosample_to_genbank.genbank_source_modifier_table
