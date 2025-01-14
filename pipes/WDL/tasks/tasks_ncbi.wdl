@@ -869,7 +869,8 @@ task biosample_to_genbank {
           if special.startswith('Influenza'):
             print("special organism is Influenza A/B/C")
             # simplify isolate name
-            header_key_map['isolate'] = 'strain'
+            if 'strain' in row.keys():
+              header_key_map['isolate'] = 'strain'
             for row in biosample_attributes:
               # populate serotype from name parsing
               match = re.search(r'\(([^()]+)\)+$', row['sample_name'])
