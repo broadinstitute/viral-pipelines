@@ -89,7 +89,8 @@ workflow genbank_single {
         input:
             biosample_attributes = biosample_attributes,
             num_segments         = length(string_split.tokens),
-            taxid                = tax_id
+            taxid                = tax_id,
+            filter_to_accession  = biosample_accession
     }
     ## naive liftover of gene coordinates by alignment
     call ncbi.align_and_annot_transfer_single as annot {
