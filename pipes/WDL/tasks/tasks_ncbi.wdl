@@ -221,6 +221,7 @@ task align_and_annot_transfer_single {
 
   output {
     File         feature_tbl           = "~{out_base}.tbl"
+    Array[File]+ genome_per_chr_tbls   = glob("out/*.tbl")
     Array[File]+ genome_per_chr_fastas = glob("out/*.fasta")
     String       viralngs_version      = read_string("VERSION")
   }
