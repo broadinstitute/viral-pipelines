@@ -1364,6 +1364,11 @@ task genbank_special_taxa {
 
   command <<<
     set -e
+
+    # unpack the taxdump tarball
+    mkdir -p taxdump
+    read_utils.py extract_tarball "~{taxdump_tgz}" taxdump
+
     python3 << CODE
     import metagenomics
     import tarfile
@@ -1371,7 +1376,7 @@ task genbank_special_taxa {
     taxid = ~{taxid}
 
     # load taxdb and retrieve full hierarchy leading to this taxid
-    taxdb = metagenomics.TaxonomyDb(tax_dir="~{taxdump_tgz}", load_nodes=True, load_gis=False)
+    taxdb = metagenomics.TaxonomyDb(tax_dir="taxdump", load_nodes=True, load_gis=False)
     ancestors = taxdb.get_ordered_ancestors(taxid)
     this_and_ancestors = [taxid] + ancestors
 
