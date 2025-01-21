@@ -743,10 +743,8 @@ task biosample_to_table {
       for row in csv.DictReader(inf, delimiter='\t'):
         if row['sample_name'] in sample_names_seen and row['message'] == "Successfully loaded":
           row['biosample_accession'] = row.get('accession')
+          row = dict({k:v for k,v in row.items() if v.strip().lower() not in ('missing', 'na', 'not applicable', 'not collected', '')})
           for k,v in row.items():
-            if v.strip().lower() in ('missing', 'na', 'not applicable', 'not collected', ''):
-              v = None
-              del row[k]
             if v and (k not in biosample_headers) and k not in ('message', 'accession'):
               biosample_headers.append(k)
           row['biosample_json'] = json.dumps({k: v for k,v in row.items() if k in biosample_headers})
