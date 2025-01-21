@@ -698,7 +698,7 @@ task biosample_to_table {
   }
   input {
     File        biosample_attributes_tsv
-    Array[File] cleaned_bam_filepaths
+    Array[File] raw_bam_filepaths
     File        demux_meta_json
 
     String  sample_table_name  = "sample"
@@ -707,8 +707,8 @@ task biosample_to_table {
   String  sanitized_id_col = "entity:~{sample_table_name}_id"
   String base = basename(basename(biosample_attributes_tsv, ".txt"), ".tsv")
   parameter_meta {
-    cleaned_bam_filepaths: {
-      description: "Unaligned bam files containing cleaned (submittable) reads.",
+    raw_bam_filepaths: {
+      description: "Unaligned bam files containing raw reads.",
       localization_optional: true,
       stream: true,
       patterns: ["*.bam"]
@@ -726,7 +726,7 @@ task biosample_to_table {
       demux_meta_by_file = json.load(inf)
 
     # load list of bams surviving filters
-    bam_fnames = list(os.path.basename(x) for x in '~{sep="*" cleaned_bam_filepaths}'.split('*'))
+    bam_fnames = list(os.path.basename(x) for x in '~{sep="*" raw_bam_filepaths}'.split('*'))
     bam_fnames = list(x[:-len('.bam')] if x.endswith('.bam') else x for x in bam_fnames)
     bam_fnames = list(x[:-len('.cleaned')] if x.endswith('.cleaned') else x for x in bam_fnames)
     print("bam basenames ({}): {}".format(len(bam_fnames), bam_fnames))
@@ -743,21 +743,20 @@ task biosample_to_table {
       for row in csv.DictReader(inf, delimiter='\t'):
         if row['sample_name'] in sample_names_seen and row['message'] == "Successfully loaded":
           row['biosample_accession'] = row.get('accession')
-          biosample_attributes.append(row)
           for k,v in row.items():
             if v.strip().lower() in ('missing', 'na', 'not applicable', 'not collected', ''):
               v = None
+              del row[k]
             if v and (k not in biosample_headers) and k not in ('message', 'accession'):
               biosample_headers.append(k)
+          row['biosample_json'] = json.dumps({k: v for k,v in row.items() if k in biosample_headers})
+          biosample_attributes.append(row)
+    biosample_headers.append('biosample_json')
+
     print("biosample headers ({}): {}".format(len(biosample_headers), biosample_headers))
     print("biosample output rows ({})".format(len(biosample_attributes)))
     samples_seen_without_biosample = set(sample_names_seen) - set(row['sample_name'] for row in biosample_attributes)
     print("samples seen in bams without biosample entries ({}): {}".format(len(samples_seen_without_biosample), sorted(samples_seen_without_biosample)))
-
-    # add biosample json payload to output table
-    for row in biosample_attributes:
-      row['biosample_json'] = json.dumps({k: v for k,v in row.items() if k in biosample_headers})
-    biosample_headers.append('biosample_json')
 
     # write reformatted table
     with open('~{base}.entities.tsv', 'w', newline='') as outf:

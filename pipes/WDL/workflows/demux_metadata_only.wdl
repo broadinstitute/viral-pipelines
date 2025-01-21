@@ -72,7 +72,7 @@ workflow demux_metadata_only {
     call ncbi.biosample_to_table {
         input:
             biosample_attributes_tsv = biosample_map_tsv,
-            cleaned_bam_filepaths    = cleaned_reads_unaligned_bams,
+            raw_bam_filepaths        = raw_reads_unaligned_bams,
             demux_meta_json          = meta_by_filename_json
     }
 
@@ -101,13 +101,12 @@ workflow demux_metadata_only {
 
 
     output {
-        File?       sra_metadata                             = sra_meta_prep.sra_metadata
-        File?       cleaned_bam_uris                         = sra_meta_prep.cleaned_bam_uris
+        File        sra_metadata                             = sra_meta_prep.sra_metadata
         
         String      instrument_model_inferred                = select_first(flatten([[instrument_model_user_specified],[run_info['sequencer_model']]]))
 
         File?       terra_library_table                      = create_or_update_sample_tables.library_metadata_tsv
         File?       terra_sample_library_map                 = create_or_update_sample_tables.sample_membership_tsv
-        File?       terra_sample_metadata                    = biosample_to_table.sample_meta_tsv
+        File        terra_sample_metadata                    = biosample_to_table.sample_meta_tsv
     }
 }
