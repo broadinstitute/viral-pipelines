@@ -761,7 +761,7 @@ task biosample_to_table {
       writer = csv.DictWriter(outf, delimiter='\t', fieldnames=["~{sanitized_id_col}"]+biosample_headers, dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
       writer.writeheader()
       for row in biosample_attributes:
-        outrow = {h: row[h] for h in biosample_headers}
+        outrow = {h: row.get(h, '') for h in biosample_headers}
         outrow["~{sanitized_id_col}"] = sample_to_sanitized[row['sample_name']]
         writer.writerow(outrow)
     CODE
