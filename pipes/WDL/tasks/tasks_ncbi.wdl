@@ -1317,10 +1317,11 @@ task table2asn {
   >>>
 
   output {
-    File        genbank_submission_sqn   = "~{out_basename}.sqn"
-    File        genbank_preview_file     = "~{out_basename}.gbf"
-    File        genbank_validation_file  = "~{out_basename}.val"
-    String      table2asn_version        = read_string("TABLE2ASN_VERSION")
+    File          genbank_submission_sqn   = "~{out_basename}.sqn"
+    File          genbank_preview_file     = "~{out_basename}.gbf"
+    File          genbank_validation_file  = "~{out_basename}.val"
+    Array[String] table2asn_errors         = read_lines("~{out_basename}.val")
+    String        table2asn_version        = read_string("TABLE2ASN_VERSION")
   }
 
   runtime {

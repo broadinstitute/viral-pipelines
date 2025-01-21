@@ -2,7 +2,6 @@ version 1.0
 
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_ncbi_tools.wdl" as ncbi_tools
-import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_utils.wdl" as utils
 
 workflow genbank_single {
@@ -24,7 +23,7 @@ workflow genbank_single {
 
         String        email_address # required for fetching data from NCBI APIs
 
-        #String?       biosample_attributes_json # if this is used, we will use this first
+        String?       biosample_attributes_json # if this is used, we will use this first
         File?         biosample_attributes_tsv # if no json, we will read this tsv
         # if both are unspecified, we will fetch from NCBI via biosample_accession
     }
@@ -45,14 +44,20 @@ workflow genbank_single {
     }
 
     # fetch biosample metadata from NCBI if it's not given to us in tsv form
-    if(!defined(biosample_attributes_tsv)) {
+    if(defined(biosample_attributes_json)) {
+        call utils.json_dict_to_tsv as biosample_json_to_tsv {
+            input:
+                json_data = select_first([biosample_attributes_json])
+        }
+    }
+    if(!defined(biosample_attributes_tsv) && !defined(biosample_attributes_json)) {
         call ncbi_tools.fetch_biosamples {
             input:
                 biosample_ids = [biosample_accession],
                 out_basename = "biosample_attributes-~{biosample_accession}"
         }
     }
-    File biosample_attributes = select_first([biosample_attributes_tsv, fetch_biosamples.biosample_attributes_tsv])
+    File biosample_attributes = select_first([biosample_json_to_tsv.tsv, biosample_attributes_tsv, fetch_biosamples.biosample_attributes_tsv])
 
     # Is this a special virus that NCBI handles differently?
     call ncbi.genbank_special_taxa {
@@ -117,14 +122,19 @@ workflow genbank_single {
     }
 
     output {
-        File?       genbank_submission_sqn = table2asn.genbank_submission_sqn
-        File?       genbank_preview_file   = table2asn.genbank_preview_file
-        File?       table2asn_errors       = table2asn.genbank_validation_file
-        File        genbank_comment_file   = structured_comments_from_aligned_bam.structured_comment_file
-        Boolean?    vadr_pass              = vadr.pass
+        File          genbank_comment_file   = structured_comments_from_aligned_bam.structured_comment_file
+        File          genbank_source_table   = biosample_to_genbank.genbank_source_modifier_table
+        File          annotation_tbl         = feature_tbl
 
-        File        genbank_source_table   = biosample_to_genbank.genbank_source_modifier_table
-        File        annotation_tbl         = feature_tbl
+        Boolean?             vadr_pass       = vadr.pass
+        Array[Array[String]] vadr_alerts     = select_first([vadr.alerts, [[]]])
+
+        File?         genbank_submission_sqn = table2asn.genbank_submission_sqn
+        File?         genbank_preview_file   = table2asn.genbank_preview_file
+        File?         table2asn_val_file     = table2asn.genbank_validation_file
+        Array[String] table2asn_errors       = select_first([table2asn.table2asn_errors, []])
+
+        # TO DO: add some conditionally present fields such as File? passing_sqn (only if no errors from vadr or table2asn) or File? passing_non_sqn_zips (for the four special non-table2asn taxa but only if their vadr is passing; zipping up the fsa, cmt, and src files)
     }
 
 }

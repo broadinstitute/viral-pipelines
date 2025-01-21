@@ -587,6 +587,34 @@ task md5sum {
   }
 }
 
+
+task json_dict_to_tsv {
+  input {
+    String      json_data
+    String      out_name = "~{basename(json_data, '.json')}.tsv"
+  }
+  command <<<
+    python3 << CODE
+    import csv, json
+    data = json.loads('~{json_data}')
+    with open('~{out_name}', 'wt') as outf:
+      writer = csv.DictWriter(outf, fieldnames=data.keys(), delimiter='\t')
+      writer.writeheader()
+      writer.writerow(data)
+    CODE
+  >>>
+  output {
+    File tsv = out_name
+  }
+  runtime {
+    docker: "python:slim"
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
 task fetch_row_from_tsv {
   input {
     File          tsv
