@@ -91,12 +91,15 @@ workflow genbank_single {
             organism_name_override = organism_name,
             filter_to_accession    = biosample_accession
     }
-    ## naive liftover of gene coordinates by alignment
-    call ncbi.align_and_annot_transfer_single as annot {
+
+    ## annotate genes, either by VADR or by naive coordinate liftover
+    if(!genbank_special_taxa.vadr_supported) {
+      call ncbi.align_and_annot_transfer_single as annot {
         input:
             genome_fasta             = assembly_fasta,
             reference_fastas         = flatten(download_annotations.genomes_fasta),
             reference_feature_tables = flatten(download_annotations.features_tbl)
+      }
     }
     if(genbank_special_taxa.vadr_supported) {
       call ncbi.vadr {
