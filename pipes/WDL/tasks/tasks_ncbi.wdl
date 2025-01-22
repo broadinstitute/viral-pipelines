@@ -1297,7 +1297,7 @@ task table2asn {
   }
 
   command <<<
-    set -e
+    set -ex
     table2asn -version | cut -f 2 -d ' ' > TABLE2ASN_VERSION
     cp "~{assembly_fasta}" "~{out_basename}.fsa" # input fasta must be in CWD so output files end up next to it
     touch "~{out_basename}.val"  # this file isn't produced if no errors/warnings
@@ -1519,7 +1519,7 @@ task vadr {
     File?   vadr_model_tar
 
     String docker = "quay.io/staphb/vadr:1.6.3"
-    Int    mem_size = 16
+    Int    mem_size = 16  # the RSV model in particular seems to consume 15GB RAM
     Int    cpus = 4
   }
   String out_base = basename(genome_fasta, '.fasta')
