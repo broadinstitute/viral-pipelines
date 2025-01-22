@@ -591,20 +591,22 @@ task md5sum {
 task json_dict_to_tsv {
   input {
     String      json_data
-    String      out_name = "~{basename(json_data, '.json')}.tsv"
+    String      out_basename = "out"
   }
+  File json_file = write_lines([json_data])
   command <<<
     python3 << CODE
     import csv, json
-    data = json.loads('~{json_data}')
-    with open('~{out_name}', 'wt') as outf:
-      writer = csv.DictWriter(outf, fieldnames=data.keys(), delimiter='\t')
-      writer.writeheader()
-      writer.writerow(data)
+    with open('~{json_file}', 'rt') as inf:
+      data = json.load(inf)
+      with open('~{out_basename}.tsv', 'wt') as outf:
+        writer = csv.DictWriter(outf, fieldnames=data.keys(), delimiter='\t')
+        writer.writeheader()
+        writer.writerow(data)
     CODE
   >>>
   output {
-    File tsv = out_name
+    File tsv = "~{out_basename}.tsv"
   }
   runtime {
     docker: "python:slim"

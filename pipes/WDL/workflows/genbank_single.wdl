@@ -47,7 +47,8 @@ workflow genbank_single {
     if(defined(biosample_attributes_json)) {
         call utils.json_dict_to_tsv as biosample_json_to_tsv {
             input:
-                json_data = select_first([biosample_attributes_json])
+                json_data = select_first([biosample_attributes_json]),
+                out_basename = "biosample_attributes-~{biosample_accession}"
         }
     }
     if(!defined(biosample_attributes_tsv) && !defined(biosample_attributes_json)) {
