@@ -799,7 +799,7 @@ task biosample_to_genbank {
   }
   String base = basename(basename(biosample_attributes, ".txt"), ".tsv")
   command <<<
-    set -ex -o pipefail
+    set -e
     python3<<CODE
     import csv
     import json
@@ -816,9 +816,6 @@ task biosample_to_genbank {
         header_key_map[k] = v
     print("header_key_map: {}".format(header_key_map))
 
-    datestring_formats = [
-        "YYYY-MM-DDTHH:mm:ss", "YYYY-MM-DD", "YYYY-MM", "DD-MMM-YYYY", "MMM-YYYY", "YYYY"
-    ]
     out_headers_total = ['Sequence_ID', 'isolate', 'collection_date', 'geo_loc_name', 'collected_by', 'isolation_source', 'organism', 'host', 'note', 'db_xref', 'BioProject', 'BioSample']
     samples_to_filter_to = set()
     if "~{default='' filter_to_ids}":
@@ -833,9 +830,12 @@ task biosample_to_genbank {
     with open("~{biosample_attributes}", 'rt') as inf_biosample:
       biosample_attributes_reader = csv.DictReader(inf_biosample, delimiter='\t')
       in_headers = biosample_attributes_reader.fieldnames
+      if 'accession' not in in_headers:
+        assert 'biosample_accession' in in_headers, "no accession column found in ~{biosample_attributes}"
+        header_key_map['BioSample'] = 'biosample_accession'
       biosample_attributes = list(row for row in biosample_attributes_reader
         if row.get('message', 'Success').startswith('Success')
-        and (not only_accession or row['accession'] == only_accession)
+        and (not only_accession or row[header_key_map['BioSample']] == only_accession)
         and (not samples_to_filter_to or row[header_key_map['Sequence_ID']] in samples_to_filter_to))
       print("filtered to {} samples".format(len(biosample_attributes)))
 
@@ -909,7 +909,7 @@ task biosample_to_genbank {
                     row['serotype'] = match.group(1)
 
             # write BioSample
-            outf_biosample.write("{}\t{}\n".format(row['accession'], row[header_key_map['Sequence_ID']]))
+            outf_biosample.write("{}\t{}\n".format(row[header_key_map['BioSample']], row[header_key_map['Sequence_ID']]))
 
             # populate output row as a dict
             outrow = dict((h, row.get(header_key_map.get(h,h), '')) for h in out_headers)
