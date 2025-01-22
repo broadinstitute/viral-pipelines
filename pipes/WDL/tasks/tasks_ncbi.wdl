@@ -834,7 +834,7 @@ task biosample_to_genbank {
       biosample_attributes_reader = csv.DictReader(inf_biosample, delimiter='\t')
       in_headers = biosample_attributes_reader.fieldnames
       biosample_attributes = list(row for row in biosample_attributes_reader
-        if row['message'].startswith('Success')
+        if row.get('message', 'Success').startswith('Success')
         and (not only_accession or row['accession'] == only_accession)
         and (not samples_to_filter_to or row[header_key_map['Sequence_ID']] in samples_to_filter_to))
       print("filtered to {} samples".format(len(biosample_attributes)))
