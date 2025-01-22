@@ -1560,6 +1560,9 @@ task vadr {
     # package everything for output
     tar -C "~{out_base}" -czvf "~{out_base}.vadr.tar.gz" .
 
+    # get the gene annotations (feature table)
+    cat "~{out_base}/~{out_base}.vadr.pass.tbl" "~{out_base}/~{out_base}.vadr.fail.tbl" > "~{out_base}.vadr.tbl"
+
     # prep alerts into a tsv file for parsing
     cat "~{out_base}/~{out_base}.vadr.alt.list" | cut -f 5 | tail -n +2 \
       > "~{out_base}.vadr.alerts.tsv"
@@ -1570,7 +1573,7 @@ task vadr {
     { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } | tee MEM_BYTES
   >>>
   output {
-    File                 feature_tbl = "~{out_base}/~{out_base}.vadr.pass.tbl"
+    File                 feature_tbl = "~{out_base}.vadr.tbl"
     Int                  num_alerts  = read_int("NUM_ALERTS")
     File                 alerts_list = "~{out_base}/~{out_base}.vadr.alt.list"
     Array[Array[String]] alerts      = read_tsv("~{out_base}.vadr.alerts.tsv")
