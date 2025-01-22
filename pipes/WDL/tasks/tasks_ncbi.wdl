@@ -1519,8 +1519,8 @@ task vadr {
     File?   vadr_model_tar
 
     String docker = "quay.io/staphb/vadr:1.6.3"
-    Int    mem_size = 4
-    Int    cpus = 2
+    Int    mem_size = 16
+    Int    cpus = 4
   }
   String out_base = basename(genome_fasta, '.fasta')
   command <<<
@@ -1567,7 +1567,7 @@ task vadr {
 
     # record peak memory usage
     set +o pipefail
-    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } | tee MEM_BYTES
   >>>
   output {
     File                 feature_tbl = "~{out_base}/~{out_base}.vadr.pass.tbl"
@@ -1583,7 +1583,7 @@ task vadr {
     docker: docker
     memory: mem_size + " GB"
     cpu: cpus
-    dx_instance_type: "mem1_ssd1_v2_x2"
+    dx_instance_type: "mem2_ssd1_v2_x4"
     maxRetries: 2
   }
 }
