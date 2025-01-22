@@ -1564,6 +1564,10 @@ task vadr {
     cat "~{out_base}/~{out_base}.vadr.alt.list" | cut -f 5 | tail -n +2 \
       > "~{out_base}.vadr.alerts.tsv"
     cat "~{out_base}.vadr.alerts.tsv" | wc -l > NUM_ALERTS
+
+    # record peak memory usage
+    set +o pipefail
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
   >>>
   output {
     File                 feature_tbl = "~{out_base}/~{out_base}.vadr.pass.tbl"
@@ -1573,6 +1577,7 @@ task vadr {
     File                 outputs_tgz = "~{out_base}.vadr.tar.gz"
     Boolean              pass        = num_alerts==0
     String               vadr_docker = docker
+    Int                  max_ram_gb  = ceil(read_float("MEM_BYTES")/1000000000)
   }
   runtime {
     docker: docker
