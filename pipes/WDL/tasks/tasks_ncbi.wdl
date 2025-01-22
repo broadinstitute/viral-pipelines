@@ -1306,7 +1306,7 @@ task table2asn {
       -t "~{authors_sbt}" \
       -i "~{out_basename}.fsa" \
       -f "~{annotations_tbl}" \
-      "~{'-w ' + structured_comment_file}" \
+      ~{'-w "' + structured_comment_file + '"'} \
       -j '[gcode=~{genetic_code}][moltype=~{mol_type}][organism=~{organism}]' \
       ~{'-src-file ' + source_modifier_table} \
       ~{'-y "' + comment + '"'} \
