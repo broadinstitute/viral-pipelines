@@ -130,8 +130,8 @@ workflow genbank_single {
         File          genbank_source_table   = biosample_to_genbank.genbank_source_modifier_table
         File          annotation_tbl         = feature_tbl
 
-        Boolean?             vadr_pass       = vadr.pass
-        Array[Array[String]] vadr_alerts     = select_first([vadr.alerts, [[]]])
+        Boolean?      vadr_pass              = vadr.pass
+        Array[String] vadr_alerts            = select_first([vadr.alerts, []])
 
         File?         genbank_submission_sqn = table2asn.genbank_submission_sqn
         File?         genbank_preview_file   = table2asn.genbank_preview_file

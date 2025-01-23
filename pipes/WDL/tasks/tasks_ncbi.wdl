@@ -1580,7 +1580,7 @@ task vadr {
     File                 feature_tbl = "~{out_base}.vadr.tbl"
     Int                  num_alerts  = read_int("NUM_ALERTS")
     File                 alerts_list = "~{out_base}/~{out_base}.vadr.alt.list"
-    Array[Array[String]] alerts      = read_tsv("~{out_base}.vadr.alerts.tsv")
+    Array[String]        alerts      = read_lines("~{out_base}.vadr.alerts.tsv")
     File                 outputs_tgz = "~{out_base}.vadr.tar.gz"
     Boolean              pass        = num_alerts==0
     String               vadr_docker = docker
