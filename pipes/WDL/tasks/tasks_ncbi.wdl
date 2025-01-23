@@ -1529,7 +1529,7 @@ task vadr {
     if [ -n "~{vadr_model_tar}" ]; then
       mkdir -p vadr-untar
       tar -C vadr-untar -xzvf "~{vadr_model_tar}"
-      if [ -f "vadr-untar/vadr-models-hsv-1.0" -o -f "vadr-untar/vadr-models-hmpv-1.0" ]; then
+      if [ -d "vadr-untar/vadr-models-hsv-1.0" -o -d "vadr-untar/vadr-models-hmpv-1.0" ]; then
         # these HSV/hMPV tarballs are structured weird (one extra directory layer), collapse its contents
         mkdir -p vadr-models
         ln -s vadr-untar/vadr-models-*/*/* vadr-models
