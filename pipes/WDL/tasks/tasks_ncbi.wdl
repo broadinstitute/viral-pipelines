@@ -1532,7 +1532,7 @@ task vadr {
       if [ -d "vadr-untar/vadr-models-hsv-1.0" -o -d "vadr-untar/vadr-models-hmpv-1.0" ]; then
         # these HSV/hMPV tarballs are structured weird (one extra directory layer), collapse its contents
         mkdir -p vadr-models
-        ln -s vadr-untar/vadr-models-*/*/* vadr-models
+        ln -s `pwd`/vadr-untar/vadr-models-*/*/* vadr-models
       else
         # this is a normal model tarball, just link the model subdirectory, not the outer wrapper
         ln -s vadr-untar/*/ vadr-models
