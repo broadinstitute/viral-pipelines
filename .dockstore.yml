@@ -204,14 +204,11 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/filter_sequences.wdl
     testParameterFiles:
       - /empty.json
-  - name: genbank
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/genbank.wdl
-    testParameterFiles:
-    - /test/input/WDL/test_inputs-genbank-local.json
   - name: genbank_single
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/genbank_single.wdl
+    testParameterFiles:
+    - /test/input/WDL/test_inputs-genbank_single-local.json
   - name: isnvs_merge_to_vcf
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/isnvs_merge_to_vcf.wdl
