@@ -352,7 +352,7 @@ task tar_extract {
         tar -xv ~{tar_opts} -f "~{tar_file}"
     >>>
     runtime {
-        docker: "quay.io/broadinstitute/viral-baseimage:0.2.0"
+        docker: "quay.io/broadinstitute/viral-baseimage:0.2.4"
         memory: "2 GB"
         cpu:    1
         disks:  "local-disk " + disk_size + " LOCAL"
@@ -518,7 +518,7 @@ task download_from_url {
         printf "Downloaded file size (bytes): " && stat --format=%s  "~{download_subdir_local}/${downloaded_file_name}" | tee SIZE_OF_DOWNLOADED_FILE_BYTES
     >>>
     runtime {
-        docker: "quay.io/broadinstitute/viral-baseimage:0.2.0"
+        docker: "quay.io/broadinstitute/viral-baseimage:0.2.4"
         memory: "2 GB"
         cpu:    1
         disks:  "local-disk " + disk_size + " LOCAL"
@@ -1062,7 +1062,7 @@ task today {
   runtime {
     memory: "1 GB"
     cpu: 1
-    docker: "quay.io/broadinstitute/viral-baseimage:0.2.0"
+    docker: "quay.io/broadinstitute/viral-baseimage:0.2.4"
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -1097,7 +1097,7 @@ task s3_copy {
     Array[String] out_uris = read_lines("OUT_URIS")
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-baseimage:0.2.0"
+    docker: "quay.io/broadinstitute/viral-baseimage:0.2.4"
     memory: "2 GB"
     cpu: cpus
     disks: "local-disk ~{disk_gb} SSD"
