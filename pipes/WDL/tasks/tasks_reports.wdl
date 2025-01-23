@@ -480,6 +480,14 @@ task align_and_count {
     else
       PCT_OF_INPUT_READS_MAPPED=$( echo "scale=3; 100 * ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT) / $TOTAL_READS_IN_INPUT" | \
       bc -l | awk '{printf "%.3f\n", $0}' | tee '~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt' )
+
+      if [ $TOTAL_COUNT_OF_TOP_HIT -ne 0 ]; then
+        PCT_TOP_HIT_OF_TOTAL_READS=$( echo "scale=3; 100 * ($TOTAL_COUNT_OF_TOP_HIT / $TOTAL_READS_IN_INPUT)" | \
+          bc -l | awk '{printf "%.3f\n", $0}' | tee '~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt' )
+      else
+        echo "PCT_TOP_HIT_OF_TOTAL_READS cannot be calculated: there were no mapping hits, or no reads"
+        PCT_TOP_HIT_OF_TOTAL_READS=$( echo "null" | tee '~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt')
+      fi
     fi
   >>>
 
@@ -493,8 +501,9 @@ task align_and_count {
     Int    reads_mapped_top_hit = read_int("TOTAL_COUNT_OF_TOP_HIT")
     Int    reads_mapped         = read_int("TOTAL_COUNT_OF_LESSER_HITS") + read_int("TOTAL_COUNT_OF_TOP_HIT")
 
-    String pct_total_reads_mapped    = read_string('~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt')
-    String pct_lesser_hits_of_mapped = read_string('~{reads_basename}.count.~{ref_basename}.pct_lesser_hits_of_mapped.txt')
+    String pct_total_reads_mapped     = read_string('~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt')
+    String pct_top_hit_of_total_reads = read_string('~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt')
+    String pct_lesser_hits_of_mapped  = read_string('~{reads_basename}.count.~{ref_basename}.pct_lesser_hits_of_mapped.txt')
     
     String viralngs_version = read_string("VERSION")
   }
