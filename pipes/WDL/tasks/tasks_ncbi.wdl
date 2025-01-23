@@ -6,7 +6,7 @@ task download_fasta {
     Array[String]+ accessions
     String         emailAddress
 
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
   }
 
   command {
@@ -38,7 +38,7 @@ task download_annotations {
     String         emailAddress
     String         combined_out_prefix
 
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
   }
 
   command <<<
@@ -132,7 +132,7 @@ task align_and_annot_transfer_single {
     Array[File]+ reference_fastas
     Array[File]+ reference_feature_tables
 
-    String       docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
+    String       docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
   }
   String out_base = basename(genome_fasta, '.fasta')
 
@@ -1068,7 +1068,7 @@ task table2asn {
     Int          genetic_code = 1
 
     Int          machine_mem_gb = 3
-    String       docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
+    String       docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
   }
 
   String out_basename = basename(assembly_fasta, ".fasta")
