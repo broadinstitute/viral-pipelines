@@ -1561,7 +1561,11 @@ task vadr {
     tar -C "~{out_base}" -czvf "~{out_base}.vadr.tar.gz" .
 
     # get the gene annotations (feature table)
-    cat "~{out_base}/~{out_base}.vadr.pass.tbl" "~{out_base}/~{out_base}.vadr.fail.tbl" > "~{out_base}.vadr.tbl"
+    # the vadr.fail.tbl sometimes contains junk / invalid content that needs to be filtered out
+    cat "~{out_base}/~{out_base}.vadr.pass.tbl" \
+        "~{out_base}/~{out_base}.vadr.fail.tbl" \
+       | sed '/Additional note/,$d' \
+        > "~{out_base}.vadr.tbl"
 
     # prep alerts into a tsv file for parsing
     cat "~{out_base}/~{out_base}.vadr.alt.list" | cut -f 5 | tail -n +2 \
