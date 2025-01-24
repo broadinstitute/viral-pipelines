@@ -70,7 +70,10 @@ workflow sarscov2_genbank {
         File renamed_assembly = select_first([rename_fasta_header.renamed_fasta, assembly])
         call ncbi.vadr {
           input:
-            genome_fasta = renamed_assembly
+            genome_fasta = renamed_assembly,
+            vadr_opts = "--glsearch -s -r --nomisc --mkey sarscov2 --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn",
+            minlen = 50,
+            maxlen = 30000
         }
         if (assembly_bases.assembly_length_unambiguous >= min_genome_bases) {
           if (vadr.num_alerts <= max_vadr_alerts) {

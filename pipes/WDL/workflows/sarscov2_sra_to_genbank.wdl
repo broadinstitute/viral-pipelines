@@ -120,7 +120,10 @@ workflow sarscov2_sra_to_genbank {
             # VADR annotation & QC
             call ncbi.vadr {
               input:
-                genome_fasta = passing_assemblies
+                genome_fasta = passing_assemblies,
+                vadr_opts = "--glsearch -s -r --nomisc --mkey sarscov2 --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn",
+                minlen = 50,
+                maxlen = 30000
             }
             if (vadr.num_alerts<=max_vadr_alerts) {
               File submittable_genomes = passing_assemblies

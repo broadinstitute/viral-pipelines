@@ -157,7 +157,10 @@ workflow sarscov2_illumina_full {
             # VADR annotation & QC
             call ncbi.vadr {
               input:
-                genome_fasta = assemble_refbased.assembly_fasta
+                genome_fasta = assemble_refbased.assembly_fasta,
+                vadr_opts = "--glsearch -s -r --nomisc --mkey sarscov2 --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn",
+                minlen = 50,
+                maxlen = 30000
             }
             if (vadr.num_alerts<=max_vadr_alerts) {
               String submittable_id    = orig_name
