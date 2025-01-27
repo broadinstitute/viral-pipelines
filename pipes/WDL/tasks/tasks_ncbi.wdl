@@ -738,6 +738,7 @@ task biosample_to_genbank {
     String? filter_to_accession
     Map[String,String] src_to_attr_map = {}
     String?  organism_name_override
+    String?  isolate_prefix_override
 
     Boolean sanitize_seq_ids = true
 
@@ -851,15 +852,41 @@ task biosample_to_genbank {
                 if match:
                     row['serotype'] = match.group(1)
 
-            # write BioSample
-            outf_biosample.write("{}\t{}\n".format(row[header_key_map['BioSample']], row[header_key_map['Sequence_ID']]))
-
             # populate output row as a dict
             outrow = dict((h, row.get(header_key_map.get(h,h), '')) for h in out_headers)
+
+            ### Taxon-specific genome naming rules go here
+            if outrow['organism'].startswith('Influenza'):
+              ### Influenza-specific isolate naming was handled above already and is required to be metadata-free
+              pass
+            elif outrow['organism'].startswith('Special taxon with special naming rules'):
+              ### Example special case here
+              pass
+            else:
+              ### Most viral taxa can follow this generic model containing structured metadata
+              # <short organism name>/<host lowercase>/Country/ST-Institution-LabID/Year
+              # e.g. RSV-A/human/USA/MA-Broad-1234/2020
+              # e.g. SARS-CoV-2/human/USA/MA-Broad-1234/2020
+              # assume that the current isolate name has the structure:
+              # <something wrong to be overwritten>/<host>/<country>/<state>-<institution>-<labid>/<year>
+              year = outrow['collection_date'].split('-')[0]
+              country = outrow['geo_loc_name'].split(':')[0]
+              host = outrow['host'].lower()
+              if host == 'homo sapiens':
+                host = 'human'
+              state_inst_labid = outrow['isolate'].split('/')[-2]
+              name_prefix = outrow['organism'].split('(')[0].split('/')[0].strip()
+              if name_prefix.lower().endswith('refseq'):
+                name_prefix = name_prefix[:-6].strip()
+              if "~{default='' isolate_prefix_override}".strip():
+                name_prefix = "~{default='' isolate_prefix_override}".strip()
+              outrow['isolate'] = '/'.join([name_prefix, host, country, state_inst_labid, year])
 
             # isolate name should not start with organism string
             if outrow['isolate'].startswith(outrow['organism']):
                 outrow['isolate'] = outrow['isolate'][len(outrow['organism']):].strip()
+            if outrow['isolate'].startswith('/')
+                outrow['isolate'] = outrow['isolate'][1:].strip()
 
             # some fields are not allowed to be empty
             if not outrow.get('geo_loc_name'):
@@ -877,8 +904,9 @@ task biosample_to_genbank {
             if "~{sanitize_seq_ids}".lower() == 'true':
                 outrow['Sequence_ID'] = re.sub(r'[^0-9A-Za-z!_-]', '-', outrow['Sequence_ID'])
 
-            # write isolate name for this sample
+            # write isolate name for this sample (it will overwrite and only keep the last one if there are many)
             with open("isolate_name.str", 'wt') as outf_isolate:
+                print("writing isolate name: {}".format(outrow['isolate']))
                 outf_isolate.write(outrow['isolate']+'\n')
 
             # write entry for this sample
