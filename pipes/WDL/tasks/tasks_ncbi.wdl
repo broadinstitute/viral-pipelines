@@ -844,9 +844,6 @@ task biosample_to_genbank {
       outf_smt.write('\t'.join(out_headers)+'\n')
 
       with open("~{base}.sample_ids.txt", 'wt') as outf_ids:
-        with open("~{base}.biosample.map.txt", 'wt') as outf_biosample:
-          outf_biosample.write('BioSample\tsample\n')
-
           for row in biosample_attributes:
             # Influenza-specific requirement
             if row['organism'].startswith('Influenza'):
@@ -893,9 +890,9 @@ task biosample_to_genbank {
     CODE
   >>>
   output {
-    File genbank_source_modifier_table = "~{base}.genbank.src"
-    File biosample_map                 = "~{base}.biosample.map.txt"
-    File sample_ids                    = "~{base}.sample_ids.txt"
+    File   genbank_source_modifier_table = "~{base}.genbank.src"
+    File   sample_ids                    = "~{base}.sample_ids.txt"
+    #String isolate_name                  = read_string("isolate_name.str")
   }
   runtime {
     docker: docker
