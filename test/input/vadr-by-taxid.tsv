@@ -1,4 +1,4 @@
-#tax_id	taxon_name	min_seq_len	max_seq_len	vadr_min_ram_gb	vadr_opts	vadr_model_tar_url
+tax_id	taxon_name	min_seq_len	max_seq_len	vadr_min_ram_gb	vadr_opts	vadr_model_tar_url
 11308	Orthomyxoviridae		15000		--mkey flu -r --atgonly --xnocomp --nomisc --alt_fail extrant5,extrant3	https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/flu/1.6.3-2/vadr-models-flu-1.6.3-2.tar.gz
 11983	Norovirus		9000		--group Norovirus --nomisc --noprotid	https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/caliciviridae/1.2-1/vadr-models-calici-1.2-1.tar.gz
 11974	Caliciviridae		10000		--nomisc --noprotid	https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/caliciviridae/1.2-1/vadr-models-calici-1.2-1.tar.gz
