@@ -877,6 +877,10 @@ task biosample_to_genbank {
             if "~{sanitize_seq_ids}".lower() == 'true':
                 outrow['Sequence_ID'] = re.sub(r'[^0-9A-Za-z!_-]', '-', outrow['Sequence_ID'])
 
+            # write isolate name for this sample
+            with open("isolate_name.str", 'wt') as outf_isolate:
+                outf_isolate.write(outrow['isolate']+'\n')
+
             # write entry for this sample
             sample_name = outrow['Sequence_ID']
             if ~{num_segments}>1:
@@ -892,7 +896,7 @@ task biosample_to_genbank {
   output {
     File   genbank_source_modifier_table = "~{base}.genbank.src"
     File   sample_ids                    = "~{base}.sample_ids.txt"
-    #String isolate_name                  = read_string("isolate_name.str")
+    String isolate_name                  = read_string("isolate_name.str")
   }
   runtime {
     docker: docker

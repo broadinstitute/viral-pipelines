@@ -129,6 +129,7 @@ workflow genbank_single {
     output {
         File          genbank_comment_file   = structured_comments_from_aligned_bam.structured_comment_file
         File          genbank_source_table   = biosample_to_genbank.genbank_source_modifier_table
+        String        genbank_isolate_name   = biosample_to_genbank.isolate_name
         File          annotation_tbl         = feature_tbl
 
         Boolean?      vadr_pass              = vadr.pass
