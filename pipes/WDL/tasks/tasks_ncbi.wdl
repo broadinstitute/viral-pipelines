@@ -1069,7 +1069,7 @@ task table2asn {
     Int          genetic_code = 1
 
     Int          machine_mem_gb = 3
-    String       docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
+    String       docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"  # this could be a simpler docker image, we don't use anything beyond table2asn itself
   }
 
   String out_basename = basename(assembly_fasta, ".fasta")
@@ -1117,7 +1117,7 @@ task table2asn {
       -f "~{annotations_tbl}" \
       ~{'-w "' + structured_comment_file + '"'} \
       -j '[gcode=~{genetic_code}][moltype=~{mol_type}][organism=~{organism}]' \
-      ~{'-src-file ' + source_modifier_table} \
+      ~{'-src-file "' + source_modifier_table + '"'} \
       ~{'-y "' + comment + '"'} \
       -a s -V vb
   >>>
