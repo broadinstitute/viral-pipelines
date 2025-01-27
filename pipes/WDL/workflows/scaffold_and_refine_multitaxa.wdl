@@ -30,16 +30,16 @@ workflow scaffold_and_refine_multitaxa {
 
     # download (multi-segment) genomes for each reference, fasta filename = colon-concatenated accession list
     scatter(taxon in read_tsv(taxid_to_ref_accessions_tsv)) {
-        # taxon = [taxid, taxname, semicolon_delim_accession_list]
+        # taxon = [taxid, isolate_prefix, taxname, semicolon_delim_accession_list]
         call utils.string_split {
             input:
-                joined_string = taxon[2],
+                joined_string = taxon[3],
                 delimiter = ":"
         }
         call ncbi.download_annotations {
             input:
                 accessions = string_split.tokens,
-                combined_out_prefix = taxon[2]
+                combined_out_prefix = taxon[3]
         }
     }
 
