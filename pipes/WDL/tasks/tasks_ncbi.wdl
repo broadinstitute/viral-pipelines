@@ -1270,7 +1270,7 @@ task genbank_special_taxa {
     out_vadr_min_ram_gb = 8
     for row in vadr_supported:
       if any(node == int(row['tax_id']) for node in this_and_ancestors):
-        out_vadr_taxid = node
+        out_vadr_taxid = int(row['tax_id'])
         out_vadr_supported = True
         out_vadr_cli_options = row['vadr_opts']
         out_vadr_model_tar_url = row['vadr_model_tar_url']
