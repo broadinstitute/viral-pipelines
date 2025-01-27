@@ -11,6 +11,7 @@
   "genbank_single.table2asn.comment": "this is only a test -- DO NOT SUBMIT to NCBI",
   "genbank_single.table2asn.authors_sbt": "test/input/genbank/authors-nga_lasv.sbt",
   "genbank_single.genbank_special_taxa.taxdump_tgz": "test/input/taxdump-20231214.tar.gz",
+  "genbank_single.genbank_special_taxa.vadr_by_taxid_tsv": "test/input/vadr-by-taxid.tsv",
   "genbank_single.email_address": "viral-ngs@broadinstitute.org"
 }
 
