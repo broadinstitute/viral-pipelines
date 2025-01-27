@@ -1216,6 +1216,7 @@ task genbank_special_taxa {
   input {
     Int     taxid
     File    taxdump_tgz
+    File    vadr_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/annotation/vadr/vadr-by-taxid.tsv"
     String  docker = "quay.io/broadinstitute/viral-classify:2.2.5"
   }
 
@@ -1227,6 +1228,7 @@ task genbank_special_taxa {
     read_utils.py extract_tarball "~{taxdump_tgz}" taxdump
 
     python3 << CODE
+    import csv
     import metagenomics
     import tarfile
     import urllib.request
@@ -1255,43 +1257,47 @@ task genbank_special_taxa {
     # Note this table includes some taxa that are subtaxa of others and in those cases, it is ORDERED from
     # more specific to less specific (e.g. noro before calici, dengue before flavi, sc2 before corona)
     # so use the *first* hit in the table.
-    # table entries: (taxid, taxon_name, max_genome_length, vadr_cli_options, vadr_model_tar_url)
-    vadr_supported = (
-      (11308, "Orthomyxoviridae", 15000, "--mkey flu -r --atgonly --xnocomp --nomisc --alt_fail extrant5,extrant3", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/flu/1.6.3-2/vadr-models-flu-1.6.3-2.tar.gz"),
-      (11983, "Norovirus", 9000, "--group Norovirus --nomisc --noprotid", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/caliciviridae/1.2-1/vadr-models-calici-1.2-1.tar.gz"),
-      (11974, "Caliciviridae", 10000, "--nomisc --noprotid", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/caliciviridae/1.2-1/vadr-models-calici-1.2-1.tar.gz"),
-      (3052464, "Dengue virus", 12000, "--mkey flavi --group Dengue --nomisc --noprotid", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/flaviviridae/1.2-1/vadr-models-flavi-1.2-1.tar.gz"),
-      (11050, "Flaviviridae", 14000, "--mkey flavi --nomisc --noprotid", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/flaviviridae/1.2-1/vadr-models-flavi-1.2-1.tar.gz"),
-      (2697049, "SARS-CoV-2", 32000, "--mkey sarscov2 --glsearch -s -r --nomisc --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/sarscov2/1.3-2/vadr-models-sarscov2-1.3-2.tar.gz"),
-      (11118, "Coronaviridae", 32000, "--mkey corona --glsearch -s -r --nomisc --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/coronaviridae/1.3-3/vadr-models-corona-1.3-3.tar.gz"),
-      (1868215, "Orthopneumovirus", 16000, "--mkey rsv --xnocomp -r", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/rsv/1.5-2/vadr-models-rsv-1.5-2.tar.gz"),
-      (10244, "MPXV", 230000, "--mkey mpxv --glsearch --minimap2 -s -r --nomisc --r_lowsimok --r_lowsimxd 100 --r_lowsimxl 2000 --alt_pass discontn,dupregin --s_overhang 150", "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/mpxv/1.4.2-1/vadr-models-mpxv-1.4.2-1.tar.gz"),
-      (3048148, "hMPV", 14000, "--mkey hmpv -r", "https://github.com/greninger-lab/vadr-models-hmpv/archive/refs/tags/v1.0.tar.gz"),
-      (3050292, "HHV1", 170000, "--mkey NC_001806.vadr -s --glsearch -r --alt_pass dupregin,discontn,indfstrn,indfstrp --alt_mnf_yes insertnp --r_lowsimok --nmiscftrthr 10 -f --keep", "https://github.com/greninger-lab/vadr-models-hsv/archive/refs/tags/v1.0.tar.gz"),
-      (3050293, "HHV2", 170000, "--mkey NC_001798.vadr -s --glsearch -r --alt_pass dupregin,discontn,indfstrn,indfstrp --alt_mnf_yes insertnp --r_lowsimok --nmiscftrthr 10 -f --keep", "https://github.com/greninger-lab/vadr-models-hsv/archive/refs/tags/v1.0.tar.gz"),
-    )
+    # tsv header: tax_id, taxon_name, min_seq_len, max_seq_len, vadr_min_ram_gb, vadr_opts, vadr_model_tar_url
+    with open("~{vadr_by_taxid_tsv}", 'rt') as inf:
+      vadr_supported = list(row for row in csv.DictReader(inf, delimiter='\t'))
 
     out_vadr_supported = False
     out_vadr_cli_options = ""
     out_vadr_model_tar_url = ""
+    out_min_genome_length = 0
     out_max_genome_length = 1000000
-    for taxid, taxon_name, max_genome_length, vadr_cli_options, vadr_model_tar_url in vadr_supported:
-      if any(node == taxid for node in this_and_ancestors):
+    out_vadr_taxid = 0
+    out_vadr_min_ram_gb = 8
+    for row in vadr_supported:
+      if any(node == int(row['tax_id']) for node in this_and_ancestors):
+        out_vadr_taxid = node
         out_vadr_supported = True
-        out_vadr_cli_options = vadr_cli_options
-        out_vadr_model_tar_url = vadr_model_tar_url
-        out_max_genome_length = max_genome_length
+        out_vadr_cli_options = row['vadr_opts']
+        out_vadr_model_tar_url = row['vadr_model_tar_url']
+        if row['min_seq_len']:
+          out_min_genome_length = int(row['min_seq_len'])
+        if row['max_seq_len']:
+          out_max_genome_length = int(row['max_seq_len'])
+        if row['vadr_min_ram_gb']:
+          out_vadr_min_ram_gb = int(row['vadr_min_ram_gb'])
         break
     with open("vadr_supported.boolean", "wt") as outf:
       outf.write("true" if out_vadr_supported else "false")
     with open("vadr_cli_options.string", "wt") as outf:
       outf.write(out_vadr_cli_options)
+    with open("min_genome_length.int", "wt") as outf:
+      outf.write(str(out_min_genome_length))
     with open("max_genome_length.int", "wt") as outf:
       outf.write(str(out_max_genome_length))
+    with open("vadr_taxid.int", "wt") as outf:
+      outf.write(str(out_vadr_taxid))
+    with open("vadr_min_ram_gb.int", "wt") as outf:
+      outf.write(str(out_vadr_min_ram_gb))
 
     if out_vadr_model_tar_url:
       urllib.request.urlretrieve(out_vadr_model_tar_url, "vadr_model-~{taxid}.tar.gz")
     else:
+      # I'd rather emit a null value but not sure how
       with tarfile.open("vadr_model-~{taxid}.tar.gz", "w:gz") as out_tar:
         pass
 
@@ -1303,6 +1309,9 @@ task genbank_special_taxa {
     Boolean  vadr_supported     = read_boolean("vadr_supported.boolean")
     String   vadr_cli_options   = read_string("vadr_cli_options.string")
     File     vadr_model_tar     = "vadr_model-~{taxid}.tar.gz"
+    Int      vadr_taxid         = read_int("vadr_taxid.int")
+    Int      vadr_min_ram_gb    = read_int("vadr_min_ram_gb.int")
+    Int      min_genome_length  = read_int("min_genome_length.int")
     Int      max_genome_length  = read_int("max_genome_length.int")
   }
 
