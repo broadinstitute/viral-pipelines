@@ -885,7 +885,7 @@ task biosample_to_genbank {
             # isolate name should not start with organism string
             if outrow['isolate'].startswith(outrow['organism']):
                 outrow['isolate'] = outrow['isolate'][len(outrow['organism']):].strip()
-            if outrow['isolate'].startswith('/')
+            if outrow['isolate'].startswith('/'):
                 outrow['isolate'] = outrow['isolate'][1:].strip()
 
             # some fields are not allowed to be empty
