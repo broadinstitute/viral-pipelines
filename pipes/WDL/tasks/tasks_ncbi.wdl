@@ -875,7 +875,10 @@ task biosample_to_genbank {
               host = outrow['host'].lower()
               if host == 'homo sapiens':
                 host = 'human'
-              state_inst_labid = outrow['isolate'].split('/')[-2]
+              if len(outrow['isolate'].split('/')) >= 2:
+                state_inst_labid = outrow['isolate'].split('/')[-2]
+              else:
+                state_inst_labid = outrow['Sequence_ID']
               name_prefix = outrow['organism'].split('(')[0].split('/')[0].strip()
               if name_prefix.lower().endswith('refseq'):
                 name_prefix = name_prefix[:-6].strip()
