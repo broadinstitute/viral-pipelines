@@ -869,6 +869,7 @@ task biosample_to_genbank {
               # e.g. SARS-CoV-2/human/USA/MA-Broad-1234/2020
               # assume that the current isolate name has the structure:
               # <something wrong to be overwritten>/<host>/<country>/<state>-<institution>-<labid>/<year>
+              print("old isolate name: {}".format(outrow['isolate']))
               year = outrow['collection_date'].split('-')[0]
               country = outrow['geo_loc_name'].split(':')[0]
               host = outrow['host'].lower()
@@ -881,6 +882,7 @@ task biosample_to_genbank {
               if "~{default='' isolate_prefix_override}".strip():
                 name_prefix = "~{default='' isolate_prefix_override}".strip()
               outrow['isolate'] = '/'.join([name_prefix, host, country, state_inst_labid, year])
+              print("new isolate name: {}".format(outrow['isolate']))
 
             # isolate name should not start with organism string
             if outrow['isolate'].startswith(outrow['organism']):
