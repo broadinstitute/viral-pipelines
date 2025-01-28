@@ -786,6 +786,12 @@ task biosample_to_genbank {
         and (not samples_to_filter_to or row[header_key_map['Sequence_ID']] in samples_to_filter_to))
       print("filtered to {} samples".format(len(biosample_attributes)))
 
+    # clean out some na values
+    for row in biosample_attributes:
+      for k in ('strain', 'isolate', 'host', 'geo_loc_name', 'collection_date', 'serotype', 'food_origin'):
+        if row.get(k, '').lower().strip() in ('na', 'not applicable', 'missing', 'not collected', 'not available', ''):
+            row[k] = ''
+
     # override organism_name if provided (this allows us to submit Genbank assemblies for
     # specific species even though the metagenomic BioSample may have been registered with a different
     # species or none at all)
@@ -813,12 +819,12 @@ task biosample_to_genbank {
           if special.startswith('Influenza'):
             print("special organism is Influenza A/B/C")
             # simplify isolate name
-            if 'strain' in row.keys():
+            if row.get('strain'):
               header_key_map['isolate'] = 'strain'
             for row in biosample_attributes:
               # simplify isolate name more if it still looks structured with metadata (not allowed for flu submissions)
-              if len(row[header_key_map['isolate']].split('/')) >= 2:
-                row[header_key_map['isolate']] = row[header_key_map['isolate']].split('/')[-2]
+              if len(row[header_key_map.get('isolate', 'isolate')].split('/')) >= 2:
+                row[header_key_map.get('isolate', 'isolate')] = row[header_key_map.get('isolate', 'isolate')].split('/')[-2]
               # populate serotype from name parsing
               match = re.search(r'\(([^()]+)\)+$', row['sample_name'])
               if match:
