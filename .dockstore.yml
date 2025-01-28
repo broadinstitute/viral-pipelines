@@ -93,9 +93,6 @@ workflows:
   - name: demux_deplete
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/demux_deplete.wdl
-  - name: demux_deplete_and_table_insert
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/demux_deplete_and_table_insert.wdl
   - name: demux_metadata_only
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/demux_metadata_only.wdl
