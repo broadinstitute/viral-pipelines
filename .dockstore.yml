@@ -432,5 +432,3 @@ workflows:
   - name: unpack_archive_to_bucket
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/unpack_archive_to_bucket.wdl
-    testParameterFiles:
-      - /empty.json
