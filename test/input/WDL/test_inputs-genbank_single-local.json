@@ -1,0 +1,17 @@
+{
+  "genbank_single.assembly_fasta": "test/input/LASV_NGA_2018_0026.fasta",
+  "genbank_single.biosample_accession": "SAMN08765786",
+  "genbank_single.tax_id": 3052310,
+  "genbank_single.organism_name": "Lassa virus",
+  "genbank_single.ref_accessions_colon_delim": "KM821997.1:KM821998.1",
+  "genbank_single.structured_comments_from_aligned_bam.aligned_bam": "test/input/genbank/LASV_NGA_2018_0026-aligned.bam",
+  "genbank_single.biosample_attributes_tsv": "test/input/genbank/biosample-attributes-lasv.txt",
+  "genbank_single.structured_comments_from_aligned_bam.assembly_method": "placeholder assembly software",
+  "genbank_single.structured_comments_from_aligned_bam.assembly_method_version": "5.4.3.2.1",
+  "genbank_single.table2asn.comment": "this is only a test -- DO NOT SUBMIT to NCBI",
+  "genbank_single.table2asn.authors_sbt": "test/input/genbank/authors-nga_lasv.sbt",
+  "genbank_single.genbank_special_taxa.taxdump_tgz": "test/input/taxdump-20231214.tar.gz",
+  "genbank_single.genbank_special_taxa.vadr_by_taxid_tsv": "test/input/vadr-by-taxid.tsv",
+  "genbank_single.email_address": "viral-ngs@broadinstitute.org"
+}
+

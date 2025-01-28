@@ -6,7 +6,7 @@ task download_fasta {
     Array[String]+ accessions
     String         emailAddress
 
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
   }
 
   command {
@@ -38,7 +38,7 @@ task download_annotations {
     String         emailAddress
     String         combined_out_prefix
 
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
   }
 
   command <<<
@@ -75,49 +75,42 @@ task download_annotations {
   }
 }
 
-task annot_transfer {
-  meta {
-    description: "Given a reference genome annotation in TBL format (e.g. from Genbank or RefSeq) and a multiple alignment of that reference to other genomes, produce new annotation files (TBL format with appropriate coordinate conversions) for each sequence in the multiple alignment. Resulting output can be fed to tbl2asn for Genbank submission."
-  }
-
+task sequencing_platform_from_bam {
   input {
-    File         multi_aln_fasta
-    File         reference_fasta
-    Array[File]+ reference_feature_table
+    File    bam
 
-    String       docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
+    String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
   }
 
-  parameter_meta {
-    multi_aln_fasta: {
-      description: "multiple alignment of sample sequences against a reference genome -- for a single chromosome",
-      patterns: ["*.fasta"]
-    }
-    reference_fasta: {
-      description: "Reference genome, all segments/chromosomes in one fasta file. Headers must be Genbank accessions.",
-      patterns: ["*.fasta"]
-    }
-    reference_feature_table: {
-      description: "NCBI Genbank feature tables, one file for each segment/chromosome described in reference_fasta.",
-      patterns: ["*.tbl"]
-    }
-  }
-
-  command {
-    set -e
-    ncbi.py --version | tee VERSION
-    ncbi.py tbl_transfer_prealigned \
-        ${multi_aln_fasta} \
-        ${reference_fasta} \
-        ${sep=' ' reference_feature_table} \
-        . \
-        --oob_clip \
-        --loglevel DEBUG
-  }
+  command <<<
+    set -ex -o pipefail
+    samtools view -H "~{bam}" | grep '^@RG' | grep -o 'PL:[^[:space:]]*' | cut -d':' -f2 | sort | uniq > BAM_PLATFORMS
+    if [ $(wc -l < BAM_PLATFORMS) -ne 1 ]; then
+      echo "Other: hybrid" > GENBANK_SEQ_TECH
+    elif grep -qi 'ILLUMINA' BAM_PLATFORMS; then
+      echo "Illumina" > GENBANK_SEQ_TECH
+    elif grep -qi 'ONT' BAM_PLATFORMS; then
+      echo "Oxford Nanopore" > GENBANK_SEQ_TECH
+    elif grep -qi 'PACBIO' BAM_PLATFORMS; then
+      echo "PacBio" > GENBANK_SEQ_TECH
+    elif grep -qi 'IONTORRENT' BAM_PLATFORMS; then
+      echo "IonTorrent" > GENBANK_SEQ_TECH
+    elif grep -qi 'SOLID' BAM_PLATFORMS; then
+      echo "SOLiD" > GENBANK_SEQ_TECH
+    elif grep -qi 'ULTIMA' BAM_PLATFORMS; then
+      echo "Ultima" > GENBANK_SEQ_TECH
+    elif grep -qi 'ELEMENT' BAM_PLATFORMS; then
+      echo "Element" > GENBANK_SEQ_TECH
+    elif grep -qi 'CAPILLARY' BAM_PLATFORMS; then
+      echo "Sanger" > GENBANK_SEQ_TECH
+    else
+      echo "Haven't seen this one before!"
+      exit 1
+    fi
+  >>>
 
   output {
-    Array[File] transferred_feature_tables = glob("*.tbl")
-    String      viralngs_version           = read_string("VERSION")
+    String  genbank_sequencing_technology  = read_string("GENBANK_SEQ_TECH")
   }
 
   runtime {
@@ -139,8 +132,9 @@ task align_and_annot_transfer_single {
     Array[File]+ reference_fastas
     Array[File]+ reference_feature_tables
 
-    String       docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
+    String       docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
   }
+  String out_base = basename(genome_fasta, '.fasta')
 
   parameter_meta {
     genome_fasta: {
@@ -157,22 +151,24 @@ task align_and_annot_transfer_single {
     }
   }
 
-  command {
+  command <<<
     set -e
     ncbi.py --version | tee VERSION
     mkdir -p out
     ncbi.py tbl_transfer_multichr \
-        "${genome_fasta}" \
+        "~{genome_fasta}" \
         out \
-        --ref_fastas ${sep=' ' reference_fastas} \
-        --ref_tbls ${sep=' ' reference_feature_tables} \
+        --ref_fastas ~{sep=' ' reference_fastas} \
+        --ref_tbls ~{sep=' ' reference_feature_tables} \
         --oob_clip \
         --loglevel DEBUG
-  }
+    cat out/*.tbl > "~{out_base}.tbl"
+  >>>
 
   output {
-    Array[File]+ genome_per_chr_tbls   = glob("out/*.tbl")
-    Array[File]+ genome_per_chr_fastas = glob("out/*.fasta")
+    File         feature_tbl           = "~{out_base}.tbl"
+    #Array[File]+ genome_per_chr_tbls   = glob("out/*.tbl")
+    #Array[File]+ genome_per_chr_fastas = glob("out/*.fasta")
     String       viralngs_version      = read_string("VERSION")
   }
 
@@ -231,6 +227,91 @@ task structured_comments {
     docker: docker
     memory: "1 GB"
     cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
+task structured_comments_from_aligned_bam {
+  input {
+    File    aligned_bam
+    String  assembly_method
+    String  assembly_method_version
+
+    Boolean is_genome_assembly = true
+    String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
+  }
+  String out_basename = basename(aligned_bam, '.bam')
+  # see https://www.ncbi.nlm.nih.gov/genbank/structuredcomment/
+  command <<<
+    set -e
+
+    reports.py coverage_only "~{aligned_bam}" coverage.txt
+
+    samtools view -H USA-MA-Broad_BWH-20907-2024.l000013250703_C8.H5FWNDRX5.1.hs_depleted.mapped.bam  | grep '^@SQ' | grep -o 'SN:[^[:space:]]*' | cut -d':' -f2 > SEQ_IDS
+
+    samtools view -H "~{aligned_bam}" | grep '^@RG' | grep -o 'PL:[^[:space:]]*' | cut -d':' -f2 | sort | uniq > BAM_PLATFORMS
+    if [ $(wc -l < BAM_PLATFORMS) -ne 1 ]; then
+      echo "Other: hybrid" > GENBANK_SEQ_TECH
+    elif grep -qi 'ILLUMINA' BAM_PLATFORMS; then
+      echo "Illumina" > GENBANK_SEQ_TECH
+    elif grep -qi 'ONT' BAM_PLATFORMS; then
+      echo "Oxford Nanopore" > GENBANK_SEQ_TECH
+    elif grep -qi 'PACBIO' BAM_PLATFORMS; then
+      echo "PacBio" > GENBANK_SEQ_TECH
+    elif grep -qi 'IONTORRENT' BAM_PLATFORMS; then
+      echo "IonTorrent" > GENBANK_SEQ_TECH
+    elif grep -qi 'SOLID' BAM_PLATFORMS; then
+      echo "SOLiD" > GENBANK_SEQ_TECH
+    elif grep -qi 'ULTIMA' BAM_PLATFORMS; then
+      echo "Ultima" > GENBANK_SEQ_TECH
+    elif grep -qi 'ELEMENT' BAM_PLATFORMS; then
+      echo "Element" > GENBANK_SEQ_TECH
+    elif grep -qi 'CAPILLARY' BAM_PLATFORMS; then
+      echo "Sanger" > GENBANK_SEQ_TECH
+    else
+      echo "Haven't seen this one before!"
+      exit 1
+    fi
+
+    python3 << CODE
+    import Bio.SeqIO
+    import csv
+
+    # get list of sequence IDs from BAM header
+    with open("SEQ_IDS") as inf:
+        seqids = set(line.strip() for line in inf)
+
+    # get sequencing technology from BAM header    
+    with open("GENBANK_SEQ_TECH", "rt") as inf:
+        sequencing_tech = inf.read().strip()
+
+    # this header has to be in this specific order -- don't reorder the columns!
+    out_headers = ('SeqID', 'StructuredCommentPrefix', 'Assembly Method', "~{true='Genome ' false='' is_genome_assembly}Coverage", 'Sequencing Technology', 'StructuredCommentSuffix')
+    with open("~{out_basename}.cmt", 'wt') as outf:
+      outf.write('\t'.join(out_headers)+'\n')
+
+      with open("coverage.txt", "rt") as inf:
+        for row in csv.DictReader(inf, delimiter='\t'):
+          if row.get('sample') and row.get('aln2self_cov_median') and row['sample'] in seqids:
+            outrow = {
+              'SeqID': row['sample'],
+              'Assembly Method': "~{assembly_method} v. ~{assembly_method_version}",  # note: the <tool name> v. <version name> format is required by NCBI, don't remove the " v. "
+              'Sequencing Technology': sequencing_tech,
+              "~{true='Genome ' false='' is_genome_assembly}Coverage": "{}x".format(round(float(row['aln2self_cov_median']))),
+              'StructuredCommentPrefix': "~{true='Genome-' false='' is_genome_assembly}Assembly-Data",
+              'StructuredCommentSuffix': "~{true='Genome-' false='' is_genome_assembly}Assembly-Data",
+            }
+            outf.write('\t'.join(outrow[h] for h in out_headers)+'\n')
+    CODE
+  >>>
+  output {
+    File   structured_comment_file = "~{out_basename}.cmt"
+  }
+  runtime {
+    docker: docker
+    memory: "2 GB"
+    cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -563,7 +644,7 @@ task biosample_to_table {
   }
   input {
     File        biosample_attributes_tsv
-    Array[File] cleaned_bam_filepaths
+    Array[File] raw_bam_filepaths
     File        demux_meta_json
 
     String  sample_table_name  = "sample"
@@ -572,8 +653,8 @@ task biosample_to_table {
   String  sanitized_id_col = "entity:~{sample_table_name}_id"
   String base = basename(basename(biosample_attributes_tsv, ".txt"), ".tsv")
   parameter_meta {
-    cleaned_bam_filepaths: {
-      description: "Unaligned bam files containing cleaned (submittable) reads.",
+    raw_bam_filepaths: {
+      description: "Unaligned bam files containing raw reads.",
       localization_optional: true,
       stream: true,
       patterns: ["*.bam"]
@@ -591,7 +672,7 @@ task biosample_to_table {
       demux_meta_by_file = json.load(inf)
 
     # load list of bams surviving filters
-    bam_fnames = list(os.path.basename(x) for x in '~{sep="*" cleaned_bam_filepaths}'.split('*'))
+    bam_fnames = list(os.path.basename(x) for x in '~{sep="*" raw_bam_filepaths}'.split('*'))
     bam_fnames = list(x[:-len('.bam')] if x.endswith('.bam') else x for x in bam_fnames)
     bam_fnames = list(x[:-len('.cleaned')] if x.endswith('.cleaned') else x for x in bam_fnames)
     print("bam basenames ({}): {}".format(len(bam_fnames), bam_fnames))
@@ -608,12 +689,14 @@ task biosample_to_table {
       for row in csv.DictReader(inf, delimiter='\t'):
         if row['sample_name'] in sample_names_seen and row['message'] == "Successfully loaded":
           row['biosample_accession'] = row.get('accession')
-          biosample_attributes.append(row)
+          row = dict({k:v for k,v in row.items() if v.strip().lower() not in ('missing', 'na', 'not applicable', 'not collected', '')})
           for k,v in row.items():
-            if v.strip().lower() in ('missing', 'na', 'not applicable', 'not collected', ''):
-              v = None
             if v and (k not in biosample_headers) and k not in ('message', 'accession'):
               biosample_headers.append(k)
+          row['biosample_json'] = json.dumps({k: v for k,v in row.items() if k in biosample_headers})
+          biosample_attributes.append(row)
+    biosample_headers.append('biosample_json')
+
     print("biosample headers ({}): {}".format(len(biosample_headers), biosample_headers))
     print("biosample output rows ({})".format(len(biosample_attributes)))
     samples_seen_without_biosample = set(sample_names_seen) - set(row['sample_name'] for row in biosample_attributes)
@@ -624,7 +707,7 @@ task biosample_to_table {
       writer = csv.DictWriter(outf, delimiter='\t', fieldnames=["~{sanitized_id_col}"]+biosample_headers, dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
       writer.writeheader()
       for row in biosample_attributes:
-        outrow = {h: row[h] for h in biosample_headers}
+        outrow = {h: row.get(h, '') for h in biosample_headers}
         outrow["~{sanitized_id_col}"] = sample_to_sanitized[row['sample_name']]
         writer.writerow(outrow)
     CODE
@@ -647,35 +730,216 @@ task biosample_to_genbank {
   }
   input {
     File    biosample_attributes
-    Int     num_segments = 1
     Int     taxid
+    Int     num_segments = 1
+    String  biosample_col_for_fasta_headers = "sample_name"
 
     File?   filter_to_ids
+    String? filter_to_accession
+    Map[String,String] src_to_attr_map = {}
+    String?  organism_name_override
+    String?  isolate_prefix_override
 
-    Boolean s_dropout_note = true
-    String  docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
+    Boolean sanitize_seq_ids = true
+
+    String  docker = "python:slim"
   }
-  String base = basename(biosample_attributes, ".txt")
-  command {
-    set -ex -o pipefail
-    ncbi.py --version | tee VERSION
-    ncbi.py biosample_to_genbank \
-        "${biosample_attributes}" \
-        ${num_segments} \
-        ${taxid} \
-        "${base}".genbank.src \
-        "${base}".biosample.map.txt \
-        ${'--filter_to_samples ' + filter_to_ids} \
-        --biosample_in_smt \
-        --iso_dates \
-        ~{true="--sgtf_override" false="" s_dropout_note} \
-        --loglevel DEBUG
-    cut -f 1 "${base}.genbank.src" | tail +2 > "${base}.sample_ids.txt"
-  }
+  String base = basename(basename(biosample_attributes, ".txt"), ".tsv")
+  command <<<
+    set -e
+    python3<<CODE
+    import csv
+    import json
+    import re
+
+    header_key_map = {
+        'Sequence_ID':'~{biosample_col_for_fasta_headers}',
+        'BioProject':'bioproject_accession',
+        'BioSample':'accession',
+    }
+    with open("~{write_json(src_to_attr_map)}", 'rt') as inf:
+        more_header_key_map = json.load(inf)
+    for k,v in more_header_key_map.items():
+        header_key_map[k] = v
+    print("header_key_map: {}".format(header_key_map))
+
+    out_headers_total = ['Sequence_ID', 'isolate', 'collection_date', 'geo_loc_name', 'collected_by', 'isolation_source', 'organism', 'host', 'note', 'db_xref', 'BioProject', 'BioSample']
+    samples_to_filter_to = set()
+    if "~{default='' filter_to_ids}":
+        with open("~{filter_to_ids}", 'rt') as inf:
+            samples_to_filter_to = set(line.strip() for line in inf)
+            print("filtering to samples: {}".format(samples_to_filter_to))
+    only_accession = "~{default='' filter_to_accession}" if "~{default='' filter_to_accession}" else None
+    if only_accession:
+        print("filtering to biosample: {}".format(only_accession))
+
+    # read entire tsv -> biosample_attributes, filtered to only the entries we keep
+    with open("~{biosample_attributes}", 'rt') as inf_biosample:
+      biosample_attributes_reader = csv.DictReader(inf_biosample, delimiter='\t')
+      in_headers = biosample_attributes_reader.fieldnames
+      if 'accession' not in in_headers:
+        assert 'biosample_accession' in in_headers, "no accession column found in ~{biosample_attributes}"
+        header_key_map['BioSample'] = 'biosample_accession'
+      biosample_attributes = list(row for row in biosample_attributes_reader
+        if row.get('message', 'Success').startswith('Success')
+        and (not only_accession or row[header_key_map['BioSample']] == only_accession)
+        and (not samples_to_filter_to or row[header_key_map['Sequence_ID']] in samples_to_filter_to))
+      print("filtered to {} samples".format(len(biosample_attributes)))
+
+    # clean out some na values
+    for row in biosample_attributes:
+      for k in ('strain', 'isolate', 'host', 'geo_loc_name', 'collection_date', 'serotype', 'food_origin'):
+        if row.get(k, '').lower().strip() in ('na', 'not applicable', 'missing', 'not collected', 'not available', ''):
+            row[k] = ''
+
+    # override organism_name if provided (this allows us to submit Genbank assemblies for
+    # specific species even though the metagenomic BioSample may have been registered with a different
+    # species or none at all)
+    if "~{default='' organism_name_override}":
+        for row in biosample_attributes:
+            row['organism'] = "~{default='' organism_name_override}"
+
+    # handle special submission types: flu, sc2, noro, dengue
+    special_bugs = ('Influenza A virus', 'Influenza B virus', 'Influenza C virus',
+                    'Severe acute respiratory syndrome coronavirus 2',
+                    'Norovirus', 'Dengue virus')
+    for special in special_bugs:
+        # sanitize organism name if it's a special one
+        for row in biosample_attributes:
+          if row['organism'].startswith(special):
+              row['organism'] = special
+
+        # enforce that special submissions are all the same special thing
+        if any(row['organism'] == special for row in biosample_attributes):
+          print("special organism found " + special)
+          assert all(row['organism'] == special for row in biosample_attributes), "if any samples are {}, all samples must be {}".format(special, special)
+          if 'serotype' not in out_headers_total:
+            out_headers_total.append('serotype')
+          ### Influenza-specific requirements
+          if special.startswith('Influenza'):
+            print("special organism is Influenza A/B/C")
+            # simplify isolate name
+            if row.get('strain'):
+              header_key_map['isolate'] = 'strain'
+            for row in biosample_attributes:
+              # simplify isolate name more if it still looks structured with metadata (not allowed for flu submissions)
+              if len(row[header_key_map.get('isolate', 'isolate')].split('/')) >= 2:
+                row[header_key_map.get('isolate', 'isolate')] = row[header_key_map.get('isolate', 'isolate')].split('/')[-2]
+              # populate serotype from name parsing
+              match = re.search(r'\(([^()]+)\)+$', row['sample_name'])
+              if match:
+                  row['serotype'] = match.group(1)
+                  print("found serotype {}". format(row['serotype']))
+              # populate host field from name parsing if empty, override milk
+              if not row.get('host','').strip():
+                match = re.search(r'[^/]+/([^/]+)/[^/]+/[^/]+/[^/]+', row['sample_name'])
+                if match:
+                    row['host'] = match.group(1)
+                    if row['host'] == 'bovine_milk':
+                      row['host'] = 'Cattle'
+                    assert 'host' in out_headers_total
+              # override geo_loc_name if food_origin exists
+              if row.get('food_origin','').strip():
+                  print("overriding geo_loc_name with food_origin")
+                  row['geo_loc_name'] = row['food_origin']
+
+    with open("~{base}.genbank.src", 'wt') as outf_smt:
+      out_headers = list(h for h in out_headers_total if header_key_map.get(h,h) in in_headers)
+      if 'db_xref' not in out_headers:
+          out_headers.append('db_xref')
+      if 'note' not in out_headers:
+          out_headers.append('note')
+      if 'serotype' not in out_headers:
+          out_headers.append('serotype')
+      outf_smt.write('\t'.join(out_headers)+'\n')
+
+      with open("~{base}.sample_ids.txt", 'wt') as outf_ids:
+          for row in biosample_attributes:
+            # Influenza-specific requirement
+            if row['organism'].startswith('Influenza'):
+                match = re.search(r'\(([^()]+)\)+$', row[header_key_map.get('isolate','isolate')])
+                if match:
+                    row['serotype'] = match.group(1)
+
+            # populate output row as a dict
+            outrow = dict((h, row.get(header_key_map.get(h,h), '')) for h in out_headers)
+
+            ### Taxon-specific genome naming rules go here
+            if outrow['organism'].startswith('Influenza'):
+              ### Influenza-specific isolate naming was handled above already and is required to be metadata-free
+              pass
+            elif outrow['organism'].startswith('Special taxon with special naming rules'):
+              ### Example special case here
+              pass
+            else:
+              ### Most viral taxa can follow this generic model containing structured metadata
+              # <short organism name>/<host lowercase>/Country/ST-Institution-LabID/Year
+              # e.g. RSV-A/human/USA/MA-Broad-1234/2020
+              # e.g. SARS-CoV-2/human/USA/MA-Broad-1234/2020
+              # assume that the current isolate name has the structure:
+              # <something wrong to be overwritten>/<host>/<country>/<state>-<institution>-<labid>/<year>
+              print("old isolate name: {}".format(outrow['isolate']))
+              year = outrow['collection_date'].split('-')[0]
+              country = outrow['geo_loc_name'].split(':')[0]
+              host = outrow['host'].lower()
+              if host == 'homo sapiens':
+                host = 'human'
+              if len(outrow['isolate'].split('/')) >= 2:
+                state_inst_labid = outrow['isolate'].split('/')[-2]
+              else:
+                state_inst_labid = outrow['Sequence_ID']
+              name_prefix = outrow['organism'].split('(')[0].split('/')[0].strip()
+              if name_prefix.lower().endswith('refseq'):
+                name_prefix = name_prefix[:-6].strip()
+              if "~{default='' isolate_prefix_override}".strip():
+                name_prefix = "~{default='' isolate_prefix_override}".strip()
+              outrow['isolate'] = '/'.join([name_prefix, host, country, state_inst_labid, year])
+              print("new isolate name: {}".format(outrow['isolate']))
+
+            # -- this seems to be flu specific, comment out:
+            ## isolate name should not start with organism string
+            #if outrow['isolate'].startswith(outrow['organism']):
+            #    outrow['isolate'] = outrow['isolate'][len(outrow['organism']):].strip()
+            #if outrow['isolate'].startswith('/'):
+            #    outrow['isolate'] = outrow['isolate'][1:].strip()
+
+            # some fields are not allowed to be empty
+            if not outrow.get('geo_loc_name'):
+                outrow['geo_loc_name'] = 'missing'
+            if not outrow.get('host'):
+                outrow['host'] = 'not applicable'
+
+            # custom db_xref/taxon
+            outrow['db_xref'] = "taxon:{}".format(~{taxid})
+
+            # load the purpose of sequencing (or if not, the purpose of sampling) in the note field
+            outrow['note'] = row.get('purpose_of_sequencing', row.get('purpose_of_sampling', ''))
+
+            # sanitize sequence IDs to match fasta headers
+            if "~{sanitize_seq_ids}".lower() == 'true':
+                outrow['Sequence_ID'] = re.sub(r'[^0-9A-Za-z!_-]', '-', outrow['Sequence_ID'])
+
+            # write isolate name for this sample (it will overwrite and only keep the last one if there are many)
+            with open("isolate_name.str", 'wt') as outf_isolate:
+                print("writing isolate name: {}".format(outrow['isolate']))
+                outf_isolate.write(outrow['isolate']+'\n')
+
+            # write entry for this sample
+            sample_name = outrow['Sequence_ID']
+            if ~{num_segments}>1:
+                for i in range(~{num_segments}):
+                    outrow['Sequence_ID'] = "{}-{}".format(sample_name, i+1)
+                    outf_smt.write('\t'.join(outrow[h] for h in out_headers)+'\n')
+                    outf_ids.write(outrow['Sequence_ID']+'\n')
+            else:
+                outf_smt.write('\t'.join(outrow[h] for h in out_headers)+'\n')
+                outf_ids.write(outrow['Sequence_ID']+'\n')
+    CODE
+  >>>
   output {
-    File genbank_source_modifier_table = "${base}.genbank.src"
-    File biosample_map                 = "${base}.biosample.map.txt"
-    File sample_ids                    = "${base}.sample_ids.txt"
+    File   genbank_source_modifier_table = "~{base}.genbank.src"
+    File   sample_ids                    = "~{base}.sample_ids.txt"
+    String isolate_name                  = read_string("isolate_name.str")
   }
   runtime {
     docker: docker
@@ -695,7 +959,7 @@ task generate_author_sbt_file {
     String? author_list
     File    j2_template
     File?   defaults_yaml
-    String? out_base = "authors"
+    String  out_base = "authors"
 
     String  docker = "quay.io/broadinstitute/py3-bio:0.1.2"
   }
@@ -831,32 +1095,31 @@ task generate_author_sbt_file {
   }
 }
 
-task prepare_genbank {
+task table2asn {
   meta {
-    description: "this task runs NCBI's tbl2asn"
+    description: "This task runs NCBI's table2asn, the artist formerly known as tbl2asn"
   }
 
   input {
-    Array[File]+ assemblies_fasta
-    Array[File]  annotations_tbl
+    File         assembly_fasta
+    File         annotations_tbl
     File         authors_sbt
-    File?        biosampleMap
-    File?        genbankSourceTable
-    File?        coverage_table
-    String?      sequencingTech
+    File?        source_modifier_table
+    File?        structured_comment_file
     String?      comment
-    String?      organism
-    String?      molType
-    String?      assembly_method
-    String?      assembly_method_version
+    String       organism
+    String       mol_type = "cRNA"
+    Int          genetic_code = 1
 
-    Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-phylo:2.3.6.0"
+    Int          machine_mem_gb = 3
+    String       docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"  # this could be a simpler docker image, we don't use anything beyond table2asn itself
   }
 
+  String out_basename = basename(assembly_fasta, ".fasta")
+
   parameter_meta {
-    assemblies_fasta: {
-      description: "Assembled genomes. One chromosome/segment per fasta file.",
+    assembly_fasta: {
+      description: "Assembled genome. All chromosomes/segments in one file.",
       patterns: ["*.fasta"]
     }
     annotations_tbl: {
@@ -867,102 +1130,52 @@ task prepare_genbank {
       description: "A genbank submission template file (SBT) with the author list, created at https://submit.ncbi.nlm.nih.gov/genbank/template/submission/",
       patterns: ["*.sbt"]
     }
-    biosampleMap: {
-      description: "A two column tab text file mapping sample IDs (first column) to NCBI BioSample accession numbers (second column). These typically take the format 'SAMN****' and are obtained by registering your samples first at https://submit.ncbi.nlm.nih.gov/",
-      patterns: ["*.txt", "*.tsv"]
-    }
-    genbankSourceTable: {
+    source_modifier_table: {
       description: "A tab-delimited text file containing requisite metadata for Genbank (a 'source modifier table'). https://www.ncbi.nlm.nih.gov/WebSub/html/help/genbank-source-table.html",
-      patterns: ["*.txt", "*.tsv"]
+      patterns: ["*.src"]
     }
-    coverage_table: {
-      description: "A two column tab text file mapping sample IDs (first column) to average sequencing coverage (second column, floating point number).",
-      patterns: ["*.txt", "*.tsv"]
-    }
-    sequencingTech: {
-      description: "The type of sequencer used to generate reads. NCBI has a controlled vocabulary for this value which can be found here: https://submit.ncbi.nlm.nih.gov/structcomment/nongenomes/"
+    structured_comment_file: {
+      patterns: ["*.cmt"]
     }
     organism: {
       description: "The scientific name for the organism being submitted. This is typically the species name and should match the name given by the NCBI Taxonomy database. For more info, see: https://www.ncbi.nlm.nih.gov/Sequin/sequin.hlp.html#Organism"
     }
-    molType: {
+    mol_type: {
       description: "The type of molecule being described. Any value allowed by the INSDC controlled vocabulary may be used here. Valid values are described at http://www.insdc.org/controlled-vocabulary-moltype-qualifier"
-    }
-    assembly_method: {
-      description: "Very short description of the software approach used to assemble the genome. We typically provide a github link here. If this is specified, assembly_method_version should also be specified."
-    }
-    assembly_method_version: {
-      description: "The version of the software used. If this is specified, assembly_method should also be specified."
     }
     comment: {
       description: "Optional comments that can be displayed in the COMMENT section of the Genbank record. This may include any disclaimers about assembly quality or notes about pre-publication availability or requests to discuss pre-publication use with authors."
     }
-
   }
 
-  command {
-    set -ex -o pipefail
-    ncbi.py --version | tee VERSION
-    cp ${sep=' ' annotations_tbl} .
+  command <<<
+    set -ex
+    table2asn -version | cut -f 2 -d ' ' > TABLE2ASN_VERSION
+    cp "~{assembly_fasta}" "~{out_basename}.fsa" # input fasta must be in CWD so output files end up next to it
+    touch "~{out_basename}.val"  # this file isn't produced if no errors/warnings
 
-    touch special_args
-    if [ -n "${comment}" ]; then
-      echo "--comment" >> special_args
-      echo "${comment}" >> special_args
-    fi
-    if [ -n "${sequencingTech}" ]; then
-      echo "--sequencing_tech" >> special_args
-      echo "${sequencingTech}" >> special_args
-    fi
-    if [ -n "${organism}" ]; then
-      echo "--organism" >> special_args
-      echo "${organism}" >> special_args
-    fi
-    if [ -n "${molType}" ]; then
-      echo "--mol_type" >> special_args
-      echo "${molType}" >> special_args
-    fi
-    if [ -n "${assembly_method}" -a -n "${assembly_method_version}" ]; then
-      echo "--assembly_method" >> special_args
-      echo "${assembly_method}" >> special_args
-      echo "--assembly_method_version" >> special_args
-      echo "${assembly_method_version}" >> special_args
-    fi
-    if [ -n "${coverage_table}" ]; then
-      echo -e "sample\taln2self_cov_median" > coverage_table.txt
-      cat ${coverage_table} >> coverage_table.txt
-      echo "--coverage_table" >> special_args
-      echo coverage_table.txt >> special_args
-    fi
-
-    cat special_args | xargs -d '\n' ncbi.py prep_genbank_files \
-        ${authors_sbt} \
-        ${sep=' ' assemblies_fasta} \
-        . \
-        ${'--biosample_map ' + biosampleMap} \
-        ${'--master_source_table ' + genbankSourceTable} \
-        --loglevel DEBUG
-    zip sequins_only.zip *.sqn
-    zip all_files.zip *.sqn *.cmt *.gbf *.src *.fsa *.val
-    mv errorsummary.val errorsummary.val.txt # to keep it separate from the glob
-  }
+    table2asn \
+      -t "~{authors_sbt}" \
+      -i "~{out_basename}.fsa" \
+      -f "~{annotations_tbl}" \
+      ~{'-w "' + structured_comment_file + '"'} \
+      -j '[gcode=~{genetic_code}][moltype=~{mol_type}][organism=~{organism}]' \
+      ~{'-src-file "' + source_modifier_table + '"'} \
+      ~{'-y "' + comment + '"'} \
+      -a s -V vb
+  >>>
 
   output {
-    File        submission_zip           = "sequins_only.zip"
-    File        archive_zip              = "all_files.zip"
-    Array[File] sequin_files             = glob("*.sqn")
-    Array[File] structured_comment_files = glob("*.cmt")
-    Array[File] genbank_preview_files    = glob("*.gbf")
-    Array[File] source_table_files       = glob("*.src")
-    Array[File] fasta_per_chr_files      = glob("*.fsa")
-    Array[File] validation_files         = glob("*.val")
-    File        errorSummary             = "errorsummary.val.txt"
-    String      viralngs_version         = read_string("VERSION")
+    File          genbank_submission_sqn   = "~{out_basename}.sqn"
+    File          genbank_preview_file     = "~{out_basename}.gbf"
+    File          genbank_validation_file  = "~{out_basename}.val"
+    Array[String] table2asn_errors         = read_lines("~{out_basename}.val")
+    String        table2asn_version        = read_string("TABLE2ASN_VERSION")
   }
 
   runtime {
-    docker: "${docker}"
-    memory: select_first([machine_mem_gb, 3]) + " GB"
+    docker: docker
+    memory: machine_mem_gb + " GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
@@ -1039,126 +1252,212 @@ task package_sc2_genbank_ftp_submission {
   }
 }
 
+task genbank_special_taxa {
+  meta {
+    description: "this task tells you if you have a special taxon that NCBI treats differently"
+  }
+
+  input {
+    Int     taxid
+    File    taxdump_tgz
+    File    vadr_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/annotation/vadr/vadr-by-taxid.tsv"
+    String  docker = "quay.io/broadinstitute/viral-classify:2.2.5"
+  }
+
+  command <<<
+    set -e
+
+    # unpack the taxdump tarball
+    mkdir -p taxdump
+    read_utils.py extract_tarball "~{taxdump_tgz}" taxdump
+
+    python3 << CODE
+    import csv
+    import metagenomics
+    import tarfile
+    import urllib.request
+    taxid = ~{taxid}
+
+    # load taxdb and retrieve full hierarchy leading to this taxid
+    taxdb = metagenomics.TaxonomyDb(tax_dir="taxdump", load_nodes=True, load_gis=False)
+    ancestors = taxdb.get_ordered_ancestors(taxid)
+    this_and_ancestors = [taxid] + ancestors
+
+    # Genbank prohibits normal submissions for SC2, Flu A/B/C, Noro, and Dengue
+    table2asn_prohibited = {
+      11320: "Influenza A virus",
+      11520: "Influenza B virus",
+      11552: "Influenza C virus",
+      2697049: "Severe acute respiratory syndrome coronavirus 2",
+      11983: "Norovirus",
+      3052464: "Dengue virus"
+    }
+    prohibited = any(node in table2asn_prohibited for node in this_and_ancestors)
+    with open("table2asn_allowed.boolean", "wt") as outf:
+      outf.write("false" if prohibited else "true")
+
+    # VADR is an annotation tool that supports SC2, Flu A/B/C/D, Noro, Dengue, RSV A/B, MPXV, etc
+    # https://github.com/ncbi/vadr/wiki/Available-VADR-model-files
+    # Note this table includes some taxa that are subtaxa of others and in those cases, it is ORDERED from
+    # more specific to less specific (e.g. noro before calici, dengue before flavi, sc2 before corona)
+    # so use the *first* hit in the table.
+    # tsv header: tax_id, taxon_name, min_seq_len, max_seq_len, vadr_min_ram_gb, vadr_opts, vadr_model_tar_url
+    with open("~{vadr_by_taxid_tsv}", 'rt') as inf:
+      vadr_supported = list(row for row in csv.DictReader(inf, delimiter='\t'))
+
+    out_vadr_supported = False
+    out_vadr_cli_options = ""
+    out_vadr_model_tar_url = ""
+    out_min_genome_length = 0
+    out_max_genome_length = 1000000
+    out_vadr_taxid = 0
+    out_vadr_min_ram_gb = 8
+    out_vadr_model_tar_subdir = ""
+    for row in vadr_supported:
+      if any(node == int(row['tax_id']) for node in this_and_ancestors):
+        out_vadr_taxid = int(row['tax_id'])
+        out_vadr_supported = True
+        out_vadr_cli_options = row['vadr_opts']
+        out_vadr_model_tar_url = row['vadr_model_tar_url']
+        if row['min_seq_len']:
+          out_min_genome_length = int(row['min_seq_len'])
+        if row['max_seq_len']:
+          out_max_genome_length = int(row['max_seq_len'])
+        if row['vadr_min_ram_gb']:
+          out_vadr_min_ram_gb = int(row['vadr_min_ram_gb'])
+        if row['vadr_model_tar_subdir']:
+          out_vadr_model_tar_subdir = row['vadr_model_tar_subdir']
+        break
+    with open("vadr_supported.boolean", "wt") as outf:
+      outf.write("true" if out_vadr_supported else "false")
+    with open("vadr_cli_options.string", "wt") as outf:
+      outf.write(out_vadr_cli_options)
+    with open("min_genome_length.int", "wt") as outf:
+      outf.write(str(out_min_genome_length))
+    with open("max_genome_length.int", "wt") as outf:
+      outf.write(str(out_max_genome_length))
+    with open("vadr_taxid.int", "wt") as outf:
+      outf.write(str(out_vadr_taxid))
+    with open("vadr_min_ram_gb.int", "wt") as outf:
+      outf.write(str(out_vadr_min_ram_gb))
+    with open("vadr_model_tar_subdir.str", "wt") as outf:
+      outf.write(out_vadr_model_tar_subdir)
+
+    if out_vadr_model_tar_url:
+      urllib.request.urlretrieve(out_vadr_model_tar_url, "vadr_model-~{taxid}.tar.gz")
+    else:
+      # I'd rather emit a null value but not sure how
+      with tarfile.open("vadr_model-~{taxid}.tar.gz", "w:gz") as out_tar:
+        pass
+
+    CODE
+  >>>
+
+  output {
+    Boolean  table2asn_allowed     = read_boolean("table2asn_allowed.boolean")
+    Boolean  vadr_supported        = read_boolean("vadr_supported.boolean")
+    String   vadr_cli_options      = read_string("vadr_cli_options.string")
+    File     vadr_model_tar        = "vadr_model-~{taxid}.tar.gz"
+    String   vadr_model_tar_subdir = read_string("vadr_model_tar_subdir.str")
+    Int      vadr_taxid            = read_int("vadr_taxid.int")
+    Int      vadr_min_ram_gb       = read_int("vadr_min_ram_gb.int")
+    Int      min_genome_length     = read_int("min_genome_length.int")
+    Int      max_genome_length     = read_int("max_genome_length.int")
+  }
+
+  runtime {
+    docker: docker
+    memory: "1 GB"
+    cpu: 1
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
 task vadr {
   meta {
-    description: "Runs NCBI's Viral Annotation DefineR for annotation and QC. Defaults here are for SARS-CoV-2 (see https://github.com/ncbi/vadr/wiki/Coronavirus-annotation), but VADR itself is applicable to a larger number of viral taxa (change the vadr_opts accordingly)."
+    description: "Runs NCBI's Viral Annotation DefineR for annotation and QC."
   }
   input {
-    File   genome_fasta
-    String vadr_opts = "--glsearch -s -r --nomisc --mkey sarscov2 --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn"
+    File    genome_fasta
+    String? vadr_opts
+    Int?    minlen
+    Int?    maxlen
+    File?   vadr_model_tar
+    String? vadr_model_tar_subdir
 
     String docker = "quay.io/staphb/vadr:1.6.3"
-    Int    minlen = 50
-    Int    maxlen = 30000
-    Int    mem_size = 4
-    Int    cpus = 2
+    Int    mem_size = 16  # the RSV model in particular seems to consume 15GB RAM
+    Int    cpus = 4
   }
   String out_base = basename(genome_fasta, '.fasta')
   command <<<
     set -e
+    # unpack custom VADR models or use default
+    if [ -n "~{vadr_model_tar}" ]; then
+      mkdir -p vadr-untar
+      tar -C vadr-untar -xzvf "~{vadr_model_tar}"
+      # just link the model subdirectory, not the outer wrapper
+      ln -s vadr-untar/*/ vadr-models
+    else
+      # use default (distributed with docker image) models
+      ln -s /opt/vadr/vadr-models vadr-models
+    fi
+    if [ -n "~{default='' vadr_model_tar_subdir}" ]; then
+      VADR_MODEL_DIR="vadr-models/~{default='' vadr_model_tar_subdir}"
+    else
+      VADR_MODEL_DIR="vadr-models"
+    fi
 
     # remove terminal ambiguous nucleotides
     /opt/vadr/vadr/miniscripts/fasta-trim-terminal-ambigs.pl \
       "~{genome_fasta}" \
-      --minlen ~{minlen} \
-      --maxlen ~{maxlen} \
+      ~{'--minlen ' + minlen} \
+      ~{'--maxlen ' + maxlen} \
       > "~{out_base}.fasta"
 
     # run VADR
     v-annotate.pl \
-      ~{vadr_opts} \
-      --mdir /opt/vadr/vadr-models/ \
+      ~{default='' vadr_opts} \
+      --split --cpu `nproc` \
+      --mdir "$VADR_MODEL_DIR" \
       "~{out_base}.fasta" \
       "~{out_base}"
 
     # package everything for output
     tar -C "~{out_base}" -czvf "~{out_base}.vadr.tar.gz" .
 
+    # get the gene annotations (feature table)
+    # the vadr.fail.tbl sometimes contains junk / invalid content that needs to be filtered out
+    cat "~{out_base}/~{out_base}.vadr.pass.tbl" \
+        "~{out_base}/~{out_base}.vadr.fail.tbl" \
+       | sed '/Additional note/,$d' \
+        > "~{out_base}.vadr.tbl"
+
     # prep alerts into a tsv file for parsing
     cat "~{out_base}/~{out_base}.vadr.alt.list" | cut -f 5 | tail -n +2 \
       > "~{out_base}.vadr.alerts.tsv"
     cat "~{out_base}.vadr.alerts.tsv" | wc -l > NUM_ALERTS
+
+    # record peak memory usage
+    set +o pipefail
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } | tee MEM_BYTES
   >>>
   output {
-    File                 feature_tbl = "~{out_base}/~{out_base}.vadr.pass.tbl"
+    File                 feature_tbl = "~{out_base}.vadr.tbl"
     Int                  num_alerts  = read_int("NUM_ALERTS")
     File                 alerts_list = "~{out_base}/~{out_base}.vadr.alt.list"
-    Array[Array[String]] alerts      = read_tsv("~{out_base}.vadr.alerts.tsv")
+    Array[String]        alerts      = read_lines("~{out_base}.vadr.alerts.tsv")
     File                 outputs_tgz = "~{out_base}.vadr.tar.gz"
     Boolean              pass        = num_alerts==0
     String               vadr_docker = docker
+    Int                  max_ram_gb  = ceil(read_float("MEM_BYTES")/1000000000)
   }
   runtime {
     docker: docker
     memory: mem_size + " GB"
     cpu: cpus
-    dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
-  }
-}
-
-task sequence_rename_by_species {
-  meta {
-    description: "Rename sequences based on species-specific naming conventions for many viral taxa."
-  }
-  input {
-    String sample_id
-    String organism_name
-    File   biosample_attributes
-    String taxid
-    File   taxdump_tgz
-
-    String docker = "quay.io/broadinstitute/viral-classify:2.2.5"
-  }
-  command <<<
-    set -e
-    mkdir -p taxdump
-    read_utils.py extract_tarball "~{taxdump_tgz}" taxdump
-    python3 << CODE
-    import metagenomics
-    taxdb = metagenomics.TaxonomyDb(tax_dir='taxdump', load_nodes=True, load_gis=False)
-    taxid = int('~{taxid}')
-    ancestors = taxdb.get_ordered_ancestors(taxid)
-
-
-    if any(node == 3052310 for node in [taxid] + ancestors):
-      # LASV
-      pass
-    elif any(node == 186538 for node in [taxid] + ancestors):
-      # ZEBOV
-      pass
-    elif any(node == 11250 for node in [taxid] + ancestors):
-      # RSV -- no real convention! Some coalescence around this:
-      # <type>/<host lowercase>/Country/ST-Institution-LabID/Year
-      # e.g. RSV-A/human/USA/MA-Broad-1234/2020
-      pass
-    elif any(node == 2697049 for node in [taxid] + ancestors):
-      # SARS-CoV-2
-      # SARS-CoV-2/<host lowercase>/Country/ST-Institution-LabID/Year
-      # e.g. SARS-CoV-2/human/USA/MA-Broad-1234/2020
-      pass
-    elif any((node == 11320 or node == 11520) for node in [taxid] + ancestors):
-      # Flu A or B
-      # <type>/<hostname if not human>/<geoloc>/seqUID/year
-      # e.g. A/Massachusetts/Broad_MGH-1234/2001 or A/chicken/Hokkaido/TU25-3/2022 or B/Rhode Island/RISHL-1234/2024
-      pass
-    elif any(node == 12059 for node in [taxid] + ancestors):
-      # Enterovirus (including rhinos)
-      pass
-    else:
-      # everything else
-      pass
-
-    CODE
-  >>>
-  output {
-    String assembly_name_genbank = read_string("assembly_name_genbank")
-  }
-  runtime {
-    docker: docker
-    memory: "1 GB"
-    cpu: 1
-    dx_instance_type: "mem1_ssd1_v2_x2"
+    dx_instance_type: "mem2_ssd1_v2_x4"
     maxRetries: 2
   }
 }
