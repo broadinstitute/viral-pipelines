@@ -1306,6 +1306,7 @@ task genbank_special_taxa {
     out_max_genome_length = 1000000
     out_vadr_taxid = 0
     out_vadr_min_ram_gb = 8
+    out_vadr_model_tar_subdir = ""
     for row in vadr_supported:
       if any(node == int(row['tax_id']) for node in this_and_ancestors):
         out_vadr_taxid = int(row['tax_id'])
@@ -1318,6 +1319,8 @@ task genbank_special_taxa {
           out_max_genome_length = int(row['max_seq_len'])
         if row['vadr_min_ram_gb']:
           out_vadr_min_ram_gb = int(row['vadr_min_ram_gb'])
+        if row['vadr_model_tar_subdir']:
+          out_vadr_model_tar_subdir = row['vadr_model_tar_subdir']
         break
     with open("vadr_supported.boolean", "wt") as outf:
       outf.write("true" if out_vadr_supported else "false")
@@ -1331,6 +1334,8 @@ task genbank_special_taxa {
       outf.write(str(out_vadr_taxid))
     with open("vadr_min_ram_gb.int", "wt") as outf:
       outf.write(str(out_vadr_min_ram_gb))
+    with open("vadr_model_tar_subdir.str", "wt") as outf:
+      outf.write(out_vadr_model_tar_subdir)
 
     if out_vadr_model_tar_url:
       urllib.request.urlretrieve(out_vadr_model_tar_url, "vadr_model-~{taxid}.tar.gz")
@@ -1343,14 +1348,15 @@ task genbank_special_taxa {
   >>>
 
   output {
-    Boolean  table2asn_allowed  = read_boolean("table2asn_allowed.boolean")
-    Boolean  vadr_supported     = read_boolean("vadr_supported.boolean")
-    String   vadr_cli_options   = read_string("vadr_cli_options.string")
-    File     vadr_model_tar     = "vadr_model-~{taxid}.tar.gz"
-    Int      vadr_taxid         = read_int("vadr_taxid.int")
-    Int      vadr_min_ram_gb    = read_int("vadr_min_ram_gb.int")
-    Int      min_genome_length  = read_int("min_genome_length.int")
-    Int      max_genome_length  = read_int("max_genome_length.int")
+    Boolean  table2asn_allowed     = read_boolean("table2asn_allowed.boolean")
+    Boolean  vadr_supported        = read_boolean("vadr_supported.boolean")
+    String   vadr_cli_options      = read_string("vadr_cli_options.string")
+    File     vadr_model_tar        = "vadr_model-~{taxid}.tar.gz"
+    String   vadr_model_tar_subdir = read_string("vadr_model_tar_subdir.str")
+    Int      vadr_taxid            = read_int("vadr_taxid.int")
+    Int      vadr_min_ram_gb       = read_int("vadr_min_ram_gb.int")
+    Int      min_genome_length     = read_int("min_genome_length.int")
+    Int      max_genome_length     = read_int("max_genome_length.int")
   }
 
   runtime {
@@ -1372,6 +1378,7 @@ task vadr {
     Int?    minlen
     Int?    maxlen
     File?   vadr_model_tar
+    String? vadr_model_tar_subdir
 
     String docker = "quay.io/staphb/vadr:1.6.3"
     Int    mem_size = 16  # the RSV model in particular seems to consume 15GB RAM
@@ -1384,17 +1391,16 @@ task vadr {
     if [ -n "~{vadr_model_tar}" ]; then
       mkdir -p vadr-untar
       tar -C vadr-untar -xzvf "~{vadr_model_tar}"
-      if [ -d "vadr-untar/vadr-models-hsv-1.0" -o -d "vadr-untar/vadr-models-hmpv-1.0" ]; then
-        # these HSV/hMPV tarballs are structured weird (one extra directory layer), collapse its contents
-        mkdir -p vadr-models
-        ln -s `pwd`/vadr-untar/vadr-models-*/*/* vadr-models
-      else
-        # this is a normal model tarball, just link the model subdirectory, not the outer wrapper
-        ln -s vadr-untar/*/ vadr-models
-      fi
+      # just link the model subdirectory, not the outer wrapper
+      ln -s vadr-untar/*/ vadr-models
     else
       # use default (distributed with docker image) models
       ln -s /opt/vadr/vadr-models vadr-models
+    fi
+    if [ -n "~{default='' vadr_model_tar_subdir}" ]; then
+      VADR_MODEL_DIR="vadr-models/~{default='' vadr_model_tar_subdir}"
+    else
+      VADR_MODEL_DIR="vadr-models"
     fi
 
     # remove terminal ambiguous nucleotides
@@ -1408,7 +1414,7 @@ task vadr {
     v-annotate.pl \
       ~{default='' vadr_opts} \
       --split --cpu `nproc` \
-      --mdir vadr-models \
+      --mdir "$VADR_MODEL_DIR" \
       "~{out_base}.fasta" \
       "~{out_base}"
 

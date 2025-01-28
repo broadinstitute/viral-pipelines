@@ -104,11 +104,12 @@ workflow genbank_single {
     if(genbank_special_taxa.vadr_supported) {
       call ncbi.vadr {
         input:
-          genome_fasta    = assembly_fasta,
-          maxlen          = genbank_special_taxa.max_genome_length,
-          vadr_opts       = genbank_special_taxa.vadr_cli_options,
-          vadr_model_tar  = genbank_special_taxa.vadr_model_tar,
-          mem_size        = genbank_special_taxa.vadr_min_ram_gb
+          genome_fasta          = assembly_fasta,
+          maxlen                = genbank_special_taxa.max_genome_length,
+          vadr_opts             = genbank_special_taxa.vadr_cli_options,
+          vadr_model_tar        = genbank_special_taxa.vadr_model_tar,
+          vadr_model_tar_subdir = genbank_special_taxa.vadr_model_tar_subdir,
+          mem_size              = genbank_special_taxa.vadr_min_ram_gb
       }
     }
     File feature_tbl   = select_first([vadr.feature_tbl, annot.feature_tbl])
