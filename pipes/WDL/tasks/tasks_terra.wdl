@@ -59,7 +59,7 @@ task check_terra_env {
     touch method_path.txt
     touch top_level_submission_id.txt
 
-    touch gcp_created_by_attributes.txt
+    #touch gcp_created_by_attributes.txt
     touch gcp_instance_metadata.json
 
     # disable the version update alert messages gcloud sometimes emits when executing any command
@@ -78,17 +78,15 @@ task check_terra_env {
 
       GCLOUD_OAUTH_BEARER_TOKEN="$(gcloud auth print-access-token)"
 
-      curl -s -H "Metadata-Flavor: Google" \
-        "http://metadata.google.internal/computeMetadata/v1/instance/attributes/created-by" | tee gcp_created_by_attributes.txt
+      #curl -s -H "Metadata-Flavor: Google" \
+      #  "http://metadata.google.internal/computeMetadata/v1/instance/attributes/created-by" | tee gcp_created_by_attributes.txt
 
       curl -s -H "Metadata-Flavor: Google" \
         "http://metadata.google.internal/computeMetadata/v1/instance/?recursive=true" | tee gcp_instance_metadata.json
 
-
-
       # if BATCH_JOB_UID has a value the job is running on GCP Batch
       # NOTE: PAPIv2 is deprecated and will be removed in the future
-      if [ -n "$BATCH_JOB_UID" ]; then
+      if [[ -n "$BATCH_JOB_UID" ]] || $(jq '.attributes | has("cloudbatch-job-uid")' gcp_instance_metadata.json); then
         echo "Job appears to be running on GCP Batch"
         echo "true"  > RUNNING_ON_GCP_BATCH
       else
@@ -268,7 +266,7 @@ task check_terra_env {
     String method_source           = read_string("method_source.txt")
     String method_path             = read_string("method_path.txt")
 
-    String gcp_created_by_metadata = read_string("gcp_created_by_attributes.txt")
+    #String gcp_created_by_metadata = read_string("gcp_created_by_attributes.txt")
     File   gcp_instance_metadata   = "gcp_instance_metadata.json"
 
     String input_table_name        = read_string("input_table_name.txt")
