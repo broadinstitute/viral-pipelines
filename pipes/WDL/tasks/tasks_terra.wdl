@@ -32,7 +32,7 @@ task gcs_copy {
 
 task check_terra_env {
   input {
-    String docker = "quay.io/broadinstitute/viral-core:2.4.1"
+    String docker = "quay.io/broadinstitute/viral-baseimage:0.2.4"
   }
   meta {
     description: "task for inspection of backend to determine whether the task is running on Terra and/or GCP"
@@ -59,6 +59,9 @@ task check_terra_env {
     touch method_path.txt
     touch top_level_submission_id.txt
 
+    touch gcp_created_by_attributes.txt
+    touch gcp_instance_metadata.txt
+
     # disable the version update alert messages gcloud sometimes emits when executing any command
     gcloud config set component_manager/disable_update_check true
 
@@ -74,6 +77,14 @@ task check_terra_env {
       echo "true" > RUNNING_ON_GCP
 
       GCLOUD_OAUTH_BEARER_TOKEN="$(gcloud auth print-access-token)"
+
+      curl -H "Metadata-Flavor: Google" \
+        "http://metadata.google.internal/computeMetadata/v1/instance/attributes/created-by" | tee gcp_created_by_attributes.txt
+
+      curl -s -H "Metadata-Flavor: Google" \
+        "http://metadata.google.internal/computeMetadata/v1/instance/?recursive=true" | tee gcp_instance_metadata.txt
+
+
 
       # if BATCH_JOB_UID has a value the job is running on GCP Batch
       # NOTE: PAPIv2 is deprecated and will be removed in the future
@@ -256,6 +267,9 @@ task check_terra_env {
     String method_version          = read_string("method_version.txt")
     String method_source           = read_string("method_source.txt")
     String method_path             = read_string("method_path.txt")
+
+    String gcp_created_by_metadata = read_string("gcp_created_by_attributes.txt")
+    File   gcp_instance_metadata   = "gcp_instance_metadata.json"
 
     String input_table_name        = read_string("input_table_name.txt")
     String input_row_id            = read_string("input_row_id.txt")
