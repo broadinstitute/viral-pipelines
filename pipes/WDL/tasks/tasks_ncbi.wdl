@@ -132,9 +132,9 @@ task align_and_annot_transfer_single {
     Array[File]+ reference_fastas
     Array[File]+ reference_feature_tables
 
+    String       out_basename = basename(genome_fasta, '.fasta')
     String       docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
   }
-  String out_base = basename(genome_fasta, '.fasta')
 
   parameter_meta {
     genome_fasta: {
@@ -162,11 +162,11 @@ task align_and_annot_transfer_single {
         --ref_tbls ~{sep=' ' reference_feature_tables} \
         --oob_clip \
         --loglevel DEBUG
-    cat out/*.tbl > "~{out_base}.tbl"
+    cat out/*.tbl > "~{out_basename}.tbl"
   >>>
 
   output {
-    File         feature_tbl           = "~{out_base}.tbl"
+    File         feature_tbl           = "~{out_basename}.tbl"
     #Array[File]+ genome_per_chr_tbls   = glob("out/*.tbl")
     #Array[File]+ genome_per_chr_fastas = glob("out/*.fasta")
     String       viralngs_version      = read_string("VERSION")
@@ -238,10 +238,10 @@ task structured_comments_from_aligned_bam {
     String  assembly_method
     String  assembly_method_version
 
+    String  out_basename = basename(aligned_bam, '.bam')
     Boolean is_genome_assembly = true
     String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
   }
-  String out_basename = basename(aligned_bam, '.bam')
   # see https://www.ncbi.nlm.nih.gov/genbank/structuredcomment/
   command <<<
     set -e
@@ -742,9 +742,9 @@ task biosample_to_genbank {
 
     Boolean sanitize_seq_ids = true
 
+    String  out_basename = basename(basename(biosample_attributes, ".txt"), ".tsv")
     String  docker = "python:slim"
   }
-  String base = basename(basename(biosample_attributes, ".txt"), ".tsv")
   command <<<
     set -e
     python3<<CODE
@@ -843,7 +843,7 @@ task biosample_to_genbank {
                   print("overriding geo_loc_name with food_origin")
                   row['geo_loc_name'] = row['food_origin']
 
-    with open("~{base}.genbank.src", 'wt') as outf_smt:
+    with open("~{out_basename}.genbank.src", 'wt') as outf_smt:
       out_headers = list(h for h in out_headers_total if header_key_map.get(h,h) in in_headers)
       if 'db_xref' not in out_headers:
           out_headers.append('db_xref')
@@ -853,7 +853,7 @@ task biosample_to_genbank {
           out_headers.append('serotype')
       outf_smt.write('\t'.join(out_headers)+'\n')
 
-      with open("~{base}.sample_ids.txt", 'wt') as outf_ids:
+      with open("~{out_basename}.sample_ids.txt", 'wt') as outf_ids:
           for row in biosample_attributes:
             # Influenza-specific requirement
             if row['organism'].startswith('Influenza'):
@@ -937,8 +937,8 @@ task biosample_to_genbank {
     CODE
   >>>
   output {
-    File   genbank_source_modifier_table = "~{base}.genbank.src"
-    File   sample_ids                    = "~{base}.sample_ids.txt"
+    File   genbank_source_modifier_table = "~{out_basename}.src"
+    File   sample_ids                    = "~{out_basename}.sample_ids.txt"
     String isolate_name                  = read_string("isolate_name.str")
   }
   runtime {
@@ -1111,11 +1111,11 @@ task table2asn {
     String       mol_type = "cRNA"
     Int          genetic_code = 1
 
+    String       out_basename = basename(assembly_fasta, ".fasta")
     Int          machine_mem_gb = 3
     String       docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"  # this could be a simpler docker image, we don't use anything beyond table2asn itself
   }
 
-  String out_basename = basename(assembly_fasta, ".fasta")
 
   parameter_meta {
     assembly_fasta: {
@@ -1399,11 +1399,11 @@ task vadr {
     File?   vadr_model_tar
     String? vadr_model_tar_subdir
 
+    String out_basename = basename(genome_fasta, '.fasta')
     String docker = "quay.io/staphb/vadr:1.6.3"
     Int    mem_size = 16  # the RSV model in particular seems to consume 15GB RAM
     Int    cpus = 4
   }
-  String out_base = basename(genome_fasta, '.fasta')
   command <<<
     set -e
     # unpack custom VADR models or use default
@@ -1427,41 +1427,41 @@ task vadr {
       "~{genome_fasta}" \
       ~{'--minlen ' + minlen} \
       ~{'--maxlen ' + maxlen} \
-      > "~{out_base}.fasta"
+      > "~{out_basename}.fasta"
 
     # run VADR
     v-annotate.pl \
       ~{default='' vadr_opts} \
       --split --cpu `nproc` \
       --mdir "$VADR_MODEL_DIR" \
-      "~{out_base}.fasta" \
-      "~{out_base}"
+      "~{out_basename}.fasta" \
+      "~{out_basename}"
 
     # package everything for output
-    tar -C "~{out_base}" -czvf "~{out_base}.vadr.tar.gz" .
+    tar -C "~{out_basename}" -czvf "~{out_basename}.vadr.tar.gz" .
 
     # get the gene annotations (feature table)
     # the vadr.fail.tbl sometimes contains junk / invalid content that needs to be filtered out
-    cat "~{out_base}/~{out_base}.vadr.pass.tbl" \
-        "~{out_base}/~{out_base}.vadr.fail.tbl" \
+    cat "~{out_basename}/~{out_basename}.vadr.pass.tbl" \
+        "~{out_basename}/~{out_basename}.vadr.fail.tbl" \
        | sed '/Additional note/,$d' \
-        > "~{out_base}.vadr.tbl"
+        > "~{out_basename}.tbl"
 
     # prep alerts into a tsv file for parsing
-    cat "~{out_base}/~{out_base}.vadr.alt.list" | cut -f 5 | tail -n +2 \
-      > "~{out_base}.vadr.alerts.tsv"
-    cat "~{out_base}.vadr.alerts.tsv" | wc -l > NUM_ALERTS
+    cat "~{out_basename}/~{out_basename}.vadr.alt.list" | cut -f 5 | tail -n +2 \
+      > "~{out_basename}.vadr.alerts.tsv"
+    cat "~{out_basename}.vadr.alerts.tsv" | wc -l > NUM_ALERTS
 
     # record peak memory usage
     set +o pipefail
     { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } | tee MEM_BYTES
   >>>
   output {
-    File                 feature_tbl = "~{out_base}.vadr.tbl"
+    File                 feature_tbl = "~{out_basename}.tbl"
     Int                  num_alerts  = read_int("NUM_ALERTS")
-    File                 alerts_list = "~{out_base}/~{out_base}.vadr.alt.list"
-    Array[String]        alerts      = read_lines("~{out_base}.vadr.alerts.tsv")
-    File                 outputs_tgz = "~{out_base}.vadr.tar.gz"
+    File                 alerts_list = "~{out_basename}/~{out_basename}.vadr.alt.list"
+    Array[String]        alerts      = read_lines("~{out_basename}.vadr.alerts.tsv")
+    File                 outputs_tgz = "~{out_basename}.vadr.tar.gz"
     Boolean              pass        = num_alerts==0
     String               vadr_docker = docker
     Int                  max_ram_gb  = ceil(read_float("MEM_BYTES")/1000000000)
@@ -1475,26 +1475,24 @@ task vadr {
   }
 }
 
-struct GenbankSubmission {
-  String      mechanism
-  Boolean     validation_clean
-  File?       sqn
-  File?       fsa
-  File?       cmt
-  File?       src
-  File?       sbt
-}
-
 #task package_genbank_submissions {
 #  input {
-#    Array[GenbankSubmission] submissions
-#    String                   spuid_base
-#
-#    File                     authors_sbt
-#
-#    String  docker = "quay.io/broadinstitute/viral-baseimage:0.2.0"
-#    Int     mem_size = 2
-#    Int     cpus = 1
+#    Array[String]   mechanism
+#    Array[Boolean]  validation_clean
+
+#    -- at the end of the day I need these four files to have predictable filenames
+#    Array[File?]    sqn
+#    Array[File?]    fsa
+#    Array[File?]    cmt
+#    Array[File?]    src
+
+#    String          spuid_base
+#    String          spuid_namespace
+#    File            authors_sbt
+
+#    String          docker = "quay.io/broadinstitute/viral-baseimage:0.2.0"
+#    Int             mem_size = 2
+#    Int             cpus = 1
 #  }
 #  command <<<
 #    set -e

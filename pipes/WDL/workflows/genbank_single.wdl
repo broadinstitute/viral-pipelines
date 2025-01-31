@@ -15,6 +15,7 @@ workflow genbank_single {
 
     input {
         File          assembly_fasta
+        String        assembly_id = basename(assembly_fasta, ".fasta")
         String        ref_accessions_colon_delim
 
         String        biosample_accession
@@ -67,6 +68,13 @@ workflow genbank_single {
         taxid = tax_id
     }
 
+    # Rename fasta
+    call util.rename_file as assembly_fsa {
+        input:
+            infile       = assembly_fasta,
+            out_filename = assembly_id + ".fsa"
+    }
+
     # Annotate genes
     ## fetch reference genome sequences and annoations
     call utils.string_split {
@@ -90,7 +98,8 @@ workflow genbank_single {
             num_segments           = length(string_split.tokens),
             taxid                  = tax_id,
             organism_name_override = organism_name,
-            filter_to_accession    = biosample_accession
+            filter_to_accession    = biosample_accession,
+            out_basename           = assembly_id
     }
 
     ## annotate genes, either by VADR or by naive coordinate liftover
@@ -99,7 +108,8 @@ workflow genbank_single {
         input:
             genome_fasta             = assembly_fasta,
             reference_fastas         = flatten(download_annotations.genomes_fasta),
-            reference_feature_tables = flatten(download_annotations.features_tbl)
+            reference_feature_tables = flatten(download_annotations.features_tbl),
+            out_basename             = assembly_id
       }
     }
     if(genbank_special_taxa.vadr_supported) {
@@ -110,12 +120,16 @@ workflow genbank_single {
           vadr_opts             = genbank_special_taxa.vadr_cli_options,
           vadr_model_tar        = genbank_special_taxa.vadr_model_tar,
           vadr_model_tar_subdir = genbank_special_taxa.vadr_model_tar_subdir,
-          mem_size              = genbank_special_taxa.vadr_min_ram_gb
+          mem_size              = genbank_special_taxa.vadr_min_ram_gb,
+          out_basename          = assembly_id
       }
     }
     File feature_tbl   = select_first([vadr.feature_tbl, annot.feature_tbl])
 
-    call ncbi.structured_comments_from_aligned_bam
+    call ncbi.structured_comments_from_aligned_bam {
+      input:
+        out_basename = assembly_id
+    }
 
     if(genbank_special_taxa.table2asn_allowed) {
       call ncbi.table2asn {
@@ -125,26 +139,15 @@ workflow genbank_single {
             source_modifier_table   = biosample_to_genbank.genbank_source_modifier_table,
             structured_comment_file = structured_comments_from_aligned_bam.structured_comment_file,
             organism                = organism_name,
-            authors_sbt             = authors_sbt
+            authors_sbt             = authors_sbt,
+            out_basename            = assembly_id
       }
     }
-
     if(!genbank_special_taxa.table2asn_allowed) {
-      File fsa = assembly_fasta
-      File cmt = structured_comments_from_aligned_bam.structured_comment_file
-      File src = biosample_to_genbank.genbank_source_modifier_table
-      File sbt = authors_sbt
+      Array[File] special_submit_files = [assembly_fsa.out,
+        structured_comments_from_aligned_bam.structured_comment_file,
+        biosample_to_genbank.genbank_source_modifier_table]
     }
-
-#    GenbankSubmission submit_info = {
-#      "mechanism" :        genbank_special_taxa.genbank_submission_mechanism,
-#      "validation_clean" : ((length(select_first([table2asn.table2asn_errors, []])) == 0) && select_first([vadr.pass, true])),
-#      "sqn" :              table2asn.genbank_submission_sqn,
-#      "fsa" :              fsa,
-#      "cmt" :              cmt,
-#      "src" :              src,
-#      "sbt" :              sbt
-#    }
 
     output {
         String        genbank_mechanism      = genbank_special_taxa.genbank_submission_mechanism
@@ -161,7 +164,7 @@ workflow genbank_single {
         File?         table2asn_val_file     = table2asn.genbank_validation_file
         Array[String] table2asn_errors       = select_first([table2asn.table2asn_errors, []])
 
-#        GenbankSubmission genbank_submit_info = submit_info
+        Array[File]   genbank_submit_files   = flatten(select_all([[table2asn.genbank_submission_sqn], special_submit_files]))
     }
 
 }
