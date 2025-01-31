@@ -220,7 +220,7 @@ workflow demux_deplete {
         call ncbi.biosample_to_table {
             input:
                 biosample_attributes_tsv = biosample_map_tsv,
-                cleaned_bam_filepaths    = select_all(cleaned_bam_passing),
+                raw_bam_filepaths        = flatten(illumina_demux.raw_reads_unaligned_bams),
                 demux_meta_json          = meta_filename.merged_json
         }
 

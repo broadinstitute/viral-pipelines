@@ -286,7 +286,7 @@ task merge_coverage_per_position {
 task coverage_report {
   input {
     Array[File]+ mapped_bams
-    Array[File]  mapped_bam_idx # optional.. speeds it up if you provide it, otherwise we auto-index
+    Array[File]  mapped_bam_idx = []  # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name = "coverage_report.txt"
 
     String       docker = "quay.io/broadinstitute/viral-core:2.4.1"
@@ -294,21 +294,21 @@ task coverage_report {
 
   Int disk_size = 375
 
-  command {
+  command <<<
     reports.py --version | tee VERSION
     reports.py coverage_only \
-      ${sep=' ' mapped_bams} \
-      ${out_report_name} \
+      ~{sep=' ' mapped_bams} \
+      "~{out_report_name}" \
       --loglevel DEBUG
-  }
+  >>>
 
   output {
-    File   coverage_report  = "${out_report_name}"
+    File   coverage_report  = "~{out_report_name}"
     String viralngs_version = read_string("VERSION")
   }
 
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: "2 GB"
     cpu: 2
     disks:  "local-disk " + disk_size + " LOCAL"
@@ -480,6 +480,14 @@ task align_and_count {
     else
       PCT_OF_INPUT_READS_MAPPED=$( echo "scale=3; 100 * ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT) / $TOTAL_READS_IN_INPUT" | \
       bc -l | awk '{printf "%.3f\n", $0}' | tee '~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt' )
+
+      if [ $TOTAL_COUNT_OF_TOP_HIT -ne 0 ]; then
+        PCT_TOP_HIT_OF_TOTAL_READS=$( echo "scale=3; 100 * ($TOTAL_COUNT_OF_TOP_HIT / $TOTAL_READS_IN_INPUT)" | \
+          bc -l | awk '{printf "%.3f\n", $0}' | tee '~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt' )
+      else
+        echo "PCT_TOP_HIT_OF_TOTAL_READS cannot be calculated: there were no mapping hits, or no reads"
+        PCT_TOP_HIT_OF_TOTAL_READS=$( echo "null" | tee '~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt')
+      fi
     fi
   >>>
 
@@ -493,8 +501,9 @@ task align_and_count {
     Int    reads_mapped_top_hit = read_int("TOTAL_COUNT_OF_TOP_HIT")
     Int    reads_mapped         = read_int("TOTAL_COUNT_OF_LESSER_HITS") + read_int("TOTAL_COUNT_OF_TOP_HIT")
 
-    String pct_total_reads_mapped    = read_string('~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt')
-    String pct_lesser_hits_of_mapped = read_string('~{reads_basename}.count.~{ref_basename}.pct_lesser_hits_of_mapped.txt')
+    String pct_total_reads_mapped     = read_string('~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt')
+    String pct_top_hit_of_total_reads = read_string('~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt')
+    String pct_lesser_hits_of_mapped  = read_string('~{reads_basename}.count.~{ref_basename}.pct_lesser_hits_of_mapped.txt')
     
     String viralngs_version = read_string("VERSION")
   }
