@@ -22,6 +22,7 @@ workflow genbank_single {
         String        organism_name
 
         String        email_address # required for fetching data from NCBI APIs
+        File          authors_sbt
 
         String?       biosample_attributes_json # if this is used, we will use this first
         File?         biosample_attributes_tsv # if no json, we will read this tsv
@@ -123,11 +124,30 @@ workflow genbank_single {
             annotations_tbl         = feature_tbl,
             source_modifier_table   = biosample_to_genbank.genbank_source_modifier_table,
             structured_comment_file = structured_comments_from_aligned_bam.structured_comment_file,
-            organism                = organism_name
+            organism                = organism_name,
+            authors_sbt             = authors_sbt
       }
     }
 
+    if(!genbank_special_taxa.table2asn_allowed) {
+      File fsa = assembly_fasta
+      File cmt = structured_comments_from_aligned_bam.structured_comment_file
+      File src = biosample_to_genbank.genbank_source_modifier_table
+      File sbt = authors_sbt
+    }
+
+#    GenbankSubmission submit_info = {
+#      "mechanism" :        genbank_special_taxa.genbank_submission_mechanism,
+#      "validation_clean" : ((length(select_first([table2asn.table2asn_errors, []])) == 0) && select_first([vadr.pass, true])),
+#      "sqn" :              table2asn.genbank_submission_sqn,
+#      "fsa" :              fsa,
+#      "cmt" :              cmt,
+#      "src" :              src,
+#      "sbt" :              sbt
+#    }
+
     output {
+        String        genbank_mechanism      = genbank_special_taxa.genbank_submission_mechanism
         File          genbank_comment_file   = structured_comments_from_aligned_bam.structured_comment_file
         File          genbank_source_table   = biosample_to_genbank.genbank_source_modifier_table
         String        genbank_isolate_name   = biosample_to_genbank.isolate_name
@@ -141,7 +161,7 @@ workflow genbank_single {
         File?         table2asn_val_file     = table2asn.genbank_validation_file
         Array[String] table2asn_errors       = select_first([table2asn.table2asn_errors, []])
 
-        # TO DO: add some conditionally present fields such as File? passing_sqn (only if no errors from vadr or table2asn) or File? passing_non_sqn_zips (for the four special non-table2asn taxa but only if their vadr is passing; zipping up the fsa, cmt, and src files)
+#        GenbankSubmission genbank_submit_info = submit_info
     }
 
 }

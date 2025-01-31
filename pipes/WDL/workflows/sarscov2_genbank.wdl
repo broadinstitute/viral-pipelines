@@ -126,7 +126,7 @@ workflow sarscov2_genbank {
             defaults_yaml = author_sbt_defaults_yaml,
             j2_template   = author_sbt_j2_template
     }
-    call ncbi.package_sc2_genbank_ftp_submission as passing_package_genbank {
+    call ncbi.package_special_genbank_ftp_submission as passing_package_genbank {
       input:
         sequences_fasta          = passing_fasta.combined,
         source_modifier_table    = passing_source_modifiers.genbank_source_modifier_table,
@@ -162,7 +162,7 @@ workflow sarscov2_genbank {
         assembly_stats_tsv = assembly_stats_tsv,
         filter_to_ids      = weird_ids.ids_txt
     }
-    call ncbi.package_sc2_genbank_ftp_submission as weird_package_genbank {
+    call ncbi.package_special_genbank_ftp_submission as weird_package_genbank {
       input:
         sequences_fasta          = weird_fasta.combined,
         source_modifier_table    = weird_source_modifiers.genbank_source_modifier_table,

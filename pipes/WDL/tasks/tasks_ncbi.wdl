@@ -1182,7 +1182,7 @@ task table2asn {
   }
 }
 
-task package_sc2_genbank_ftp_submission {
+task package_special_genbank_ftp_submission {
   meta {
     description: "Prepares a zip and xml file for FTP-based NCBI Genbank submission according to instructions at https://www.ncbi.nlm.nih.gov/viewvc/v1/trunk/submit/public-docs/genbank/SARS-CoV-2/."
   }
@@ -1195,6 +1195,7 @@ task package_sc2_genbank_ftp_submission {
     String submission_uid
     String spuid_namespace
     String account_name
+    String wizard="BankIt_SARSCoV2_api"
 
     String  docker = "quay.io/broadinstitute/viral-baseimage:0.2.0"
   }
@@ -1226,7 +1227,7 @@ task package_sc2_genbank_ftp_submission {
           <File file_path="$SPUID.zip">
             <DataType>genbank-submission-package</DataType>
           </File>
-          <Attribute name="wizard">BankIt_SARSCoV2_api</Attribute>
+          <Attribute name="wizard">~{wizard}</Attribute>
           <Identifier>
             <SPUID spuid_namespace="~{spuid_namespace}">$SPUID</SPUID>
           </Identifier>
@@ -1295,6 +1296,17 @@ task genbank_special_taxa {
     prohibited = any(node in table2asn_prohibited for node in this_and_ancestors)
     with open("table2asn_allowed.boolean", "wt") as outf:
       outf.write("false" if prohibited else "true")
+    with open("genbank_submission_mechanism.str", "wt") as outf:
+      if any(node in set(11320, 11520, 11552) for node in this_and_ancestors):
+        outf.write("Influenza")
+      elif any(node == 2697049 for node in this_and_ancestors):
+        outf.write("SARS-CoV-2")
+      elif any(node == 11983 for node in this_and_ancestors):
+        outf.write("Norovirus")
+      elif any(node == 3052464 for node in this_and_ancestors):
+        outf.write("Dengue")
+      else:
+        outf.write("table2asn")
 
     # VADR is an annotation tool that supports SC2, Flu A/B/C/D, Noro, Dengue, RSV A/B, MPXV, etc
     # https://github.com/ncbi/vadr/wiki/Available-VADR-model-files
@@ -1355,6 +1367,7 @@ task genbank_special_taxa {
 
   output {
     Boolean  table2asn_allowed     = read_boolean("table2asn_allowed.boolean")
+    String   genbank_submission_mechanism = read_string("genbank_submission_mechanism.str")
     Boolean  vadr_supported        = read_boolean("vadr_supported.boolean")
     String   vadr_cli_options      = read_string("vadr_cli_options.string")
     File     vadr_model_tar        = "vadr_model-~{taxid}.tar.gz"
@@ -1461,3 +1474,66 @@ task vadr {
     maxRetries: 2
   }
 }
+
+struct GenbankSubmission {
+  String      mechanism
+  Boolean     validation_clean
+  File?       sqn
+  File?       fsa
+  File?       cmt
+  File?       src
+  File?       sbt
+}
+
+#task package_genbank_submissions {
+#  input {
+#    Array[GenbankSubmission] submissions
+#    String                   spuid_base
+#
+#    File                     authors_sbt
+#
+#    String  docker = "quay.io/broadinstitute/viral-baseimage:0.2.0"
+#    Int     mem_size = 2
+#    Int     cpus = 1
+#  }
+#  command <<<
+#    set -e
+#
+#    python3 << CODE
+#
+#    CODE
+#
+#    zip genbank_submissions.zip ~{join(" ", [s.sqn s.fsa s.cmt s.src s.sbt])}
+#  >>>
+
+#  output {
+#    File  submit_sqns_clean_zip   = "~{spuid_base}_sqn_1.zip"
+#    File  submit_sqns_errors_zip  = "~{spuid_base}_sqn_2.zip"
+#    Int   num_sqns_clean
+#    Int   num_sqns_errors
+#    File  submit_flu_clean_zip    = "~{spuid_base}_flu_1.zip"
+#    File  submit_flu_errors_zip   = "~{spuid_base}_flu_2.zip"
+#    Int   num_flu_clean
+#    Int   num_flu_errors
+#    File  submit_sc2_clean_zip
+#    File  submit_sc2_errors_zip
+#    Int   num_sc2_clean
+#    Int   num_sc2_errors
+#    File  submit_noro_clean_zip
+#    File  submit_noro_errors_zip
+#    Int   num_noro_clean
+#    Int   num_noro_errors
+#    File  submit_dengue_clean_zip
+#    File  submit_dengue_errors_zip
+#    Int   num_dengue_clean
+#    Int   num_dengue_errors
+#  }
+
+#  runtime {
+#    docker: docker
+#    memory: mem_size + " GB"
+#    cpu: cpus
+#    dx_instance_type: "mem1_ssd1_v2_x2"
+#    maxRetries: 1
+#  }
+#}

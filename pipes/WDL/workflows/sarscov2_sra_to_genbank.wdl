@@ -202,7 +202,7 @@ workflow sarscov2_sra_to_genbank {
         assembly_stats_tsv = write_tsv(flatten([[['SeqID','Assembly Method','Coverage','Sequencing Technology']],select_all(assembly_cmt)])),
         filter_to_ids      = write_lines(select_all(submittable_id))
     }
-    call ncbi.package_sc2_genbank_ftp_submission as package_genbank_ftp_submission {
+    call ncbi.package_special_genbank_ftp_submission as package_genbank_ftp_submission {
       input:
         sequences_fasta          = submit_genomes.combined,
         source_modifier_table    = biosample_to_genbank.genbank_source_modifier_table,
