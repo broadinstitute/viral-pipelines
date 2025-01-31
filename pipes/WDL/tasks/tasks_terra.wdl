@@ -86,7 +86,7 @@ task check_terra_env {
 
       # if BATCH_JOB_UID has a value the job is running on GCP Batch
       # NOTE: PAPIv2 is deprecated and will be removed in the future
-      if [[ -n "$BATCH_JOB_UID" ]] || $(jq '.attributes | has("cloudbatch-job-uid")' gcp_instance_metadata.json); then
+      if [[ -n "$BATCH_JOB_UID" ]] || $(jq -rc '.attributes | has("cloudbatch-job-uid")' gcp_instance_metadata.json); then
         echo "Job appears to be running on GCP Batch"
         echo "true"  > RUNNING_ON_GCP_BATCH
       else
