@@ -60,7 +60,7 @@ task check_terra_env {
     touch top_level_submission_id.txt
 
     touch gcp_created_by_attributes.txt
-    touch gcp_instance_metadata.txt
+    touch gcp_instance_metadata.json
 
     # disable the version update alert messages gcloud sometimes emits when executing any command
     gcloud config set component_manager/disable_update_check true
@@ -78,11 +78,11 @@ task check_terra_env {
 
       GCLOUD_OAUTH_BEARER_TOKEN="$(gcloud auth print-access-token)"
 
-      curl -H "Metadata-Flavor: Google" \
+      curl -s -H "Metadata-Flavor: Google" \
         "http://metadata.google.internal/computeMetadata/v1/instance/attributes/created-by" | tee gcp_created_by_attributes.txt
 
       curl -s -H "Metadata-Flavor: Google" \
-        "http://metadata.google.internal/computeMetadata/v1/instance/?recursive=true" | tee gcp_instance_metadata.txt
+        "http://metadata.google.internal/computeMetadata/v1/instance/?recursive=true" | tee gcp_instance_metadata.json
 
 
 
