@@ -69,7 +69,7 @@ workflow genbank_single {
     }
 
     # Rename fasta
-    call util.rename_file as assembly_fsa {
+    call utils.rename_file as assembly_fsa {
         input:
             infile       = assembly_fasta,
             out_filename = assembly_id + ".fsa"
@@ -164,7 +164,7 @@ workflow genbank_single {
         File?         table2asn_val_file     = table2asn.genbank_validation_file
         Array[String] table2asn_errors       = select_first([table2asn.table2asn_errors, []])
 
-        Array[File]   genbank_submit_files   = flatten(select_all([[table2asn.genbank_submission_sqn], special_submit_files]))
+        Array[File]   genbank_submit_files   = select_all(flatten(select_all([[table2asn.genbank_submission_sqn], special_submit_files])))
     }
 
 }
