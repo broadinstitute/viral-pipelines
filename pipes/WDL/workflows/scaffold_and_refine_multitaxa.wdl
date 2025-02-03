@@ -39,7 +39,7 @@ workflow scaffold_and_refine_multitaxa {
         call ncbi.download_annotations {
             input:
                 accessions = string_split.tokens,
-                combined_out_prefix = taxon[3]
+                combined_out_prefix = sub(taxon[3], ":", "-")  # singularity does not like colons in filenames
         }
     }
 
