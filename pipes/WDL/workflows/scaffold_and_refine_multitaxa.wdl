@@ -95,7 +95,7 @@ workflow scaffold_and_refine_multitaxa {
             input:
                 tsv = taxid_to_ref_accessions_tsv,
                 idx_col = "accessions",
-                idx_val = scaffold.scaffolding_chosen_ref_basename,
+                idx_val = sub(scaffold.scaffolding_chosen_ref_basename, "-", ":"),
                 add_header = ["taxid", "isolate_prefix", "taxname", "accessions"]
         }
         String taxid = tax_lookup.map["taxid"]
