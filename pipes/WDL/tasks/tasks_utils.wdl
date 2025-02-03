@@ -992,16 +992,16 @@ task rename_file {
     File   infile
     String out_filename
   }
-  Int disk_size = 100
+  Int disk_size = 375
   command {
-    ln -s "~{infile}" "~{out_filename}"
+    cp "~{infile}" "~{out_filename}"
   }
   output {
     File out = "~{out_filename}"
   }
   runtime {
-    memory: "1 GB"
-    cpu: 1
+    memory: "2 GB"
+    cpu: 2
     docker: "ubuntu"
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
