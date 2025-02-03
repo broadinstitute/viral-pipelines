@@ -720,7 +720,7 @@ task refine_assembly_with_aligned_reads {
       Int      min_coverage = 3
 
       Int      machine_mem_gb = 15
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.3.6.1"
+      String   docker = "quay.io/broadinstitute/viral-assemble:dp-trim" #skip-global-version-pin
     }
 
     Int disk_size = 375
