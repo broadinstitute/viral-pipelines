@@ -1297,7 +1297,7 @@ task genbank_special_taxa {
     with open("table2asn_allowed.boolean", "wt") as outf:
       outf.write("false" if prohibited else "true")
     with open("genbank_submission_mechanism.str", "wt") as outf:
-      if any(node in set(11320, 11520, 11552) for node in this_and_ancestors):
+      if any(node in set((11320, 11520, 11552)) for node in this_and_ancestors):
         outf.write("Influenza")
       elif any(node == 2697049 for node in this_and_ancestors):
         outf.write("SARS-CoV-2")
