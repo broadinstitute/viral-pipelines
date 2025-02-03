@@ -780,11 +780,21 @@ task refine_assembly_with_aligned_reads {
           --JVMmemory "$mem_in_mb"m \
           --loglevel=DEBUG
 
+        # trim edges if they're too ambiguous or else table2asn will reject if first or last line of seq > 40% ambig
+        # (we don't really know how long the last line will be so use both the --ten and --fifty rules
+        # and basically disable the --maxfrac rule as we will handle that elsewhere)
+        fasta-trim-terminal-ambigs.pl --3rules \
+          --ten 4 \
+          --fifty 15 \
+          --maxfrac 0.9 \
+          refined.fasta > trimmed.fasta
+
+        # rename for external consumption
         file_utils.py rename_fasta_sequences \
-          refined.fasta "~{out_basename}.fasta" "~{sample_name}"
+          trimmed.fasta "~{out_basename}.fasta" "~{sample_name}"
 
         # collect variant counts
-        if (( $(cat refined.fasta | wc -l) > 1 )); then
+        if (( $(cat trimmed.fasta | wc -l) > 1 )); then
           bcftools filter -e "FMT/DP<~{min_coverage}" -S . "~{out_basename}.sites.vcf.gz" -Ou | bcftools filter -i "AC>1" -Ou > "~{out_basename}.diffs.vcf"
           bcftools filter -i 'TYPE="snp"'  "~{out_basename}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_snps
           bcftools filter -i 'TYPE!="snp"' "~{out_basename}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_indels
@@ -797,8 +807,8 @@ task refine_assembly_with_aligned_reads {
 
         # collect figures of merit
         set +o pipefail # grep will exit 1 if it fails to find the pattern
-        grep -v '^>' refined.fasta | tr -d '\n' | wc -c | tee assembly_length
-        grep -v '^>' refined.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
+        grep -v '^>' trimmed.fasta | tr -d '\n' | wc -c | tee assembly_length
+        grep -v '^>' trimmed.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
     >>>
 
     output {
