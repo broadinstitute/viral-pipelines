@@ -843,7 +843,7 @@ task biosample_to_genbank {
                   print("overriding geo_loc_name with food_origin")
                   row['geo_loc_name'] = row['food_origin']
 
-    with open("~{out_basename}.genbank.src", 'wt') as outf_smt:
+    with open("~{out_basename}.src", 'wt') as outf_smt:
       out_headers = list(h for h in out_headers_total if header_key_map.get(h,h) in in_headers)
       if 'db_xref' not in out_headers:
           out_headers.append('db_xref')
