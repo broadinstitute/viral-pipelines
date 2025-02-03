@@ -783,7 +783,6 @@ task refine_assembly_with_aligned_reads {
         # trim edges if they're too ambiguous or else table2asn will reject if first or last line of seq > 40% ambig
         # (we don't really know how long the last line will be so use both the --ten and --fifty rules
         # and basically disable the --maxfrac rule as we will handle that elsewhere)
-        export PERL5LIB=$PERL5LIB:/opt/miniconda/envs/viral-ngs-env/share/sequip-0.10/lib
         fasta-trim-terminal-ambigs.pl --3rules \
           --ten 4 \
           --fifty 15 \
