@@ -300,7 +300,8 @@ task coverage_report {
     python3 << CODE
     import tools.samtools
     import reports
-    in_bams = list([bam for bam in ["~{sep='", "' mapped_bams}"] if bam and not tools.samtools.isEmpty(bam)])
+    samtools = tools.samtools.SamtoolsTool()
+    in_bams = list([bam for bam in ["~{sep='", "' mapped_bams}"] if bam and not samtools.isEmpty(bam)])
     if in_bams:
       reports.coverage_only(in_bams, "~{out_report_name}")
     else:
