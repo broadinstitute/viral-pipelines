@@ -295,15 +295,22 @@ task coverage_report {
   Int disk_size = 375
 
   command <<<
+    set -e
     reports.py --version | tee VERSION
-    reports.py coverage_only \
-      ~{sep=' ' mapped_bams} \
-      "~{out_report_name}" \
-      --loglevel DEBUG
+    python3 << CODE
+    import tools.samtools
+    import reports
+    in_bams = list([bam for bam in ["~{sep='", "' mapped_bams}"] if bam and not tools.samtools.isEmpty(bam)])
+    if in_bams:
+      reports.coverage_only(in_bams, "~{out_report_name}")
+    else:
+      with open("~{out_report_name}", "w") as outf:
+        outf.write('\t'.join(('sample', 'aln2self_cov_median', 'aln2self_cov_mean', 'aln2self_cov_mean_non0', 'aln2self_cov_1X', 'aln2self_cov_5X', 'aln2self_cov_20X', 'aln2self_cov_100X'))+'\n')
+    CODE
   >>>
 
   output {
-    File   coverage_report  = "~{out_report_name}"
+    File   coverage_report  = out_report_name
     String viralngs_version = read_string("VERSION")
   }
 

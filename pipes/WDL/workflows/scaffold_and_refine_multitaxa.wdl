@@ -81,7 +81,8 @@ workflow scaffold_and_refine_multitaxa {
             call reports.coverage_report as coverage_self {
                 input:
                     mapped_bams = [refine.align_to_self_merged_aligned_only_bam],
-                    mapped_bam_idx = []
+                    mapped_bam_idx = [],
+                    out_report_name = "~{sample_id}.coverage_report.txt"
             }
             call utils.tsv_drop_cols as coverage_two_col {
                 input:
