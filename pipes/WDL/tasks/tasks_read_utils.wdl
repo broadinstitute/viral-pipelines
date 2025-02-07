@@ -368,8 +368,8 @@ task FastqToUBAM {
     String? additional_picard_options
 
     Int     cpus = 2
-    Int     mem_gb = 3
-    Int     disk_size = 375
+    Int     mem_gb = 4
+    Int     disk_size = 750
     String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
   }
   parameter_meta {
