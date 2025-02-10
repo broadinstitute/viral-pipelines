@@ -1503,7 +1503,7 @@ task package_genbank_submissions {
 
     # initialize counters and file lists for each submission category
     counts_by_type = {}
-    files_by_type {}
+    files_by_type = {}
     groups_total = list(m+"_"+v for m in ('table2asn', 'Influenza', 'SARS-CoV-2', 'Norovirus', 'Dengue') for v in ('clean', 'warnings'))
     for group in groups_total:
       counts_by_type[group] = 0
