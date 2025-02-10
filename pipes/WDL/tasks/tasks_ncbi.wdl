@@ -1510,7 +1510,7 @@ task package_genbank_submissions {
       files_by_type[group] = []
 
     # read manifest from genbank_single
-    for genome in json.loads("[~{sep=',' genbank_file_manifest}]"):
+    for genome in json.loads('[~{sep="," genbank_file_manifest}]'):
       group = genome['submission_type'] + '_' + ('clean' if genome['validation_passing'] else 'warnings')
       counts_by_type[group] += 1
       files_by_type[group].extend(genome['files'])
