@@ -135,6 +135,9 @@ workflows:
   - name: filter_sequences
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/filter_sequences.wdl
+  - name: genbank_gather
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/genbank_gather.wdl
   - name: genbank_single
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/genbank_single.wdl
