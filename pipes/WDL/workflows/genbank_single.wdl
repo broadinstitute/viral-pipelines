@@ -147,11 +147,12 @@ workflow genbank_single {
       Array[File] special_submit_files = [assembly_fsa.out,
         structured_comments_from_aligned_bam.structured_comment_file,
         biosample_to_genbank.genbank_source_modifier_table]
+      String special_basename_list = '["~{assembly_id}.fsa", "~{assembly_id}.cmt", "~{assembly_id}.src"]'
     }
+    String basename_list_json = select_first([special_basename_list, '["~{assembly_id}.sqn"]'])
 
     scatter(submit_file in select_all(flatten(select_all([[table2asn.genbank_submission_sqn], special_submit_files])))) {
       File   submit_files = submit_file
-      String submit_basenames = basename(submit_file)
     }
 
     output {
@@ -171,7 +172,7 @@ workflow genbank_single {
         Boolean?      table2asn_pass         = table2asn.table2asn_passing
 
         Array[File]   genbank_submit_files   = submit_files
-        String        genbank_file_manifest  = '{"submission_type": "~{genbank_special_taxa.genbank_submission_mechanism}", "validation_passing": ~{select_first([vadr.pass, true]) && select_first([table2asn.table2asn_passing, true])}, "files": ~{read_string(write_json(submit_basenames))}}'
+        String        genbank_file_manifest  = '{"submission_type": "~{genbank_special_taxa.genbank_submission_mechanism}", "validation_passing": ~{select_first([vadr.pass, true]) && select_first([table2asn.table2asn_passing, true])}, "files": ~{basename_list_json}}'
     }
 
 }
