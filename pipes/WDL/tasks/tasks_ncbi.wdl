@@ -1171,6 +1171,7 @@ task table2asn {
     File          genbank_validation_file  = "~{out_basename}.val"
     Array[String] table2asn_errors         = read_lines("~{out_basename}.val")
     String        table2asn_version        = read_string("TABLE2ASN_VERSION")
+    Boolean       table2asn_passing        = length(read_lines("~{out_basename}.val")) == 0
   }
 
   runtime {
@@ -1475,63 +1476,116 @@ task vadr {
   }
 }
 
-#task package_genbank_submissions {
-#  input {
-#    Array[String]   mechanism
-#    Array[Boolean]  validation_clean
+task package_genbank_submissions {
+  # TO DO: output submission.xml files too
+  input {
+    Array[String]   genbank_file_manifest
+    Array[File]     genbank_submit_files
 
-#    -- at the end of the day I need these four files to have predictable filenames
-#    Array[File?]    sqn
-#    Array[File?]    fsa
-#    Array[File?]    cmt
-#    Array[File?]    src
+    String          spuid_base
+    String          spuid_namespace
+    File            authors_sbt
 
-#    String          spuid_base
-#    String          spuid_namespace
-#    File            authors_sbt
+    String          docker = "quay.io/broadinstitute/viral-baseimage:0.2.0"
+    Int             mem_size = 2
+    Int             cpus = 1
+  }
+  command <<<
+    set -e
 
-#    String          docker = "quay.io/broadinstitute/viral-baseimage:0.2.0"
-#    Int             mem_size = 2
-#    Int             cpus = 1
-#  }
-#  command <<<
-#    set -e
-#
-#    python3 << CODE
-#
-#    CODE
-#
-#    zip genbank_submissions.zip ~{join(" ", [s.sqn s.fsa s.cmt s.src s.sbt])}
-#  >>>
+    # bring everything into CWD -- at this point we are sure all files are uniquely named / no collisions
+    cp "~{sep='" "' genbank_submit_files}" .
+    cp "~{authors_sbt}" template.sbt
 
-#  output {
-#    File  submit_sqns_clean_zip   = "~{spuid_base}_sqn_1.zip"
-#    File  submit_sqns_errors_zip  = "~{spuid_base}_sqn_2.zip"
-#    Int   num_sqns_clean
-#    Int   num_sqns_errors
-#    File  submit_flu_clean_zip    = "~{spuid_base}_flu_1.zip"
-#    File  submit_flu_errors_zip   = "~{spuid_base}_flu_2.zip"
-#    Int   num_flu_clean
-#    Int   num_flu_errors
-#    File  submit_sc2_clean_zip
-#    File  submit_sc2_errors_zip
-#    Int   num_sc2_clean
-#    Int   num_sc2_errors
-#    File  submit_noro_clean_zip
-#    File  submit_noro_errors_zip
-#    Int   num_noro_clean
-#    Int   num_noro_errors
-#    File  submit_dengue_clean_zip
-#    File  submit_dengue_errors_zip
-#    Int   num_dengue_clean
-#    Int   num_dengue_errors
-#  }
+    python3 << CODE
+    import json
+    import zipfile
 
-#  runtime {
-#    docker: docker
-#    memory: mem_size + " GB"
-#    cpu: cpus
-#    dx_instance_type: "mem1_ssd1_v2_x2"
-#    maxRetries: 1
-#  }
-#}
+    # initialize counters and file lists for each submission category
+    counts_by_type = {}
+    files_by_type {}
+    groups_total = list(m+"_"+v for m in ('table2asn', 'Influenza', 'SARS-CoV-2', 'Norovirus', 'Dengue') for v in ('clean', 'warnings'))
+    for group in groups_total:
+      counts_by_type[group] = 0
+      files_by_type[group] = []
+
+    # read manifest from genbank_single
+    for genome in json.loads("[~{sep=',' genbank_file_manifest}]"):
+      group = genome['submission_type'] + '_' + ('clean' if genome['validation_passing'] else 'warnings')
+      counts_by_type[group] += 1
+      files_by_type[group].extend(genome['files'])
+
+    # write and bundle outputs
+    for group in groups_total:
+      with open("count_"+group+".int", 'wt') as outf:
+        outf.write(str(counts_by_type[group]))
+      if counts_by_type[group]:
+        if group.startswith('table2asn'):
+          # bundle the sqn files together and that's it
+          with zipfile.ZipFile("~{spuid_base}_" + group + ".zip", 'w') as zf:
+            for fname in files_by_type[group]:
+              zf.write(fname)
+        else:
+          # for special submissions, merge each individual file type
+          with open("sequences.fsa", 'wt') as out_fsa:
+            with open("comment.cmt", 'wt') as out_cmt:
+              with open("source.src", 'wt') as out_src:
+                src_header = ""
+                cmt_header = ""
+                for fname in files_by_type[group]:
+                  if fname.endswith('.fsa') or fname.endswith('.fasta'):
+                    with open(fname) as inf:
+                      out_fsa.write(inf.read())
+                  elif fname.endswith('.cmt'):
+                    with open(fname) as inf:
+                      header = inf.readline()
+                      if cmt_header:
+                        assert header == cmt_header
+                      else:
+                        cmt_header = header
+                      out_cmt.write(inf.read())
+                  elif fname.endswith('.src'):
+                    with open(fname) as inf:
+                      header = inf.readline()
+                      if src_header:
+                        assert header == src_header
+                      else:
+                        src_header = header
+                      out_src.write(inf.read())
+          with zipfile.ZipFile("~{spuid_base}_" + group + ".zip", 'w') as zf:
+            for fname in ('sequences.fsa', 'comment.cmt', 'source.src', 'template.sbt'):
+              zf.write(fname)
+    CODE
+  >>>
+
+  output {
+    File? submit_sqns_clean_zip       = "~{spuid_base}_table2asn_clean.zip"
+    File? submit_sqns_warnings_zip    = "~{spuid_base}_table2asn_warnings.zip"
+    Int   num_sqns_clean              = read_int("count_table2asn_clean.int")
+    Int   num_sqns_warnings           = read_int("count_table2asn_warnings.int")
+    File? submit_flu_clean_zip        = "~{spuid_base}_Influenza_clean.zip"
+    File? submit_flu_warnings_zip     = "~{spuid_base}_Influenza_warnings.zip"
+    Int   num_flu_clean               = read_int("count_Influenza_clean.int")
+    Int   num_flu_warnings            = read_int("count_Influenza_warnings.int")
+    File? submit_sc2_clean_zip        = "~{spuid_base}_SARS-CoV-2_clean.zip"
+    File? submit_sc2_warnings_zip     = "~{spuid_base}_SARS-CoV-2_warnings.zip"
+    Int   num_sc2_clean               = read_int("count_SARS-CoV-2_clean.int")
+    Int   num_sc2_warnings            = read_int("count_SARS-CoV-2_warnings.int")
+    File? submit_noro_clean_zip       = "~{spuid_base}_Norovirus_clean.zip"
+    File? submit_noro_warnings_zip    = "~{spuid_base}_Norovirus_warnings.zip"
+    Int   num_noro_clean              = read_int("count_Norovirus_clean.int")
+    Int   num_noro_warnings           = read_int("count_Norovirus_warnings.int")
+    File? submit_dengue_clean_zip     = "~{spuid_base}_Dengue_clean.zip"
+    File? submit_dengue_warnings_zip  = "~{spuid_base}_Dengue_warnings.zip"
+    Int   num_dengue_clean            = read_int("count_Dengue_clean.int")
+    Int   num_dengue_warnings         = read_int("count_Dengue_warnings.int")
+  }
+
+  runtime {
+    docker: docker
+    memory: mem_size + " GB"
+    cpu: cpus
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 1
+  }
+}

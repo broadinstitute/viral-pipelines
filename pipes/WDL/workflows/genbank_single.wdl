@@ -149,6 +149,11 @@ workflow genbank_single {
         biosample_to_genbank.genbank_source_modifier_table]
     }
 
+    scatter(submit_file in select_all(flatten(select_all([[table2asn.genbank_submission_sqn], special_submit_files])))) {
+      File   submit_files = submit_file
+      String submit_basenames = basename(submit_file)
+    }
+
     output {
         String        genbank_mechanism      = genbank_special_taxa.genbank_submission_mechanism
         File          genbank_comment_file   = structured_comments_from_aligned_bam.structured_comment_file
@@ -163,8 +168,10 @@ workflow genbank_single {
         File?         genbank_preview_file   = table2asn.genbank_preview_file
         File?         table2asn_val_file     = table2asn.genbank_validation_file
         Array[String] table2asn_errors       = select_first([table2asn.table2asn_errors, []])
+        Boolean?      table2asn_pass         = table2asn.table2asn_passing
 
-        Array[File]   genbank_submit_files   = select_all(flatten(select_all([[table2asn.genbank_submission_sqn], special_submit_files])))
+        Array[File]   genbank_submit_files   = submit_files
+        String        genbank_file_manifest  = '{"submission_type": "~{genbank_special_taxa.genbank_submission_mechanism}", "validation_passing": ~{select_first([vadr.pass, true]) && select_first([table2asn.table2asn_passing, true])}, "files": ~{read_string(write_json(submit_basenames))}}'
     }
 
 }
