@@ -2,7 +2,6 @@ version 1.0
 
 import "../tasks/tasks_assembly.wdl" as assembly
 import "../tasks/tasks_ncbi.wdl" as ncbi
-import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_utils.wdl" as utils
 import "assemble_refbased.wdl" as assemble_refbased
 
