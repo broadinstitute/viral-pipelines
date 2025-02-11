@@ -1358,10 +1358,6 @@ task genbank_special_taxa {
 
     if out_vadr_model_tar_url:
       urllib.request.urlretrieve(out_vadr_model_tar_url, "vadr_model-~{taxid}.tar.gz")
-    else:
-      # I'd rather emit a null value but not sure how
-      with tarfile.open("vadr_model-~{taxid}.tar.gz", "w:gz") as out_tar:
-        pass
 
     CODE
   >>>
@@ -1371,7 +1367,7 @@ task genbank_special_taxa {
     String   genbank_submission_mechanism = read_string("genbank_submission_mechanism.str")
     Boolean  vadr_supported        = read_boolean("vadr_supported.boolean")
     String   vadr_cli_options      = read_string("vadr_cli_options.string")
-    File     vadr_model_tar        = "vadr_model-~{taxid}.tar.gz"
+    File?    vadr_model_tar        = "vadr_model-~{taxid}.tar.gz"
     String   vadr_model_tar_subdir = read_string("vadr_model_tar_subdir.str")
     Int      vadr_taxid            = read_int("vadr_taxid.int")
     Int      vadr_min_ram_gb       = read_int("vadr_min_ram_gb.int")
