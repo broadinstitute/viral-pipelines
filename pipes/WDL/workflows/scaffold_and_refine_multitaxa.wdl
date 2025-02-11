@@ -78,17 +78,6 @@ workflow scaffold_and_refine_multitaxa {
                     sample_name          = sample_id,
                     sample_original_name = sample_original_name
             }
-            call reports.coverage_report as coverage_self {
-                input:
-                    mapped_bams = [refine.align_to_self_merged_aligned_only_bam],
-                    mapped_bam_idx = [],
-                    out_report_name = "~{sample_id}.coverage_report.txt"
-            }
-            call utils.tsv_drop_cols as coverage_two_col {
-                input:
-                    in_tsv = coverage_self.coverage_report,
-                    drop_cols = ["aln2self_cov_median", "aln2self_cov_mean_non0", "aln2self_cov_1X", "aln2self_cov_5X", "aln2self_cov_20X", "aln2self_cov_100X"]
-            }
         }
 
         # get taxid and taxname from taxid_to_ref_accessions_tsv
@@ -185,7 +174,6 @@ workflow scaffold_and_refine_multitaxa {
         File   assembly_stats_by_taxon_tsv                 = select_first([assembly_stats_non_empty.combined, assembly_stats_empty.combined])
         String assembly_method                             = "viral-ngs/scaffold_and_refine_multitaxa"
 
-        #String assembly_top_taxon_id               = select_references.top_matches_per_cluster_basenames[0]
         Int    skani_num_ref_clusters              = length(select_references.matched_reference_clusters_fastas_tars)
         File   skani_contigs_to_refs_dist_tsv      = select_references.skani_dist_full_tsv
 
