@@ -295,15 +295,23 @@ task coverage_report {
   Int disk_size = 375
 
   command <<<
+    set -e
     reports.py --version | tee VERSION
-    reports.py coverage_only \
-      ~{sep=' ' mapped_bams} \
-      "~{out_report_name}" \
-      --loglevel DEBUG
+    python3 << CODE
+    import tools.samtools
+    import reports
+    samtools = tools.samtools.SamtoolsTool()
+    in_bams = list([bam for bam in ["~{sep='", "' mapped_bams}"] if bam and not samtools.isEmpty(bam)])
+    if in_bams:
+      reports.coverage_only(in_bams, "~{out_report_name}")
+    else:
+      with open("~{out_report_name}", "w") as outf:
+        outf.write('\t'.join(('sample', 'aln2self_cov_median', 'aln2self_cov_mean', 'aln2self_cov_mean_non0', 'aln2self_cov_1X', 'aln2self_cov_5X', 'aln2self_cov_20X', 'aln2self_cov_100X'))+'\n')
+    CODE
   >>>
 
   output {
-    File   coverage_report  = "~{out_report_name}"
+    File   coverage_report  = out_report_name
     String viralngs_version = read_string("VERSION")
   }
 
@@ -477,6 +485,8 @@ task align_and_count {
     if [ $TOTAL_READS_IN_INPUT -eq 0 ]; then
       echo "no reads in input bam"
       PCT_OF_INPUT_READS_MAPPED=$(echo "0" | tee "~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt")
+      echo "PCT_TOP_HIT_OF_TOTAL_READS cannot be calculated: there were no mapping hits, or no reads"
+      PCT_TOP_HIT_OF_TOTAL_READS=$( echo "null" | tee '~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt')
     else
       PCT_OF_INPUT_READS_MAPPED=$( echo "scale=3; 100 * ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT) / $TOTAL_READS_IN_INPUT" | \
       bc -l | awk '{printf "%.3f\n", $0}' | tee '~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt' )
@@ -707,7 +717,7 @@ task compare_two_genomes {
     File   genome_two
     String out_basename
 
-    String docker = "quay.io/broadinstitute/viral-assemble:2.3.6.1"
+    String docker = "quay.io/broadinstitute/viral-assemble:2.4.1.0"
   }
 
   Int disk_size = 50

@@ -15,6 +15,7 @@ workflow genbank_single {
 
     input {
         File          assembly_fasta
+        String        assembly_id = basename(assembly_fasta, ".fasta")
         String        ref_accessions_colon_delim
 
         String        biosample_accession
@@ -22,6 +23,7 @@ workflow genbank_single {
         String        organism_name
 
         String        email_address # required for fetching data from NCBI APIs
+        File          authors_sbt
 
         String?       biosample_attributes_json # if this is used, we will use this first
         File?         biosample_attributes_tsv # if no json, we will read this tsv
@@ -66,6 +68,13 @@ workflow genbank_single {
         taxid = tax_id
     }
 
+    # Rename fasta
+    call utils.rename_file as assembly_fsa {
+        input:
+            infile       = assembly_fasta,
+            out_filename = assembly_id + ".fsa"
+    }
+
     # Annotate genes
     ## fetch reference genome sequences and annoations
     call utils.string_split {
@@ -89,7 +98,8 @@ workflow genbank_single {
             num_segments           = length(string_split.tokens),
             taxid                  = tax_id,
             organism_name_override = organism_name,
-            filter_to_accession    = biosample_accession
+            filter_to_accession    = biosample_accession,
+            out_basename           = assembly_id
     }
 
     ## annotate genes, either by VADR or by naive coordinate liftover
@@ -98,7 +108,8 @@ workflow genbank_single {
         input:
             genome_fasta             = assembly_fasta,
             reference_fastas         = flatten(download_annotations.genomes_fasta),
-            reference_feature_tables = flatten(download_annotations.features_tbl)
+            reference_feature_tables = flatten(download_annotations.features_tbl),
+            out_basename             = assembly_id
       }
     }
     if(genbank_special_taxa.vadr_supported) {
@@ -109,12 +120,16 @@ workflow genbank_single {
           vadr_opts             = genbank_special_taxa.vadr_cli_options,
           vadr_model_tar        = genbank_special_taxa.vadr_model_tar,
           vadr_model_tar_subdir = genbank_special_taxa.vadr_model_tar_subdir,
-          mem_size              = genbank_special_taxa.vadr_min_ram_gb
+          mem_size              = genbank_special_taxa.vadr_min_ram_gb,
+          out_basename          = assembly_id
       }
     }
     File feature_tbl   = select_first([vadr.feature_tbl, annot.feature_tbl])
 
-    call ncbi.structured_comments_from_aligned_bam
+    call ncbi.structured_comments_from_aligned_bam {
+      input:
+        out_basename = assembly_id
+    }
 
     if(genbank_special_taxa.table2asn_allowed) {
       call ncbi.table2asn {
@@ -123,11 +138,25 @@ workflow genbank_single {
             annotations_tbl         = feature_tbl,
             source_modifier_table   = biosample_to_genbank.genbank_source_modifier_table,
             structured_comment_file = structured_comments_from_aligned_bam.structured_comment_file,
-            organism                = organism_name
+            organism                = organism_name,
+            authors_sbt             = authors_sbt,
+            out_basename            = assembly_id
       }
+    }
+    if(!genbank_special_taxa.table2asn_allowed) {
+      Array[File] special_submit_files = [assembly_fsa.out,
+        structured_comments_from_aligned_bam.structured_comment_file,
+        biosample_to_genbank.genbank_source_modifier_table]
+      String special_basename_list = '["~{assembly_id}.fsa", "~{assembly_id}.cmt", "~{assembly_id}.src"]'
+    }
+    String basename_list_json = select_first([special_basename_list, '["~{assembly_id}.sqn"]'])
+
+    scatter(submit_file in select_all(flatten(select_all([[table2asn.genbank_submission_sqn], special_submit_files])))) {
+      File   submit_files = submit_file
     }
 
     output {
+        String        genbank_mechanism      = genbank_special_taxa.genbank_submission_mechanism
         File          genbank_comment_file   = structured_comments_from_aligned_bam.structured_comment_file
         File          genbank_source_table   = biosample_to_genbank.genbank_source_modifier_table
         String        genbank_isolate_name   = biosample_to_genbank.isolate_name
@@ -140,8 +169,10 @@ workflow genbank_single {
         File?         genbank_preview_file   = table2asn.genbank_preview_file
         File?         table2asn_val_file     = table2asn.genbank_validation_file
         Array[String] table2asn_errors       = select_first([table2asn.table2asn_errors, []])
+        Boolean?      table2asn_pass         = table2asn.table2asn_passing
 
-        # TO DO: add some conditionally present fields such as File? passing_sqn (only if no errors from vadr or table2asn) or File? passing_non_sqn_zips (for the four special non-table2asn taxa but only if their vadr is passing; zipping up the fsa, cmt, and src files)
+        Array[File]   genbank_submit_files   = submit_files
+        String        genbank_file_manifest  = '{"submission_type": "~{genbank_special_taxa.genbank_submission_mechanism}", "validation_passing": ~{select_first([vadr.pass, true]) && select_first([table2asn.table2asn_passing, true])}, "files": ~{basename_list_json}}'
     }
 
 }

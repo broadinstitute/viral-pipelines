@@ -367,9 +367,11 @@ task FastqToUBAM {
     String? sequencing_center
     String? additional_picard_options
 
+    Int     cpus = 2
+    Int     mem_gb = 4
+    Int     disk_size = 750
     String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
   }
-  Int disk_size = 375
   parameter_meta {
     fastq_1: { description: "Unaligned read1 file in fastq format", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }
     fastq_2: { description: "Unaligned read2 file in fastq format. This should be empty for single-end read conversion and required for paired-end reads. If provided, it must match fastq_1 in length and order.", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }
@@ -401,8 +403,8 @@ task FastqToUBAM {
   }
   runtime {
     docker: docker
-    cpu: 2
-    memory: "3 GB"
+    cpu: cpus
+    memory: mem_gb + " GB"
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"

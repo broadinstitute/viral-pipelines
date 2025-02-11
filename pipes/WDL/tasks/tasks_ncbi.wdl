@@ -132,9 +132,9 @@ task align_and_annot_transfer_single {
     Array[File]+ reference_fastas
     Array[File]+ reference_feature_tables
 
+    String       out_basename = basename(genome_fasta, '.fasta')
     String       docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
   }
-  String out_base = basename(genome_fasta, '.fasta')
 
   parameter_meta {
     genome_fasta: {
@@ -162,11 +162,11 @@ task align_and_annot_transfer_single {
         --ref_tbls ~{sep=' ' reference_feature_tables} \
         --oob_clip \
         --loglevel DEBUG
-    cat out/*.tbl > "~{out_base}.tbl"
+    cat out/*.tbl > "~{out_basename}.tbl"
   >>>
 
   output {
-    File         feature_tbl           = "~{out_base}.tbl"
+    File         feature_tbl           = "~{out_basename}.tbl"
     #Array[File]+ genome_per_chr_tbls   = glob("out/*.tbl")
     #Array[File]+ genome_per_chr_fastas = glob("out/*.fasta")
     String       viralngs_version      = read_string("VERSION")
@@ -238,10 +238,10 @@ task structured_comments_from_aligned_bam {
     String  assembly_method
     String  assembly_method_version
 
+    String  out_basename = basename(aligned_bam, '.bam')
     Boolean is_genome_assembly = true
     String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
   }
-  String out_basename = basename(aligned_bam, '.bam')
   # see https://www.ncbi.nlm.nih.gov/genbank/structuredcomment/
   command <<<
     set -e
@@ -742,9 +742,9 @@ task biosample_to_genbank {
 
     Boolean sanitize_seq_ids = true
 
+    String  out_basename = basename(basename(biosample_attributes, ".txt"), ".tsv")
     String  docker = "python:slim"
   }
-  String base = basename(basename(biosample_attributes, ".txt"), ".tsv")
   command <<<
     set -e
     python3<<CODE
@@ -843,7 +843,7 @@ task biosample_to_genbank {
                   print("overriding geo_loc_name with food_origin")
                   row['geo_loc_name'] = row['food_origin']
 
-    with open("~{base}.genbank.src", 'wt') as outf_smt:
+    with open("~{out_basename}.src", 'wt') as outf_smt:
       out_headers = list(h for h in out_headers_total if header_key_map.get(h,h) in in_headers)
       if 'db_xref' not in out_headers:
           out_headers.append('db_xref')
@@ -853,7 +853,7 @@ task biosample_to_genbank {
           out_headers.append('serotype')
       outf_smt.write('\t'.join(out_headers)+'\n')
 
-      with open("~{base}.sample_ids.txt", 'wt') as outf_ids:
+      with open("~{out_basename}.sample_ids.txt", 'wt') as outf_ids:
           for row in biosample_attributes:
             # Influenza-specific requirement
             if row['organism'].startswith('Influenza'):
@@ -937,8 +937,8 @@ task biosample_to_genbank {
     CODE
   >>>
   output {
-    File   genbank_source_modifier_table = "~{base}.genbank.src"
-    File   sample_ids                    = "~{base}.sample_ids.txt"
+    File   genbank_source_modifier_table = "~{out_basename}.src"
+    File   sample_ids                    = "~{out_basename}.sample_ids.txt"
     String isolate_name                  = read_string("isolate_name.str")
   }
   runtime {
@@ -1111,11 +1111,11 @@ task table2asn {
     String       mol_type = "cRNA"
     Int          genetic_code = 1
 
+    String       out_basename = basename(assembly_fasta, ".fasta")
     Int          machine_mem_gb = 3
     String       docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"  # this could be a simpler docker image, we don't use anything beyond table2asn itself
   }
 
-  String out_basename = basename(assembly_fasta, ".fasta")
 
   parameter_meta {
     assembly_fasta: {
@@ -1171,6 +1171,7 @@ task table2asn {
     File          genbank_validation_file  = "~{out_basename}.val"
     Array[String] table2asn_errors         = read_lines("~{out_basename}.val")
     String        table2asn_version        = read_string("TABLE2ASN_VERSION")
+    Boolean       table2asn_passing        = length(read_lines("~{out_basename}.val")) == 0
   }
 
   runtime {
@@ -1182,7 +1183,7 @@ task table2asn {
   }
 }
 
-task package_sc2_genbank_ftp_submission {
+task package_special_genbank_ftp_submission {
   meta {
     description: "Prepares a zip and xml file for FTP-based NCBI Genbank submission according to instructions at https://www.ncbi.nlm.nih.gov/viewvc/v1/trunk/submit/public-docs/genbank/SARS-CoV-2/."
   }
@@ -1195,6 +1196,7 @@ task package_sc2_genbank_ftp_submission {
     String submission_uid
     String spuid_namespace
     String account_name
+    String wizard="BankIt_SARSCoV2_api"
 
     String  docker = "quay.io/broadinstitute/viral-baseimage:0.2.0"
   }
@@ -1226,7 +1228,7 @@ task package_sc2_genbank_ftp_submission {
           <File file_path="$SPUID.zip">
             <DataType>genbank-submission-package</DataType>
           </File>
-          <Attribute name="wizard">BankIt_SARSCoV2_api</Attribute>
+          <Attribute name="wizard">~{wizard}</Attribute>
           <Identifier>
             <SPUID spuid_namespace="~{spuid_namespace}">$SPUID</SPUID>
           </Identifier>
@@ -1295,6 +1297,17 @@ task genbank_special_taxa {
     prohibited = any(node in table2asn_prohibited for node in this_and_ancestors)
     with open("table2asn_allowed.boolean", "wt") as outf:
       outf.write("false" if prohibited else "true")
+    with open("genbank_submission_mechanism.str", "wt") as outf:
+      if any(node in set((11320, 11520, 11552)) for node in this_and_ancestors):
+        outf.write("Influenza")
+      elif any(node == 2697049 for node in this_and_ancestors):
+        outf.write("SARS-CoV-2")
+      elif any(node == 11983 for node in this_and_ancestors):
+        outf.write("Norovirus")
+      elif any(node == 3052464 for node in this_and_ancestors):
+        outf.write("Dengue")
+      else:
+        outf.write("table2asn")
 
     # VADR is an annotation tool that supports SC2, Flu A/B/C/D, Noro, Dengue, RSV A/B, MPXV, etc
     # https://github.com/ncbi/vadr/wiki/Available-VADR-model-files
@@ -1355,6 +1368,7 @@ task genbank_special_taxa {
 
   output {
     Boolean  table2asn_allowed     = read_boolean("table2asn_allowed.boolean")
+    String   genbank_submission_mechanism = read_string("genbank_submission_mechanism.str")
     Boolean  vadr_supported        = read_boolean("vadr_supported.boolean")
     String   vadr_cli_options      = read_string("vadr_cli_options.string")
     File     vadr_model_tar        = "vadr_model-~{taxid}.tar.gz"
@@ -1386,11 +1400,11 @@ task vadr {
     File?   vadr_model_tar
     String? vadr_model_tar_subdir
 
+    String out_basename = basename(genome_fasta, '.fasta')
     String docker = "quay.io/staphb/vadr:1.6.3"
     Int    mem_size = 16  # the RSV model in particular seems to consume 15GB RAM
     Int    cpus = 4
   }
-  String out_base = basename(genome_fasta, '.fasta')
   command <<<
     set -e
     # unpack custom VADR models or use default
@@ -1414,41 +1428,41 @@ task vadr {
       "~{genome_fasta}" \
       ~{'--minlen ' + minlen} \
       ~{'--maxlen ' + maxlen} \
-      > "~{out_base}.fasta"
+      > "~{out_basename}.fasta"
 
     # run VADR
     v-annotate.pl \
       ~{default='' vadr_opts} \
       --split --cpu `nproc` \
       --mdir "$VADR_MODEL_DIR" \
-      "~{out_base}.fasta" \
-      "~{out_base}"
+      "~{out_basename}.fasta" \
+      "~{out_basename}"
 
     # package everything for output
-    tar -C "~{out_base}" -czvf "~{out_base}.vadr.tar.gz" .
+    tar -C "~{out_basename}" -czvf "~{out_basename}.vadr.tar.gz" .
 
     # get the gene annotations (feature table)
     # the vadr.fail.tbl sometimes contains junk / invalid content that needs to be filtered out
-    cat "~{out_base}/~{out_base}.vadr.pass.tbl" \
-        "~{out_base}/~{out_base}.vadr.fail.tbl" \
+    cat "~{out_basename}/~{out_basename}.vadr.pass.tbl" \
+        "~{out_basename}/~{out_basename}.vadr.fail.tbl" \
        | sed '/Additional note/,$d' \
-        > "~{out_base}.vadr.tbl"
+        > "~{out_basename}.tbl"
 
     # prep alerts into a tsv file for parsing
-    cat "~{out_base}/~{out_base}.vadr.alt.list" | cut -f 5 | tail -n +2 \
-      > "~{out_base}.vadr.alerts.tsv"
-    cat "~{out_base}.vadr.alerts.tsv" | wc -l > NUM_ALERTS
+    cat "~{out_basename}/~{out_basename}.vadr.alt.list" | cut -f 5 | tail -n +2 \
+      > "~{out_basename}.vadr.alerts.tsv"
+    cat "~{out_basename}.vadr.alerts.tsv" | wc -l > NUM_ALERTS
 
     # record peak memory usage
     set +o pipefail
     { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } | tee MEM_BYTES
   >>>
   output {
-    File                 feature_tbl = "~{out_base}.vadr.tbl"
+    File                 feature_tbl = "~{out_basename}.tbl"
     Int                  num_alerts  = read_int("NUM_ALERTS")
-    File                 alerts_list = "~{out_base}/~{out_base}.vadr.alt.list"
-    Array[String]        alerts      = read_lines("~{out_base}.vadr.alerts.tsv")
-    File                 outputs_tgz = "~{out_base}.vadr.tar.gz"
+    File                 alerts_list = "~{out_basename}/~{out_basename}.vadr.alt.list"
+    Array[String]        alerts      = read_lines("~{out_basename}.vadr.alerts.tsv")
+    File                 outputs_tgz = "~{out_basename}.vadr.tar.gz"
     Boolean              pass        = num_alerts==0
     String               vadr_docker = docker
     Int                  max_ram_gb  = ceil(read_float("MEM_BYTES")/1000000000)
@@ -1459,5 +1473,119 @@ task vadr {
     cpu: cpus
     dx_instance_type: "mem2_ssd1_v2_x4"
     maxRetries: 2
+  }
+}
+
+task package_genbank_submissions {
+  # TO DO: output submission.xml files too
+  input {
+    Array[String]   genbank_file_manifest
+    Array[File]     genbank_submit_files
+
+    String          spuid_base
+    String          spuid_namespace
+    File            authors_sbt
+
+    String          docker = "quay.io/broadinstitute/viral-baseimage:0.2.0"
+    Int             mem_size = 2
+    Int             cpus = 1
+  }
+  command <<<
+    set -e
+
+    # bring everything into CWD -- at this point we are sure all files are uniquely named / no collisions
+    cp "~{sep='" "' genbank_submit_files}" .
+    cp "~{authors_sbt}" template.sbt
+
+    python3 << CODE
+    import json
+    import zipfile
+
+    # initialize counters and file lists for each submission category
+    counts_by_type = {}
+    files_by_type = {}
+    groups_total = list(m+"_"+v for m in ('table2asn', 'Influenza', 'SARS-CoV-2', 'Norovirus', 'Dengue') for v in ('clean', 'warnings'))
+    for group in groups_total:
+      counts_by_type[group] = 0
+      files_by_type[group] = []
+
+    # read manifest from genbank_single
+    for genome in json.loads('[~{sep="," genbank_file_manifest}]'):
+      group = genome['submission_type'] + '_' + ('clean' if genome['validation_passing'] else 'warnings')
+      counts_by_type[group] += 1
+      files_by_type[group].extend(genome['files'])
+
+    # write and bundle outputs
+    for group in groups_total:
+      with open("count_"+group+".int", 'wt') as outf:
+        outf.write(str(counts_by_type[group]))
+      if counts_by_type[group]:
+        if group.startswith('table2asn'):
+          # bundle the sqn files together and that's it
+          with zipfile.ZipFile("~{spuid_base}_" + group + ".zip", 'w') as zf:
+            for fname in files_by_type[group]:
+              zf.write(fname)
+        else:
+          # for special submissions, merge each individual file type
+          with open("sequences.fsa", 'wt') as out_fsa:
+            with open("comment.cmt", 'wt') as out_cmt:
+              with open("source.src", 'wt') as out_src:
+                src_header = ""
+                cmt_header = ""
+                for fname in files_by_type[group]:
+                  if fname.endswith('.fsa') or fname.endswith('.fasta'):
+                    with open(fname) as inf:
+                      out_fsa.write(inf.read())
+                  elif fname.endswith('.cmt'):
+                    with open(fname) as inf:
+                      header = inf.readline()
+                      if cmt_header:
+                        assert header == cmt_header
+                      else:
+                        cmt_header = header
+                      out_cmt.write(inf.read())
+                  elif fname.endswith('.src'):
+                    with open(fname) as inf:
+                      header = inf.readline()
+                      if src_header:
+                        assert header == src_header
+                      else:
+                        src_header = header
+                      out_src.write(inf.read())
+          with zipfile.ZipFile("~{spuid_base}_" + group + ".zip", 'w') as zf:
+            for fname in ('sequences.fsa', 'comment.cmt', 'source.src', 'template.sbt'):
+              zf.write(fname)
+    CODE
+  >>>
+
+  output {
+    File? submit_sqns_clean_zip       = "~{spuid_base}_table2asn_clean.zip"
+    File? submit_sqns_warnings_zip    = "~{spuid_base}_table2asn_warnings.zip"
+    Int   num_sqns_clean              = read_int("count_table2asn_clean.int")
+    Int   num_sqns_warnings           = read_int("count_table2asn_warnings.int")
+    File? submit_flu_clean_zip        = "~{spuid_base}_Influenza_clean.zip"
+    File? submit_flu_warnings_zip     = "~{spuid_base}_Influenza_warnings.zip"
+    Int   num_flu_clean               = read_int("count_Influenza_clean.int")
+    Int   num_flu_warnings            = read_int("count_Influenza_warnings.int")
+    File? submit_sc2_clean_zip        = "~{spuid_base}_SARS-CoV-2_clean.zip"
+    File? submit_sc2_warnings_zip     = "~{spuid_base}_SARS-CoV-2_warnings.zip"
+    Int   num_sc2_clean               = read_int("count_SARS-CoV-2_clean.int")
+    Int   num_sc2_warnings            = read_int("count_SARS-CoV-2_warnings.int")
+    File? submit_noro_clean_zip       = "~{spuid_base}_Norovirus_clean.zip"
+    File? submit_noro_warnings_zip    = "~{spuid_base}_Norovirus_warnings.zip"
+    Int   num_noro_clean              = read_int("count_Norovirus_clean.int")
+    Int   num_noro_warnings           = read_int("count_Norovirus_warnings.int")
+    File? submit_dengue_clean_zip     = "~{spuid_base}_Dengue_clean.zip"
+    File? submit_dengue_warnings_zip  = "~{spuid_base}_Dengue_warnings.zip"
+    Int   num_dengue_clean            = read_int("count_Dengue_clean.int")
+    Int   num_dengue_warnings         = read_int("count_Dengue_warnings.int")
+  }
+
+  runtime {
+    docker: docker
+    memory: mem_size + " GB"
+    cpu: cpus
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 1
   }
 }

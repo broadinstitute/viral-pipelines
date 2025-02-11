@@ -2,7 +2,6 @@ version 1.0
 
 import "../tasks/tasks_assembly.wdl" as assembly
 import "../tasks/tasks_ncbi.wdl" as ncbi
-import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_utils.wdl" as utils
 import "assemble_refbased.wdl" as assemble_refbased
 
@@ -39,7 +38,7 @@ workflow scaffold_and_refine_multitaxa {
         call ncbi.download_annotations {
             input:
                 accessions = string_split.tokens,
-                combined_out_prefix = taxon[3]
+                combined_out_prefix = sub(taxon[3], ":", "-")  # singularity does not like colons in filenames
         }
     }
 
@@ -51,7 +50,7 @@ workflow scaffold_and_refine_multitaxa {
     }
 
     # assemble and produce stats for every reference cluster
-    Array[String] assembly_header = ["entity:assembly_id", "assembly_name", "sample_id", "sample_name", "taxid", "tax_name", "tax_shortname", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "scaffolding_num_segments_recovered", "reference_num_segments_required", "reference_length", "reference_accessions", "skani_num_ref_clusters", "skani_this_cluster_num_refs", "skani_dist_tsv", "scaffolding_ani", "scaffolding_pct_ref_cov", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned", "coverage_genbank", "assembly_method", "assembly_method_version", "biosample_accession", "sample"]
+    Array[String] assembly_header = ["entity:assembly_id", "assembly_name", "sample_id", "sample_name", "taxid", "tax_name", "tax_shortname", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "scaffolding_num_segments_recovered", "reference_num_segments_required", "reference_length", "reference_accessions", "skani_num_ref_clusters", "skani_this_cluster_num_refs", "skani_dist_tsv", "scaffolding_ani", "scaffolding_pct_ref_cov", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned", "assembly_method", "assembly_method_version", "biosample_accession", "sample"]
     scatter(ref_cluster_tar in select_references.matched_reference_clusters_fastas_tars) {
 
         call utils.tar_extract {
@@ -78,16 +77,6 @@ workflow scaffold_and_refine_multitaxa {
                     sample_name          = sample_id,
                     sample_original_name = sample_original_name
             }
-            call reports.coverage_report as coverage_self {
-                input:
-                    mapped_bams = [refine.align_to_self_merged_aligned_only_bam],
-                    mapped_bam_idx = []
-            }
-            call utils.tsv_drop_cols as coverage_two_col {
-                input:
-                    in_tsv = coverage_self.coverage_report,
-                    drop_cols = ["aln2self_cov_median", "aln2self_cov_mean_non0", "aln2self_cov_1X", "aln2self_cov_5X", "aln2self_cov_20X", "aln2self_cov_100X"]
-            }
         }
 
         # get taxid and taxname from taxid_to_ref_accessions_tsv
@@ -95,7 +84,7 @@ workflow scaffold_and_refine_multitaxa {
             input:
                 tsv = taxid_to_ref_accessions_tsv,
                 idx_col = "accessions",
-                idx_val = scaffold.scaffolding_chosen_ref_basename,
+                idx_val = sub(scaffold.scaffolding_chosen_ref_basename, "-", ":"),
                 add_header = ["taxid", "isolate_prefix", "taxname", "accessions"]
         }
         String taxid = tax_lookup.map["taxid"]
@@ -147,7 +136,6 @@ workflow scaffold_and_refine_multitaxa {
             "coverage_tsv" :       select_first([refine.align_to_self_merged_coverage_tsv, ""]),
             "read_pairs_aligned" : select_first([refine.align_to_self_merged_read_pairs_aligned, "0"]),
             "bases_aligned" :      select_first([refine.align_to_self_merged_bases_aligned, "0"]),
-            "coverage_genbank" :   select_first([coverage_two_col.out_tsv, ""]),
 
             "assembly_method" :         "viral-ngs/assemble_denovo",
             "assembly_method_version" : scaffold.viralngs_version,
@@ -185,7 +173,6 @@ workflow scaffold_and_refine_multitaxa {
         File   assembly_stats_by_taxon_tsv                 = select_first([assembly_stats_non_empty.combined, assembly_stats_empty.combined])
         String assembly_method                             = "viral-ngs/scaffold_and_refine_multitaxa"
 
-        #String assembly_top_taxon_id               = select_references.top_matches_per_cluster_basenames[0]
         Int    skani_num_ref_clusters              = length(select_references.matched_reference_clusters_fastas_tars)
         File   skani_contigs_to_refs_dist_tsv      = select_references.skani_dist_full_tsv
 
