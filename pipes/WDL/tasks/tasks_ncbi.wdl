@@ -240,6 +240,7 @@ task structured_comments_from_aligned_bam {
 
     String  out_basename = basename(aligned_bam, '.bam')
     Boolean is_genome_assembly = true
+    Boolean sanitize_ids = true
     String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
   }
   # see https://www.ncbi.nlm.nih.gov/genbank/structuredcomment/
@@ -250,9 +251,9 @@ task structured_comments_from_aligned_bam {
     reports.py coverage_only aligned.bam coverage.txt
     cat coverage.txt
 
-    samtools view -H "~{aligned_bam}" | grep '^@SQ' | grep -o 'SN:[^[:space:]]*' | cut -d':' -f2 > SEQ_IDS
+    samtools view -H "~{aligned_bam}" | grep '^@SQ' | grep -o 'SN:[^[:space:]]*' | cut -d':' -f2 | tee SEQ_IDS
 
-    samtools view -H "~{aligned_bam}" | grep '^@RG' | grep -o 'PL:[^[:space:]]*' | cut -d':' -f2 | sort | uniq > BAM_PLATFORMS
+    samtools view -H "~{aligned_bam}" | grep '^@RG' | grep -o 'PL:[^[:space:]]*' | cut -d':' -f2 | sort | uniq | tee BAM_PLATFORMS
     if [ $(wc -l < BAM_PLATFORMS) -ne 1 ]; then
       echo "Other: hybrid" > GENBANK_SEQ_TECH
     elif grep -qi 'ILLUMINA' BAM_PLATFORMS; then
@@ -275,14 +276,18 @@ task structured_comments_from_aligned_bam {
       echo "Haven't seen this one before!"
       exit 1
     fi
+    cat GENBANK_SEQ_TECH
 
     python3 << CODE
     import Bio.SeqIO
     import csv
+    import re
 
     # get list of sequence IDs from BAM header
     with open("SEQ_IDS") as inf:
         seqids = set(line.strip() for line in inf)
+        if ~{true="True" false="False" sanitize_ids}:
+          seqids = set(re.sub(r'[^0-9A-Za-z!_-]', '-', x) for x in seqids)
 
     # get sequencing technology from BAM header    
     with open("GENBANK_SEQ_TECH", "rt") as inf:

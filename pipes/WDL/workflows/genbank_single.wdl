@@ -68,10 +68,10 @@ workflow genbank_single {
         taxid = tax_id
     }
 
-    # Rename fasta
-    call utils.rename_file as assembly_fsa {
+    # Rename fasta and sanitize ids of special characters
+    call utils.sanitize_fasta_headers as assembly_fsa {
         input:
-            infile       = assembly_fasta,
+            in_fasta     = assembly_fasta,
             out_filename = assembly_id + ".fsa"
     }
 
@@ -106,7 +106,7 @@ workflow genbank_single {
     if(!genbank_special_taxa.vadr_supported) {
       call ncbi.align_and_annot_transfer_single as annot {
         input:
-            genome_fasta             = assembly_fasta,
+            genome_fasta             = assembly_fsa.sanitized_fasta,
             reference_fastas         = flatten(download_annotations.genomes_fasta),
             reference_feature_tables = flatten(download_annotations.features_tbl),
             out_basename             = assembly_id
@@ -115,7 +115,7 @@ workflow genbank_single {
     if(genbank_special_taxa.vadr_supported) {
       call ncbi.vadr {
         input:
-          genome_fasta          = assembly_fasta,
+          genome_fasta          = assembly_fsa.sanitized_fasta,
           maxlen                = genbank_special_taxa.max_genome_length,
           vadr_opts             = genbank_special_taxa.vadr_cli_options,
           vadr_model_tar        = genbank_special_taxa.vadr_model_tar,
@@ -134,7 +134,7 @@ workflow genbank_single {
     if(genbank_special_taxa.table2asn_allowed) {
       call ncbi.table2asn {
         input:
-            assembly_fasta          = assembly_fasta,
+            assembly_fasta          = assembly_fsa.sanitized_fasta,
             annotations_tbl         = feature_tbl,
             source_modifier_table   = biosample_to_genbank.genbank_source_modifier_table,
             structured_comment_file = structured_comments_from_aligned_bam.structured_comment_file,
@@ -144,7 +144,7 @@ workflow genbank_single {
       }
     }
     if(!genbank_special_taxa.table2asn_allowed) {
-      Array[File] special_submit_files = [assembly_fsa.out,
+      Array[File] special_submit_files = [assembly_fsa.sanitized_fasta,
         structured_comments_from_aligned_bam.structured_comment_file,
         biosample_to_genbank.genbank_source_modifier_table]
       String special_basename_list = '["~{assembly_id}.fsa", "~{assembly_id}.cmt", "~{assembly_id}.src"]'

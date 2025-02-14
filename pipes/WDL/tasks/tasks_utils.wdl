@@ -539,6 +539,35 @@ task download_from_url {
     }
 }
 
+task sanitize_fasta_headers {
+  input {
+    File   in_fasta
+    String out_filename = "~{basename(in_fasta, '.fasta')}-sanitized.fasta"
+  }
+  String docker = "quay.io/broadinstitute/viral-core:2.4.1"
+  Int    disk_size = 375
+  command <<<
+    python3<<CODE
+    import shutil
+    import util.file
+    with util.file.fastas_with_sanitized_ids("~{in_fasta}", use_tmp=True) as sanitized_fastas:
+        shutil.copyfile(sanitized_fastas[0], "~{out_filename}")
+    CODE
+  >>>
+  output {
+    File sanitized_fasta = out_filename
+  }
+  runtime {
+    docker: docker
+    memory: "2 GB"
+    cpu:    2
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk:   disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 1
+  }
+}
+
 task fasta_to_ids {
     meta {
         description: "Return the headers only from a fasta file"
