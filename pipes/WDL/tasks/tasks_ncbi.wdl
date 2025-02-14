@@ -1539,6 +1539,7 @@ task package_genbank_submissions {
                         assert header == cmt_header
                       else:
                         cmt_header = header
+                        out_cmt.write(header)
                       out_cmt.write(inf.read())
                   elif fname.endswith('.src'):
                     with open(fname) as inf:
@@ -1547,6 +1548,7 @@ task package_genbank_submissions {
                         assert header == src_header
                       else:
                         src_header = header
+                        out_src.write(header)
                       out_src.write(inf.read())
           with zipfile.ZipFile("~{spuid_base}_" + group + ".zip", 'w') as zf:
             for fname in ('sequences.fsa', 'comment.cmt', 'source.src', 'template.sbt'):
