@@ -244,9 +244,10 @@ task structured_comments_from_aligned_bam {
   }
   # see https://www.ncbi.nlm.nih.gov/genbank/structuredcomment/
   command <<<
-    set -e
+    set -e -o pipefail
 
-    reports.py coverage_only "~{aligned_bam}" coverage.txt
+    cp "~{aligned_bam}" aligned.bam
+    reports.py coverage_only aligned.bam coverage.txt
 
     samtools view -H USA-MA-Broad_BWH-20907-2024.l000013250703_C8.H5FWNDRX5.1.hs_depleted.mapped.bam  | grep '^@SQ' | grep -o 'SN:[^[:space:]]*' | cut -d':' -f2 > SEQ_IDS
 
