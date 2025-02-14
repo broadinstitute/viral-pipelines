@@ -248,6 +248,7 @@ task structured_comments_from_aligned_bam {
 
     cp "~{aligned_bam}" aligned.bam
     reports.py coverage_only aligned.bam coverage.txt
+    cat coverage.txt
 
     samtools view -H "~{aligned_bam}" | grep '^@SQ' | grep -o 'SN:[^[:space:]]*' | cut -d':' -f2 > SEQ_IDS
 
