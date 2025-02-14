@@ -554,6 +554,8 @@ task sanitize_fasta_headers {
       with open('~{out_filename}', 'wt') as outf:
         for seq in Bio.SeqIO.parse(inf, 'fasta'):
           seq.id = re.sub(r'[^0-9A-Za-z!_-]', '-', seq.id)
+          seq.description = None
+          seq.name = None
           Bio.SeqIO.write(seq, outf, 'fasta')
     CODE
   >>>
