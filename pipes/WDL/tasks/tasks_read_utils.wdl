@@ -388,7 +388,7 @@ task FastqToUBAM {
 
       read_utils.py --version | tee VERSION
 
-      if [[ ! "~{platform_name}" =~ ^(CAPILLARY|DNBSEQ|ELEMENT|HELICOS|ILLUMINA|IONTORRENT|LS454|ONT|PACBIO|SINGULAR|SOLID|ULTIMA)$ ]];; then
+      if [[ ! "~{platform_name}" =~ ^(CAPILLARY|DNBSEQ|ELEMENT|HELICOS|ILLUMINA|IONTORRENT|LS454|ONT|PACBIO|SINGULAR|SOLID|ULTIMA)$ ]]; then
         exit 1
       fi
 
