@@ -249,7 +249,7 @@ task structured_comments_from_aligned_bam {
     cp "~{aligned_bam}" aligned.bam
     reports.py coverage_only aligned.bam coverage.txt
 
-    samtools view -H USA-MA-Broad_BWH-20907-2024.l000013250703_C8.H5FWNDRX5.1.hs_depleted.mapped.bam  | grep '^@SQ' | grep -o 'SN:[^[:space:]]*' | cut -d':' -f2 > SEQ_IDS
+    samtools view -H "~{aligned_bam}" | grep '^@SQ' | grep -o 'SN:[^[:space:]]*' | cut -d':' -f2 > SEQ_IDS
 
     samtools view -H "~{aligned_bam}" | grep '^@RG' | grep -o 'PL:[^[:space:]]*' | cut -d':' -f2 | sort | uniq > BAM_PLATFORMS
     if [ $(wc -l < BAM_PLATFORMS) -ne 1 ]; then
