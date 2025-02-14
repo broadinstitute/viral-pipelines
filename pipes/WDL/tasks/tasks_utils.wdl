@@ -544,14 +544,17 @@ task sanitize_fasta_headers {
     File   in_fasta
     String out_filename = "~{basename(in_fasta, '.fasta')}-sanitized.fasta"
   }
-  String docker = "quay.io/broadinstitute/viral-core:2.4.1"
+  String docker = "quay.io/broadinstitute/py3-bio:0.1.2"
   Int    disk_size = 375
   command <<<
     python3<<CODE
-    import shutil
-    import util.file
-    with util.file.fastas_with_sanitized_ids("~{in_fasta}", use_tmp=True) as sanitized_fastas:
-        shutil.copyfile(sanitized_fastas[0], "~{out_filename}")
+    import re
+    import Bio.SeqIO
+    with open('~{in_fasta}', 'rt') as inf:
+      with open('~{out_filename}', 'wt') as outf:
+        for seq in Bio.SeqIO.parse(inf, 'fasta'):
+          seq.id = re.sub(r'[^0-9A-Za-z!_-]', '-', seq.id)
+          Bio.SeqIO.write(seq, outf, 'fasta')
     CODE
   >>>
   output {
