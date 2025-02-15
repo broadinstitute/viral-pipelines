@@ -1594,22 +1594,23 @@ task package_genbank_submissions {
   >>>
 
   output {
+    Array[File] ftp_submission_files  = glob("~{spuid_base}_[tIS]*")
     File? submit_sqns_clean_zip       = "~{spuid_base}_table2asn_clean.zip"
     File? submit_sqns_warnings_zip    = "~{spuid_base}_table2asn_warnings.zip"
     Int   num_sqns_clean              = read_int("count_table2asn_clean.int")
     Int   num_sqns_warnings           = read_int("count_table2asn_warnings.int")
-    File? submit_fluA_clean_zip        = "~{spuid_base}_InfluenzaA_clean.zip"
-    File? submit_fluA_warnings_zip     = "~{spuid_base}_InfluenzaA_warnings.zip"
-    Int   num_fluA_clean               = read_int("count_InfluenzaA_clean.int")
-    Int   num_fluA_warnings            = read_int("count_InfluenzaA_warnings.int")
-    File? submit_fluB_clean_zip        = "~{spuid_base}_InfluenzaB_clean.zip"
-    File? submit_fluB_warnings_zip     = "~{spuid_base}_InfluenzaB_warnings.zip"
-    Int   num_fluB_clean               = read_int("count_InfluenzaB_clean.int")
-    Int   num_fluB_warnings            = read_int("count_InfluenzaB_warnings.int")
-    File? submit_fluC_clean_zip        = "~{spuid_base}_InfluenzaC_clean.zip"
-    File? submit_fluC_warnings_zip     = "~{spuid_base}_InfluenzaC_warnings.zip"
-    Int   num_fluC_clean               = read_int("count_InfluenzaC_clean.int")
-    Int   num_fluC_warnings            = read_int("count_InfluenzaC_warnings.int")
+    File? submit_fluA_clean_zip       = "~{spuid_base}_InfluenzaA_clean.zip"
+    File? submit_fluA_warnings_zip    = "~{spuid_base}_InfluenzaA_warnings.zip"
+    Int   num_fluA_clean              = read_int("count_InfluenzaA_clean.int")
+    Int   num_fluA_warnings           = read_int("count_InfluenzaA_warnings.int")
+    File? submit_fluB_clean_zip       = "~{spuid_base}_InfluenzaB_clean.zip"
+    File? submit_fluB_warnings_zip    = "~{spuid_base}_InfluenzaB_warnings.zip"
+    Int   num_fluB_clean              = read_int("count_InfluenzaB_clean.int")
+    Int   num_fluB_warnings           = read_int("count_InfluenzaB_warnings.int")
+    File? submit_fluC_clean_zip       = "~{spuid_base}_InfluenzaC_clean.zip"
+    File? submit_fluC_warnings_zip    = "~{spuid_base}_InfluenzaC_warnings.zip"
+    Int   num_fluC_clean              = read_int("count_InfluenzaC_clean.int")
+    Int   num_fluC_warnings           = read_int("count_InfluenzaC_warnings.int")
     File? submit_sc2_clean_zip        = "~{spuid_base}_SARS-CoV-2_clean.zip"
     File? submit_sc2_warnings_zip     = "~{spuid_base}_SARS-CoV-2_warnings.zip"
     Int   num_sc2_clean               = read_int("count_SARS-CoV-2_clean.int")
