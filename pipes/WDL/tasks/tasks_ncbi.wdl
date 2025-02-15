@@ -1491,6 +1491,7 @@ task package_genbank_submissions {
 
     String          spuid_base
     String          spuid_namespace
+    String          account_name
     File            authors_sbt
 
     String          docker = "quay.io/broadinstitute/viral-baseimage:0.2.0"
@@ -1521,6 +1522,31 @@ task package_genbank_submissions {
       group = genome['submission_type'] + '_' + ('clean' if genome['validation_passing'] else 'warnings')
       counts_by_type[group] += 1
       files_by_type[group].extend(genome['files'])
+
+    # function for writing submission.xml files
+    def write_submission_xml(fname, account_name, submission_name, spuid_namespace, spuid, wizard=None):
+      with open(fname, 'wt') as outf:
+        outf.write('<?xml version="1.0"?>\n')
+        outf.write('<Submission>\n')
+        outf.write('  <Description>\n')
+        outf.write('    <Comment>{}</Comment>\n'.format(submission_name))
+        outf.write('    <Organization type="center" role="owner">\n')
+        outf.write('      <Name>{}</Name>\n').format(account_name)
+        outf.write('    </Organization>\n')
+        outf.write('  </Description>\n')
+        outf.write('  <Action>\n')
+        outf.write('    <AddFiles target_db="GenBank">\n')
+        outf.write('      <File file_path="{}.zip">\n'.format(spuid))
+        outf.write('        <DataType>genbank-submission-package</DataType>\n')
+        outf.write('      </File>\n')
+        if wizard:
+          outf.write('      <Attribute name="wizard">{}</Attribute>\n').format(wizard)
+        outf.write('      <Identifier>\n')
+        outf.write('        <SPUID spuid_namespace="{}">{}</SPUID>\n'.format(spuid_namespace, spuid))
+        outf.write('      </Identifier>\n')
+        outf.write('    </AddFiles>\n')
+        outf.write('  </Action>\n')
+        outf.write('</Submission>\n')
 
     # write and bundle outputs
     for group in groups_total:
