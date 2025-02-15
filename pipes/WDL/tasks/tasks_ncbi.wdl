@@ -1305,8 +1305,12 @@ task genbank_special_taxa {
     with open("table2asn_allowed.boolean", "wt") as outf:
       outf.write("false" if prohibited else "true")
     with open("genbank_submission_mechanism.str", "wt") as outf:
-      if any(node in set((11320, 11520, 11552)) for node in this_and_ancestors):
-        outf.write("Influenza")
+      if any(node == 11320 for node in this_and_ancestors):
+        outf.write("InfluenzaA")
+      elif any(node == 11520 for node in this_and_ancestors):
+        outf.write("InfluenzaB")
+      elif any(node == 11552 for node in this_and_ancestors):
+        outf.write("InfluenzaC")
       elif any(node == 2697049 for node in this_and_ancestors):
         outf.write("SARS-CoV-2")
       elif any(node == 11983 for node in this_and_ancestors):
@@ -1507,7 +1511,7 @@ task package_genbank_submissions {
     # initialize counters and file lists for each submission category
     counts_by_type = {}
     files_by_type = {}
-    groups_total = list(m+"_"+v for m in ('table2asn', 'Influenza', 'SARS-CoV-2', 'Norovirus', 'Dengue') for v in ('clean', 'warnings'))
+    groups_total = list(m+"_"+v for m in ('table2asn', 'InfluenzaA', 'InfluenzaB', 'InfluenzaC', 'SARS-CoV-2', 'Norovirus', 'Dengue') for v in ('clean', 'warnings'))
     for group in groups_total:
       counts_by_type[group] = 0
       files_by_type[group] = []
@@ -1568,10 +1572,18 @@ task package_genbank_submissions {
     File? submit_sqns_warnings_zip    = "~{spuid_base}_table2asn_warnings.zip"
     Int   num_sqns_clean              = read_int("count_table2asn_clean.int")
     Int   num_sqns_warnings           = read_int("count_table2asn_warnings.int")
-    File? submit_flu_clean_zip        = "~{spuid_base}_Influenza_clean.zip"
-    File? submit_flu_warnings_zip     = "~{spuid_base}_Influenza_warnings.zip"
-    Int   num_flu_clean               = read_int("count_Influenza_clean.int")
-    Int   num_flu_warnings            = read_int("count_Influenza_warnings.int")
+    File? submit_fluA_clean_zip        = "~{spuid_base}_InfluenzaA_clean.zip"
+    File? submit_fluA_warnings_zip     = "~{spuid_base}_InfluenzaA_warnings.zip"
+    Int   num_fluA_clean               = read_int("count_InfluenzaA_clean.int")
+    Int   num_fluA_warnings            = read_int("count_InfluenzaA_warnings.int")
+    File? submit_fluB_clean_zip        = "~{spuid_base}_InfluenzaB_clean.zip"
+    File? submit_fluB_warnings_zip     = "~{spuid_base}_InfluenzaB_warnings.zip"
+    Int   num_fluB_clean               = read_int("count_InfluenzaB_clean.int")
+    Int   num_fluB_warnings            = read_int("count_InfluenzaB_warnings.int")
+    File? submit_fluC_clean_zip        = "~{spuid_base}_InfluenzaC_clean.zip"
+    File? submit_fluC_warnings_zip     = "~{spuid_base}_InfluenzaC_warnings.zip"
+    Int   num_fluC_clean               = read_int("count_InfluenzaC_clean.int")
+    Int   num_fluC_warnings            = read_int("count_InfluenzaC_warnings.int")
     File? submit_sc2_clean_zip        = "~{spuid_base}_SARS-CoV-2_clean.zip"
     File? submit_sc2_warnings_zip     = "~{spuid_base}_SARS-CoV-2_warnings.zip"
     Int   num_sc2_clean               = read_int("count_SARS-CoV-2_clean.int")
