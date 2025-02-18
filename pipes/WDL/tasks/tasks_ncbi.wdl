@@ -1428,7 +1428,7 @@ task genbank_special_taxa {
 
   runtime {
     docker: docker
-    memory: "1 GB"
+    memory: "2 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
