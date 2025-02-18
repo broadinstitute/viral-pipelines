@@ -1302,6 +1302,7 @@ task genbank_special_taxa {
     import urllib.request
     import json
     import re
+    import sys
     taxid = ~{taxid}
 
     # load taxdb and retrieve full hierarchy leading to this taxid
@@ -1347,7 +1348,14 @@ task genbank_special_taxa {
           print("found Influenza A subtype {}". format(subtype))
           json.dump({'serotype':subtype}, outf)
         else:
-          print("failed to find Influenza A subtype from taxid {}, taxname {}".format(taxid, taxdb.names[taxid]))
+          match = re.search(r'(\w+)\s+subtype$', taxdb.names[taxid])
+          if match:
+            subtype = match.group(1)
+            print("found Influenza A subtype {}". format(subtype))
+            json.dump({'serotype':subtype}, outf)
+          else:
+            print("failed to find Influenza A subtype from taxid {}, taxname {}".format(taxid, taxdb.names[taxid]))
+            sys.exit(1)
     elif any(node == 3052464 for node in this_and_ancestors):
       # dengue needs serotype specified in the genotype column
       with open("genbank_source_overrides.json", "wt") as outf:
@@ -1358,6 +1366,7 @@ task genbank_special_taxa {
           json.dump({'genotype':serotype}, outf)
         else:
           print("failed to find Dengue serotype from taxid {}, taxname {}".format(taxid, taxdb.names[taxid]))
+          sys.exit(1)
 
     # VADR is an annotation tool that supports SC2, Flu A/B/C/D, Noro, Dengue, RSV A/B, MPXV, etc
     # https://github.com/ncbi/vadr/wiki/Available-VADR-model-files
