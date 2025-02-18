@@ -1342,12 +1342,14 @@ task genbank_special_taxa {
     if any(node == 11320 for node in this_and_ancestors):
       # flu A needs subtype specified in the serotype column
       with open("genbank_source_overrides.json", "wt") as outf:
+        # This taxid matches a specific named strain
         match = re.search(r'\(([^()]+)\)+$', taxdb.names[taxid])
         if match:
           subtype = match.group(1)
           print("found Influenza A subtype {}". format(subtype))
           json.dump({'serotype':subtype}, outf)
         else:
+          # Influenza A has a number of taxids at the subtype level
           match = re.search(r'(\w+)\s+subtype$', taxdb.names[taxid])
           if match:
             subtype = match.group(1)
