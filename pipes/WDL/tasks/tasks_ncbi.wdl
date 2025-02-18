@@ -1415,7 +1415,7 @@ task genbank_special_taxa {
   output {
     Boolean  table2asn_allowed     = read_boolean("table2asn_allowed.boolean")
     String   genbank_submission_mechanism = read_string("genbank_submission_mechanism.str")
-    File?    genbank_source_overrides_json = read_string("genbank_source_overrides.json")
+    File?    genbank_source_overrides_json = "genbank_source_overrides.json"
     Boolean  vadr_supported        = read_boolean("vadr_supported.boolean")
     String   vadr_cli_options      = read_string("vadr_cli_options.string")
     File?    vadr_model_tar        = "vadr_model-~{taxid}.tar.gz"
