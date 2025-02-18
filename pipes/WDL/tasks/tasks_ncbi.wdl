@@ -746,6 +746,7 @@ task biosample_to_genbank {
     Map[String,String] src_to_attr_map = {}
     String?  organism_name_override
     String?  isolate_prefix_override
+    File?    source_overrides_json # optional set of key-value pairs to override source metadata
 
     Boolean sanitize_seq_ids = true
 
@@ -758,6 +759,7 @@ task biosample_to_genbank {
     import csv
     import json
     import re
+    import os.path
 
     header_key_map = {
         'Sequence_ID':'~{biosample_col_for_fasta_headers}',
@@ -820,14 +822,14 @@ task biosample_to_genbank {
         if any(row['organism'] == special for row in biosample_attributes):
           print("special organism found " + special)
           assert all(row['organism'] == special for row in biosample_attributes), "if any samples are {}, all samples must be {}".format(special, special)
-          if 'serotype' not in out_headers_total:
-            out_headers_total.append('serotype')
           ### Influenza-specific requirements
           if special.startswith('Influenza'):
             print("special organism is Influenza A/B/C")
             # simplify isolate name
             if row.get('strain'):
               header_key_map['isolate'] = 'strain'
+            if 'serotype' not in out_headers_total:
+              out_headers_total.append('serotype')
             for row in biosample_attributes:
               # simplify isolate name more if it still looks structured with metadata (not allowed for flu submissions)
               if len(row[header_key_map.get('isolate', 'isolate')].split('/')) >= 2:
@@ -850,14 +852,27 @@ task biosample_to_genbank {
                   print("overriding geo_loc_name with food_origin")
                   row['geo_loc_name'] = row['food_origin']
 
+    # prepare output headers
+    out_headers = list(h for h in out_headers_total if header_key_map.get(h,h) in in_headers)
+    if 'db_xref' not in out_headers:
+        out_headers.append('db_xref')
+    if 'note' not in out_headers:
+        out_headers.append('note')
+    if 'serotype' in out_headers_total and 'serotype' not in out_headers:
+        out_headers.append('serotype')
+
+    # manual overrides if provided
+    if os.path.isfile("~{source_overrides_json}"):
+      with open("~{source_overrides_json}", 'rt') as inf:
+        for k,v in json.load(inf).items():
+          print("overriding {} with {}".format(k,v))
+          if k not in out_headers:
+            out_headers.append(k)
+          for row in biosample_attributes:
+            row[k] = v
+
+    # write output source modifier table
     with open("~{out_basename}.src", 'wt') as outf_smt:
-      out_headers = list(h for h in out_headers_total if header_key_map.get(h,h) in in_headers)
-      if 'db_xref' not in out_headers:
-          out_headers.append('db_xref')
-      if 'note' not in out_headers:
-          out_headers.append('note')
-      if 'serotype' not in out_headers:
-          out_headers.append('serotype')
       outf_smt.write('\t'.join(out_headers)+'\n')
 
       with open("~{out_basename}.sample_ids.txt", 'wt') as outf_ids:
@@ -1285,10 +1300,12 @@ task genbank_special_taxa {
     import metagenomics
     import tarfile
     import urllib.request
+    import json
+    import re
     taxid = ~{taxid}
 
     # load taxdb and retrieve full hierarchy leading to this taxid
-    taxdb = metagenomics.TaxonomyDb(tax_dir="taxdump", load_nodes=True, load_gis=False)
+    taxdb = metagenomics.TaxonomyDb(tax_dir="taxdump", load_nodes=True, load_names=True, load_gis=False)
     ancestors = taxdb.get_ordered_ancestors(taxid)
     this_and_ancestors = [taxid] + ancestors
 
@@ -1319,6 +1336,28 @@ task genbank_special_taxa {
         outf.write("Dengue")
       else:
         outf.write("table2asn")
+
+    # Genbank requires certain fields to be populated for Flu A and Dengue
+    if any(node == 11320 for node in this_and_ancestors):
+      # flu A needs subtype specified in the serotype column
+      with open("genbank_source_overrides.json", "wt") as outf:
+        match = re.search(r'\(([^()]+)\)+$', taxdb.names[taxid])
+        if match:
+          subtype = match.group(1)
+          print("found Influenza A subtype {}". format(subtype))
+          json.dump({'serotype':subtype}, outf)
+        else:
+          print("failed to find Influenza A subtype from taxid {}, taxname {}".format(taxid, taxdb.names[taxid]))
+    elif any(node == 3052464 for node in this_and_ancestors):
+      # dengue needs serotype specified in the genotype column
+      with open("genbank_source_overrides.json", "wt") as outf:
+        match = re.search(r'(\d)$', taxdb.names[taxid])
+        if match:
+          serotype = match.group(1)
+          print("found Dengue serotype {}". format(serotype))
+          json.dump({'genotype':serotype}, outf)
+        else:
+          print("failed to find Dengue serotype from taxid {}, taxname {}".format(taxid, taxdb.names[taxid]))
 
     # VADR is an annotation tool that supports SC2, Flu A/B/C/D, Noro, Dengue, RSV A/B, MPXV, etc
     # https://github.com/ncbi/vadr/wiki/Available-VADR-model-files
@@ -1376,6 +1415,7 @@ task genbank_special_taxa {
   output {
     Boolean  table2asn_allowed     = read_boolean("table2asn_allowed.boolean")
     String   genbank_submission_mechanism = read_string("genbank_submission_mechanism.str")
+    File?    genbank_source_overrides_json = read_string("genbank_source_overrides.json")
     Boolean  vadr_supported        = read_boolean("vadr_supported.boolean")
     String   vadr_cli_options      = read_string("vadr_cli_options.string")
     File?    vadr_model_tar        = "vadr_model-~{taxid}.tar.gz"

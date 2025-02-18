@@ -99,7 +99,8 @@ workflow genbank_single {
             taxid                  = tax_id,
             organism_name_override = organism_name,
             filter_to_accession    = biosample_accession,
-            out_basename           = assembly_id
+            out_basename           = assembly_id,
+            source_overrides_json  = genbank_special_taxa.genbank_source_overrides_json
     }
 
     ## annotate genes, either by VADR or by naive coordinate liftover
