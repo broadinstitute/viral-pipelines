@@ -19,7 +19,7 @@ workflow dump_gcloud_env_info {
 
         String  google_project_id       = check_terra_env.google_project_id
 
-        String  workspace_id            = check_terra_env.workspace_id
+        String  workspace_uuid          = check_terra_env.workspace_uuid
         String  workspace_name          = check_terra_env.workspace_name
         String  workspace_namespace     = check_terra_env.workspace_namespace
         String  workspace_bucket_path   = check_terra_env.workspace_bucket_path
