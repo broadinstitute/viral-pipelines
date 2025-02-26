@@ -1583,7 +1583,7 @@ task package_genbank_submissions {
         outf.write('  <Description>\n')
         outf.write('    <Comment>{}</Comment>\n'.format(submission_name))
         outf.write('    <Organization type="center" role="owner">\n')
-        outf.write('      <Name>{}</Name>\n').format(account_name)
+        outf.write('      <Name>{}</Name>\n'.format(account_name))
         outf.write('    </Organization>\n')
         outf.write('  </Description>\n')
         outf.write('  <Action>\n')
@@ -1592,7 +1592,7 @@ task package_genbank_submissions {
         outf.write('        <DataType>genbank-submission-package</DataType>\n')
         outf.write('      </File>\n')
         if wizard:
-          outf.write('      <Attribute name="wizard">{}</Attribute>\n').format(wizard)
+          outf.write('      <Attribute name="wizard">{}</Attribute>\n'.format(wizard))
         outf.write('      <Identifier>\n')
         outf.write('        <SPUID spuid_namespace="{}">{}</SPUID>\n'.format(spuid_namespace, spuid))
         outf.write('      </Identifier>\n')
