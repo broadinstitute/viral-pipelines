@@ -1652,7 +1652,7 @@ task package_genbank_submissions {
   >>>
 
   output {
-    Array[File] ftp_submission_files  = glob("~{spuid_base}_[tIS]*")
+    Array[File] ftp_submission_files  = glob("~{spuid_base}_[IS]*_clean.*")
     File? submit_sqns_clean_zip       = "~{spuid_base}_table2asn_clean.zip"
     File? submit_sqns_warnings_zip    = "~{spuid_base}_table2asn_warnings.zip"
     Int   num_sqns_clean              = read_int("count_table2asn_clean.int")
