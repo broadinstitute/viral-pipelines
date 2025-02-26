@@ -240,17 +240,20 @@ task structured_comments_from_aligned_bam {
 
     String  out_basename = basename(aligned_bam, '.bam')
     Boolean is_genome_assembly = true
+    Boolean sanitize_ids = true
     String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
   }
   # see https://www.ncbi.nlm.nih.gov/genbank/structuredcomment/
   command <<<
-    set -e
+    set -e -o pipefail
 
-    reports.py coverage_only "~{aligned_bam}" coverage.txt
+    cp "~{aligned_bam}" aligned.bam
+    reports.py coverage_only aligned.bam coverage.txt
+    cat coverage.txt
 
-    samtools view -H USA-MA-Broad_BWH-20907-2024.l000013250703_C8.H5FWNDRX5.1.hs_depleted.mapped.bam  | grep '^@SQ' | grep -o 'SN:[^[:space:]]*' | cut -d':' -f2 > SEQ_IDS
+    samtools view -H "~{aligned_bam}" | grep '^@SQ' | grep -o 'SN:[^[:space:]]*' | cut -d':' -f2 | tee SEQ_IDS
 
-    samtools view -H "~{aligned_bam}" | grep '^@RG' | grep -o 'PL:[^[:space:]]*' | cut -d':' -f2 | sort | uniq > BAM_PLATFORMS
+    samtools view -H "~{aligned_bam}" | grep '^@RG' | grep -o 'PL:[^[:space:]]*' | cut -d':' -f2 | sort | uniq | tee BAM_PLATFORMS
     if [ $(wc -l < BAM_PLATFORMS) -ne 1 ]; then
       echo "Other: hybrid" > GENBANK_SEQ_TECH
     elif grep -qi 'ILLUMINA' BAM_PLATFORMS; then
@@ -273,14 +276,18 @@ task structured_comments_from_aligned_bam {
       echo "Haven't seen this one before!"
       exit 1
     fi
+    cat GENBANK_SEQ_TECH
 
     python3 << CODE
     import Bio.SeqIO
     import csv
+    import re
 
     # get list of sequence IDs from BAM header
     with open("SEQ_IDS") as inf:
         seqids = set(line.strip() for line in inf)
+        if ~{true="True" false="False" sanitize_ids}:
+          seqids = set(re.sub(r'[^0-9A-Za-z!_-]', '-', x) for x in seqids)
 
     # get sequencing technology from BAM header    
     with open("GENBANK_SEQ_TECH", "rt") as inf:
@@ -739,6 +746,7 @@ task biosample_to_genbank {
     Map[String,String] src_to_attr_map = {}
     String?  organism_name_override
     String?  isolate_prefix_override
+    File?    source_overrides_json # optional set of key-value pairs to override source metadata
 
     Boolean sanitize_seq_ids = true
 
@@ -751,6 +759,7 @@ task biosample_to_genbank {
     import csv
     import json
     import re
+    import os.path
 
     header_key_map = {
         'Sequence_ID':'~{biosample_col_for_fasta_headers}',
@@ -813,14 +822,14 @@ task biosample_to_genbank {
         if any(row['organism'] == special for row in biosample_attributes):
           print("special organism found " + special)
           assert all(row['organism'] == special for row in biosample_attributes), "if any samples are {}, all samples must be {}".format(special, special)
-          if 'serotype' not in out_headers_total:
-            out_headers_total.append('serotype')
           ### Influenza-specific requirements
           if special.startswith('Influenza'):
             print("special organism is Influenza A/B/C")
             # simplify isolate name
             if row.get('strain'):
               header_key_map['isolate'] = 'strain'
+            if 'serotype' not in out_headers_total:
+              out_headers_total.append('serotype')
             for row in biosample_attributes:
               # simplify isolate name more if it still looks structured with metadata (not allowed for flu submissions)
               if len(row[header_key_map.get('isolate', 'isolate')].split('/')) >= 2:
@@ -843,14 +852,27 @@ task biosample_to_genbank {
                   print("overriding geo_loc_name with food_origin")
                   row['geo_loc_name'] = row['food_origin']
 
+    # prepare output headers
+    out_headers = list(h for h in out_headers_total if header_key_map.get(h,h) in in_headers)
+    if 'db_xref' not in out_headers:
+        out_headers.append('db_xref')
+    if 'note' not in out_headers:
+        out_headers.append('note')
+    if 'serotype' in out_headers_total and 'serotype' not in out_headers:
+        out_headers.append('serotype')
+
+    # manual overrides if provided
+    if os.path.isfile("~{source_overrides_json}"):
+      with open("~{source_overrides_json}", 'rt') as inf:
+        for k,v in json.load(inf).items():
+          print("overriding {} with {}".format(k,v))
+          if k not in out_headers:
+            out_headers.append(k)
+          for row in biosample_attributes:
+            row[k] = v
+
+    # write output source modifier table
     with open("~{out_basename}.src", 'wt') as outf_smt:
-      out_headers = list(h for h in out_headers_total if header_key_map.get(h,h) in in_headers)
-      if 'db_xref' not in out_headers:
-          out_headers.append('db_xref')
-      if 'note' not in out_headers:
-          out_headers.append('note')
-      if 'serotype' not in out_headers:
-          out_headers.append('serotype')
       outf_smt.write('\t'.join(out_headers)+'\n')
 
       with open("~{out_basename}.sample_ids.txt", 'wt') as outf_ids:
@@ -1278,10 +1300,13 @@ task genbank_special_taxa {
     import metagenomics
     import tarfile
     import urllib.request
+    import json
+    import re
+    import sys
     taxid = ~{taxid}
 
     # load taxdb and retrieve full hierarchy leading to this taxid
-    taxdb = metagenomics.TaxonomyDb(tax_dir="taxdump", load_nodes=True, load_gis=False)
+    taxdb = metagenomics.TaxonomyDb(tax_dir="taxdump", load_nodes=True, load_names=True, load_gis=False)
     ancestors = taxdb.get_ordered_ancestors(taxid)
     this_and_ancestors = [taxid] + ancestors
 
@@ -1298,8 +1323,12 @@ task genbank_special_taxa {
     with open("table2asn_allowed.boolean", "wt") as outf:
       outf.write("false" if prohibited else "true")
     with open("genbank_submission_mechanism.str", "wt") as outf:
-      if any(node in set((11320, 11520, 11552)) for node in this_and_ancestors):
-        outf.write("Influenza")
+      if any(node == 11320 for node in this_and_ancestors):
+        outf.write("InfluenzaA")
+      elif any(node == 11520 for node in this_and_ancestors):
+        outf.write("InfluenzaB")
+      elif any(node == 11552 for node in this_and_ancestors):
+        outf.write("InfluenzaC")
       elif any(node == 2697049 for node in this_and_ancestors):
         outf.write("SARS-CoV-2")
       elif any(node == 11983 for node in this_and_ancestors):
@@ -1308,6 +1337,38 @@ task genbank_special_taxa {
         outf.write("Dengue")
       else:
         outf.write("table2asn")
+
+    # Genbank requires certain fields to be populated for Flu A and Dengue
+    if any(node == 11320 for node in this_and_ancestors):
+      # flu A needs subtype specified in the serotype column
+      with open("genbank_source_overrides.json", "wt") as outf:
+        # This taxid matches a specific named strain
+        match = re.search(r'\(([^()]+)\)+$', taxdb.names[taxid])
+        if match:
+          subtype = match.group(1)
+          print("found Influenza A subtype {}". format(subtype))
+          json.dump({'serotype':subtype}, outf)
+        else:
+          # Influenza A has a number of taxids at the subtype level
+          match = re.search(r'(\w+)\s+subtype$', taxdb.names[taxid])
+          if match:
+            subtype = match.group(1)
+            print("found Influenza A subtype {}". format(subtype))
+            json.dump({'serotype':subtype}, outf)
+          else:
+            print("failed to find Influenza A subtype from taxid {}, taxname {}".format(taxid, taxdb.names[taxid]))
+            sys.exit(1)
+    elif any(node == 3052464 for node in this_and_ancestors):
+      # dengue needs serotype specified in the genotype column
+      with open("genbank_source_overrides.json", "wt") as outf:
+        match = re.search(r'(\d)$', taxdb.names[taxid])
+        if match:
+          serotype = match.group(1)
+          print("found Dengue serotype {}". format(serotype))
+          json.dump({'genotype':serotype}, outf)
+        else:
+          print("failed to find Dengue serotype from taxid {}, taxname {}".format(taxid, taxdb.names[taxid]))
+          sys.exit(1)
 
     # VADR is an annotation tool that supports SC2, Flu A/B/C/D, Noro, Dengue, RSV A/B, MPXV, etc
     # https://github.com/ncbi/vadr/wiki/Available-VADR-model-files
@@ -1358,10 +1419,6 @@ task genbank_special_taxa {
 
     if out_vadr_model_tar_url:
       urllib.request.urlretrieve(out_vadr_model_tar_url, "vadr_model-~{taxid}.tar.gz")
-    else:
-      # I'd rather emit a null value but not sure how
-      with tarfile.open("vadr_model-~{taxid}.tar.gz", "w:gz") as out_tar:
-        pass
 
     CODE
   >>>
@@ -1369,9 +1426,10 @@ task genbank_special_taxa {
   output {
     Boolean  table2asn_allowed     = read_boolean("table2asn_allowed.boolean")
     String   genbank_submission_mechanism = read_string("genbank_submission_mechanism.str")
+    File?    genbank_source_overrides_json = "genbank_source_overrides.json"
     Boolean  vadr_supported        = read_boolean("vadr_supported.boolean")
     String   vadr_cli_options      = read_string("vadr_cli_options.string")
-    File     vadr_model_tar        = "vadr_model-~{taxid}.tar.gz"
+    File?    vadr_model_tar        = "vadr_model-~{taxid}.tar.gz"
     String   vadr_model_tar_subdir = read_string("vadr_model_tar_subdir.str")
     Int      vadr_taxid            = read_int("vadr_taxid.int")
     Int      vadr_min_ram_gb       = read_int("vadr_min_ram_gb.int")
@@ -1381,7 +1439,7 @@ task genbank_special_taxa {
 
   runtime {
     docker: docker
-    memory: "1 GB"
+    memory: "2 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
@@ -1477,16 +1535,16 @@ task vadr {
 }
 
 task package_genbank_submissions {
-  # TO DO: output submission.xml files too
   input {
     Array[String]   genbank_file_manifest
     Array[File]     genbank_submit_files
 
     String          spuid_base
     String          spuid_namespace
+    String          account_name
     File            authors_sbt
 
-    String          docker = "quay.io/broadinstitute/viral-baseimage:0.2.0"
+    String          docker = "python:slim"
     Int             mem_size = 2
     Int             cpus = 1
   }
@@ -1504,7 +1562,7 @@ task package_genbank_submissions {
     # initialize counters and file lists for each submission category
     counts_by_type = {}
     files_by_type = {}
-    groups_total = list(m+"_"+v for m in ('table2asn', 'Influenza', 'SARS-CoV-2', 'Norovirus', 'Dengue') for v in ('clean', 'warnings'))
+    groups_total = list(m+"_"+v for m in ('table2asn', 'InfluenzaA', 'InfluenzaB', 'InfluenzaC', 'SARS-CoV-2', 'Norovirus', 'Dengue') for v in ('clean', 'warnings'))
     for group in groups_total:
       counts_by_type[group] = 0
       files_by_type[group] = []
@@ -1514,6 +1572,33 @@ task package_genbank_submissions {
       group = genome['submission_type'] + '_' + ('clean' if genome['validation_passing'] else 'warnings')
       counts_by_type[group] += 1
       files_by_type[group].extend(genome['files'])
+
+    # function for writing submission.xml files
+    def write_submission_xml(spuid, spuid_namespace, account_name, wizard=None):
+      fname = spuid + ".xml"
+      submission_name = spuid
+      with open(fname, 'wt') as outf:
+        outf.write('<?xml version="1.0"?>\n')
+        outf.write('<Submission>\n')
+        outf.write('  <Description>\n')
+        outf.write('    <Comment>{}</Comment>\n'.format(submission_name))
+        outf.write('    <Organization type="center" role="owner">\n')
+        outf.write('      <Name>{}</Name>\n'.format(account_name))
+        outf.write('    </Organization>\n')
+        outf.write('  </Description>\n')
+        outf.write('  <Action>\n')
+        outf.write('    <AddFiles target_db="GenBank">\n')
+        outf.write('      <File file_path="{}.zip">\n'.format(spuid))
+        outf.write('        <DataType>genbank-submission-package</DataType>\n')
+        outf.write('      </File>\n')
+        if wizard:
+          outf.write('      <Attribute name="wizard">{}</Attribute>\n'.format(wizard))
+        outf.write('      <Identifier>\n')
+        outf.write('        <SPUID spuid_namespace="{}">{}</SPUID>\n'.format(spuid_namespace, spuid))
+        outf.write('      </Identifier>\n')
+        outf.write('    </AddFiles>\n')
+        outf.write('  </Action>\n')
+        outf.write('</Submission>\n')
 
     # write and bundle outputs
     for group in groups_total:
@@ -1543,6 +1628,7 @@ task package_genbank_submissions {
                         assert header == cmt_header
                       else:
                         cmt_header = header
+                        out_cmt.write(header)
                       out_cmt.write(inf.read())
                   elif fname.endswith('.src'):
                     with open(fname) as inf:
@@ -1551,22 +1637,38 @@ task package_genbank_submissions {
                         assert header == src_header
                       else:
                         src_header = header
+                        out_src.write(header)
                       out_src.write(inf.read())
           with zipfile.ZipFile("~{spuid_base}_" + group + ".zip", 'w') as zf:
             for fname in ('sequences.fsa', 'comment.cmt', 'source.src', 'template.sbt'):
               zf.write(fname)
+          if group.startswith('SARS-CoV-2'):
+            wizard = "BankIt_SARSCoV2_api"
+            write_submission_xml("~{spuid_base}_" + group, "~{spuid_namespace}", "~{account_name}", wizard=wizard)
+          elif group.startswith('Influenza'):
+            wizard = "BankIt_influenza_api"
+            write_submission_xml("~{spuid_base}_" + group, "~{spuid_namespace}", "~{account_name}", wizard=wizard)
     CODE
   >>>
 
   output {
+    Array[File] ftp_submission_files  = glob("~{spuid_base}_[IS]*_clean.*")
     File? submit_sqns_clean_zip       = "~{spuid_base}_table2asn_clean.zip"
     File? submit_sqns_warnings_zip    = "~{spuid_base}_table2asn_warnings.zip"
     Int   num_sqns_clean              = read_int("count_table2asn_clean.int")
     Int   num_sqns_warnings           = read_int("count_table2asn_warnings.int")
-    File? submit_flu_clean_zip        = "~{spuid_base}_Influenza_clean.zip"
-    File? submit_flu_warnings_zip     = "~{spuid_base}_Influenza_warnings.zip"
-    Int   num_flu_clean               = read_int("count_Influenza_clean.int")
-    Int   num_flu_warnings            = read_int("count_Influenza_warnings.int")
+    File? submit_fluA_clean_zip       = "~{spuid_base}_InfluenzaA_clean.zip"
+    File? submit_fluA_warnings_zip    = "~{spuid_base}_InfluenzaA_warnings.zip"
+    Int   num_fluA_clean              = read_int("count_InfluenzaA_clean.int")
+    Int   num_fluA_warnings           = read_int("count_InfluenzaA_warnings.int")
+    File? submit_fluB_clean_zip       = "~{spuid_base}_InfluenzaB_clean.zip"
+    File? submit_fluB_warnings_zip    = "~{spuid_base}_InfluenzaB_warnings.zip"
+    Int   num_fluB_clean              = read_int("count_InfluenzaB_clean.int")
+    Int   num_fluB_warnings           = read_int("count_InfluenzaB_warnings.int")
+    File? submit_fluC_clean_zip       = "~{spuid_base}_InfluenzaC_clean.zip"
+    File? submit_fluC_warnings_zip    = "~{spuid_base}_InfluenzaC_warnings.zip"
+    Int   num_fluC_clean              = read_int("count_InfluenzaC_clean.int")
+    Int   num_fluC_warnings           = read_int("count_InfluenzaC_warnings.int")
     File? submit_sc2_clean_zip        = "~{spuid_base}_SARS-CoV-2_clean.zip"
     File? submit_sc2_warnings_zip     = "~{spuid_base}_SARS-CoV-2_warnings.zip"
     Int   num_sc2_clean               = read_int("count_SARS-CoV-2_clean.int")
