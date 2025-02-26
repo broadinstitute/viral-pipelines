@@ -5,7 +5,7 @@ import "../tasks/tasks_utils.wdl" as utils
 
 workflow genbank_gather {
     meta {
-        description: "More here."
+        description: "Consolidate all genbank submission files for individual genomes into bulk submission packages grouped by submission pathway."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
         allowNestedInputs: true
