@@ -1535,7 +1535,6 @@ task vadr {
 }
 
 task package_genbank_submissions {
-  # TO DO: output submission.xml files too
   input {
     Array[String]   genbank_file_manifest
     Array[File]     genbank_submit_files
@@ -1545,7 +1544,7 @@ task package_genbank_submissions {
     String          account_name
     File            authors_sbt
 
-    String          docker = "quay.io/broadinstitute/viral-baseimage:0.2.0"
+    String          docker = "python:slim"
     Int             mem_size = 2
     Int             cpus = 1
   }
@@ -1575,7 +1574,9 @@ task package_genbank_submissions {
       files_by_type[group].extend(genome['files'])
 
     # function for writing submission.xml files
-    def write_submission_xml(fname, account_name, submission_name, spuid_namespace, spuid, wizard=None):
+    def write_submission_xml(spuid, spuid_namespace, account_name, wizard=None):
+      fname = spuid + ".xml"
+      submission_name = spuid
       with open(fname, 'wt') as outf:
         outf.write('<?xml version="1.0"?>\n')
         outf.write('<Submission>\n')
@@ -1609,6 +1610,7 @@ task package_genbank_submissions {
           with zipfile.ZipFile("~{spuid_base}_" + group + ".zip", 'w') as zf:
             for fname in files_by_type[group]:
               zf.write(fname)
+          write_submission_xml("~{spuid_base}_" + group, "~{spuid_namespace}", "~{account_name}", wizard="BankIt_api")
         else:
           # for special submissions, merge each individual file type
           with open("sequences.fsa", 'wt') as out_fsa:
@@ -1641,6 +1643,11 @@ task package_genbank_submissions {
           with zipfile.ZipFile("~{spuid_base}_" + group + ".zip", 'w') as zf:
             for fname in ('sequences.fsa', 'comment.cmt', 'source.src', 'template.sbt'):
               zf.write(fname)
+          if group.startswith('SARS-CoV-2'):
+            wizard = "BankIt_SARSCoV2_api"
+          else:
+            wizard = "BankIt_api"
+          write_submission_xml("~{spuid_base}_" + group, "~{spuid_namespace}", "~{account_name}", wizard=wizard)
     CODE
   >>>
 

@@ -23,6 +23,7 @@ workflow genbank_gather {
     }
 
     output {
+        Array[File] ftp_submission_files  = package_genbank_submissions.ftp_submission_files
         File? submit_sqns_clean_zip       = package_genbank_submissions.submit_sqns_clean_zip
         File? submit_sqns_warnings_zip    = package_genbank_submissions.submit_sqns_warnings_zip
         Int   num_sqns_clean              = package_genbank_submissions.num_sqns_clean
