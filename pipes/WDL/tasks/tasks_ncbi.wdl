@@ -1610,7 +1610,6 @@ task package_genbank_submissions {
           with zipfile.ZipFile("~{spuid_base}_" + group + ".zip", 'w') as zf:
             for fname in files_by_type[group]:
               zf.write(fname)
-          write_submission_xml("~{spuid_base}_" + group, "~{spuid_namespace}", "~{account_name}", wizard="BankIt_api")
         else:
           # for special submissions, merge each individual file type
           with open("sequences.fsa", 'wt') as out_fsa:
@@ -1645,9 +1644,10 @@ task package_genbank_submissions {
               zf.write(fname)
           if group.startswith('SARS-CoV-2'):
             wizard = "BankIt_SARSCoV2_api"
-          else:
-            wizard = "BankIt_api"
-          write_submission_xml("~{spuid_base}_" + group, "~{spuid_namespace}", "~{account_name}", wizard=wizard)
+            write_submission_xml("~{spuid_base}_" + group, "~{spuid_namespace}", "~{account_name}", wizard=wizard)
+          elif group.startswith('Influenza'):
+            wizard = "BankIt_influenza_api"
+            write_submission_xml("~{spuid_base}_" + group, "~{spuid_namespace}", "~{account_name}", wizard=wizard)
     CODE
   >>>
 
