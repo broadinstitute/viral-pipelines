@@ -2,42 +2,51 @@ version 1.0
 
 task taxid_to_nextclade_dataset_name {
     input {
-        String taxid
+        Int     taxid
+        File    taxdump_tgz
+        File    nextclade_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/typing/nextclade-by-taxid.tsv"
+        String  docker = "quay.io/broadinstitute/viral-classify:2.2.5"
     }
     command <<<
-        python3 <<CODE
-        taxid = int("~{taxid}")
-        taxid_to_dataset_map = {
-            2697049 : 'sars-cov-2',
-            641809  : 'flu_h1n1pdm_ha',
-            335341  : 'flu_h3n2_ha',
-            119210  : 'flu_h3n2_ha',
-            518987  : 'flu_vic_ha',
-            208893  : 'rsv_a',
-            208895  : 'rsv_b',
-            11234   : 'nextstrain/measles/N450/WHO-2012',
-            11053   : 'nextstrain/dengue/all',
-            11060   : 'nextstrain/dengue/all',
-            11069   : 'nextstrain/dengue/all',
-            11070   : 'nextstrain/dengue/all',
-            10244   : 'MPXV',
-            619591  : 'hMPXV'
-        }
-        with open('DATASET_NAME', 'wt') as outf:
-            outf.write(taxid_to_dataset_map.get(taxid, '') + '\n')
+        set -e
+
+        # extract taxdump
+        mkdir -p taxdump
+        read_utils.py extract_tarball "~{taxdump_tgz}" taxdump
+
+        touch nextclade_dataset_name.str
+
+        python3 << CODE
+        import csv
+        import metagenomics
+        taxid = ~{taxid}
+
+        # load taxdb and retrieve full hierarchy leading to this taxid
+        taxdb = metagenomics.TaxonomyDb(tax_dir="taxdump", load_nodes=True, load_names=True, load_gis=False)
+        ancestors = taxdb.get_ordered_ancestors(taxid)
+        this_and_ancestors = [taxid] + ancestors
+
+        # read in lookup table
+        with open("~{nextclade_by_taxid_tsv}", 'rt') as inf:
+            for row in csv.DictReader(inf, delimiter='\t'):
+              if any(node == int(row['tax_id']) for node in this_and_ancestors):
+                # found a match
+                with open("nextclade_dataset_name.str", 'wt') as outf:
+                    outf.write(row['nextclade_dataset'])
+                break
         CODE
     >>>
     runtime {
-        docker: "python:slim"
-        memory: "1 GB"
+        docker: docker
+        memory: "2 GB"
         cpu:   1
-        disks: "local-disk 50 HDD"
-        disk:  "50 GB" # TES
+        disks: "local-disk 100 HDD"
+        disk:  "100 GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
     output {
-        String nextclade_dataset_name = read_string("DATASET_NAME")
+        String nextclade_dataset_name = read_string("nextclade_dataset_name.str")
     }    
 }
 
@@ -96,7 +105,8 @@ task nextclade_one_sample {
             ('short-clade', 'NEXTCLADE_SHORTCLADE'),
             ('subclade', 'NEXTCLADE_SUBCLADE'),
             ('aaSubstitutions', 'NEXTCLADE_AASUBS'),
-            ('aaDeletions', 'NEXTCLADE_AADELS')]
+            ('aaDeletions', 'NEXTCLADE_AADELS'),
+            ('Nextclade_pango', 'NEXTCLADE_PANGO')]
         out = {}
         with codecs.open('~{basename}.nextclade.tsv', 'r', encoding='utf-8') as inf:
             for line in csv.DictReader(inf, delimiter='\t'):
@@ -125,6 +135,7 @@ task nextclade_one_sample {
         String nextclade_clade   = read_string("NEXTCLADE_CLADE")
         String nextclade_shortclade = read_string("NEXTCLADE_SHORTCLADE")
         String nextclade_subclade = read_string("NEXTCLADE_SUBCLADE")
+        String nextclade_pango   = read_string("NEXTCLADE_PANGO")
         String aa_subs_csv       = read_string("NEXTCLADE_AASUBS")
         String aa_dels_csv       = read_string("NEXTCLADE_AADELS")
     }

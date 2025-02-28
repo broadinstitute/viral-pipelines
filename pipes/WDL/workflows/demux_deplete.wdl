@@ -24,6 +24,7 @@ workflow demux_deplete {
 
         Boolean      sort_reads=true
         Boolean      insert_demux_outputs_into_terra_tables=false
+        Boolean      revcomp_i5_indexes=false
 
         File?        sample_rename_map
         Array[File]  biosample_map_tsvs = []
@@ -121,11 +122,17 @@ workflow demux_deplete {
         }
     }
 
-    #### demux each lane (rename samples if requested)
+    #### demux each lane (rename samples if requested, revcomp i5 if requested)
     scatter(lane_sheet in zip(range(length(samplesheets)), samplesheets)) {
+        if(revcomp_i5_indexes) {
+            call demux.revcomp_i5 {
+                input:
+                    old_sheet = lane_sheet.right
+            }
+        }
         call demux.samplesheet_rename_ids {
             input:
-                old_sheet  = lane_sheet.right,
+                old_sheet  = select_first([revcomp_i5.new_sheet, lane_sheet.right]),
                 rename_map = sample_rename_map
         }
         call demux.illumina_demux {
