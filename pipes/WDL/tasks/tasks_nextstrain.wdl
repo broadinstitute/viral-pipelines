@@ -14,6 +14,8 @@ task taxid_to_nextclade_dataset_name {
         mkdir -p taxdump
         read_utils.py extract_tarball "~{taxdump_tgz}" taxdump
 
+        touch nextclade_dataset_name.str
+
         python3 << CODE
         import csv
         import metagenomics
