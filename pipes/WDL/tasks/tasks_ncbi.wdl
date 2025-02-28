@@ -860,6 +860,8 @@ task biosample_to_genbank {
         out_headers.append('note')
     if 'serotype' in out_headers_total and 'serotype' not in out_headers:
         out_headers.append('serotype')
+    if 'strain' not in out_headers and any(row['organism'].startswith('Influenza') for row in biosample_attributes):
+        out_headers.append('strain')
 
     # manual overrides if provided
     if os.path.isfile("~{source_overrides_json}"):
@@ -877,19 +879,17 @@ task biosample_to_genbank {
 
       with open("~{out_basename}.sample_ids.txt", 'wt') as outf_ids:
           for row in biosample_attributes:
-            # Influenza-specific requirement
-            if row['organism'].startswith('Influenza'):
-                match = re.search(r'\(([^()]+)\)+$', row[header_key_map.get('isolate','isolate')])
-                if match:
-                    row['serotype'] = match.group(1)
-
             # populate output row as a dict
             outrow = dict((h, row.get(header_key_map.get(h,h), '')) for h in out_headers)
 
             ### Taxon-specific genome naming rules go here
             if outrow['organism'].startswith('Influenza'):
               ### Influenza-specific isolate naming was handled above already and is required to be metadata-free
-              pass
+              # Influenza has requirements for serotype and strain field however
+              match = re.search(r'\(([^()]+)\)+$', outrow['isolate'])
+              if match:
+                  outrow['serotype'] = match.group(1) # H1N1, H3N2, etc
+              outrow['strain'] = outrow['organism'].split()[1] # A, B, C, D, etc
             elif outrow['organism'].startswith('Special taxon with special naming rules'):
               ### Example special case here
               pass
@@ -917,13 +917,6 @@ task biosample_to_genbank {
                 name_prefix = "~{default='' isolate_prefix_override}".strip()
               outrow['isolate'] = '/'.join([name_prefix, host, country, state_inst_labid, year])
               print("new isolate name: {}".format(outrow['isolate']))
-
-            # -- this seems to be flu specific, comment out:
-            ## isolate name should not start with organism string
-            #if outrow['isolate'].startswith(outrow['organism']):
-            #    outrow['isolate'] = outrow['isolate'][len(outrow['organism']):].strip()
-            #if outrow['isolate'].startswith('/'):
-            #    outrow['isolate'] = outrow['isolate'][1:].strip()
 
             # some fields are not allowed to be empty
             if not outrow.get('geo_loc_name'):
