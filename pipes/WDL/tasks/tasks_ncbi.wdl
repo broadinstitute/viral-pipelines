@@ -885,11 +885,12 @@ task biosample_to_genbank {
             ### Taxon-specific genome naming rules go here
             if outrow['organism'].startswith('Influenza'):
               ### Influenza-specific isolate naming was handled above already and is required to be metadata-free
-              # Influenza has requirements for serotype and strain field however
-              match = re.search(r'\(([^()]+)\)+$', outrow['isolate'])
-              if match:
-                  outrow['serotype'] = match.group(1) # H1N1, H3N2, etc
-              outrow['strain'] = outrow['organism'].split()[1] # A, B, C, D, etc
+              # FTP submission pathway requires us to do the naming via the strain field
+              type = outrow['organism'].split()[1] # A, B, C, D, etc
+              state = outrow['geo_loc_name'].split(':')[1] if ':' in outrow['geo_loc_name'] else outrow['geo_loc_name']
+              year = outrow['collection_date'].split('-')[0]
+              outrow['strain'] = '/'.join([type, state, outrow['isolate'], year])
+              print("new strain name: {}".format(outrow['strain']))
             elif outrow['organism'].startswith('Special taxon with special naming rules'):
               ### Example special case here
               pass
