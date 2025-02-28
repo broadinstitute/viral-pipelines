@@ -44,7 +44,7 @@ task taxid_to_nextclade_dataset_name {
         maxRetries: 2
     }
     output {
-        String nextclade_dataset_name = read_string("DATASET_NAME")
+        String nextclade_dataset_name = read_string("nextclade_dataset_name.str")
     }    
 }
 
