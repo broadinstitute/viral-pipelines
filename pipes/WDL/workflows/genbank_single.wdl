@@ -137,7 +137,7 @@ workflow genbank_single {
         call ncbi.structured_comments_from_aligned_bam {
           input:
             out_basename = assembly_id,
-            aligned_bam = aligned_bam
+            aligned_bam = select_first([aligned_bam])
         }
     }
 
