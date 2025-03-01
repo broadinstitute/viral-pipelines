@@ -890,8 +890,6 @@ task biosample_to_genbank {
               state = outrow['geo_loc_name'].split(':')[1].strip() if ':' in outrow['geo_loc_name'] else outrow['geo_loc_name']
               year = outrow['collection_date'].split('-')[0]
               outrow['strain'] = '/'.join([type, state, outrow['isolate'], year])
-              if type == 'A':
-                outrow['strain'] = '{}({})'.format(outrow['strain'], outrow['serotype'])
               print("new strain name: {}".format(outrow['strain']))
             elif outrow['organism'].startswith('Special taxon with special naming rules'):
               ### Example special case here
