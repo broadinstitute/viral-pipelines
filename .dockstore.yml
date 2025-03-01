@@ -244,6 +244,9 @@ workflows:
   - name: scaffold_and_refine_multitaxa
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/scaffold_and_refine_multitaxa.wdl
+  - name: submit_sra
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/submit_sra.wdl
   - name: subsample_by_casecounts
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/subsample_by_casecounts.wdl

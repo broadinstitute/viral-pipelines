@@ -4,9 +4,10 @@ task gcs_copy {
   input {
     Array[File] infiles
     String      gcs_uri_prefix
+    # TO DO: add an input File? for GCP credentials to allow this to work outside of Terra
   }
   meta {
-    description: "gsutil cp. only works on a GCP-based backend (e.g. Terra)"
+    description: "gcloud storage cp without additional authentication only works on Terra"
   }
   parameter_meta {
     infiles: {
@@ -17,7 +18,7 @@ task gcs_copy {
   }
   command {
     set -e
-    gsutil -m cp ~{sep=' ' infiles} ~{gcs_uri_prefix}
+    gcloud storage cp "~{sep='" "' infiles}" ~{gcs_uri_prefix}
   }
   output {
     File logs = stdout()
