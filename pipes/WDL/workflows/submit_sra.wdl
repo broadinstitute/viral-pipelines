@@ -25,7 +25,6 @@ workflow submit_sra {
 
     String prefix = "/~{prod_test}/~{flowcell_id}"
 
-
     call terra.gcs_copy as gcs_sra_dump_reads {
         input:
             infiles        = reads_bams,
