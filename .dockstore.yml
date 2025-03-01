@@ -84,9 +84,6 @@ workflows:
   - name: create_enterics_qc_viz_general
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/create_enterics_qc_viz_general.wdl
-  - name: demux_metag
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/demux_metag.wdl
   - name: demux_only
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/demux_only.wdl
