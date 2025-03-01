@@ -244,6 +244,12 @@ workflows:
   - name: scaffold_and_refine_multitaxa
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/scaffold_and_refine_multitaxa.wdl
+  - name: submit_biosample
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/submit_biosample.wdl
+  - name: submit_genbank
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/submit_genbank.wdl
   - name: submit_sra
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/submit_sra.wdl
