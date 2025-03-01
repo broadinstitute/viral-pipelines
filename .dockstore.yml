@@ -256,9 +256,6 @@ workflows:
   - name: subsample_by_metadata_with_focal
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/subsample_by_metadata_with_focal.wdl
-  - name: taxid_to_nextclade
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/taxid_to_nextclade.wdl
   - name: terra_table_to_tsv
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/terra_table_to_tsv.wdl
