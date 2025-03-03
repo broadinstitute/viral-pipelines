@@ -72,9 +72,6 @@ workflows:
   - name: classify_single
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/classify_single.wdl
-  - name: contigs
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/contigs.wdl
   - name: coverage_table
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/coverage_table.wdl
