@@ -16,6 +16,9 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/assemble_denovo.wdl
     testParameterFiles:
     - /test/input/WDL/test_inputs-assemble_denovo-local.json
+  - name: assemble_denovo_metagenomic
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/assemble_denovo_metagenomic.wdl
   - name: assemble_refbased
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/assemble_refbased.wdl
