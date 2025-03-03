@@ -17,6 +17,7 @@ workflow submit_biosample {
         String prod_test = "Production" # Production or Test
     }
 
+    # TO DO: md5sum not necessary if ncbi_sftp_upload becomes more friendly to resubmissions / corrections of existing subs
     call utils.md5sum {
         input:
             in_file = biosample_submit_tsv
@@ -40,18 +41,21 @@ workflow submit_biosample {
     }
 
     # merge all results and attributes
-    call utils.tsv_join {
-        input:
-            input_tsvs = select_all([
+    Array[File] attributes_tsvs = select_all([
                 biosample_tsv_filter_preexisting.biosample_attributes_tsv,
                 biosample_submit_tsv_ftp_upload.attributes_tsv,
                 biosample_submit_tsv
-            ]),
-            id_col = "isolate",
-            out_basename = basename(biosample_submit_tsv, '.tsv') + "-attributes"
+            ])
+    if(length(attributes_tsvs) > 1) {
+        call utils.tsv_join {
+            input:
+                input_tsvs = attributes_tsvs,
+                id_col = "isolate",
+                out_basename = basename(biosample_submit_tsv, '.tsv') + "-attributes"
+        }
     }
 
     output {
-        File  biosample_attributes = tsv_join.out_tsv
+        File  biosample_attributes = select_first([tsv_join.out_tsv, attributes_tsvs[0]])
     }
 }

@@ -30,7 +30,6 @@ workflow submit_sra {
             infiles        = reads_bams,
             gcs_uri_prefix = "~{sra_data_bucket_uri}/~{flowcell_id}/"
     }
-
     call ncbi_tools.sra_tsv_to_xml {
         input:
             meta_submit_tsv  = sra_meta_tsv,
