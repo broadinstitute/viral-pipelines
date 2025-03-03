@@ -1260,3 +1260,29 @@ task filter_sequences_by_length {
         Int  sequences_out     = read_int("OUT_COUNT")
     }
 }
+
+task pair_files_by_basename {
+  input {
+    Array[File] files
+    String      left_ext
+    String      right_ext
+  }
+  command {
+    set -e
+    cp ~{sep=' ' files} .
+  }
+  output {
+    Array[File] left_files  = glob("*.~{left_ext}")
+    Array[File] right_files = glob("*.~{right_ext}")
+    Array[Pair[File,File]] file_pairs = zip(left_files, right_files)
+  }
+  runtime {
+    memory: "1 GB"
+    cpu: 2
+    docker: "ubuntu"
+    disks:  "local-disk 100 HDD"
+    disk: "100 GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
