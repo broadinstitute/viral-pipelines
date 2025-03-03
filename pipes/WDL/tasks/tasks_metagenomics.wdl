@@ -214,7 +214,7 @@ task kraken2 {
     File   reads_bam
     File   kraken2_db_tgz         # {database.kdb,taxonomy}
     File   krona_taxonomy_db_tgz  # taxonomy.tab
-    Float? confidence_threshold
+    Float? confidence_threshold = 0.05
     Int?   min_base_qual
 
     Int    machine_mem_gb = 90
