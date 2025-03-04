@@ -23,6 +23,8 @@ workflow assemble_denovo_metagenomic {
 
         Array[File]+  reads_bams
 
+        Array[String] batch_id_list
+
         File          ncbi_taxdump_tgz
 
         File          spikein_db
@@ -87,6 +89,11 @@ workflow assemble_denovo_metagenomic {
           category: "other"
         }
 
+    }
+
+    call utils.unique_strings as unique_batch_ids {
+        input:
+            strings = batch_id_list
     }
 
     call read_utils.merge_and_reheader_bams as merge_raw_reads {
@@ -165,7 +172,7 @@ workflow assemble_denovo_metagenomic {
     }
 
     # assemble and produce stats for every reference cluster
-    Array[String] assembly_header = ["entity:assembly_id", "assembly_name", "sample_id", "sample_name", "taxid", "tax_name", "tax_shortname", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "scaffolding_num_segments_recovered", "reference_num_segments_required", "reference_length", "reference_accessions", "skani_num_ref_clusters", "skani_this_cluster_num_refs", "skani_dist_tsv", "scaffolding_ani", "scaffolding_pct_ref_cov", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned", "assembly_method", "assembly_method_version", "biosample_accession", "sample"]
+    Array[String] assembly_header = ["entity:assembly_id", "assembly_name", "sample_id", "sample_name", "taxid", "tax_name", "tax_shortname", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "scaffolding_num_segments_recovered", "reference_num_segments_required", "reference_length", "reference_accessions", "skani_num_ref_clusters", "skani_this_cluster_num_refs", "skani_dist_tsv", "scaffolding_ani", "scaffolding_pct_ref_cov", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned", "assembly_method", "assembly_method_version", "biosample_accession", "batch_ids", "sample"]
     scatter(ref_cluster_tar in select_references.matched_reference_clusters_fastas_tars) {
 
         call utils.tar_extract {
@@ -257,6 +264,8 @@ workflow assemble_denovo_metagenomic {
 
             "biosample_accession" :     select_first([biosample_accession, ""]),
 
+            "batch_ids" :          unique_batch_ids.sorted_unique_joined,
+
             "sample":              '{"entityType":"sample","entityName":"' + sample_id + '"}'
         }
 
@@ -326,5 +335,7 @@ workflow assemble_denovo_metagenomic {
         Array[Int]    assembly_all_lengths_unambig = assembly_length_unambiguous
         Array[Float]  assembly_all_pct_ref_cov     = percent_reference_covered
         Array[File]   assembly_all_fastas          = assembly_fasta
+
+        String  batch_ids                          = unique_batch_ids.sorted_unique_joined
     }
 }

@@ -1067,18 +1067,26 @@ task raise {
 task unique_strings {
   input {
     Array[String]  strings
+    String         separator=","
   }
   Int disk_size = 50
   command {
     cat ~{write_lines(strings)} | sort | uniq > UNIQUE_OUT
+    python3<<CODE
+    with open('UNIQUE_OUT', 'rt') as inf:
+      rows = [line.strip() for line in inf]
+    with open('UNIQUE_OUT_JOIN', 'wt') as outf:
+      outf.write('~{separator}'.join(rows) + '\n')
+    CODE
   }
   output {
     Array[String]  sorted_unique = read_lines("UNIQUE_OUT")
+    String         sorted_unique_joined = read_string("UNIQUE_OUT_JOIN")
   }
   runtime {
     memory: "1 GB"
     cpu: 1
-    docker: "ubuntu"
+    docker: "python:slim"
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
