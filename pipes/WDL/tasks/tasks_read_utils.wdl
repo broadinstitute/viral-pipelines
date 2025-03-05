@@ -247,7 +247,7 @@ task rmdup_ubam {
     String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
   }
 
-  Int disk_size = 375
+  Int disk_size = 375 + 2 * ceil(size(reads_unmapped_bam, "GB"))
 
   parameter_meta {
     reads_unmapped_bam: { description: "unaligned reads in BAM format", patterns: ["*.bam"] }
