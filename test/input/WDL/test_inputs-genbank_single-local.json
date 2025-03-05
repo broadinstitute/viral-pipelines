@@ -4,7 +4,7 @@
   "genbank_single.tax_id": 3052310,
   "genbank_single.organism_name": "Lassa virus",
   "genbank_single.ref_accessions_colon_delim": "KM821997.1:KM821998.1",
-  "genbank_single.structured_comments_from_aligned_bam.aligned_bam": "test/input/genbank/LASV_NGA_2018_0026-aligned.bam",
+  "genbank_single.aligned_bam": "test/input/genbank/LASV_NGA_2018_0026-aligned.bam",
   "genbank_single.biosample_attributes_tsv": "test/input/genbank/biosample-attributes-lasv.txt",
   "genbank_single.structured_comments_from_aligned_bam.assembly_method": "placeholder assembly software",
   "genbank_single.structured_comments_from_aligned_bam.assembly_method_version": "5.4.3.2.1",

@@ -14,19 +14,21 @@ workflow genbank_single {
     }
 
     input {
-        File          assembly_fasta
-        String        assembly_id = basename(assembly_fasta, ".fasta")
-        String        ref_accessions_colon_delim
+        File    assembly_fasta
+        String  assembly_id = basename(assembly_fasta, ".fasta")
+        File?   aligned_bam
 
-        String        biosample_accession
-        Int           tax_id
-        String        organism_name
+        String  ref_accessions_colon_delim
 
-        String        email_address # required for fetching data from NCBI APIs
-        File          authors_sbt
+        String  biosample_accession
+        Int     tax_id
+        String  organism_name
 
-        String?       biosample_attributes_json # if this is used, we will use this first
-        File?         biosample_attributes_tsv # if no json, we will read this tsv
+        String  email_address # required for fetching data from NCBI APIs
+        File    authors_sbt
+
+        String? biosample_attributes_json # if this is used, we will use this first
+        File?   biosample_attributes_tsv # if no json, we will read this tsv
         # if both are unspecified, we will fetch from NCBI via biosample_accession
     }
 
@@ -38,6 +40,10 @@ workflow genbank_single {
         ref_accessions_colon_delim: {
           description: "Reference genome Genbank accessions, each segment/chromosome in the exact same count and order as the segments/chromosomes described in assemblies_fasta. List of accessions should be colon delimited.",
           patterns: ["*.fasta"]
+        }
+        aligned_bam: {
+          description: "Optional: aligned BAM file to inspect for reporting sequencing platform, read depth, etc. in GenBank structured comments.",
+          patterns: ["*.bam","*.sam"]
         }
         biosample_attributes_tsv: {
           description: "A post-submission attributes file from NCBI BioSample, which is available at https://submit.ncbi.nlm.nih.gov/subs/ and clicking on 'Download attributes file with BioSample accessions'.",
@@ -127,9 +133,12 @@ workflow genbank_single {
     }
     File feature_tbl   = select_first([vadr.feature_tbl, annot.feature_tbl])
 
-    call ncbi.structured_comments_from_aligned_bam {
-      input:
-        out_basename = assembly_id
+    if(defined(aligned_bam)) {
+        call ncbi.structured_comments_from_aligned_bam {
+          input:
+            out_basename = assembly_id,
+            aligned_bam = select_first([aligned_bam])
+        }
     }
 
     if(genbank_special_taxa.table2asn_allowed) {
@@ -145,9 +154,9 @@ workflow genbank_single {
       }
     }
     if(!genbank_special_taxa.table2asn_allowed) {
-      Array[File] special_submit_files = [assembly_fsa.sanitized_fasta,
+      Array[File] special_submit_files = select_all([assembly_fsa.sanitized_fasta,
         structured_comments_from_aligned_bam.structured_comment_file,
-        biosample_to_genbank.genbank_source_modifier_table]
+        biosample_to_genbank.genbank_source_modifier_table])
       String special_basename_list = '["~{assembly_id}.fsa", "~{assembly_id}.cmt", "~{assembly_id}.src"]'
     }
     String basename_list_json = select_first([special_basename_list, '["~{assembly_id}.sqn"]'])
@@ -158,7 +167,7 @@ workflow genbank_single {
 
     output {
         String        genbank_mechanism      = genbank_special_taxa.genbank_submission_mechanism
-        File          genbank_comment_file   = structured_comments_from_aligned_bam.structured_comment_file
+        File?         genbank_comment_file   = structured_comments_from_aligned_bam.structured_comment_file
         File          genbank_source_table   = biosample_to_genbank.genbank_source_modifier_table
         String        genbank_isolate_name   = biosample_to_genbank.isolate_name
         File          annotation_tbl         = feature_tbl
