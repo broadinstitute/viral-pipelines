@@ -3,7 +3,9 @@ version 1.0
 import "../tasks/tasks_metagenomics.wdl" as metagenomics
 import "../tasks/tasks_read_utils.wdl" as read_utils
 import "../tasks/tasks_assembly.wdl" as assembly
+import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_reports.wdl" as reports
+import "../tasks/tasks_utils.wdl" as utils
 
 workflow classify_single {
     meta {
@@ -26,6 +28,8 @@ workflow classify_single {
 
         Array[String] taxa_to_dehost         = ["Vertebrata"]
         Array[String] taxa_to_avoid_assembly = ["Vertebrata", "other sequences", "Bacteria"]
+
+        File?         taxid_to_ref_accessions_tsv
     }
 
     parameter_meta {
@@ -129,6 +133,44 @@ workflow classify_single {
             kraken_summary_report = kraken2.kraken2_summary_report
     }
 
+    if(defined(taxid_to_ref_accessions_tsv)) {
+      # download (multi-segment) genomes for each reference, fasta filename = colon-concatenated accession list
+      scatter(taxon in read_tsv(select_first([taxid_to_ref_accessions_tsv]))) {
+          # taxon = [taxid, isolate_prefix, taxname, semicolon_delim_accession_list]
+          call utils.string_split {
+              input:
+                  joined_string = taxon[3],
+                  delimiter = ":"
+          }
+          call ncbi.download_annotations {
+              input:
+                  accessions = string_split.tokens,
+                  combined_out_prefix = sub(taxon[3], ":", "-")  # singularity does not like colons in filenames
+          }
+      }
+
+      # subset reference genomes to those with ANI hits to contigs and cluster reference hits by any ANI similarity to each other
+      call assembly.select_references {
+          input:
+              reference_genomes_fastas = download_annotations.combined_fasta,
+              contigs_fasta = spades.contigs_fasta
+      }
+
+      # get taxid and taxname from taxid_to_ref_accessions_tsv
+      scatter(top_match in select_references.top_matches_per_cluster_basenames) {
+        call utils.fetch_row_from_tsv as tax_lookup {
+          input:
+              tsv = select_first([taxid_to_ref_accessions_tsv]),
+              idx_col = "accessions",
+              idx_val = sub(select_references.top_matches_per_cluster_basenames, "-", ":"),
+              add_header = ["taxid", "isolate_prefix", "taxname", "accessions"]
+        }
+        Int skani_hit_taxid = tax_lookup.map["taxid"]
+        String skani_hit_taxname = tax_lookup.map["taxname"]
+      }
+    }
+
+
     output {
         File   cleaned_reads_unaligned_bam     = deplete.bam_filtered_to_taxa
         File   deduplicated_reads_unaligned    = rmdup_ubam.dedup_bam
@@ -149,6 +191,11 @@ workflow classify_single {
         String kraken2_top_taxon_rank          = report_primary_kraken_taxa.tax_rank
         Int    kraken2_top_taxon_num_reads     = report_primary_kraken_taxa.num_reads
         Float  kraken2_top_taxon_pct_of_focal  = report_primary_kraken_taxa.percent_of_focal
+
+        Int    skani_num_hits                  = length(select_first([select_references.top_matches_per_cluster_basenames, []]))
+        File?  skani_contigs_to_refs_dist_tsv  = select_references.skani_dist_full_tsv
+        Array[Int]? skani_hits_taxids          = skani_hit_taxid
+        Array[String]? skani_hits_taxnames     = skani_hit_taxname
 
         File   raw_fastqc                      = merge_raw_reads.fastqc
         File   cleaned_fastqc                  = fastqc_cleaned.fastqc_html
