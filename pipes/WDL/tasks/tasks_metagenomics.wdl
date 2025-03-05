@@ -785,12 +785,12 @@ task filter_bam_to_taxa {
     Boolean        exclude_taxa = false
     String         out_filename_suffix = "filtered"
 
-    Int            machine_mem_gb = 26
+    Int            machine_mem_gb = 26 + 10 * ceil(size(classified_reads_txt_gz, "GB"))
     String         docker = "quay.io/broadinstitute/viral-classify:2.2.5"
   }
 
   String out_basename = basename(classified_bam, ".bam") + "." + out_filename_suffix
-  Int disk_size = 375
+  Int disk_size = 375 + 2 * ceil(size(classified_bam, "GB"))
 
   command <<<
     set -ex -o pipefail
