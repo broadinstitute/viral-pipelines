@@ -21,6 +21,7 @@ workflow augur_from_msa {
         File?          clades_tsv
         Array[String]? ancestral_traits_to_infer
         Array[File]?   keep_list
+        Array[File]?   exclude_list
         File?          mask_bed
     }
 
@@ -56,6 +57,10 @@ workflow augur_from_msa {
           description: "Optional lists of strain ids to filter inputs down to.",
           patterns: ["*.txt", "*.tsv"]
         }
+        exclude_list: {
+          description: "Optional lists of strain ids to exclude from the provided input before building the tree",
+          patterns: ["*.txt", "*.tsv"]
+        }
         mask_bed: {
           description: "Optional list of sites to mask when building trees.",
           patterns: ["*.bed"]
@@ -65,7 +70,8 @@ workflow augur_from_msa {
     call nextstrain.filter_sequences_to_list {
         input:
             sequences = msa_or_vcf,
-            keep_list = keep_list
+            keep_list = keep_list,
+            exclude_list = exclude_list
     }
     call nextstrain.augur_mask_sites {
         input:
