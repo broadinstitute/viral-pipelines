@@ -1552,6 +1552,7 @@ task package_genbank_submissions {
     python3 << CODE
     import json
     import zipfile
+    import csv
 
     # initialize counters and file lists for each submission category
     counts_by_type = {}
@@ -1633,20 +1634,43 @@ task package_genbank_submissions {
                         src_header = header
                         out_src.write(header)
                       out_src.write(inf.read())
+          # make FTP zips and xmls
+          if group.startswith('SARS-CoV-2'):
+            with zipfile.ZipFile("~{spuid_base}_FTP_" + group + ".zip", 'w') as zf:
+              for fname in ('sequences.fsa', 'comment.cmt', 'source.src', 'template.sbt'):
+                zf.write(fname)
+            wizard = "BankIt_SARSCoV2_api"
+            write_submission_xml("~{spuid_base}_FTP_" + group, "~{spuid_namespace}", "~{account_name}", wizard=wizard)
+          elif group.startswith('Influenza'):
+            with zipfile.ZipFile("~{spuid_base}_FTP_" + group + ".zip", 'w') as zf:
+              for fname in ('sequences.fsa', 'comment.cmt', 'source.src', 'template.sbt'):
+                zf.write(fname)
+            wizard = "BankIt_influenza_api"
+            write_submission_xml("~{spuid_base}_FTP_" + group, "~{spuid_namespace}", "~{account_name}", wizard=wizard)
+            # make a different src file for web after making FTP zip
+            # because for some reason, you can't use the same source.src file for web and FTP for flu
+            # strain column is required for FTP and prohibited for web
+            with open('source.src', 'rt') as inf:
+              reader = csv.DictReader(inf, delimiter='\t')
+              out_header = list(h for h in reader.fieldnames if h != 'strain')
+              rows = []
+              for row in reader:
+                del row['strain']
+                rows.append(row)
+            with open('source.src', 'wt') as outf:
+              writer = csv.DictWriter(outf, delimiter='\t', fieldnames=out_header, dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
+              for row in rows:
+                writer.writerow(row)
+
+          # make web portal zips
           with zipfile.ZipFile("~{spuid_base}_" + group + ".zip", 'w') as zf:
             for fname in ('sequences.fsa', 'comment.cmt', 'source.src', 'template.sbt'):
               zf.write(fname)
-          if group.startswith('SARS-CoV-2'):
-            wizard = "BankIt_SARSCoV2_api"
-            write_submission_xml("~{spuid_base}_" + group, "~{spuid_namespace}", "~{account_name}", wizard=wizard)
-          elif group.startswith('Influenza'):
-            wizard = "BankIt_influenza_api"
-            write_submission_xml("~{spuid_base}_" + group, "~{spuid_namespace}", "~{account_name}", wizard=wizard)
     CODE
   >>>
 
   output {
-    Array[File] ftp_submission_files  = glob("~{spuid_base}_[IS]*_clean.*")
+    Array[File] ftp_submission_files  = glob("~{spuid_base}_FTP_*_clean.*")
     File? submit_sqns_clean_zip       = "~{spuid_base}_table2asn_clean.zip"
     File? submit_sqns_warnings_zip    = "~{spuid_base}_table2asn_warnings.zip"
     Int   num_sqns_clean              = read_int("count_table2asn_clean.int")
