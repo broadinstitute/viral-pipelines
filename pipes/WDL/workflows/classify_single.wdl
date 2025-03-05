@@ -162,7 +162,7 @@ workflow classify_single {
           input:
               tsv = select_first([taxid_to_ref_accessions_tsv]),
               idx_col = "accessions",
-              idx_val = sub(select_references.top_matches_per_cluster_basenames, "-", ":"),
+              idx_val = sub(top_match, "-", ":"),
               add_header = ["taxid", "isolate_prefix", "taxname", "accessions"]
         }
         Int skani_hit_taxid = tax_lookup.map["taxid"]
