@@ -1182,7 +1182,7 @@ task table2asn {
 
     set +e
     grep -vi '^Info:' "~{out_basename}.val" > "~{out_basename}.val.no_info"
-    # Question: should "^Warning: valid" also be passed??
+    grep -vi '^Warning: valid' "~{out_basename}.val.no_info" > "~{out_basename}.val.no_warn_valid"
   >>>
 
   output {
@@ -1191,7 +1191,7 @@ task table2asn {
     File          genbank_validation_file  = "~{out_basename}.val"
     Array[String] table2asn_errors         = read_lines("~{out_basename}.val")
     String        table2asn_version        = read_string("TABLE2ASN_VERSION")
-    Boolean       table2asn_passing        = length(read_lines("~{out_basename}.val.no_info")) == 0
+    Boolean       table2asn_passing        = length(read_lines("~{out_basename}.val.no_warn_valid")) == 0
   }
 
   runtime {
