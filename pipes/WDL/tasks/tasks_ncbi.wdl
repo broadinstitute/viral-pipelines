@@ -1180,9 +1180,10 @@ task table2asn {
       ~{'-y "' + comment + '"'} \
       -a s -V vb
 
-    set +e
+    set +e +o pipefail
     grep -vi '^Info:' "~{out_basename}.val" > "~{out_basename}.val.no_info"
     grep -vi '^Warning: valid' "~{out_basename}.val.no_info" > "~{out_basename}.val.no_warn_valid"
+    exit 0
   >>>
 
   output {
