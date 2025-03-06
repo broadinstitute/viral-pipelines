@@ -1128,10 +1128,10 @@ task table2asn {
     Int          genetic_code = 1
 
     String       out_basename = basename(assembly_fasta, ".fasta")
-    Int          machine_mem_gb = 8
+    Int          machine_mem_gb = 12  # 8 is enough for small viruses but DNA viruses seem to require more
     String       docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"  # this could be a simpler docker image, we don't use anything beyond table2asn itself
   }
-
+  Int disk_size = 50
 
   parameter_meta {
     assembly_fasta: {
@@ -1201,6 +1201,8 @@ task table2asn {
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
   }
 }
 
