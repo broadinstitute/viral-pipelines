@@ -1666,6 +1666,7 @@ task package_genbank_submissions {
                 rows.append(row)
             with open('source.src', 'wt') as outf:
               writer = csv.DictWriter(outf, delimiter='\t', fieldnames=out_header, dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
+              writer.writeheader()
               for row in rows:
                 writer.writerow(row)
 
