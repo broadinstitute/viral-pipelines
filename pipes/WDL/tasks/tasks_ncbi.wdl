@@ -1180,9 +1180,9 @@ task table2asn {
       ~{'-y "' + comment + '"'} \
       -a s -V vb
 
-    set +e +o pipefail
-    grep -vi '^Info:' "~{out_basename}.val" > "~{out_basename}.val.no_info"
-    grep -vi '^Warning: valid' "~{out_basename}.val.no_info" > "~{out_basename}.val.no_warn_valid"
+    set +e +o pipefail # grep exits 1 if it doesn't match
+    cat "~{out_basename}.val" | grep -vi '^Info:' > "~{out_basename}.val.no_info"
+    cat "~{out_basename}.val.no_info" | grep -vi '^Warning: valid'  > "~{out_basename}.val.errors_only"
     exit 0
   >>>
 
@@ -1192,7 +1192,7 @@ task table2asn {
     File          genbank_validation_file  = "~{out_basename}.val"
     Array[String] table2asn_errors         = read_lines("~{out_basename}.val")
     String        table2asn_version        = read_string("TABLE2ASN_VERSION")
-    Boolean       table2asn_passing        = length(read_lines("~{out_basename}.val.no_warn_valid")) == 0
+    Boolean       table2asn_passing        = length(read_lines("~{out_basename}.val.errors_only")) == 0
   }
 
   runtime {
