@@ -1165,7 +1165,7 @@ task table2asn {
   }
 
   command <<<
-    set -ex
+    set -ex -o pipefail
     table2asn -version | cut -f 2 -d ' ' > TABLE2ASN_VERSION
     cp "~{assembly_fasta}" "~{out_basename}.fsa" # input fasta must be in CWD so output files end up next to it
     touch "~{out_basename}.val"  # this file isn't produced if no errors/warnings
@@ -1180,10 +1180,8 @@ task table2asn {
       ~{'-y "' + comment + '"'} \
       -a s -V vb
 
-    set +e +o pipefail # grep exits 1 if it doesn't match
-    cat "~{out_basename}.val" | grep -vi '^Info:' > "~{out_basename}.val.no_info"
-    cat "~{out_basename}.val.no_info" | grep -vi '^Warning: valid'  > "~{out_basename}.val.errors_only"
-    exit 0
+    cat "~{out_basename}.val" | { grep -vi '^Info:' || test $? = 1; } > "~{out_basename}.val.no_info"
+    cat "~{out_basename}.val.no_info" | { grep -vi '^Warning: valid' || test $? = 1; } > "~{out_basename}.val.errors_only"
   >>>
 
   output {
