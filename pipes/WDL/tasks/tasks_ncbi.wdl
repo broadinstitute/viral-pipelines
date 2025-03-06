@@ -1180,8 +1180,10 @@ task table2asn {
       ~{'-y "' + comment + '"'} \
       -a s -V vb
 
-    cat "~{out_basename}.val" | { grep -vi '^Info:' || test $? = 1; } > "~{out_basename}.val.no_info"
-    cat "~{out_basename}.val.no_info" | { grep -vi '^Warning: valid' || test $? = 1; } > "~{out_basename}.val.errors_only"
+    set +x
+    echo "table2asn complete"
+    cat "~{out_basename}.val" | { grep -vi '^Info:' || test $? = 1; } | tee "~{out_basename}.val.no_info"
+    cat "~{out_basename}.val.no_info" | { grep -vi '^Warning: valid' || test $? = 1; } | tee "~{out_basename}.val.errors_only"
   >>>
 
   output {
