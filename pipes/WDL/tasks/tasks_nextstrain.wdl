@@ -1631,6 +1631,7 @@ task ancestral_tree {
         Boolean  infer_ambiguous = false
         Boolean  keep_overhangs = false
         File?    vcf_reference
+        File?    root_sequence
         File?    output_vcf
 
         String   docker = "docker.io/nextstrain/base:build-20240318T173028Z"
@@ -1651,6 +1652,7 @@ task ancestral_tree {
             --alignment "~{msa_or_vcf}" \
             --output-node-data "~{out_basename}_nt_muts.json" \
             ~{"--vcf-reference " + vcf_reference} \
+            ~{"--root-sequence " + root_sequence} \
             ~{"--output-vcf " + output_vcf} \
             --output-sequences "~{out_basename}_ancestral_sequences.fasta" \
             ~{true="--keep-overhangs" false="" keep_overhangs} \
