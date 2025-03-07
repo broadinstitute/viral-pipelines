@@ -15,7 +15,7 @@ task assemble {
       String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
       
       Int?     machine_mem_gb
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.3.6.1"
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.4.1.0"
     }
     parameter_meta{
       reads_unmapped_bam: {
@@ -115,7 +115,7 @@ task select_references {
     Int?          skani_s
     Int?          skani_c
 
-    String        docker = "quay.io/broadinstitute/viral-assemble:2.3.6.1"
+    String        docker = "quay.io/broadinstitute/viral-assemble:2.4.1.0"
     Int           machine_mem_gb = 4
     Int           cpu = 2
     Int           disk_size = 100
@@ -206,7 +206,7 @@ task scaffold {
       Float?       scaffold_min_pct_contig_aligned
 
       Int?         machine_mem_gb
-      String       docker="quay.io/broadinstitute/viral-assemble:2.3.6.1"
+      String       docker="quay.io/broadinstitute/viral-assemble:2.4.1.0"
 
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
@@ -720,7 +720,7 @@ task refine_assembly_with_aligned_reads {
       Int      min_coverage = 3
 
       Int      machine_mem_gb = 15
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.3.6.1"
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.4.1.0"
     }
 
     Int disk_size = 375
@@ -780,11 +780,26 @@ task refine_assembly_with_aligned_reads {
           --JVMmemory "$mem_in_mb"m \
           --loglevel=DEBUG
 
+        # trim edges if they're too ambiguous or else table2asn will reject if first or last line of seq > 40% ambig
+        # (we don't really know how long the last line will be so use both the --ten and --fifty rules
+        # and basically disable the --maxfrac rule as we will handle that elsewhere)
+        if [ -s refined.fasta ]; then
+          fasta-trim-terminal-ambigs.pl --3rules \
+            --ten 4 \
+            --fifty 15 \
+            --maxfrac 0.9 \
+            refined.fasta > trimmed.fasta
+        else
+          # VADR perl script fails on empty input
+          touch trimmed.fasta
+        fi
+
+        # rename for external consumption
         file_utils.py rename_fasta_sequences \
-          refined.fasta "~{out_basename}.fasta" "~{sample_name}"
+          trimmed.fasta "~{out_basename}.fasta" "~{sample_name}"
 
         # collect variant counts
-        if (( $(cat refined.fasta | wc -l) > 1 )); then
+        if (( $(cat trimmed.fasta | wc -l) > 1 )); then
           bcftools filter -e "FMT/DP<~{min_coverage}" -S . "~{out_basename}.sites.vcf.gz" -Ou | bcftools filter -i "AC>1" -Ou > "~{out_basename}.diffs.vcf"
           bcftools filter -i 'TYPE="snp"'  "~{out_basename}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_snps
           bcftools filter -i 'TYPE!="snp"' "~{out_basename}.diffs.vcf" | bcftools query -f '%POS\n' | wc -l | tee num_indels
@@ -797,8 +812,8 @@ task refine_assembly_with_aligned_reads {
 
         # collect figures of merit
         set +o pipefail # grep will exit 1 if it fails to find the pattern
-        grep -v '^>' refined.fasta | tr -d '\n' | wc -c | tee assembly_length
-        grep -v '^>' refined.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
+        grep -v '^>' trimmed.fasta | tr -d '\n' | wc -c | tee assembly_length
+        grep -v '^>' trimmed.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
     >>>
 
     output {

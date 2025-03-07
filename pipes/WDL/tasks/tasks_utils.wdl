@@ -539,6 +539,40 @@ task download_from_url {
     }
 }
 
+task sanitize_fasta_headers {
+  input {
+    File   in_fasta
+    String out_filename = "~{basename(in_fasta, '.fasta')}-sanitized.fasta"
+  }
+  String docker = "quay.io/broadinstitute/py3-bio:0.1.2"
+  Int    disk_size = 375
+  command <<<
+    python3<<CODE
+    import re
+    import Bio.SeqIO
+    with open('~{in_fasta}', 'rt') as inf:
+      with open('~{out_filename}', 'wt') as outf:
+        for seq in Bio.SeqIO.parse(inf, 'fasta'):
+          seq.id = re.sub(r'[^0-9A-Za-z!_-]', '-', seq.id)
+          seq.description = seq.id
+          seq.name = seq.id
+          Bio.SeqIO.write(seq, outf, 'fasta')
+    CODE
+  >>>
+  output {
+    File sanitized_fasta = out_filename
+  }
+  runtime {
+    docker: docker
+    memory: "2 GB"
+    cpu:    2
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk:   disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 1
+  }
+}
+
 task fasta_to_ids {
     meta {
         description: "Return the headers only from a fasta file"
@@ -992,16 +1026,16 @@ task rename_file {
     File   infile
     String out_filename
   }
-  Int disk_size = 100
+  Int disk_size = 375
   command {
-    ln -s "~{infile}" "~{out_filename}"
+    cp "~{infile}" "~{out_filename}"
   }
   output {
     File out = "~{out_filename}"
   }
   runtime {
-    memory: "1 GB"
-    cpu: 1
+    memory: "2 GB"
+    cpu: 2
     docker: "ubuntu"
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
@@ -1033,18 +1067,26 @@ task raise {
 task unique_strings {
   input {
     Array[String]  strings
+    String         separator=","
   }
   Int disk_size = 50
   command {
     cat ~{write_lines(strings)} | sort | uniq > UNIQUE_OUT
+    python3<<CODE
+    with open('UNIQUE_OUT', 'rt') as inf:
+      rows = [line.strip() for line in inf]
+    with open('UNIQUE_OUT_JOIN', 'wt') as outf:
+      outf.write('~{separator}'.join(rows) + '\n')
+    CODE
   }
   output {
     Array[String]  sorted_unique = read_lines("UNIQUE_OUT")
+    String         sorted_unique_joined = read_string("UNIQUE_OUT_JOIN")
   }
   runtime {
     memory: "1 GB"
     cpu: 1
-    docker: "ubuntu"
+    docker: "python:slim"
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -1225,4 +1267,31 @@ task filter_sequences_by_length {
         Int  sequences_dropped = read_int("DROP_COUNT")
         Int  sequences_out     = read_int("OUT_COUNT")
     }
+}
+
+task pair_files_by_basename {
+  input {
+    Array[File] files
+    String      left_ext
+    String      right_ext
+  }
+  Int disk_gb = 100
+  command {
+    set -e
+    cp ~{sep=' ' files} .
+  }
+  output {
+    Array[File] left_files  = glob("*.~{left_ext}")
+    Array[File] right_files = glob("*.~{right_ext}")
+    Array[Pair[File,File]] file_pairs = zip(left_files, right_files)
+  }
+  runtime {
+    memory: "1 GB"
+    cpu: 2
+    docker: "ubuntu"
+    disks:  "local-disk ~{disk_gb} HDD"
+    disk: "~{disk_gb} GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
 }

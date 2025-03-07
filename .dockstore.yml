@@ -16,6 +16,9 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/assemble_denovo.wdl
     testParameterFiles:
     - /test/input/WDL/test_inputs-assemble_denovo-local.json
+  - name: assemble_denovo_metagenomic
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/assemble_denovo_metagenomic.wdl
   - name: assemble_refbased
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/assemble_refbased.wdl
@@ -72,9 +75,6 @@ workflows:
   - name: classify_single
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/classify_single.wdl
-  - name: contigs
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/contigs.wdl
   - name: coverage_table
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/coverage_table.wdl
@@ -84,9 +84,6 @@ workflows:
   - name: create_enterics_qc_viz_general
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/create_enterics_qc_viz_general.wdl
-  - name: demux_metag
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/demux_metag.wdl
   - name: demux_only
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/demux_only.wdl
@@ -135,6 +132,9 @@ workflows:
   - name: filter_sequences
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/filter_sequences.wdl
+  - name: genbank_gather
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/genbank_gather.wdl
   - name: genbank_single
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/genbank_single.wdl
@@ -244,6 +244,15 @@ workflows:
   - name: scaffold_and_refine_multitaxa
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/scaffold_and_refine_multitaxa.wdl
+  - name: submit_biosample
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/submit_biosample.wdl
+  - name: submit_genbank
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/submit_genbank.wdl
+  - name: submit_sra
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/submit_sra.wdl
   - name: subsample_by_casecounts
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/subsample_by_casecounts.wdl
@@ -253,9 +262,6 @@ workflows:
   - name: subsample_by_metadata_with_focal
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/subsample_by_metadata_with_focal.wdl
-  - name: taxid_to_nextclade
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/taxid_to_nextclade.wdl
   - name: terra_table_to_tsv
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/terra_table_to_tsv.wdl

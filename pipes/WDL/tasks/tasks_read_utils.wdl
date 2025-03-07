@@ -247,7 +247,7 @@ task rmdup_ubam {
     String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
   }
 
-  Int disk_size = 375
+  Int disk_size = 375 + 2 * ceil(size(reads_unmapped_bam, "GB"))
 
   parameter_meta {
     reads_unmapped_bam: { description: "unaligned reads in BAM format", patterns: ["*.bam"] }
@@ -367,9 +367,11 @@ task FastqToUBAM {
     String? sequencing_center
     String? additional_picard_options
 
+    Int     cpus = 2
+    Int     mem_gb = 4
+    Int     disk_size = 750
     String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
   }
-  Int disk_size = 375
   parameter_meta {
     fastq_1: { description: "Unaligned read1 file in fastq format", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }
     fastq_2: { description: "Unaligned read2 file in fastq format. This should be empty for single-end read conversion and required for paired-end reads. If provided, it must match fastq_1 in length and order.", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }
@@ -378,7 +380,7 @@ task FastqToUBAM {
     platform_name: { description: "Sequencing platform. This is required and will populate the 'PL' read group value. Must be one of CAPILLARY, DNBSEQ, HELICOS, ILLUMINA, IONTORRENT, LS454, ONT, PACBIO, or SOLID." }
     additional_picard_options: { description: "A string containing additional options to pass to picard FastqToSam beyond those made explicitly available as inputs to this task. For valid values, see: https://broadinstitute.github.io/picard/command-line-overview.html#FastqToSam" }
   }
-  command {
+  command <<<
       set -ex -o pipefail
 
       # find 90% memory
@@ -386,23 +388,27 @@ task FastqToUBAM {
 
       read_utils.py --version | tee VERSION
 
+      if [[ ! "~{platform_name}" =~ ^(CAPILLARY|DNBSEQ|ELEMENT|HELICOS|ILLUMINA|IONTORRENT|LS454|ONT|PACBIO|SINGULAR|SOLID|ULTIMA)$ ]]; then
+        exit 1
+      fi
+
       picard -Xmx"$mem_in_mb"m \
         FastqToSam \
         FASTQ="~{fastq_1}" \
-        ${"FASTQ2=" + fastq_2} \
-        SAMPLE_NAME="${sample_name}" \
-        LIBRARY_NAME="${library_name}" \
-        OUTPUT="${sample_name}".bam \
-        ${"READ_GROUP_NAME=" + readgroup_name} \
-        ${"PLATFORM_UNIT=" + platform_unit} \
-        ${"RUN_DATE=" + run_date} \
-        ${"PLATFORM=" + platform_name} \
-        ${"SEQUENCING_CENTER=" + sequencing_center} ${additional_picard_options}
-  }
+        ~{"FASTQ2=" + fastq_2} \
+        SAMPLE_NAME="~{sample_name}" \
+        LIBRARY_NAME="~{library_name}" \
+        OUTPUT="~{sample_name}".bam \
+        ~{"READ_GROUP_NAME=" + readgroup_name} \
+        ~{"PLATFORM_UNIT=" + platform_unit} \
+        ~{"RUN_DATE=" + run_date} \
+        ~{"PLATFORM=" + platform_name} \
+        ~{"SEQUENCING_CENTER=" + sequencing_center} ~{additional_picard_options}
+  >>>
   runtime {
     docker: docker
-    cpu: 2
-    memory: "3 GB"
+    cpu: cpus
+    memory: mem_gb + " GB"
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
