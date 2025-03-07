@@ -133,6 +133,7 @@ task align_and_annot_transfer_single {
     Array[File]+ reference_feature_tables
 
     String       out_basename = basename(genome_fasta, '.fasta')
+    Int          machine_mem_gb = 30
     String       docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
   }
 
@@ -174,8 +175,8 @@ task align_and_annot_transfer_single {
 
   runtime {
     docker: docker
-    memory: "15 GB"
-    cpu: 4
+    memory: machine_mem_gb + " GB"
+    cpu: 8
     dx_instance_type: "mem2_ssd1_v2_x4"
     preemptible: 1
     maxRetries: 2
