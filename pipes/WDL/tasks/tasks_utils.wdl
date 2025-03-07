@@ -1275,6 +1275,7 @@ task pair_files_by_basename {
     String      left_ext
     String      right_ext
   }
+  Int disk_gb = 100
   command {
     set -e
     cp ~{sep=' ' files} .
@@ -1288,8 +1289,8 @@ task pair_files_by_basename {
     memory: "1 GB"
     cpu: 2
     docker: "ubuntu"
-    disks:  "local-disk 100 HDD"
-    disk: "100 GB" # TES
+    disks:  "local-disk ~{disk_gb} HDD"
+    disk: "~{disk_gb} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }

@@ -23,9 +23,9 @@ workflow submit_genbank {
 
     call utils.pair_files_by_basename {
         input:
-            left_ext = ".xml",
-            right_ext = ".zip",
-            files    = submission_files
+            left_ext  = "xml",
+            right_ext = "zip",
+            files     = submission_files
     }
 
     scatter(file_pair in pair_files_by_basename.file_pairs) {
