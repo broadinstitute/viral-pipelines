@@ -1067,18 +1067,26 @@ task raise {
 task unique_strings {
   input {
     Array[String]  strings
+    String         separator=","
   }
   Int disk_size = 50
   command {
     cat ~{write_lines(strings)} | sort | uniq > UNIQUE_OUT
+    python3<<CODE
+    with open('UNIQUE_OUT', 'rt') as inf:
+      rows = [line.strip() for line in inf]
+    with open('UNIQUE_OUT_JOIN', 'wt') as outf:
+      outf.write('~{separator}'.join(rows) + '\n')
+    CODE
   }
   output {
     Array[String]  sorted_unique = read_lines("UNIQUE_OUT")
+    String         sorted_unique_joined = read_string("UNIQUE_OUT_JOIN")
   }
   runtime {
     memory: "1 GB"
     cpu: 1
-    docker: "ubuntu"
+    docker: "python:slim"
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -1259,4 +1267,31 @@ task filter_sequences_by_length {
         Int  sequences_dropped = read_int("DROP_COUNT")
         Int  sequences_out     = read_int("OUT_COUNT")
     }
+}
+
+task pair_files_by_basename {
+  input {
+    Array[File] files
+    String      left_ext
+    String      right_ext
+  }
+  Int disk_gb = 100
+  command {
+    set -e
+    cp ~{sep=' ' files} .
+  }
+  output {
+    Array[File] left_files  = glob("*.~{left_ext}")
+    Array[File] right_files = glob("*.~{right_ext}")
+    Array[Pair[File,File]] file_pairs = zip(left_files, right_files)
+  }
+  runtime {
+    memory: "1 GB"
+    cpu: 2
+    docker: "ubuntu"
+    disks:  "local-disk ~{disk_gb} HDD"
+    disk: "~{disk_gb} GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
 }

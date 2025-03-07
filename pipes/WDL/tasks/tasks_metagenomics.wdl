@@ -214,7 +214,7 @@ task kraken2 {
     File   reads_bam
     File   kraken2_db_tgz         # {database.kdb,taxonomy}
     File   krona_taxonomy_db_tgz  # taxonomy.tab
-    Float? confidence_threshold
+    Float? confidence_threshold = 0.05
     Int?   min_base_qual
 
     Int    machine_mem_gb = 90
@@ -785,12 +785,12 @@ task filter_bam_to_taxa {
     Boolean        exclude_taxa = false
     String         out_filename_suffix = "filtered"
 
-    Int            machine_mem_gb = 26
+    Int            machine_mem_gb = 26 + 10 * ceil(size(classified_reads_txt_gz, "GB"))
     String         docker = "quay.io/broadinstitute/viral-classify:2.2.5"
   }
 
   String out_basename = basename(classified_bam, ".bam") + "." + out_filename_suffix
-  Int disk_size = 375
+  Int disk_size = 375 + 2 * ceil(size(classified_bam, "GB"))
 
   command <<<
     set -ex -o pipefail

@@ -42,7 +42,7 @@ workflow genbank_single {
           patterns: ["*.fasta"]
         }
         aligned_bam: {
-          description: "Optional: aligned BAM file to inspect for reporting sequencing platform, read depth, etc. in GenBank structured comments.",
+          description: "Normally required: aligned BAM file to inspect for reporting sequencing platform, read depth, etc. in GenBank structured comments.",
           patterns: ["*.bam","*.sam"]
         }
         biosample_attributes_tsv: {

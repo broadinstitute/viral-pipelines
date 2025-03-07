@@ -860,6 +860,8 @@ task biosample_to_genbank {
         out_headers.append('note')
     if 'serotype' in out_headers_total and 'serotype' not in out_headers:
         out_headers.append('serotype')
+    if 'strain' not in out_headers and any(row['organism'].startswith('Influenza') for row in biosample_attributes):
+        out_headers.append('strain')
 
     # manual overrides if provided
     if os.path.isfile("~{source_overrides_json}"):
@@ -877,19 +879,18 @@ task biosample_to_genbank {
 
       with open("~{out_basename}.sample_ids.txt", 'wt') as outf_ids:
           for row in biosample_attributes:
-            # Influenza-specific requirement
-            if row['organism'].startswith('Influenza'):
-                match = re.search(r'\(([^()]+)\)+$', row[header_key_map.get('isolate','isolate')])
-                if match:
-                    row['serotype'] = match.group(1)
-
             # populate output row as a dict
             outrow = dict((h, row.get(header_key_map.get(h,h), '')) for h in out_headers)
 
             ### Taxon-specific genome naming rules go here
             if outrow['organism'].startswith('Influenza'):
               ### Influenza-specific isolate naming was handled above already and is required to be metadata-free
-              pass
+              # FTP submission pathway requires us to do the naming via the strain field
+              type = outrow['organism'].split()[1] # A, B, C, D, etc
+              state = outrow['geo_loc_name'].split(':')[1].strip() if ':' in outrow['geo_loc_name'] else outrow['geo_loc_name']
+              year = outrow['collection_date'].split('-')[0]
+              outrow['strain'] = '/'.join([type, state, outrow['isolate'], year])
+              print("new strain name: {}".format(outrow['strain']))
             elif outrow['organism'].startswith('Special taxon with special naming rules'):
               ### Example special case here
               pass
@@ -917,13 +918,6 @@ task biosample_to_genbank {
                 name_prefix = "~{default='' isolate_prefix_override}".strip()
               outrow['isolate'] = '/'.join([name_prefix, host, country, state_inst_labid, year])
               print("new isolate name: {}".format(outrow['isolate']))
-
-            # -- this seems to be flu specific, comment out:
-            ## isolate name should not start with organism string
-            #if outrow['isolate'].startswith(outrow['organism']):
-            #    outrow['isolate'] = outrow['isolate'][len(outrow['organism']):].strip()
-            #if outrow['isolate'].startswith('/'):
-            #    outrow['isolate'] = outrow['isolate'][1:].strip()
 
             # some fields are not allowed to be empty
             if not outrow.get('geo_loc_name'):
@@ -1134,10 +1128,10 @@ task table2asn {
     Int          genetic_code = 1
 
     String       out_basename = basename(assembly_fasta, ".fasta")
-    Int          machine_mem_gb = 3
+    Int          machine_mem_gb = 8
     String       docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"  # this could be a simpler docker image, we don't use anything beyond table2asn itself
   }
-
+  Int disk_size = 50
 
   parameter_meta {
     assembly_fasta: {
@@ -1171,7 +1165,7 @@ task table2asn {
   }
 
   command <<<
-    set -ex
+    set -ex -o pipefail
     table2asn -version | cut -f 2 -d ' ' > TABLE2ASN_VERSION
     cp "~{assembly_fasta}" "~{out_basename}.fsa" # input fasta must be in CWD so output files end up next to it
     touch "~{out_basename}.val"  # this file isn't produced if no errors/warnings
@@ -1185,6 +1179,11 @@ task table2asn {
       ~{'-src-file "' + source_modifier_table + '"'} \
       ~{'-y "' + comment + '"'} \
       -a s -V vb
+
+    set +x
+    echo "table2asn complete"
+    cat "~{out_basename}.val" | { grep -vi '^Info:' || test $? = 1; } | tee "~{out_basename}.val.no_info"
+    cat "~{out_basename}.val.no_info" | { grep -vi '^Warning: valid' || test $? = 1; } | tee "~{out_basename}.val.errors_only"
   >>>
 
   output {
@@ -1193,7 +1192,7 @@ task table2asn {
     File          genbank_validation_file  = "~{out_basename}.val"
     Array[String] table2asn_errors         = read_lines("~{out_basename}.val")
     String        table2asn_version        = read_string("TABLE2ASN_VERSION")
-    Boolean       table2asn_passing        = length(read_lines("~{out_basename}.val")) == 0
+    Boolean       table2asn_passing        = length(read_lines("~{out_basename}.val.errors_only")) == 0
   }
 
   runtime {
@@ -1202,6 +1201,8 @@ task table2asn {
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
   }
 }
 
@@ -1558,6 +1559,7 @@ task package_genbank_submissions {
     python3 << CODE
     import json
     import zipfile
+    import csv
 
     # initialize counters and file lists for each submission category
     counts_by_type = {}
@@ -1639,20 +1641,44 @@ task package_genbank_submissions {
                         src_header = header
                         out_src.write(header)
                       out_src.write(inf.read())
+          # make FTP zips and xmls
+          if group.startswith('SARS-CoV-2'):
+            with zipfile.ZipFile("~{spuid_base}_FTP_" + group + ".zip", 'w') as zf:
+              for fname in ('sequences.fsa', 'comment.cmt', 'source.src', 'template.sbt'):
+                zf.write(fname)
+            wizard = "BankIt_SARSCoV2_api"
+            write_submission_xml("~{spuid_base}_FTP_" + group, "~{spuid_namespace}", "~{account_name}", wizard=wizard)
+          elif group.startswith('Influenza'):
+            with zipfile.ZipFile("~{spuid_base}_FTP_" + group + ".zip", 'w') as zf:
+              for fname in ('sequences.fsa', 'comment.cmt', 'source.src', 'template.sbt'):
+                zf.write(fname)
+            wizard = "BankIt_influenza_api"
+            write_submission_xml("~{spuid_base}_FTP_" + group, "~{spuid_namespace}", "~{account_name}", wizard=wizard)
+            # make a different src file for web after making FTP zip
+            # because for some reason, you can't use the same source.src file for web and FTP for flu
+            # strain column is required for FTP and prohibited for web
+            with open('source.src', 'rt') as inf:
+              reader = csv.DictReader(inf, delimiter='\t')
+              out_header = list(h for h in reader.fieldnames if h != 'strain')
+              rows = []
+              for row in reader:
+                del row['strain']
+                rows.append(row)
+            with open('source.src', 'wt') as outf:
+              writer = csv.DictWriter(outf, delimiter='\t', fieldnames=out_header, dialect=csv.unix_dialect, quoting=csv.QUOTE_MINIMAL)
+              writer.writeheader()
+              for row in rows:
+                writer.writerow(row)
+
+          # make web portal zips
           with zipfile.ZipFile("~{spuid_base}_" + group + ".zip", 'w') as zf:
             for fname in ('sequences.fsa', 'comment.cmt', 'source.src', 'template.sbt'):
               zf.write(fname)
-          if group.startswith('SARS-CoV-2'):
-            wizard = "BankIt_SARSCoV2_api"
-            write_submission_xml("~{spuid_base}_" + group, "~{spuid_namespace}", "~{account_name}", wizard=wizard)
-          elif group.startswith('Influenza'):
-            wizard = "BankIt_influenza_api"
-            write_submission_xml("~{spuid_base}_" + group, "~{spuid_namespace}", "~{account_name}", wizard=wizard)
     CODE
   >>>
 
   output {
-    Array[File] ftp_submission_files  = glob("~{spuid_base}_[IS]*_clean.*")
+    Array[File] ftp_submission_files  = glob("~{spuid_base}_FTP_*_clean.*")
     File? submit_sqns_clean_zip       = "~{spuid_base}_table2asn_clean.zip"
     File? submit_sqns_warnings_zip    = "~{spuid_base}_table2asn_warnings.zip"
     Int   num_sqns_clean              = read_int("count_table2asn_clean.int")
