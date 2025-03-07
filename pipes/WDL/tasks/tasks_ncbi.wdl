@@ -745,6 +745,7 @@ task biosample_to_genbank {
     String? filter_to_accession
     Map[String,String] src_to_attr_map = {}
     String?  organism_name_override
+    String?  sequence_id_override
     String?  isolate_prefix_override
     File?    source_overrides_json # optional set of key-value pairs to override source metadata
 
@@ -930,6 +931,10 @@ task biosample_to_genbank {
 
             # load the purpose of sequencing (or if not, the purpose of sampling) in the note field
             outrow['note'] = row.get('purpose_of_sequencing', row.get('purpose_of_sampling', ''))
+
+            # overwrite sequence ID if requested
+            if "~{default='' sequence_id_override}":
+                outrow['Sequence_ID'] = "~{default='' sequence_id_override}"
 
             # sanitize sequence IDs to match fasta headers
             if "~{sanitize_seq_ids}".lower() == 'true':

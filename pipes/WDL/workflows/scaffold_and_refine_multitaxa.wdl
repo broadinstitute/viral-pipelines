@@ -68,16 +68,6 @@ workflow scaffold_and_refine_multitaxa {
                 min_unambig = 0,
                 allow_incomplete_output = true
         }
-        if (scaffold.assembly_preimpute_length_unambiguous > min_scaffold_unambig) {
-            # polish de novo assembly with reads
-            call assemble_refbased.assemble_refbased as refine {
-                input:
-                    reads_unmapped_bams  = [reads_unmapped_bam],
-                    reference_fasta      = scaffold.scaffold_fasta,
-                    sample_name          = sample_id,
-                    sample_original_name = sample_original_name
-            }
-        }
 
         # get taxid and taxname from taxid_to_ref_accessions_tsv
         call utils.fetch_row_from_tsv as tax_lookup {
@@ -90,6 +80,16 @@ workflow scaffold_and_refine_multitaxa {
         String taxid = tax_lookup.map["taxid"]
         String tax_name = tax_lookup.map["taxname"]
         String isolate_prefix = tax_lookup.map["isolate_prefix"]
+
+        # polish de novo assembly with reads
+        if (scaffold.assembly_preimpute_length_unambiguous > min_scaffold_unambig) {
+            call assemble_refbased.assemble_refbased as refine {
+                input:
+                    reads_unmapped_bams  = [reads_unmapped_bam],
+                    reference_fasta      = scaffold.scaffold_fasta,
+                    sample_name          = sample_id + "-" + taxid
+            }
+        }
 
         # build output tsv row
         Int    assembly_length_unambiguous = select_first([refine.assembly_length_unambiguous, 0])
