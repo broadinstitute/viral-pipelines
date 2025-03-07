@@ -1221,7 +1221,7 @@ task package_special_genbank_ftp_submission {
     String account_name
     String wizard="BankIt_SARSCoV2_api"
 
-    String  docker = "quay.io/broadinstitute/viral-baseimage:0.2.0"
+    String  docker = "quay.io/broadinstitute/viral-baseimage:0.2.4"
   }
   command <<<
     set -e

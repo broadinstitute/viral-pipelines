@@ -24,7 +24,7 @@ task gcs_copy {
     File logs = stdout()
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-baseimage:0.2.0"
+    docker: "quay.io/broadinstitute/viral-baseimage:0.2.4"
     memory: "1 GB"
     cpu: 1
     maxRetries: 1
@@ -33,7 +33,7 @@ task gcs_copy {
 
 task check_terra_env {
   input {
-    String docker = "quay.io/broadinstitute/viral-core:2.4.1"
+    String docker = "quay.io/broadinstitute/viral-baseimage:0.2.4"
   }
   meta {
     description: "task for inspection of backend to determine whether the task is running on Terra and/or GCP"
@@ -60,11 +60,17 @@ task check_terra_env {
     touch method_path.txt
     touch top_level_submission_id.txt
 
+    #touch gcp_created_by_attributes.txt
+    touch gcp_instance_metadata.json
+
     # disable the version update alert messages gcloud sometimes emits when executing any command
     gcloud config set component_manager/disable_update_check true
 
     # write system environment variables to output file
     env | tee -a env_info.log
+
+    echo "false" > RUNNING_ON_GCP_PAPIv2
+    echo "false" > RUNNING_ON_GCP_BATCH
 
     # check if running on GCP
     if curl -s metadata.google.internal -i | grep -E 'Metadata-Flavor:\s+Google'; then 
@@ -72,6 +78,26 @@ task check_terra_env {
       echo "true" > RUNNING_ON_GCP
 
       GCLOUD_OAUTH_BEARER_TOKEN="$(gcloud auth print-access-token)"
+
+      #curl -s -H "Metadata-Flavor: Google" \
+      #  "http://metadata.google.internal/computeMetadata/v1/instance/attributes/created-by" | tee gcp_created_by_attributes.txt
+
+      curl -s -H "Metadata-Flavor: Google" \
+        "http://metadata.google.internal/computeMetadata/v1/instance/?recursive=true" | tee gcp_instance_metadata.json
+
+      # if BATCH_JOB_UID has a value the job is running on GCP Batch
+      # NOTE: PAPIv2 is deprecated and will be removed in the future
+      if [[ -n "$BATCH_JOB_UID" ]] || $(jq -rc '.attributes | has("cloudbatch-job-uid")' gcp_instance_metadata.json); then
+        echo "Job appears to be running on GCP Batch"
+        echo "true"  > RUNNING_ON_GCP_BATCH
+      else
+        echo "Job appears to be running on GCP via PAPIv2"
+        echo "true"  > RUNNING_ON_GCP_PAPIv2
+      fi
+
+      # Additional introspection can be performed on GCP by querying the internal metadata server
+      #   for details see:
+      #     https://cloud.google.com/compute/docs/metadata/predefined-metadata-keys
 
       # write gcloud env info to output files
       gcloud info | tee -a gcloud_config_info.log
@@ -107,17 +133,32 @@ task check_terra_env {
 
       # === Determine Terra workspace ID and submission ID for the workspace responsible for this job
 
+      # locate the Terra (de)localiztion scripts by running find on one of several known potential locations
+      # the location may/does differ when running on GCP via PAPIv2 or via Google batch
+      known_possible_terra_script_locations=(
+                                              "/cromwell_root"
+                                              "/mnt/disks/cromwell_root"
+                                            )
+      terra_localization_script_dirpath="$(dirname $(realpath $(find "${known_possible_terra_script_locations[@]}" -maxdepth 3 -iname gcs_delocalization.sh -print -quit)))"
+
+
       # Scrape various workflow / workspace info from the localization and delocalization scripts.
       #   from: https://github.com/broadinstitute/gatk/blob/ah_var_store/scripts/variantstore/wdl/GvsUtils.wdl#L35-L40
-      WORKSPACE_ID="$(sed -n -E 's!.*gs://fc-(secure-)?([^\/]+).*!\2!p' /cromwell_root/gcs_delocalization.sh | sort -u | tee workspace_id.txt)"
+      WORKSPACE_ID="$(sed -n -E 's!.*gs://fc-(secure-)?([^\/]+).*!\2!p' ${terra_localization_script_dirpath}/gcs_delocalization.sh | sort -u | tee workspace_id.txt)"
       echo "WORKSPACE_ID:            ${WORKSPACE_ID}"
+
+      # check that workspace ID is a valid UUID
+      if ! [[ "$WORKSPACE_ID" =~ ^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$ ]]; then
+        echo "ERROR: WORKSPACE_ID identified by parsing ${terra_localization_script_dirpath}/gcs_delocalization.sh is not a valid UUID"
+        exit 1
+      fi
 
       # bucket path prefix
       #BUCKET_PREFIX="$(sed -n -E 's!.*(gs://(fc-(secure-)?[^\/]+)).*!\1!p' /cromwell_root/gcs_delocalization.sh | sort -u | tee bucket_prefix.txt)"
       #echo "BUCKET_PREFIX: ${BUCKET_PREFIX}"
 
       # top-level submission ID
-      TOP_LEVEL_SUBMISSION_ID="$(sed -n -E 's!.*gs://fc-(secure-)?([^\/]+)/submissions/([^\/]+).*!\3!p' /cromwell_root/gcs_delocalization.sh | sort -u | tee top_level_submission_id.txt)"
+      TOP_LEVEL_SUBMISSION_ID="$(sed -n -E 's!.*gs://fc-(secure-)?([^\/]+)/submissions/([^\/]+).*!\3!p' ${terra_localization_script_dirpath}/gcs_delocalization.sh | sort -u | tee top_level_submission_id.txt)"
       echo "TOP_LEVEL_SUBMISSION_ID: ${TOP_LEVEL_SUBMISSION_ID}"
 
       # workflow job ID within submission
@@ -197,17 +238,27 @@ task check_terra_env {
     else 
       echo "Not running on Terra+GCP"
     fi
+
+    # pretty-print environment details to stdout
+    # if wraping is desired, add to 'column' command: --output-width 120 --table-wrap 0
+    echo "=============================================="
+    find . -maxdepth 1 -type f \( -iname 'RUNNING*' -or -iname '*.txt' \) -exec sh -c 'printf "$(basename $1 .txt)\t$(head -n1 $1)\n"' _ {} \; | sort -k1 -d -t $'\t' | column --separator $'\t' --table --table-right 1 --output-separator $'  '
+    echo "=============================================="
+
     echo -n'' "MEM_BYTES: "; { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } | tee MEM_BYTES
   >>>
   output {
     Boolean is_running_on_terra    = read_boolean("RUNNING_ON_TERRA")
-    Boolean is_backed_by_gcp       = read_boolean("RUNNING_ON_GCP")
+
+    Boolean is_backed_by_gcp          = read_boolean("RUNNING_ON_GCP")
+    Boolean is_running_via_gcp_batch  = read_boolean("RUNNING_ON_GCP_BATCH")
+    Boolean is_running_via_gcp_papiv2 = read_boolean("RUNNING_ON_GCP_PAPIv2")
 
     String google_project_id       = read_string("google_project_id.txt")
 
     String user_email              = read_string("user_email.txt")
 
-    String workspace_id            = read_string("workspace_id.txt")
+    String workspace_uuid            = read_string("workspace_id.txt")
     String workspace_name          = read_string("workspace_name.txt")
     String workspace_namespace     = read_string("workspace_namespace.txt")
     String workspace_bucket_path   = read_string("workspace_bucket_path.txt")
@@ -215,6 +266,9 @@ task check_terra_env {
     String method_version          = read_string("method_version.txt")
     String method_source           = read_string("method_source.txt")
     String method_path             = read_string("method_path.txt")
+
+    #String gcp_created_by_metadata = read_string("gcp_created_by_attributes.txt")
+    File   gcp_instance_metadata   = "gcp_instance_metadata.json"
 
     String input_table_name        = read_string("input_table_name.txt")
     String input_row_id            = read_string("input_row_id.txt")
