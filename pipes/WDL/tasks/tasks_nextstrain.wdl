@@ -892,14 +892,17 @@ task filter_subsample_sequences {
 
 task filter_sequences_to_list {
     meta {
-        description: "Filter and subsample a sequence set to a specific list of ids in a text file (one id per line)."
+        description: "Filter a sequence set to a reduced set based on lists of sequence IDs that should be included or excluded, as provided in text files (one id per line) or input strings (space-delimited)."
     }
     input {
         File         sequences
         Array[File]? keep_list
+        Array[File]? exclude_list
+
+        String? keep_list_ids_str
+        String? exclude_list_ids_str
 
         String       out_fname = sub(sub(basename(sequences, ".zst"), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
-        # Prior docker image: "nextstrain/base:build-20240318T173028Z"
         String       docker = "quay.io/broadinstitute/viral-core:2.4.1"
         Int          disk_size = 750
     }
@@ -909,16 +912,85 @@ task filter_sequences_to_list {
           patterns: ["*.fasta", "*.fa", "*.fasta.zst", "*.vcf", "*.vcf.gz"]
         }
         keep_list: {
-          description: "List of strain ids.",
+          description: "File(s) containing IDs of the sequences to include in the output, if found among the input sequences, to the exclusion of other input sequences. If keep lists are not provided, all input sequences are 'kept' prior to considering any exclusions specified. Text file with one ID per line.",
           patterns: ["*.txt", "*.tsv"]
+        }
+        exclude_list: {
+          description: "File(s) containing IDs of the sequences to exclude from the output. Exclusion is performed after filtering to 'kept' sequences (i.e. if an ID is in both 'keep_list' and 'exclude_list', it will be excluded). Text file with one ID per line.",
+          patterns: ["*.txt", "*.tsv"]
+        }
+        keep_list_ids_str: {
+          description: "Space-delimited string of IDs to include in the output, if found among the input sequences, to the exclusion of other input sequences. If keep_list_ids_str is provided, it will be combined with the IDs specified in any keep_list files provided."
+        }
+        exclude_list_ids_str: {
+          description: "Space-delimited string of IDs to exclude from the output. Exclusion is performed after filtering to 'kept' sequences (i.e. if an ID is in both 'keep_list_ids_str' and 'exclude_list_ids_str', it will be excluded). If exclude_list_ids_str is provided, it will be combined with the IDs specified in any exclude_list files provided."
         }
     }
     command <<<
         set -e
         KEEP_LISTS="~{sep=' ' select_first([keep_list, []])}"
+        EXCLUDE_LISTS="~{sep=' ' select_first([exclude_list, []])}"
 
+        # gather the IDs to keep, as specified in the input keep files and/or string
+        # if keep list files or string are provided, consolidate to a single file
         if [ -n "$KEEP_LISTS" ]; then
-            cat $KEEP_LISTS > keep_list.txt
+            # if keep list files are provided, collect the IDs into one file,
+            # omitting any lines that are empty or that only contain whitespace
+            # the grep also ensures a trailing newline is added to the last line in each file, if not present
+            grep --invert-match --extended-regexp '^\s*$' $KEEP_LISTS > keep_list.txt.tmp
+        fi
+        if ~{if(defined(keep_list_ids_str)) then 'true' else 'false'} && [ -n "~{keep_list_ids_str}" ]; then
+            # if keep list IDs are provided as a space-delimited list, write them to a file
+            echo "~{keep_list_ids_str}" | sed 's/  +/ /g' | tr ' ' '\n' >> keep_list.txt.tmp
+        fi
+        # if no keep list files, and no keep list IDs are provided, gather the IDs of the input sequences as the ones to keep
+        if [ -z "$KEEP_LISTS" ] && [ -z "~{keep_list_ids_str}" ]; then
+            echo "WARNING: no IDs specified to keep, so all input sequences will be retained prior to any exclusions specified."
+            # if no keep list files are provided, gather the IDs of the input sequences as the ones to keep
+            if [[ "~{sequences}" = *.vcf || "~{sequences}" = *.vcf.gz ]]; then
+                bcftools query -l "~{sequences}" > keep_list.txt.tmp
+            else
+                cat "~{sequences}" | grep \> | cut -c 2- > keep_list.txt.tmp
+            fi
+        fi
+
+        # gather the IDs to exclude, as specified in the input exclude files and/or string
+        touch exclude_list.txt
+        if [ -n "$EXCLUDE_LISTS" ]; then
+            # if exclude list files are provided, collect the IDs into one file,
+            # omitting any lines that are empty or that only contain whitespace
+            # the grep also ensures a trailing newline is added to the last line in each file, if not present
+            grep --invert-match --extended-regexp '^\s*$' $EXCLUDE_LISTS >> exclude_list.txt
+        fi
+        if ~{if(defined(exclude_list_ids_str)) then 'true' else 'false'} && [ -n "~{exclude_list_ids_str}" ]; then
+            # if exclude list IDs are provided as a space-delimited list, append them to the exclusion file
+            echo "~{exclude_list_ids_str}" | sed 's/  +/ /g' | tr ' ' '\n' >> exclude_list.txt
+        fi
+
+        # if either a keep list or an exclude list is provided, 
+        # then some filtering needs to be performed
+        # (otherwise, if both lists are omitted, the input will simply be copied through to the output)
+        if  ~{if( defined(keep_list)            ) then 'true' else 'false'} ||
+            ~{if( defined(keep_list_ids_str)    ) then 'true' else 'false'} ||
+            ~{if( defined(exclude_list)         ) then 'true' else 'false'} ||
+            ~{if( defined(exclude_list_ids_str) ) then 'true' else 'false'}; then
+
+            # count the number of IDs in the keep and exclude lists
+            # ignoring any lines that are empty or that only contain whitespace
+            #keep_ids_count=$(grep --count --invert-match --extended-regexp '^\s*$' keep_list.txt.tmp)
+            #exclude_ids_count=$(grep --count --invert-match --extended-regexp '^\s*$' exclude_list.txt)
+
+            # create a new "keep_list.txt" file containing the previously gathered list of IDs to keep
+            # omitting from the list any IDs that are explicitly specified in the provided exclude list(s)
+            grep --file exclude_list.txt \
+                --invert-match \
+                --ignore-case \
+                --fixed-strings \
+                --no-messages \
+                --color=never \
+                keep_list.txt.tmp \
+                > keep_list.txt
+
             if [[ "~{sequences}" = *.vcf || "~{sequences}" = *.vcf.gz ]]; then
                 # filter vcf file to keep_list.txt
                 echo filtering vcf file
@@ -926,31 +998,64 @@ task filter_sequences_to_list {
                 echo "-1" > DROP_COUNT
             else
                 # filter fasta file to keep_list.txt
-                echo filtering fasta file
-    python3 <<CODE
-    import Bio.SeqIO
-    import util.file
-    keep_list = set()
-    with open('keep_list.txt', 'rt') as inf:
-        keep_list = set(line.strip() for line in inf)
-    n_total = 0
-    n_kept = 0
-    with util.file.open_or_gzopen('~{sequences}', 'rt') as inf:
-        with util.file.open_or_gzopen('~{out_fname}', 'wt') as outf:
-            for seq in Bio.SeqIO.parse(inf, 'fasta'):
-                n_total += 1
-                if seq.id in keep_list:
-                    n_kept += 1
-                    Bio.SeqIO.write(seq, outf, 'fasta')
-    n_dropped = n_total-n_kept
-    with open('OUT_COUNT', 'wt') as outf:
-        outf.write(str(n_kept)+'\n')
-    with open('DROP_COUNT', 'wt') as outf:
-        outf.write(str(n_dropped)+'\n')
-    CODE
-            fi
+                echo "filtering fasta file"
 
+                # ===== START: python
+                # regarding the odd heredoc usage:
+                # is purely so the CODE block can be indented 'properly' in the WDL
+                # with spaces in the limit string and the pipe to awk
+                #
+                # the block is first passed to the awk command,
+                # which strips leading whitespace from each line of the code block
+                # based on the number of spaces seen in the first line,
+                # before passing the lines to Python.
+                #
+                # The command block executed by the WDL-invoked shell still has 
+                # some leading whitespace though, and to allow
+                # the terminating limit string to indented too, 
+                # the heredoc must be defined so the extra leading WDL spaces
+                # are part of the limit string
+                #
+                # This approach would need to be adapted should shell variable interpolation 
+                # be desired 
+                # (since specifying the heredoc limit string in single quotes disables variable substitution)
+                # 
+                # adapted from:
+                #   https://unix.stackexchange.com/questions/76481/cant-indent-heredoc-to-match-code-blocks-indentation#comment419983_76483
+                # see also:
+                #   https://tldp.org/LDP/abs/html/here-docs.html
+                #   https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_07_04
+                #
+                # (and now this comment is longer than what's in the code block)
+                awk 'FNR==1 && match($0, /^ */){n=RLENGTH}{print substr($0, n+1)}' <<'        CODE' |
+                import Bio.SeqIO
+                import util.file
+                keep_list = set()
+                with open('keep_list.txt', 'rt') as inf:
+                    keep_list = set(line.strip() for line in inf)
+                n_total = 0
+                n_kept = 0
+                with util.file.open_or_gzopen('~{sequences}', 'rt') as inf:
+                    with util.file.open_or_gzopen('~{out_fname}', 'wt') as outf:
+                        for seq in Bio.SeqIO.parse(inf, 'fasta'):
+                            n_total += 1
+                            if seq.id in keep_list:
+                                n_kept += 1
+                                Bio.SeqIO.write(seq, outf, 'fasta')
+                n_dropped = n_total-n_kept
+                with open('OUT_COUNT', 'wt') as outf:
+                    outf.write(str(n_kept)+'\n')
+                with open('DROP_COUNT', 'wt') as outf:
+                    outf.write(str(n_dropped)+'\n')
+                CODE
+                python3 
+                # ^^^^^ python receives the indentation-adjusted heardoc content
+                #       from the heredoc above 
+                #       (this is the second command in the 'awk | python3' pipeline)
+                # ===== END: python
+            fi
         else
+            echo "WARNING: no IDs specified to keep OR exclude, so all input sequences will be retained."
             cp "~{sequences}" "~{out_fname}"
             echo "0" > DROP_COUNT
         fi
@@ -975,7 +1080,7 @@ task filter_sequences_to_list {
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x4"
         preemptible: 1
-        maxRetries: 2
+        maxRetries: 1
     }
     output {
         File   filtered_fasta    = out_fname
