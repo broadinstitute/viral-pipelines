@@ -181,7 +181,7 @@ task illumina_demux {
         category: "advanced"
       }
       collapse_duplicated_barcodes: {
-        description: "Collapse 'samples' with duplicated barcodes into a single barcode in the output. Intended for protocols allowing an additional stage of demultiplexing downstream by other means (ex. breaking out samples based on a third (inner) barcode, added via swift-seq). If 'false', an error will be raised if duplicated samples are present in the sample sheet.",
+        description: "Collapse 'samples' with duplicated barcodes (or barcode pairs) into a single barcode (or single pair) in the output. Intended for protocols allowing an additional stage of demultiplexing downstream by other means (ex. breaking out samples based on a third (inner) barcode, added via swift-seq). If 'false', an error will be raised if duplicated barcodes (or barcode pairs) are present in the sample sheet.",
         category: "advanced"
       }
   }
