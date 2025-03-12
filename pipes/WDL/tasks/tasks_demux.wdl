@@ -145,6 +145,7 @@ task illumina_demux {
     File    flowcell_tgz
     Int     lane=1
     Boolean sort_reads=true
+    Boolean collapse_duplicated_barcodes=false
     File?   samplesheet
     File?   runinfo
     String? sequencingCenter
@@ -177,6 +178,10 @@ task illumina_demux {
       }
       runinfo: { 
         description: "if we are overriding the RunInfo file, use the path of the file provided. Otherwise the default will be RunInfo.xml. ",
+        category: "advanced"
+      }
+      collapse_duplicated_barcodes: {
+        description: "Collapse 'samples' with duplicated barcodes into a single barcode in the output. Intended for protocols allowing an additional stage of demultiplexing downstream by other means (ex. breaking out samples based on a third (inner) barcode, added via swift-seq). If 'false', an error will be raised if duplicated samples are present in the sample sheet.",
         category: "advanced"
       }
   }
@@ -336,6 +341,7 @@ task illumina_demux {
       --out_meta_by_sample meta_by_sample.json \
       --out_meta_by_filename meta_by_fname.json \
       --out_runinfo runinfo.json \
+      ~{true="--collapse_duplicated_barcodes" false="" collapse_duplicated_barcodes} \
       --loglevel=DEBUG
 
     illumina.py guess_barcodes ~{'--number_of_negative_controls ' + numberOfNegativeControls} --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
