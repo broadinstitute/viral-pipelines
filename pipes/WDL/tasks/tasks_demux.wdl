@@ -162,6 +162,11 @@ task illumina_demux {
     Int?    maxRecordsInRam
     Int?    numberOfNegativeControls
 
+    # --- options for debugging or special use
+    Int?    tileLimit  
+    Int?    firstTile
+    # ---
+
     Int?    machine_mem_gb
     Int     disk_size = 2625
     String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
@@ -332,6 +337,8 @@ task illumina_demux {
       ~{'--read_structure=' + readStructure} \
       ~{'--minimum_quality=' + minimumQuality} \
       ~{'--run_start_date=' + runStartDate} \
+      ~{'--tile_limit=' + tileLimit} \
+      ~{'--first_tile=' + firstTile} \
       ~{true="--sort=true" false="--sort=false" sort_reads} \
       $max_records_in_ram \
       --JVMmemory="$mem_in_mb"m \
