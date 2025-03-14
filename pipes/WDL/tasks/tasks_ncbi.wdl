@@ -906,8 +906,15 @@ task biosample_to_genbank {
               year = outrow['collection_date'].split('-')[0]
               country = outrow['geo_loc_name'].split(':')[0]
               host = outrow['host'].lower()
-              if host == 'homo sapiens':
-                host = 'human'
+
+              # host name mapping to the informal names used by NCBI in sequence titles for certain species
+              host_to_informal_name_map = {
+                'homo sapiens': 'human',
+                'sus scrofa domesticus': 'swine',
+                'sus scrofa': 'swine'
+              }
+              host = host_to_informal_name_map.get(host, host)
+
               if len(outrow['isolate'].split('/')) >= 2:
                 state_inst_labid = outrow['isolate'].split('/')[-2]
               else:
