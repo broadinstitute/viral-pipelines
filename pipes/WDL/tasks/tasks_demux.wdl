@@ -363,6 +363,44 @@ task illumina_demux {
       echo "$(basename $bam .bam)" >> $OUT_BASENAMES
     done
 
+    # if we collapsed duplicated barcodes, we need to run splitcode_demux
+    # This will eventually move into its own task once we characterize
+    # resource needs, but for now it's here
+    if ~{true="true" false="false" collapse_duplicated_barcodes}; then
+      splitcode_outdir="inner_barcode_demux"
+     
+      mkdir -p ./${splitcode_outdir}
+
+      # NB: at present, splitcode_demux is unaware of 
+      #     whether its input directory
+      #     is a full Illumina run directory or a data directory
+      #     containing first-stage demux output,
+      #     of the sort created by a prior illumina_demux call
+      #
+      # ${FLOWCELL_DIR}
+
+      illumina.py splitcode_demux \
+      ./ \
+      1 \
+      ./inner_barcode_demux \
+      ~{'--sampleSheet=' + samplesheet} \
+      '--runInfo=' ${RUNINFO_FILE} \
+      --threads $demux_threads
+
+      #~{'--runInfo=' + runinfo} \
+      #--tmp_dir ./tmp/ \
+      #--tmp_dirKeep \
+      # --sampleSheet ${flowcell_dir}/SampleSheet.tsv \
+      # --runInfo ${flowcell_dir}/RunInfo.xml
+
+      # outputs from splitcode_demux are in a subdirectory
+      # ./${splitcode_outdir}/bc2sample_lut.csv
+      # ./${splitcode_outdir}/reads_per_pool.{pdf,png}
+      # ./${splitcode_outdir}/reads_per_pool_sorted_curve.{pdf,png}
+      # ./${splitcode_outdir}/*.bam
+      # ./${splitcode_outdir}/*.{fastq.gz,fastq}
+    fi
+
     # fastqc
     FASTQC_HARDCODED_MEM_PER_THREAD=250 # the value fastqc sets for -Xmx per thread, not adjustable
     num_cpus=$(nproc)
