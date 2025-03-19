@@ -362,7 +362,7 @@ task illumina_demux {
       --out_meta_by_sample meta_by_sample.json \
       --out_meta_by_filename meta_by_fname.json \
       --out_runinfo runinfo.json \
-      ~{true="--collapse_duplicated_barcodes" false="" collapse_duplicated_barcodes} \
+      ~{true="--collapse_duplicated_barcodes=barcodes_if_collapsed.tsv" false="" collapse_duplicated_barcodes} \
       --loglevel=DEBUG
 
     illumina.py guess_barcodes ~{'--number_of_negative_controls ' + numberOfNegativeControls} --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
@@ -380,9 +380,8 @@ task illumina_demux {
     # if we collapsed duplicated barcodes, we need to run splitcode_demux
     # This will eventually move into its own task once we characterize
     # resource needs, but for now it's here
+    splitcode_outdir="inner_barcode_demux"
     if ~{true="true" false="false" collapse_duplicated_barcodes}; then
-      splitcode_outdir="inner_barcode_demux"
-     
       mkdir -p ./${splitcode_outdir}
 
       # NB: at present, splitcode_demux is unaware of 
@@ -399,6 +398,7 @@ task illumina_demux {
       ./inner_barcode_demux \
       ~{'--sampleSheet=' + samplesheet} \
       '--runInfo=' ${RUNINFO_FILE} \
+      '--illuminaRunDirectory' ${FLOWCELL_DIR} \
       --threads $demux_threads
 
       #~{'--runInfo=' + runinfo} \
