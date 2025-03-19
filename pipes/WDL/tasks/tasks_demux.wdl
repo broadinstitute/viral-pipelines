@@ -144,12 +144,17 @@ task illumina_demux {
   input {
     File    flowcell_tgz
     Int     lane=1
-    Boolean sort_reads=true
-    Boolean collapse_duplicated_barcodes=false
+    
     File?   samplesheet
     File?   runinfo
     String? sequencingCenter
 
+    Boolean collapse_duplicated_barcodes      = false
+    Boolean rev_comp_barcodes_before_demux    = false
+    Array[String] barcode_columns_to_rev_comp = ["barcode_2"]
+
+    Boolean sort_reads=true
+    
     String? flowcell
     Int?    minimumBaseQuality = 10
     Int?    maxMismatches = 0
@@ -187,6 +192,14 @@ task illumina_demux {
       }
       collapse_duplicated_barcodes: {
         description: "Collapse 'samples' with duplicated barcodes (or barcode pairs) into a single barcode (or single pair) in the output. Intended for protocols allowing an additional stage of demultiplexing downstream by other means (ex. breaking out samples based on a third (inner) barcode, added via swift-seq). If 'false', an error will be raised if duplicated barcodes (or barcode pairs) are present in the sample sheet.",
+        category: "advanced"
+      }
+      rev_comp_barcodes_before_demux: {
+        description: "Reverse-complement the barcode(s) before demultiplexing. By default, this action applies to values in the 'barcode_2' column unless overridden by 'barcode_columns_to_rev_comp'.",
+        category: "advanced"
+      }
+      barcode_columns_to_rev_comp: {
+        description: "Columns in the sample sheet to reverse-complement. Only used if 'rev_comp_barcodes_before_demux' is true. Defaults to 'barcode_2'.",
         category: "advanced"
       }
   }
@@ -340,6 +353,7 @@ task illumina_demux {
       ~{'--tile_limit=' + tileLimit} \
       ~{'--first_tile=' + firstTile} \
       ~{true="--sort=true" false="--sort=false" sort_reads} \
+      ~{true='~{sep=" " barcode_columns_to_rev_comp}' false='' rev_comp_barcodes_before_demux} \
       $max_records_in_ram \
       --JVMmemory="$mem_in_mb"m \
       $demux_threads \
