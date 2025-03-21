@@ -20,12 +20,19 @@ workflow scaffold_and_refine_multitaxa {
         File    contigs_fasta
 
         File    taxid_to_ref_accessions_tsv
+        String? email_address
 
         String? biosample_accession
     }
 
     Int    min_scaffold_unambig = 300 # in base-pairs; any scaffolded assembly < this length will not be refined/polished
     String sample_original_name = select_first([sample_name, sample_id])
+
+    # get user email address, with the following precedence:
+    # 1. email_address provided via WDL input
+    # 2. user_email determined by introspection via check_terra_env task
+    # 3. (empty string fallback)
+    String? user_email_address = select_first([email_address,check_terra_env.user_email, ""])
 
     # download (multi-segment) genomes for each reference, fasta filename = colon-concatenated accession list
     scatter(taxon in read_tsv(taxid_to_ref_accessions_tsv)) {
@@ -38,7 +45,8 @@ workflow scaffold_and_refine_multitaxa {
         call ncbi.download_annotations {
             input:
                 accessions = string_split.tokens,
-                combined_out_prefix = sub(taxon[3], ":", "-")  # singularity does not like colons in filenames
+                combined_out_prefix = sub(taxon[3], ":", "-"),  # singularity does not like colons in filenames
+                emailAddress = user_email_address
         }
     }
 
