@@ -12,12 +12,12 @@ workflow download_file {
     }
 
     input {
-        String path_utl
+        String path_url
     }
 
     call terra.download_from_url {
         input:
-            url_to_download = path_utl
+            url_to_download = path_url
     }
 
     output {

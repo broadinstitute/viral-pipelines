@@ -40,7 +40,7 @@ workflow scaffold_and_refine_multitaxa {
 
     call download_file.download_file as dl_taxid_to_ref_tsv {
         input:
-            url = taxid_to_ref_accessions_tsv
+            path_url = taxid_to_ref_accessions_tsv
     }
 
     # download (multi-segment) genomes for each reference, fasta filename = colon-concatenated accession list
