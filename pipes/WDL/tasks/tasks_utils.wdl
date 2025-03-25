@@ -521,6 +521,9 @@ task download_from_url {
             echo "ls -lah $(pwd)"
             ls -lah
 
+            echo "ls -lah $(pwd)/~{download_subdir_local}"
+            ls -lah ~{download_subdir_local}
+
             check_md5_sum() {
                 # $1 =  md5sum expected
                 # $2 =  md5sum of downloaded file
