@@ -367,8 +367,14 @@ task tar_extract {
 }
 
 task download_from_url {
+    # This task can be used prior to another task that consumes a file from a URL, 
+    # but where the input "protocol" is not know in advance (http[s]:// vs. gs://,drs://,etc.)
+    #
+    # After calling download_from_url, downstream tasks can then simply say:
+    #     select_first([download_from_url.downloaded_response_file, download_from_url.passthrough_url])
+    # This will allow the downstream task to consume the file since at that point it will be a bucket-local path, even if it was initially a web address.
     meta {
-        description: "Download a file from a URL. This task exists as a workaround until Terra supports this functionality natively (cromwell already does: https://cromwell.readthedocs.io/en/stable/filesystems/HTTP/). http[s] and ftp supported"
+        description: "Download a file from a URL if http[s], otherwise pass the URL through to the output. This task exists as a workaround until Terra supports http[s] inputs natively (cromwell already does: https://cromwell.readthedocs.io/en/stable/filesystems/HTTP/). http[s] and ftp supported"
         volatile: true
     }
     input {
@@ -388,7 +394,7 @@ task download_from_url {
 
     parameter_meta {
       url_to_download: {
-        description: "The URL to download; this is passed to wget"
+        description: "The URL to download; this is passed to wget. If this is not an http[s] URL, the value is passed through unchanged to the 'path_str' output."      
       }
       
       output_filename: {
@@ -415,107 +421,131 @@ task download_from_url {
     }
 
     String download_subdir_local = "downloaded"
+
     command <<<
+        echo "false" > WAS_HTTP_DOWNLOAD
+
         # enforce that only one source of expected md5 hash can be provided
         ~{if defined(md5_hash_expected) && defined(md5_hash_expected_file_url) then 'echo "The inputs \'md5_hash_expected\' and \'md5_hash_expected_file_url\' cannot both be specified; please provide only one."; exit 1;' else ''}
 
-        mkdir -p "~{download_subdir_local}/tmp"
-        
-        pushd "~{download_subdir_local}"
-        
-        # ---- download desired file
-        pushd "tmp"
+        #touch FILE_LOCATION SIZE_OF_DOWNLOADED_FILE_BYTES MD5_SUM_OF_DOWNLOADED_FILE
 
-        # if a URL-encoded version of the requested download is needed
-        #encoded_url=$(python3 -c "import urllib.parse; print urllib.parse.quote('''~{url_to_download}''')")
-        
-        # get the desired file using wget
-        # --content-disposition = use the file name suggested by the server via the Content-Disposition header
-        # --trust-server-names = ...and in the event of a redirect, use the value of the final page rather than that of the original url
-        # --save-headers = save the headers sent by the HTTP server to the file, preceding the actual contents, with an empty line as the separator.
-        wget \
-        --read-timeout 3 --waitretry 30 \
-        --no-verbose \
-        --method ~{request_method} \
-        ~{if defined(output_filename) then "--output-document ~{output_filename}" else ""} \
-        --tries ~{request_max_retries} \
-        --content-disposition --trust-server-names ~{additional_wget_opts} \
-        '~{url_to_download}' \
-        ~{if save_response_header_to_file then "--save-headers" else ""} || (echo "ERROR: request to ~{request_method} file from URL failed: ~{url_to_download}"; exit 1)
+        # if this is an http[s] url, download the file
+        # (otherwise just pass through the URL to the 'path_str' output)
+        if [[ ("~{url_to_download}" =~ ^(http|https|drs):// ) ]]; then
+            mkdir -p "~{download_subdir_local}/tmp"
+            
+            pushd "~{download_subdir_local}"
+            
+            # ---- download desired file
+            pushd "tmp"
 
-        # ----
+            # resolve any redirects to the final URL
+            # wget will do this automatically, but this snipped may be helpful if we ever need to output the final URL from this task
+            # resolved_url="$(curl -Ls -o /dev/null -w '%{url_effective}' '~{url_to_download}')"
+            # echo "resolved_url: ${resolved_url}"
 
-        # get the name of the downloaded file
-        downloaded_file_name="$(basename "$(ls -1 | head -n1)")"
+            # if a URL-encoded version of the requested download is needed
+            #encoded_url=$(python3 -c "import urllib.parse; print urllib.parse.quote('''~{url_to_download}''')")
+            
+            # get the desired file using wget
+            # --content-disposition = use the file name suggested by the server via the Content-Disposition header
+            # --trust-server-names = ...and in the event of a redirect, use the value of the final page rather than that of the original url
+            # --save-headers = save the headers sent by the HTTP server to the file, preceding the actual contents, with an empty line as the separator.
+            wget \
+            --read-timeout 3 --waitretry 30 \
+            --no-verbose \
+            --method ~{request_method} \
+            ~{if defined(output_filename) then "--output-document ~{output_filename}" else ""} \
+            --tries ~{request_max_retries} \
+            --content-disposition --trust-server-names ~{additional_wget_opts} \
+            '~{url_to_download}' \
+            ~{if save_response_header_to_file then "--save-headers" else ""} || (echo "ERROR: request to ~{request_method} file from URL failed: ~{url_to_download}"; exit 1)
 
-        if [ ! -f "$downloaded_file_name" ]; then
-            echo "Could not locate downloaded file \"$downloaded_file_name\""
-            exit 1
-        fi
-        
-        if [ ! -s "$downloaded_file_name" ]; then
-            echo "Downloaded file appears empty: \"$downloaded_file_name\""
-            exit 1
-        fi
+            # ----
 
-        popd # return to downloaded/
+            # get the name of the downloaded file
+            downloaded_file_name="$(basename "$(ls -1 | head -n1)")"
 
-        # (only for http(s)) split http response headers from response body
-        # since wget stores both in a single file separated by a couple newlines
-        if [[ "~{url_to_download}" =~ ^https?:// ]] && ~{if save_response_header_to_file then "true" else "false"}; then
-            echo "Saving response headers separately..."
-            csplit -f response -s "tmp/${downloaded_file_name}" $'/^\r$/+1' && \
-                mv response00 "../${downloaded_file_name}.headers" && \
-                mv response01 "${downloaded_file_name}" && \
-                rm "tmp/$downloaded_file_name"
-        else
-            mv "tmp/${downloaded_file_name}" "${downloaded_file_name}"
-        fi
-        # alternative python implementation to split response headers from body
-        #   via https://stackoverflow.com/a/75483099
-        #python3 << CODE
-        #if ~{if save_response_header_to_file then "True" else "False"}:
-        #    with open("tmp/${downloaded_file_name}", "rb") as f_downloaded:
-        #        headers, body = f_downloaded.read().split(b"\r\n\r\n", 1)
-        #        # write the response header to a file
-        #        with open("${downloaded_file_name}.headers", "wb") as f_headers:
-        #            f_headers.write(headers)
-        #            f_headers.write(b"\r\n")
-        #        # save the file body to its final location
-        #        with open("${downloaded_file_name}", "wb") as f:
-        #            f.write(body)
-        #else:
-        #    ## if headers are not being saved, move the file to its final destination
-        #    import shutil
-        #    shutil.move("tmp/${downloaded_file_name}","${downloaded_file_name}")
-        #CODE
-        
-        rm -r "tmp"
-
-        popd # return to job working directory
-
-        check_md5_sum() {
-            # $1 =  md5sum expected
-            # $2 =  md5sum of downloaded file
-            if [[ "$1" != "$2" ]]; then
-                echo "ERROR: md5sum of downloaded file ($2) did not match md5sum expected ($1)";
+            if [ ! -f "$downloaded_file_name" ]; then
+                echo "Could not locate downloaded file \"$downloaded_file_name\""
                 exit 1
             fi
-        }
+            
+            if [ ! -s "$downloaded_file_name" ]; then
+                echo "Downloaded file appears empty: \"$downloaded_file_name\""
+                exit 1
+            fi
 
-        md5sum_of_downloaded=$(md5sum --binary "~{download_subdir_local}/${downloaded_file_name}" | cut -f1 -d' ' | tee MD5_SUM_OF_DOWNLOADED_FILE)
+            popd # return to downloaded/
 
-        if ~{if defined(md5_hash_expected) then 'true' else 'false'}; then
-            md5_hash_expected="~{md5_hash_expected}"
-            check_md5_sum "$md5_hash_expected" "$md5sum_of_downloaded"
+            # (only for http(s)) split http response headers from response body
+            # since wget stores both in a single file separated by a couple newlines
+            if [[ "~{url_to_download}" =~ ^https?:// ]] && ~{if save_response_header_to_file then "true" else "false"}; then
+                echo "Saving response headers separately..."
+                csplit -f response -s "tmp/${downloaded_file_name}" $'/^\r$/+1' && \
+                    mv response00 "../${downloaded_file_name}.headers" && \
+                    mv response01 "${downloaded_file_name}" && \
+                    rm "tmp/$downloaded_file_name"
+            else
+                mv "tmp/${downloaded_file_name}" "${downloaded_file_name}"
+            fi
+
+            # alternative python implementation to split response headers from body
+            #   via https://stackoverflow.com/a/75483099
+            #python3 << CODE
+            #if ~{if save_response_header_to_file then "True" else "False"}:
+            #    with open("tmp/${downloaded_file_name}", "rb") as f_downloaded:
+            #        headers, body = f_downloaded.read().split(b"\r\n\r\n", 1)
+            #        # write the response header to a file
+            #        with open("${downloaded_file_name}.headers", "wb") as f_headers:
+            #            f_headers.write(headers)
+            #            f_headers.write(b"\r\n")
+            #        # save the file body to its final location
+            #        with open("${downloaded_file_name}", "wb") as f:
+            #            f.write(body)
+            #else:
+            #    ## if headers are not being saved, move the file to its final destination
+            #    import shutil
+            #    shutil.move("tmp/${downloaded_file_name}","${downloaded_file_name}")
+            #CODE
+            
+            rm -r "tmp"
+
+            popd # return to job working directory
+
+            check_md5_sum() {
+                # $1 =  md5sum expected
+                # $2 =  md5sum of downloaded file
+                if [[ "$1" != "$2" ]]; then
+                    echo "ERROR: md5sum of downloaded file ($2) did not match md5sum expected ($1)";
+                    exit 1
+                fi
+            }
+
+            md5sum_of_downloaded=$(md5sum --binary "~{download_subdir_local}/${downloaded_file_name}" | cut -f1 -d' ' | tee MD5_SUM_OF_DOWNLOADED_FILE)
+
+            if ~{if defined(md5_hash_expected) then 'true' else 'false'}; then
+                md5_hash_expected="~{md5_hash_expected}"
+                check_md5_sum "$md5_hash_expected" "$md5sum_of_downloaded"
+            fi
+            if ~{if defined(md5_hash_expected_file_url) then 'true' else 'false'}; then
+                md5_hash_expected="$(curl --silent ~{md5_hash_expected_file_url} | cut -f1 -d' ')"
+                check_md5_sum "$md5_hash_expected" "$md5sum_of_downloaded"
+            fi
+
+            # report the file size, in bytes
+            printf "Downloaded file size (bytes): " && stat --format=%s  "~{download_subdir_local}/${downloaded_file_name}" | tee SIZE_OF_DOWNLOADED_FILE_BYTES
+            touch FILE_LOCATION
+            echo "true" > WAS_HTTP_DOWNLOAD
+            echo $(realpath "~{download_subdir_local}/${downloaded_file_name}") > FILE_LOCATION
+        else
+            echo "Only URLs beginning with 'http://' or 'https://' can be downloaded; passing through input url to directly to output..."
+            echo "~{url_to_download}" > FILE_LOCATION
+            printf "0" > SIZE_OF_DOWNLOADED_FILE_BYTES
+            printf "" > MD5_SUM_OF_DOWNLOADED_FILE
+            echo "false" > WAS_HTTP_DOWNLOAD
         fi
-        if ~{if defined(md5_hash_expected_file_url) then 'true' else 'false'}; then
-            md5_hash_expected="$(curl --silent ~{md5_hash_expected_file_url} | cut -f1 -d' ')"
-            check_md5_sum "$md5_hash_expected" "$md5sum_of_downloaded"
-        fi
-
-        # report the file size, in bytes
-        printf "Downloaded file size (bytes): " && stat --format=%s  "~{download_subdir_local}/${downloaded_file_name}" | tee SIZE_OF_DOWNLOADED_FILE_BYTES
     >>>
     runtime {
         docker: "quay.io/broadinstitute/viral-baseimage:0.2.4"
@@ -527,12 +557,26 @@ task download_from_url {
         maxRetries: 0
         preemptible: 1
     }
-    output {
-        File  downloaded_response_file    = glob("downloaded/*")[0]
-        File? downloaded_response_headers = basename(downloaded_response_file) + ".headers"
 
-        Int    file_size_bytes          = read_int("SIZE_OF_DOWNLOADED_FILE_BYTES")
-        String md5_sum_of_response_file = read_string("MD5_SUM_OF_DOWNLOADED_FILE")
+    # placeholders to output null until WDL supports null literals
+    Int?    nullIntPlaceholder 
+    String? nullStrPlaceholder
+
+    # output files
+    output {
+        # one or the other will be returned, depending on the download method
+        # an http[s] url will be downloaded to a file and available via downloaded_response_file
+        # other urls (i.e. localizable paths like 'gs://*') will be available via passthrough_url
+        # When consuming this task, select the relevant output via:
+        #   select_first([download_from_url.downloaded_response_file, download_from_url.passthrough_url])
+        File?   downloaded_response_file = if (read_boolean("WAS_HTTP_DOWNLOAD")) then read_string("FILE_LOCATION") else nullStrPlaceholder
+        String? passthrough_url          = if (read_boolean("WAS_HTTP_DOWNLOAD")) then nullStrPlaceholder else url_to_download
+
+        File?   downloaded_response_headers = if ( defined(downloaded_response_file) ) then basename(read_string("FILE_LOCATION")) + ".headers" else nullStrPlaceholder
+        String? md5_sum_of_response_file    = if ( defined(downloaded_response_file) ) then read_string("MD5_SUM_OF_DOWNLOADED_FILE") else nullStrPlaceholder
+        Int?    file_size_bytes             = if ( defined(downloaded_response_file) ) then floor(size(downloaded_response_file)) else nullIntPlaceholder 
+        
+        Boolean passed_through_input_url_instead_of_downloading = if ( defined(downloaded_response_file) ) then false else true
 
         File stdout = stdout()
         File stderr = stderr()
