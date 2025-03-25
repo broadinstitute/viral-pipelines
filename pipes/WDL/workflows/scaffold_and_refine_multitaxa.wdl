@@ -3,6 +3,7 @@ version 1.0
 import "../tasks/tasks_assembly.wdl" as assembly
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_utils.wdl" as utils
+import "../tasks/tasks_terra.wdl" as terra
 import "assemble_refbased.wdl" as assemble_refbased
 import "download_file.wdl" as download_file
 
@@ -29,11 +30,12 @@ workflow scaffold_and_refine_multitaxa {
     Int    min_scaffold_unambig = 300 # in base-pairs; any scaffolded assembly < this length will not be refined/polished
     String sample_original_name = select_first([sample_name, sample_id])
 
+    call terra.check_terra_env
+
     # get user email address, with the following precedence:
     # 1. email_address provided via WDL input
     # 2. user_email determined by introspection via check_terra_env task
     # 3. (empty string fallback)
-    call terra.check_terra_env
     String user_email_address = select_first([email_address,check_terra_env.user_email, ""])
 
     call download_file.download_file as dl_taxid_to_ref_tsv {
