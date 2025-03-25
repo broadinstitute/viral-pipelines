@@ -33,7 +33,8 @@ workflow scaffold_and_refine_multitaxa {
     # 1. email_address provided via WDL input
     # 2. user_email determined by introspection via check_terra_env task
     # 3. (empty string fallback)
-    String? user_email_address = select_first([email_address,check_terra_env.user_email, ""])
+    call terra.check_terra_env
+    String user_email_address = select_first([email_address,check_terra_env.user_email, ""])
 
     call download_file.download_file as dl_taxid_to_ref_tsv {
         input:
