@@ -518,6 +518,9 @@ task download_from_url {
 
             popd # return to job working directory
 
+            echo "ls -lah $(pwd)"
+            ls -lah
+
             check_md5_sum() {
                 # $1 =  md5sum expected
                 # $2 =  md5sum of downloaded file
@@ -542,10 +545,16 @@ task download_from_url {
             printf "Downloaded file size (bytes): " && stat --format=%s  "~{download_subdir_local}/${downloaded_file_name}" | tee SIZE_OF_DOWNLOADED_FILE_BYTES
             touch FILE_LOCATION
             echo "true" > WAS_HTTP_DOWNLOAD
-            echo $(realpath "~{download_subdir_local}/${downloaded_file_name}") > FILE_LOCATION
+            downloaded_file_realpath=$(realpath "~{download_subdir_local}/${downloaded_file_name}")
+            
+            echo '~{download_subdir_local}/${downloaded_file_name}: '"~{download_subdir_local}/${downloaded_file_name}"
+            echo '${downloaded_file_realpath}: '"${downloaded_file_realpath}"
+            
+            echo "${downloaded_file_realpath}" | tee FILE_LOCATION
         else
             echo "Only URLs beginning with 'http://' or 'https://' can be downloaded; passing through input url to directly to output..."
-            echo "~{url_to_download}" > FILE_LOCATION
+            #echo "~{url_to_download}" > FILE_LOCATION
+            echo "" > FILE_LOCATION
             printf "0" > SIZE_OF_DOWNLOADED_FILE_BYTES
             printf "" > MD5_SUM_OF_DOWNLOADED_FILE
             echo "false" > WAS_HTTP_DOWNLOAD
@@ -569,6 +578,7 @@ task download_from_url {
         # other urls (i.e. localizable paths like 'gs://*') will be available via passthrough_url
         # When consuming this task, select the relevant output via:
         #   select_first([download_from_url.downloaded_response_file, download_from_url.passthrough_url])
+        File?   downloaded_response_file_debug = read_string("FILE_LOCATION")
         File?   downloaded_response_file = if (read_boolean("WAS_HTTP_DOWNLOAD")) then read_string("FILE_LOCATION") else nullStrPlaceholder
         String? passthrough_url          = if (read_boolean("WAS_HTTP_DOWNLOAD")) then nullStrPlaceholder else url_to_download
 
