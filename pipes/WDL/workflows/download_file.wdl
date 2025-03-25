@@ -11,10 +11,17 @@ workflow download_file {
         email:  "viral-ngs@broadinstitute.org"
     }
 
-    call terra.download_from_url
+    input {
+        String path_utl
+    }
+
+    call terra.download_from_url {
+        input:
+            url_to_download = path_utl
+    }
 
     output {
-        File output_file                      = select_first([download_from_url.downloaded_response_file, download_from_url.passthrough_url])
+        File    file_path                     = select_first([download_from_url.downloaded_response_file, download_from_url.passthrough_url])
 
         # one or the other will be returned, depending on the download method
         # an http[s] url will be downloaded to a file and available via downloaded_response_file

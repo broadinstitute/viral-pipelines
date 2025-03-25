@@ -4,6 +4,7 @@ import "../tasks/tasks_assembly.wdl" as assembly
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_utils.wdl" as utils
 import "assemble_refbased.wdl" as assemble_refbased
+import "download_file.wdl" as download_file
 
 workflow scaffold_and_refine_multitaxa {
     meta {
@@ -19,7 +20,7 @@ workflow scaffold_and_refine_multitaxa {
         File    reads_unmapped_bam
         File    contigs_fasta
 
-        File    taxid_to_ref_accessions_tsv
+        String  taxid_to_ref_accessions_tsv
         String? email_address
 
         String? biosample_accession
@@ -34,8 +35,13 @@ workflow scaffold_and_refine_multitaxa {
     # 3. (empty string fallback)
     String? user_email_address = select_first([email_address,check_terra_env.user_email, ""])
 
+    call download_file.download_file as dl_taxid_to_ref_tsv {
+        input:
+            url = taxid_to_ref_accessions_tsv
+    }
+
     # download (multi-segment) genomes for each reference, fasta filename = colon-concatenated accession list
-    scatter(taxon in read_tsv(taxid_to_ref_accessions_tsv)) {
+    scatter(taxon in read_tsv(dl_taxid_to_ref_tsv.file_path)) {
         # taxon = [taxid, isolate_prefix, taxname, semicolon_delim_accession_list]
         call utils.string_split {
             input:
@@ -90,7 +96,7 @@ workflow scaffold_and_refine_multitaxa {
         # get taxid and taxname from taxid_to_ref_accessions_tsv
         call utils.fetch_row_from_tsv as tax_lookup {
             input:
-                tsv = taxid_to_ref_accessions_tsv,
+                tsv = dl_taxid_to_ref_tsv.file_path,
                 idx_col = "accessions",
                 idx_val = sub(scaffold.scaffolding_chosen_ref_basename, "-", ":"),
                 add_header = ["taxid", "isolate_prefix", "taxname", "accessions"]
