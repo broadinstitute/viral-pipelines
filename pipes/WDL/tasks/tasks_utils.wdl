@@ -553,7 +553,8 @@ task download_from_url {
             echo '~{download_subdir_local}/${downloaded_file_name}: '"~{download_subdir_local}/${downloaded_file_name}"
             echo '${downloaded_file_realpath}: '"${downloaded_file_realpath}"
             
-            echo "${downloaded_file_realpath}" | tee FILE_LOCATION
+            #echo "${downloaded_file_realpath}" | tee FILE_LOCATION
+            echo "~{download_subdir_local}/${downloaded_file_name}" | tee FILE_LOCATION
         else
             echo "Only URLs beginning with 'http://' or 'https://' can be downloaded; passing through input url to directly to output..."
             #echo "~{url_to_download}" > FILE_LOCATION
