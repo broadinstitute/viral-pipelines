@@ -392,8 +392,8 @@ task download_from_url {
         Int     disk_size = 50
 
         # Do not use these inputs; they are placeholders to output null until WDL supports null literals
-        Int?    _nullIntPlaceholder 
-        String? _nullStrPlaceholder
+        Int?    nullIntPlaceholder 
+        String? nullStrPlaceholder
     }
 
     parameter_meta {
@@ -569,12 +569,12 @@ task download_from_url {
         # other urls (i.e. localizable paths like 'gs://*') will be available via passthrough_url
         # When consuming this task, select the relevant output via:
         #   select_first([download_from_url.downloaded_response_file, download_from_url.passthrough_url])
-        File?   downloaded_response_file = if (read_boolean("WAS_HTTP_DOWNLOAD")) then read_string("FILE_LOCATION") else _nullStrPlaceholder
-        String? passthrough_url          = if (read_boolean("WAS_HTTP_DOWNLOAD")) then _nullStrPlaceholder else url_to_download
+        File?   downloaded_response_file = if (read_boolean("WAS_HTTP_DOWNLOAD")) then read_string("FILE_LOCATION") else nullStrPlaceholder
+        String? passthrough_url          = if (read_boolean("WAS_HTTP_DOWNLOAD")) then nullStrPlaceholder else url_to_download
 
-        File?   downloaded_response_headers = if ( defined(downloaded_response_file) ) then basename(read_string("FILE_LOCATION")) + ".headers" else _nullStrPlaceholder
-        String? md5_sum_of_response_file    = if ( defined(downloaded_response_file) ) then read_string("MD5_SUM_OF_DOWNLOADED_FILE") else _nullStrPlaceholder
-        Int?    file_size_bytes             = if ( defined(downloaded_response_file) ) then floor(size(downloaded_response_file)) else _nullIntPlaceholder 
+        File?   downloaded_response_headers = if ( defined(downloaded_response_file) ) then basename(read_string("FILE_LOCATION")) + ".headers" else nullStrPlaceholder
+        String? md5_sum_of_response_file    = if ( defined(downloaded_response_file) ) then read_string("MD5_SUM_OF_DOWNLOADED_FILE") else nullStrPlaceholder
+        Int?    file_size_bytes             = if ( defined(downloaded_response_file) ) then floor(size(downloaded_response_file)) else nullIntPlaceholder 
         
         Boolean passed_through_input_url_instead_of_downloading = if ( defined(downloaded_response_file) ) then false else true
 
