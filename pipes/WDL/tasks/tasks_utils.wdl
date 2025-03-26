@@ -587,7 +587,7 @@ task download_from_url {
         File?   downloaded_response_file = read_string("FILE_LOCATION")
         String? passthrough_url          = if (read_boolean("WAS_HTTP_DOWNLOAD")) then nullStrPlaceholder else url_to_download
 
-        File?   downloaded_response_headers = if ( defined(downloaded_response_file) and save_response_header_to_file ) then basename(read_string("FILE_LOCATION")) + ".headers" else nullStrPlaceholder
+        File?   downloaded_response_headers = if ( defined(downloaded_response_file) && save_response_header_to_file ) then basename(read_string("FILE_LOCATION")) + ".headers" else nullStrPlaceholder
         String? md5_sum_of_response_file    = if ( defined(downloaded_response_file) ) then read_string("MD5_SUM_OF_DOWNLOADED_FILE") else nullStrPlaceholder
         Int?    file_size_bytes             = if ( defined(downloaded_response_file) ) then floor(size(read_string("FILE_LOCATION"))) else nullIntPlaceholder 
         
