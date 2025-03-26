@@ -432,7 +432,8 @@ task download_from_url {
         # enforce that only one source of expected md5 hash can be provided
         ~{if defined(md5_hash_expected) && defined(md5_hash_expected_file_url) then 'echo "The inputs \'md5_hash_expected\' and \'md5_hash_expected_file_url\' cannot both be specified; please provide only one."; exit 1;' else ''}
 
-        #touch FILE_LOCATION SIZE_OF_DOWNLOADED_FILE_BYTES MD5_SUM_OF_DOWNLOADED_FILE
+        #touch SIZE_OF_DOWNLOADED_FILE_BYTES MD5_SUM_OF_DOWNLOADED_FILE
+        touch FILE_LOCATION
 
         # if this is an http[s] url, download the file
         # (otherwise just pass through the URL to the 'path_str' output)
@@ -540,7 +541,6 @@ task download_from_url {
 
             # report the file size, in bytes
             printf "Downloaded file size (bytes): " && stat --format=%s  "~{download_subdir_local}/${downloaded_file_name}" | tee SIZE_OF_DOWNLOADED_FILE_BYTES
-            touch FILE_LOCATION
             echo "true" > WAS_HTTP_DOWNLOAD
             downloaded_file_realpath=$(realpath "~{download_subdir_local}/${downloaded_file_name}")
             
