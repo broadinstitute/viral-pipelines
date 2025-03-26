@@ -79,7 +79,7 @@ task sequencing_platform_from_bam {
   input {
     File    bam
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
+    String  docker = "quay.io/broadinstitute/viral-core:2.4.2"
   }
 
   command <<<
@@ -188,7 +188,7 @@ task structured_comments {
 
     File?  filter_to_ids
 
-    String docker = "quay.io/broadinstitute/viral-core:2.4.1"
+    String docker = "quay.io/broadinstitute/viral-core:2.4.2"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -241,7 +241,7 @@ task structured_comments_from_aligned_bam {
     String  out_basename = basename(aligned_bam, '.bam')
     Boolean is_genome_assembly = true
     Boolean sanitize_ids = true
-    String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
+    String  docker = "quay.io/broadinstitute/viral-core:2.4.2"
   }
   # see https://www.ncbi.nlm.nih.gov/genbank/structuredcomment/
   command <<<
@@ -360,7 +360,7 @@ task rename_fasta_header {
 
     String out_basename = basename(genome_fasta, ".fasta")
 
-    String docker = "quay.io/broadinstitute/viral-core:2.4.1"
+    String docker = "quay.io/broadinstitute/viral-core:2.4.2"
   }
   command {
     set -e
@@ -525,7 +525,7 @@ task sra_meta_prep {
     Boolean     paired
 
     String      out_name = "sra_metadata.tsv"
-    String      docker="quay.io/broadinstitute/viral-core:2.4.1"
+    String      docker="quay.io/broadinstitute/viral-core:2.4.2"
   }
   Int disk_size = 100
   parameter_meta {
