@@ -392,7 +392,7 @@ task download_from_url {
         Int     disk_size = 50
 
         # Do not use these inputs; they are placeholders to output null values until 
-        # cromwell-on-Terra supports the null literal "None", available starting in WDL 1.1
+        # cromwell-on-Terra supports the null literal "None" available in WDL version >1.1
         # see:
         #   https://github.com/openwdl/wdl/blob/wdl-1.1/SPEC.md#optional-types-and-none
         Int?    nullIntPlaceholder 
