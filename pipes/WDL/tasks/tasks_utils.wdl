@@ -438,7 +438,7 @@ task download_from_url {
 
         # if this is an http[s] url, download the file
         # (otherwise just pass through the URL to the 'path_str' output)
-        if [[ ("~{url_to_download}" =~ ^(http|https|drs):// ) ]]; then
+        if [[ ("~{url_to_download}" =~ ^(http|https|ftp):// ) ]]; then
             mkdir -p "~{download_subdir_local}/tmp"
             
             pushd "~{download_subdir_local}"
@@ -485,7 +485,7 @@ task download_from_url {
 
             popd # return to downloaded/
 
-            # (only for http(s)) split http response headers from response body
+            # (only for http[s]) split http response headers from response body
             # since wget stores both in a single file separated by a couple newlines
             if [[ "~{url_to_download}" =~ ^https?:// ]] && ~{if save_response_header_to_file then "true" else "false"}; then
                 echo "Saving response headers separately..."
@@ -572,7 +572,16 @@ task download_from_url {
         #   select_first([download_from_url.downloaded_response_file, download_from_url.passthrough_url])
         #File?   downloaded_response_file_debug = read_string("FILE_LOCATION")
         #File?   downloaded_response_file = if (read_boolean("WAS_HTTP_DOWNLOAD")) then read_string("FILE_LOCATION") else nullStrPlaceholder
-        File?   downloaded_response_file = if (read_boolean("WAS_HTTP_DOWNLOAD")) then select_first(flatten([glob(download_subdir_local+"/*"),[""]])) else nullStrPlaceholder
+
+
+        #File?   downloaded_response_file = if (read_boolean("WAS_HTTP_DOWNLOAD")) then glob(download_subdir_local+"/*") else nullStrPlaceholder
+
+        File?   downloaded_response_file = if (read_boolean("WAS_HTTP_DOWNLOAD")) then select_first(
+                                                                                                flatten([
+                                                                                                    glob(download_subdir_local+"/*"),
+                                                                                                    ["",nullStrPlaceholder]
+                                                                                                ])
+                                                                                        ) else nullStrPlaceholder
         String? passthrough_url          = if (read_boolean("WAS_HTTP_DOWNLOAD")) then nullStrPlaceholder else url_to_download
 
         File?   downloaded_response_headers = if ( defined(downloaded_response_file) && save_response_header_to_file ) then basename(read_string("FILE_LOCATION")) + ".headers" else nullStrPlaceholder
