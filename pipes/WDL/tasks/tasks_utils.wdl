@@ -518,12 +518,6 @@ task download_from_url {
 
             popd # return to job working directory
 
-            echo "ls -lah $(pwd)"
-            ls -lah
-
-            echo "ls -lah $(pwd)/~{download_subdir_local}"
-            ls -lah ~{download_subdir_local}
-
             check_md5_sum() {
                 # $1 =  md5sum expected
                 # $2 =  md5sum of downloaded file
@@ -555,6 +549,12 @@ task download_from_url {
             
             #echo "${downloaded_file_realpath}" | tee FILE_LOCATION
             echo "~{download_subdir_local}/${downloaded_file_name}" | tee FILE_LOCATION
+
+            echo "ls -lah $(pwd)"
+            ls -lah
+
+            echo "ls -lah $(pwd)/~{download_subdir_local}"
+            ls -lah ~{download_subdir_local}
         else
             echo "Only URLs beginning with 'http://' or 'https://' can be downloaded; passing through input url to directly to output..."
             #echo "~{url_to_download}" > FILE_LOCATION
@@ -582,13 +582,14 @@ task download_from_url {
         # other urls (i.e. localizable paths like 'gs://*') will be available via passthrough_url
         # When consuming this task, select the relevant output via:
         #   select_first([download_from_url.downloaded_response_file, download_from_url.passthrough_url])
-        File?   downloaded_response_file_debug = read_string("FILE_LOCATION")
-        File?   downloaded_response_file = if (read_boolean("WAS_HTTP_DOWNLOAD")) then read_string("FILE_LOCATION") else nullStrPlaceholder
+        #File?   downloaded_response_file_debug = read_string("FILE_LOCATION")
+        #File?   downloaded_response_file = if (read_boolean("WAS_HTTP_DOWNLOAD")) then read_string("FILE_LOCATION") else nullStrPlaceholder
+        File?   downloaded_response_file = read_string("FILE_LOCATION")
         String? passthrough_url          = if (read_boolean("WAS_HTTP_DOWNLOAD")) then nullStrPlaceholder else url_to_download
 
-        File?   downloaded_response_headers = if ( defined(downloaded_response_file) ) then basename(read_string("FILE_LOCATION")) + ".headers" else nullStrPlaceholder
+        File?   downloaded_response_headers = if ( defined(downloaded_response_file) and save_response_header_to_file ) then basename(read_string("FILE_LOCATION")) + ".headers" else nullStrPlaceholder
         String? md5_sum_of_response_file    = if ( defined(downloaded_response_file) ) then read_string("MD5_SUM_OF_DOWNLOADED_FILE") else nullStrPlaceholder
-        Int?    file_size_bytes             = if ( defined(downloaded_response_file) ) then floor(size(downloaded_response_file)) else nullIntPlaceholder 
+        Int?    file_size_bytes             = if ( defined(downloaded_response_file) ) then floor(size(read_string("FILE_LOCATION"))) else nullIntPlaceholder 
         
         Boolean passed_through_input_url_instead_of_downloading = if ( defined(downloaded_response_file) ) then false else true
 
