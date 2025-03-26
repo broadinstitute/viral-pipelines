@@ -394,6 +394,7 @@ task download_from_url {
         # Do not use these inputs; they are placeholders to output null until WDL supports null literals
         Int?    nullIntPlaceholder 
         String? nullStrPlaceholder
+        File?   nullFilePlaceholder
     }
 
     parameter_meta {
@@ -571,7 +572,7 @@ task download_from_url {
         #   select_first([download_from_url.downloaded_response_file, download_from_url.passthrough_url])
         #File?   downloaded_response_file_debug = read_string("FILE_LOCATION")
         #File?   downloaded_response_file = if (read_boolean("WAS_HTTP_DOWNLOAD")) then read_string("FILE_LOCATION") else nullStrPlaceholder
-        File?   downloaded_response_file = select_first(flatten([glob(download_subdir_local+"/*"),[""]])) #read_string("FILE_LOCATION")
+        File?   downloaded_response_file = if (read_boolean("WAS_HTTP_DOWNLOAD")) select_first(flatten([glob(download_subdir_local+"/*"),[""]])) else nullStrPlaceholder
         String? passthrough_url          = if (read_boolean("WAS_HTTP_DOWNLOAD")) then nullStrPlaceholder else url_to_download
 
         File?   downloaded_response_headers = if ( defined(downloaded_response_file) && save_response_header_to_file ) then basename(read_string("FILE_LOCATION")) + ".headers" else nullStrPlaceholder
