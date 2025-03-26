@@ -542,25 +542,12 @@ task download_from_url {
             # report the file size, in bytes
             printf "Downloaded file size (bytes): " && stat --format=%s  "~{download_subdir_local}/${downloaded_file_name}" | tee SIZE_OF_DOWNLOADED_FILE_BYTES
             echo "true" > WAS_HTTP_DOWNLOAD
-            downloaded_file_realpath=$(realpath "~{download_subdir_local}/${downloaded_file_name}")
-            
-            echo '~{download_subdir_local}/${downloaded_file_name}: '"~{download_subdir_local}/${downloaded_file_name}"
-            echo '${downloaded_file_realpath}: '"${downloaded_file_realpath}"
-            
-            #echo "${downloaded_file_realpath}" | tee FILE_LOCATION
             echo "~{download_subdir_local}/${downloaded_file_name}" | tee FILE_LOCATION
-
-            echo "ls -lah $(pwd)"
-            ls -lah
-
-            echo "ls -lah $(pwd)/~{download_subdir_local}"
-            ls -lah ~{download_subdir_local}
         else
             echo "Only URLs beginning with 'http://' or 'https://' can be downloaded; passing through input url to directly to output..."
-            #echo "~{url_to_download}" > FILE_LOCATION
-            echo "" > FILE_LOCATION
-            printf "0" > SIZE_OF_DOWNLOADED_FILE_BYTES
-            printf "" > MD5_SUM_OF_DOWNLOADED_FILE
+            echo ""      > FILE_LOCATION
+            printf "0"   > SIZE_OF_DOWNLOADED_FILE_BYTES
+            printf ""    > MD5_SUM_OF_DOWNLOADED_FILE
             echo "false" > WAS_HTTP_DOWNLOAD
         fi
     >>>
