@@ -149,11 +149,15 @@ task illumina_demux {
     File?   runinfo
     String? sequencingCenter
 
-    Boolean collapse_duplicated_barcodes      = false
+    # rename and/or replace with inspection of barcode_3
+    #Boolean collapse_duplicated_barcodes      = false 
     Boolean rev_comp_barcodes_before_demux    = false
     Array[String] barcode_columns_to_rev_comp = ["barcode_2"]
 
     Boolean sort_reads=true
+    Boolean keep_unmatched_reads=false
+
+    Boolean emit_unmatched_reads_bam=false
     
     String? flowcell
     Int?    minimumBaseQuality = 10
@@ -331,6 +335,23 @@ task illumina_demux {
     if [ -n "~{maxRecordsInRam}" ]; then max_records_in_ram="~{maxRecordsInRam}"; else max_records_in_ram="$max_records_in_ram"; fi
     if [ -n "$max_records_in_ram" ]; then max_records_in_ram="--max_records_in_ram=$max_records_in_ram"; fi
 
+    # ToDo: determine if collapsing of duplicated barcodes is needed
+    # based on inspection of provided sample sheet file.
+    # In the absense of a provided sample sheet, we will assume that no collapsing is needed.
+    collapse_duplicated_barcodes="false"
+    # Inspect ~{samplesheet} tsv file for the presence of duplicated (barcode_1,barcode_2) pairs, and/or 
+    # the presence of a barcode_3 column with values in at least some of the rows.
+    # We can lean on a Python call out to the SampleSheet class in illumina.py for this.
+
+    sample_sheet_barcode_collapse_potential=$(python -c 'import os; import illumina as il; ss=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=False); ssc=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=True); print("sheet_collapse_possible_true") if len(ss.get_rows())!=len(ssc.get_rows()) else print("sheet_collapse_possible_false")')
+    if [[ "$sample_sheet_barcode_collapse_potential" == "sheet_collapse_possible_true" ]]; then
+      collapse_duplicated_barcodes="true"
+      echo "Detected potential for barcode pair collapsing in provided sample sheet. Treating as two-stage demultiplexing..."
+    else
+      collapse_duplicated_barcodes="false"
+      echo "No potential for barcode pair collapsing detected in provided sample sheet. Proceeding with single-stage demultiplexing."
+    fi
+
     # note that we are intentionally setting --threads to about 2x the core
     # count. seems to still provide speed benefit (over 1x) when doing so.
     illumina.py illumina_demux \
@@ -362,26 +383,50 @@ task illumina_demux {
       --out_meta_by_sample meta_by_sample.json \
       --out_meta_by_filename meta_by_fname.json \
       --out_runinfo runinfo.json \
-      ~{true="--collapse_duplicated_barcodes=barcodes_if_collapsed.tsv" false="" collapse_duplicated_barcodes} \
+      if $collapse_duplicated_barcodes; then printf "--collapse_duplicated_barcodes=barcodes_if_collapsed.tsv"; fi \
       --loglevel=DEBUG
+      #~{true="--collapse_duplicated_barcodes=barcodes_if_collapsed.tsv" false="" collapse_duplicated_barcodes} \
 
     illumina.py guess_barcodes ~{'--number_of_negative_controls ' + numberOfNegativeControls} --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
 
     illumina.py flowcell_metadata --inDir $FLOWCELL_DIR flowcellMetadataFile.tsv
 
     mkdir -p unmatched
-    mv Unmatched.bam unmatched/
+    mkdir -p unmatched_picard
+    mv Unmatched.bam unmatched_picard/
+
+    # if we are emitting unmatched reads as a bam, move it to the output dir
+    if ~{true="true" false="false" emit_unmatched_reads_bam}; then
+      ln -s $(realpath unmatched_picard/Unmatched.bam) "$(realpath unmatched/)/Unmatched.bam")
+    else
+      rm unmatched_picard/Unmatched.bam
+    fi
+
+    # if bam basename is (case-insensitive) Unmatched.bam
+    #if [[ "$(basename $bam .bam)" =~ ^[Uu]nmatched$ ]]; then
+    #  mv $bam unmatched/
+    #  continue
+    #fi
 
     OUT_BASENAMES=bam_basenames.txt
     for bam in *.bam; do
       echo "$(basename $bam .bam)" >> $OUT_BASENAMES
     done
 
+    # if we're collapsing duplicated barcodes, 
+    # we need to run splitcode demux on inner barcodes (probably)
+    #if [ -f "barcodes_if_collapsed.tsv" ]; then
+    #else
+    #fi
+    #if ~{true="true" false="false" collapse_duplicated_barcodes}; then
+
     # if we collapsed duplicated barcodes, we need to run splitcode_demux
     # This will eventually move into its own task once we characterize
     # resource needs, but for now it's here
-    splitcode_outdir="inner_barcode_demux"
-    if ~{true="true" false="false" collapse_duplicated_barcodes}; then
+    splitcode_outdir="inner_barcode_demux"    
+
+    # if we collapsed barcode pairs, we need to run splitcode_demux
+    if [ -f "barcodes_if_collapsed.tsv" ]; then
       mkdir -p ./${splitcode_outdir}
 
       # NB: at present, splitcode_demux is unaware of 
@@ -392,20 +437,52 @@ task illumina_demux {
       #
       # ${FLOWCELL_DIR}
 
+      # ToDo: allow user to pass a list of input files (bams or fq) rather than a directory
+
       illumina.py splitcode_demux \
       ./ \
       1 \
-      ./inner_barcode_demux \
+      $splitcode_outdir \
       ~{'--sampleSheet=' + samplesheet} \
       '--runInfo=' ${RUNINFO_FILE} \
       '--illuminaRunDirectory' ${FLOWCELL_DIR} \
-      --threads $demux_threads
+      --threads $demux_threads \
+      --out_meta_by_sample ${splitcode_outdir}/meta_by_sample.json \
+      --out_meta_by_filename ${splitcode_outdir}/meta_by_filename.json
 
       #~{'--runInfo=' + runinfo} \
       #--tmp_dir ./tmp/ \
       #--tmp_dirKeep \
       # --sampleSheet ${flowcell_dir}/SampleSheet.tsv \
       # --runInfo ${flowcell_dir}/RunInfo.xml
+
+      
+
+
+      mkdir -p unmatched_splitcode
+      mv ${splitcode_outdir}/unmatched*.bam unmatched_splitcode/
+
+      # # if we are emitting unmatched reads as a bam, move it to the output dir
+      # if ~{true="true" false="false" emit_unmatched_reads_bam}; then
+      #   
+      #   for bam in unmatched_splitcode/unmatched*.bam; do
+      #     ln -s $(realpath $bam) $(realpath unmatched/)
+      #   done
+      # else
+      #   rm unmatched_splitcode/unmatched*.bam
+      # fi
+
+
+      for bam in ${splitcode_outdir}/*.bam; do
+        echo "$(basename $bam .bam)" >> $OUT_BASENAMES
+        mv $bam .
+      done
+
+      # ToDo: exclude pooled bams (i.e. splitcode input) from $OUT_BASENAMES
+      for bam in $(jq -rc 'keys|sort|.[] as $row | $row+".bam"' meta_by_filename.json); do 
+        # copy the bam to the output dir
+        cp $bam .
+      done
 
       # outputs from splitcode_demux are in a subdirectory
       # ./${splitcode_outdir}/bc2sample_lut.csv
@@ -414,6 +491,11 @@ task illumina_demux {
       # ./${splitcode_outdir}/*.bam
       # ./${splitcode_outdir}/*.{fastq.gz,fastq}
     fi
+
+    # ToDo: move over (or ln -s) splitcode output bams to final output dir
+    # ToDo: merge (cat) single-demux picard metrics tsv rows with splitcode picard-style metrics
+    # ToDo: also merge json outputs (meta_by_*) (make sure single-demux IDs do not collide with splitcode IDs)
+    # ToDo: merge unmatched bams into a single output bam (picard+splitcode too)
 
     # fastqc
     FASTQC_HARDCODED_MEM_PER_THREAD=250 # the value fastqc sets for -Xmx per thread, not adjustable
@@ -462,12 +544,16 @@ task illumina_demux {
     File        commonBarcodes           = "barcodes.txt"
     File        outlierBarcodes          = "barcodes_outliers.txt"
     Array[File] raw_reads_unaligned_bams = glob("*.bam")
-    File        unmatched_reads_bam      = "unmatched/Unmatched.bam"
+    #Array[File] raw_reads_unaligned_bams_inner_barcode_demux = glob("./inner_barcode_demux/*.bam")
+    File?       unmatched_reads_bam      = "unmatched/Unmatched.bam"
     Array[File] raw_reads_fastqc         = glob("*_fastqc.html")
     Array[File] raw_reads_fastqc_zip     = glob("*_fastqc.zip")
     Int         max_ram_gb               = ceil(read_float("MEM_BYTES")/1000000000)
     Int         runtime_sec              = ceil(read_float("UPTIME_SEC"))
     Int         cpu_load_15min           = ceil(read_float("LOAD_15M"))
+
+    # ToDo: include splitcode metrics as optional out Files
+    # ToDo: 
 
     String      instrument_model         = read_json("~{out_base}-runinfo.json")["sequencer_model"]
     String      flowcell_lane_count      = read_json("~{out_base}-runinfo.json")["lane_count"]
