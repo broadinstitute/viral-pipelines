@@ -438,6 +438,7 @@ task illumina_demux {
     fi
     # ======= end inner barcode demux =======
 
+
     # --- consolidate metadata json files ---
     # ToDo: make sure single-demux IDs do not collide with splitcode IDs?
     json_dirs_to_check=("./picard_demux_metadata" "./~{splitcode_outdir}")
@@ -471,6 +472,7 @@ task illumina_demux {
         | tee "./merged_jsons/${jsonfile}"
     done
     # ---------------------------------------
+
 
     # ---- output bam basenames to file -----
     # output basenames (with extensions) for expected bam files to list in file
@@ -520,9 +522,16 @@ task illumina_demux {
 
 
     # ----- merge picard-style metrics ------
-    #
-    # ToDo: merge (cat) single-demux picard metrics tsv rows with splitcode picard-style metrics
-    #
+    mv metrics.txt "./picard_demux_metadata/~{out_base}-demux_metrics.txt"
+    (
+      # 1) From file1: remove lines starting with "#" and empty lines
+      grep -v '^#' "./picard_demux_metadata/~{out_base}-demux_metrics.txt" | grep -v '^[[:space:]]*$'
+      
+      if [ -f "barcodes_if_collapsed.tsv" ]; then
+        # 2) From file2: remove lines starting with "#", remove the header line if it begins with "BARCODE", and remove empty lines
+        grep -v '^#' "~{splitcode_outdir}/inner_barcode_demux_metrics_picard-style.txt" | grep -v '^BARCODE' | grep -v '^[[:space:]]*$'
+      fi
+    ) > "~{out_base}-demux_metrics.txt"
     # ---------------------------------------
 
 
@@ -572,7 +581,6 @@ task illumina_demux {
         --threads $num_fastqc_threads" \
       ::: $(cat $OUT_BASENAMES)
 
-    mv metrics.txt  "~{out_base}-demux_metrics.txt"
     mv runinfo.json "~{out_base}-runinfo.json"
 
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
@@ -583,6 +591,7 @@ task illumina_demux {
 
   output {
     File        metrics                  = "~{out_base}-demux_metrics.txt"
+    File        metrics_picard           = "./picard_demux_metadata/~{out_base}-demux_metrics.txt"
     File        commonBarcodes           = "barcodes.txt"
     File        outlierBarcodes          = "barcodes_outliers.txt"
     Array[File] raw_reads_unaligned_bams = glob("*.bam")
@@ -594,7 +603,7 @@ task illumina_demux {
     Int         cpu_load_15min           = ceil(read_float("LOAD_15M"))
 
     File? metrics_inner_barcode_demux_csv                     = "./~{splitcode_outdir}/inner_barcode_demux_metrics.csv"
-    File? metrics_inner_barcode_demux_picard_style_tsv        = "./~{splitcode_outdir}/inner_barcode_demux_metrics_picard-style.txt"
+    File? metrics_inner_barcode_demux_picard_style            = "./~{splitcode_outdir}/inner_barcode_demux_metrics_picard-style.txt"
     File? reads_per_pool_inner_barcode_demux_pdf              = "./~{splitcode_outdir}/reads_per_pool.pdf"
     File? reads_per_pool_inner_barcode_demux_png              = "./~{splitcode_outdir}/reads_per_pool.png"
     File? reads_per_pool_sorted_curve_inner_barcode_demux_pdf = "./~{splitcode_outdir}/reads_per_pool_sorted_curve.pdf"
