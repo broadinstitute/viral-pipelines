@@ -153,7 +153,6 @@ task illumina_demux {
     Array[String] barcode_columns_to_rev_comp = ["barcode_2"]
 
     Boolean sort_reads=true
-    Boolean keep_unmatched_reads=false
 
     Boolean emit_unmatched_reads_bam=false
     
