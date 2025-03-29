@@ -516,8 +516,13 @@ task illumina_demux {
       # done
       # ----------------
 
+      # Rename splitcode splitcode metrics files
+      mv ./${splitcode_outdir}/bc2sample_lut.csv              ./${splitcode_outdir}/inner_barcode_demux_metrics.csv
+      mv ./${splitcode_outdir}/bc2sample_lut_picard-style.txt ./${splitcode_outdir}/inner_barcode_demux_metrics_picard-style.txt
+
       # outputs from splitcode_demux are in a subdirectory
       # ./${splitcode_outdir}/bc2sample_lut.csv
+      # ./${splitcode_outdir}/bc2sample_lut_picard-style.txt
       # ./${splitcode_outdir}/reads_per_pool.{pdf,png}
       # ./${splitcode_outdir}/reads_per_pool_sorted_curve.{pdf,png}
       # ./${splitcode_outdir}/*.bam
@@ -693,9 +698,10 @@ task illumina_demux {
     Int         runtime_sec              = ceil(read_float("UPTIME_SEC"))
     Int         cpu_load_15min           = ceil(read_float("LOAD_15M"))
 
-    #File? inner_barcode_demux = "./~{splitcode_outdir}/bc2sample_lut.csv"
-    File? reads_per_pool_inner_barcode_demux_pdf = "./~{splitcode_outdir}/reads_per_pool.pdf"
-    File? reads_per_pool_inner_barcode_demux_png = "./~{splitcode_outdir}/reads_per_pool.png"
+    File? metrics_inner_barcode_demux_csv                     = "./~{splitcode_outdir}/inner_barcode_demux_metrics.csv"
+    File? metrics_inner_barcode_demux_picard_style_tsv        = "./~{splitcode_outdir}/inner_barcode_demux_metrics_picard-style.txt"
+    File? reads_per_pool_inner_barcode_demux_pdf              = "./~{splitcode_outdir}/reads_per_pool.pdf"
+    File? reads_per_pool_inner_barcode_demux_png              = "./~{splitcode_outdir}/reads_per_pool.png"
     File? reads_per_pool_sorted_curve_inner_barcode_demux_pdf = "./~{splitcode_outdir}/reads_per_pool_sorted_curve.pdf"
     File? reads_per_pool_sorted_curve_inner_barcode_demux_png = "./~{splitcode_outdir}/reads_per_pool_sorted_curve.png"
 
