@@ -149,8 +149,6 @@ task illumina_demux {
     File?   runinfo
     String? sequencingCenter
 
-    # rename and/or replace with inspection of barcode_3
-    #Boolean collapse_duplicated_barcodes      = false 
     Boolean rev_comp_barcodes_before_demux    = false
     Array[String] barcode_columns_to_rev_comp = ["barcode_2"]
 
@@ -171,10 +169,10 @@ task illumina_demux {
     Int?    maxRecordsInRam
     Int?    numberOfNegativeControls
 
-    # --- options for debugging or special use
+    # --- options for debugging or special use ----
     Int?    tileLimit  
     Int?    firstTile
-    # ---
+    # ---------------------------------------------
 
     Int?    machine_mem_gb
     Int     disk_size = 2625
@@ -390,7 +388,6 @@ task illumina_demux {
       --out_runinfo runinfo.json \
       if [[ "$collapse_duplicated_barcodes" == "true" ]]; then printf "--collapse_duplicated_barcodes=barcodes_if_collapsed.tsv"; fi \
       --loglevel=DEBUG
-      #~{true="--collapse_duplicated_barcodes=barcodes_if_collapsed.tsv" false="" collapse_duplicated_barcodes} \
 
     illumina.py guess_barcodes ~{'--number_of_negative_controls ' + numberOfNegativeControls} --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
 
@@ -400,28 +397,7 @@ task illumina_demux {
 
     # move picard outputs to separate subdirs (for now)
     mv ./meta_by_sample.json ./meta_by_fname.json picard_demux_metadata
-    mv ./*.bam picard_bams
-    #mv Unmatched.bam unmatched_picard/
-
-    # if we are emitting unmatched reads as a bam, move it to the output dir
-    # if ~{true="true" false="false" emit_unmatched_reads_bam}; then
-    #   ln -s $(realpath unmatched_picard/Unmatched.bam) "$(realpath unmatched/)/Unmatched.picard.bam")
-    # else
-    #   rm unmatched_picard/Unmatched.bam
-    # fi
-
-    # OUT_BASENAMES=bam_basenames.txt
-    # for bam in *.bam; do
-    #   echo "$(basename $bam .bam)" >> $OUT_BASENAMES
-    # done
-
-    
-
-    # if we collapsed duplicated barcodes, we need to run splitcode_demux
-    # This will eventually move into its own task once we characterize
-    # resource needs, but for now it's here
-    #splitcode_outdir="~{splitcode_outdir}"    
-    
+    mv ./*.bam picard_bams    
 
     # ======= inner barcode demux =======
     # if we collapsed barcode pairs, we need to run splitcode_demux
@@ -434,8 +410,7 @@ task illumina_demux {
       #     containing first-stage demux output,
       #     of the sort created by a prior illumina_demux call
       #
-      # ${FLOWCELL_DIR}
-
+      # ${FLOWCELL_DIR} is the full Illumina run directory
       # ToDo: allow user to pass a list of input files (bams or fq) rather than a directory
 
       # -------------
@@ -449,89 +424,19 @@ task illumina_demux {
       --threads $demux_threads \
       --out_meta_by_sample ~{splitcode_outdir}/meta_by_sample.json \
       --out_meta_by_filename ~{splitcode_outdir}/meta_by_fname.json
-      # -------------
-
+      
       #~{'--runInfo=' + runinfo} \
       #--tmp_dir ./tmp/ \
       #--tmp_dirKeep \
       # --sampleSheet ${flowcell_dir}/SampleSheet.tsv \
       # --runInfo ${flowcell_dir}/RunInfo.xml
-
-      #mkdir -p unmatched_splitcode
-      #mv ~{splitcode_outdir}/unmatched*.bam unmatched_splitcode/
-
-      # # if we are emitting unmatched reads as a bam, move it to the output dir
-      # if ~{true="true" false="false" emit_unmatched_reads_bam}; then
-      #   mv ~{splitcode_outdir}/unmatched*.bam ./unmatched/
-      #   # for bam in unmatched_splitcode/unmatched*.bam; do
-      #   #   ln -s $(realpath $bam) $(realpath unmatched/$(basename $bam))
-      #   # done
-      # else
-      #   # otherwise remove the unmatched bams
-      #   #rm -r unmatched_splitcode #/unmatched*.bam
-      #   rm ~{splitcode_outdir}/unmatched*.bam
-      # fi
-
-      # ToDo: exclude pooled bams (i.e. splitcode input) from $OUT_BASENAMES
-
-      # for bam in $(jq -rc 'keys|sort|.[] as $row | $row+".bam"' meta_by_fname.json); do 
-      #   # if bam file exists, copy the bam to the output dir
-      #   if [ -f $bam ]; then
-      #     cp ~{splitcode_outdir}/$bam .
-      #     echo "$(basename $bam .bam)" >> $OUT_BASENAMES
-      #   fi
-      # done
-
       # -------------
-      # merge splitcode metadata json dicts with json dicts from picard
-      # outputting the info only if each sample matches one present in the original input sample sheet
-      #   This merges:
-      #     ./meta_by_sample.json ./meta_by_fname.json ~{splitcode_outdir}/meta_by_sample.json ~{splitcode_outdir}/meta_by_fname.json
-      # move the picard metadata jsons to a separate subdir
-      #mkdir -p picard_demux_metadata
-      #mv ./meta_by_sample.json ./meta_by_fname.json picard_demux_metadata
-
-      # merge the metadata
-      # for jsonfile in "meta_by_fname.json" "meta_by_sample.json"; do
-      #   jq --rawfile samples ${sample_names_expected_from_samplesheet_list_txt} '
-      #     reduce inputs as $f ({}; 
-      #       . + (
-      #         $f 
-      #         | to_entries
-      #         | map(
-      #             select(
-      #               (
-      #                 $samples
-      #                 | split("\n")
-      #                 | index(.value.sample)
-      #               ) 
-      #               != null
-      #             )
-      #           )
-      #         | from_entries
-      #       )
-      #     )
-      #   ' ./picard_demux_metadata/${jsonfile} \
-      #     ./~{splitcode_outdir}/${jsonfile} > ./${jsonfile}
-      # done
-      # ----------------
 
       # Rename splitcode splitcode metrics files
       mv ./${splitcode_outdir}/bc2sample_lut.csv              ./${splitcode_outdir}/inner_barcode_demux_metrics.csv
       mv ./${splitcode_outdir}/bc2sample_lut_picard-style.txt ./${splitcode_outdir}/inner_barcode_demux_metrics_picard-style.txt
-
-      # outputs from splitcode_demux are in a subdirectory
-      # ./${splitcode_outdir}/bc2sample_lut.csv
-      # ./${splitcode_outdir}/bc2sample_lut_picard-style.txt
-      # ./${splitcode_outdir}/reads_per_pool.{pdf,png}
-      # ./${splitcode_outdir}/reads_per_pool_sorted_curve.{pdf,png}
-      # ./${splitcode_outdir}/*.bam
-      # ./${splitcode_outdir}/*.{fastq.gz,fastq}
-    #else
-    #  rm -r./${splitcode_outdir}
     fi
     # ======= end inner barcode demux =======
-
 
     # --- consolidate metadata json files ---
     # ToDo: make sure single-demux IDs do not collide with splitcode IDs?
@@ -582,9 +487,6 @@ task illumina_demux {
         | (.|= . + ".bam")
       ' \
       meta_by_fname.json > $SAMPLESHEET_BASENAMES_WITH_EXT
-
-    # dump file names without extensions to separate file
-    #sed 's/\.bam$//' $SAMPLESHEET_BASENAMES_WITH_EXT > $OUT_BASENAMES
     # ---------------------------------------
 
 
@@ -596,8 +498,8 @@ task illumina_demux {
       if [[ "$(basename $bam .bam)" =~ ^[Uu]nmatched.*$ ]]; then
         #if bam basename is (case-insensitive) unmatched*.bam
         if ~{true="true" false="false" emit_unmatched_reads_bam}; then
-          # if we are emitting unmatched reads as a bam, move it to the output dir
-          #ln -s $(realpath unmatched_picard/Unmatched.bam) "$(realpath unmatched/)/Unmatched.picard.bam")
+          # if we are emitting unmatched reads as a bam, 
+          # move bams containing such reads to a separate subdir for later merging
           mv ${bam} ./unmatched/
         else
           # otherwise remove the unmatched bam
@@ -615,20 +517,15 @@ task illumina_demux {
       fi
     do
     # ---------------------------------------
-    
 
-    
 
-    # if [ -f "barcodes_if_collapsed.tsv" ]; then
-    # fi
-
+    # ----- merge picard-style metrics ------
+    #
     # ToDo: merge (cat) single-demux picard metrics tsv rows with splitcode picard-style metrics
+    #
+    # ---------------------------------------
 
-    # create a list of output bam files before (optionally) emitting the unmatched bam in the top-level (output) directory
-    #OUT_BASENAMES=bam_basenames.txt
-    #for bam in *.bam; do
-    #  echo "$(basename $bam .bam)" >> $OUT_BASENAMES
-    #done
+
     # ---- merge unmapped bams (optional) ---
     # if unmatched bam files should be part of the output
     if ~{true="true" false="false" emit_unmatched_reads_bam}; then
@@ -637,11 +534,10 @@ task illumina_demux {
         read_utils.py merge_bams unmatched/*.bam ./unmatched.bam
       else
         # otherwise we only have the single bam of unmatched reads from picard
-        mv unmatched/Unmatched.picard.bam ./
+        mv unmatched/Unmatched.picard.bam ./unmatched.bam
       fi
     fi
     # ---------------------------------------
-
 
     # fastqc
     FASTQC_HARDCODED_MEM_PER_THREAD=250 # the value fastqc sets for -Xmx per thread, not adjustable
@@ -690,8 +586,7 @@ task illumina_demux {
     File        commonBarcodes           = "barcodes.txt"
     File        outlierBarcodes          = "barcodes_outliers.txt"
     Array[File] raw_reads_unaligned_bams = glob("*.bam")
-    #Array[File] raw_reads_unaligned_bams_inner_barcode_demux = glob("./inner_barcode_demux/*.bam")
-    File?       unmatched_reads_bam      = "unmatched/Unmatched.bam"
+    File?       unmatched_reads_bam      = "unmatched.bam"
     Array[File] raw_reads_fastqc         = glob("*_fastqc.html")
     Array[File] raw_reads_fastqc_zip     = glob("*_fastqc.zip")
     Int         max_ram_gb               = ceil(read_float("MEM_BYTES")/1000000000)
