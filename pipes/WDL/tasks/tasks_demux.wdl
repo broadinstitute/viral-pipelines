@@ -353,7 +353,7 @@ task illumina_demux {
       echo "No potential for barcode pair collapsing detected in provided sample sheet. Proceeding with single-stage demultiplexing."
     fi
 
-    # dump sample names from input sample sheet to sample_names.txt
+    # dump sample names from input sample sheet 'sample' col to sample_names.txt
     sample_names_expected_from_samplesheet_list_txt="sample_names.txt"
     python -c 'import os; import illumina as il; ss=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=False); sample_name_list=[r["sample"]+"\n" for r in ss.get_rows()]; f=open("'${sample_names_expected_from_samplesheet_list_txt}'", "w"); f.writelines(sample_name_list); f.close()'
     
@@ -396,14 +396,12 @@ task illumina_demux {
 
     illumina.py flowcell_metadata --inDir $FLOWCELL_DIR flowcellMetadataFile.tsv
 
-    mkdir -p picard_bams
-    mkdir -p unmatched
-    mkdir -p unmatched_picard
-    #mv Unmatched.bam unmatched_picard/
+    mkdir -p picard_bams unmatched unmatched_picard picard_demux_metadata
 
-    # move picard bams to a separate subdir (for now)
-    
+    # move picard outputs to separate subdirs (for now)
+    mv ./meta_by_sample.json ./meta_by_fname.json picard_demux_metadata
     mv ./*.bam picard_bams
+    #mv Unmatched.bam unmatched_picard/
 
     # if we are emitting unmatched reads as a bam, move it to the output dir
     # if ~{true="true" false="false" emit_unmatched_reads_bam}; then
@@ -425,11 +423,10 @@ task illumina_demux {
     #splitcode_outdir="~{splitcode_outdir}"    
     
 
-    # ==============================
+    # ======= inner barcode demux =======
     # if we collapsed barcode pairs, we need to run splitcode_demux
     if [ -f "barcodes_if_collapsed.tsv" ]; then
       mkdir -p ./~{splitcode_outdir}
-      
 
       # NB: at present, splitcode_demux is unaware of 
       #     whether its input directory
@@ -459,9 +456,6 @@ task illumina_demux {
       #--tmp_dirKeep \
       # --sampleSheet ${flowcell_dir}/SampleSheet.tsv \
       # --runInfo ${flowcell_dir}/RunInfo.xml
-
-      
-
 
       #mkdir -p unmatched_splitcode
       #mv ~{splitcode_outdir}/unmatched*.bam unmatched_splitcode/
@@ -494,31 +488,32 @@ task illumina_demux {
       #   This merges:
       #     ./meta_by_sample.json ./meta_by_fname.json ~{splitcode_outdir}/meta_by_sample.json ~{splitcode_outdir}/meta_by_fname.json
       # move the picard metadata jsons to a separate subdir
-      mkdir -p picard_demux_metadata
-      mv ./meta_by_sample.json ./meta_by_fname.json picard_demux_metadata
+      #mkdir -p picard_demux_metadata
+      #mv ./meta_by_sample.json ./meta_by_fname.json picard_demux_metadata
+
       # merge the metadata
-      for jsonfile in "meta_by_fname.json" "meta_by_sample.json"; do
-        jq --rawfile samples ${sample_names_expected_from_samplesheet_list_txt} '
-          reduce inputs as $f ({}; 
-            . + (
-              $f 
-              | to_entries
-              | map(
-                  select(
-                    (
-                      $samples
-                      | split("\n")
-                      | index(.value.sample)
-                    ) 
-                    != null
-                  )
-                )
-              | from_entries
-            )
-          )
-        ' ./picard_demux_metadata/${jsonfile} \
-          ./~{splitcode_outdir}/${jsonfile} > ./${jsonfile}
-      done
+      # for jsonfile in "meta_by_fname.json" "meta_by_sample.json"; do
+      #   jq --rawfile samples ${sample_names_expected_from_samplesheet_list_txt} '
+      #     reduce inputs as $f ({}; 
+      #       . + (
+      #         $f 
+      #         | to_entries
+      #         | map(
+      #             select(
+      #               (
+      #                 $samples
+      #                 | split("\n")
+      #                 | index(.value.sample)
+      #               ) 
+      #               != null
+      #             )
+      #           )
+      #         | from_entries
+      #       )
+      #     )
+      #   ' ./picard_demux_metadata/${jsonfile} \
+      #     ./~{splitcode_outdir}/${jsonfile} > ./${jsonfile}
+      # done
       # ----------------
 
       # outputs from splitcode_demux are in a subdirectory
@@ -530,51 +525,91 @@ task illumina_demux {
     #else
     #  rm -r./${splitcode_outdir}
     fi
-    # ============================
+    # ======= end inner barcode demux =======
 
 
-    jq --rawfile samples ${sample_names_expected_from_samplesheet_list_txt} '
-      [ inputs
-        | to_entries
-        | map(
-            select(
-              ($samples
-               | split("\n")
-               | index(.value.sample)
-              ) != null
-            )
-          )
-        | .[].key
-      ] | flatten
-    ' meta_by_fname.json > sample_bam_basenames_expected_that_were_created.txt
+    # --- consolidate metadata json files ---
+    # ToDo: make sure single-demux IDs do not collide with splitcode IDs?
+    json_dirs_to_check=("./picard_demux_metadata" "./~{splitcode_outdir}")
+    for jsonfile in "meta_by_fname.json" "meta_by_sample.json"; do
+        echo ""
+        json_paths_to_merge=""
+        echo "Checking for $jsonfile in:"
+        for json_dir in "${json_dirs_to_check[@]}"; do
+            json_full_path="${json_dir}/${jsonfile}"
+            if [ -f "${json_full_path}" ]; then
+                printf "      [found] %s\n" "$json_full_path"
+                json_paths_to_merge="${json_paths_to_merge} ${json_full_path}"
+            else
+                printf "  [not found] %s\n" "$json_full_path"
+                continue 
+            fi
+        done
+        printf "   Merging metadata from:\n\t$json_paths_to_merge\n\n"
+
+        # perform the merge with jq
+        jq -rn \
+          --rawfile sample_list "${sample_names_expected_from_samplesheet_list_txt}" '
+            (reduce inputs as $jsf ({}; . += $jsf))
+            | .[] |= select(
+                .sample
+                | IN($sample_list | split("\n")[])
+              )
+            | .
+          ' \
+          ${json_paths_to_merge} \
+        | tee "./merged_jsons/${jsonfile}"
+    done
+    # ---------------------------------------
+
+    # ---- output bam basenames to file -----
+    # output basenames (with extensions) for expected bam files to list in file
+    OUT_BASENAMES_WITH_EXT=bam_basenames_with_ext.txt
+    jq -r \
+      --rawfile sample_list "$sample_names_expected_from_sample_listheet_list_txt" \
+      '
+        .[] |= select(
+          .sample
+          | IN($sample_list | split("\n")[])
+        )
+        | .
+        | keys[]
+        | (.|= . + ".bam")
+      ' \
+      meta_by_fname.json > $SAMPLESHEET_BASENAMES_WITH_EXT
+
+    # dump file names without extensions to separate file
+    #sed 's/\.bam$//' $SAMPLESHEET_BASENAMES_WITH_EXT > $OUT_BASENAMES
+    # ---------------------------------------
 
 
+    # --------- stage output bams -----------
+    # glob the various bam files and direct them to the appropriate locations
+    OUT_BASENAMES=bam_basenames.txt
     bams_created=(./{picard_bams,~{splitcode_outdir}}/*.bam)
     for bam in "${bams_created[@]}"; do
       if [[ "$(basename $bam .bam)" =~ ^[Uu]nmatched.*$ ]]; then
-        #if bam basename is (case-insensitive) Unmatched.bam
-        #mv ${bam} ./unmatched/
-        #continue
-        # if we are emitting unmatched reads as a bam, move it to the output dir
+        #if bam basename is (case-insensitive) unmatched*.bam
         if ~{true="true" false="false" emit_unmatched_reads_bam}; then
+          # if we are emitting unmatched reads as a bam, move it to the output dir
           #ln -s $(realpath unmatched_picard/Unmatched.bam) "$(realpath unmatched/)/Unmatched.picard.bam")
           mv ${bam} ./unmatched/
         else
           # otherwise remove the unmatched bam
           rm ${bam}
         fi
-      #elif [ -f $bam ]; then
       else
-        # while IFS= read -r prefix; do
-        #   # Skip blank lines
-        #   [[ -z "$prefix" ]] && continue
-        #   # Use 'find' with name pattern
-        #   find "$SRC_DIR" -maxdepth 1 -type f -name "${prefix}*" -exec mv {} "$DEST_DIR" \; # -exec grep banana {} \;
-        # done < "$PREFIXES_FILE"
-
-        #mv ${bam} ./
+        # use grep to determine if the bam file found 
+        # is one we expect from the sample sheet (i.e. not a pooled bam from collapsed barcodes)
+        if grep -q "$(basename $bam .bam)" $SAMPLESHEET_BASENAMES_WITH_EXT; then
+          mv $bam . && \
+            echo "$(basename $bam .bam)" >> $OUT_BASENAMES
+        else
+          rm ${bam}
+        fi
       fi
     do
+    # ---------------------------------------
     
 
     
@@ -582,19 +617,14 @@ task illumina_demux {
     # if [ -f "barcodes_if_collapsed.tsv" ]; then
     # fi
 
-    # ToDo: move over (or ln -s) splitcode output bams to final output dir
     # ToDo: merge (cat) single-demux picard metrics tsv rows with splitcode picard-style metrics
-    # ToDo: also merge json outputs (meta_by_*) (make sure single-demux IDs do not collide with splitcode IDs)
-    # ToDo: merge unmatched bams into a single output bam (picard+splitcode too)
-
-    #mkdir 
 
     # create a list of output bam files before (optionally) emitting the unmatched bam in the top-level (output) directory
-    OUT_BASENAMES=bam_basenames.txt
-    for bam in *.bam; do
-      echo "$(basename $bam .bam)" >> $OUT_BASENAMES
-    done
-
+    #OUT_BASENAMES=bam_basenames.txt
+    #for bam in *.bam; do
+    #  echo "$(basename $bam .bam)" >> $OUT_BASENAMES
+    #done
+    # ---- merge unmapped bams (optional) ---
     # if unmatched bam files should be part of the output
     if ~{true="true" false="false" emit_unmatched_reads_bam}; then
       if [ -f "barcodes_if_collapsed.tsv" ]; then
@@ -605,6 +635,8 @@ task illumina_demux {
         mv unmatched/Unmatched.picard.bam ./
       fi
     fi
+    # ---------------------------------------
+
 
     # fastqc
     FASTQC_HARDCODED_MEM_PER_THREAD=250 # the value fastqc sets for -Xmx per thread, not adjustable
