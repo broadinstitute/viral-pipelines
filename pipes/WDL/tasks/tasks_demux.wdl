@@ -202,9 +202,11 @@ task illumina_demux {
       }
   }
 
-  String out_base = "~{basename(basename(basename(basename(flowcell_tgz, '.zst'), '.gz'), '.tar'), '.tgz')}-L~{lane}"
+  # WDL 1.0 files running under miniwdl 1.12 cannot contain nested curly braces outside the command block
+  String? tarball_base = "~{basename(basename(basename(basename(select_first([flowcell_tgz,'']), '.zst'), '.gz'), '.tar'), '.tgz')}"
+  String out_base = "~{if(defined(flowcell_tgz)) then tarball_base else basename(select_first([flowcell_dir,'']))}"+'-L~{lane}'
   String splitcode_outdir="inner_barcode_demux"
-  Array[String] default_revcomp_barcode_column = ["barcode_2"]
+  String default_revcomp_barcode_column = "barcode_2"
 
   command <<<
     set -ex -o pipefail
@@ -381,7 +383,7 @@ task illumina_demux {
       ~{'--tile_limit=' + tileLimit} \
       ~{'--first_tile=' + firstTile} \
       ~{true="--sort=true" false="--sort=false" sort_reads} \
-      ~{true='--rev_comp_barcodes_before_demux ' false='' rev_comp_barcodes_before_demux}~{if defined(barcode_columns_to_rev_comp) then '~{sep=" " default_revcomp_barcode_column}' else ''} \
+      ~{true='--rev_comp_barcodes_before_demux ' false='' rev_comp_barcodes_before_demux} "~{sep=' ' select_first([barcode_columns_to_rev_comp,[default_revcomp_barcode_column],['']])}" \
       $max_records_in_ram \
       --JVMmemory="$mem_in_mb"m \
       $demux_threads \
@@ -392,6 +394,8 @@ task illumina_demux {
       --out_runinfo runinfo.json \
       if [[ "$collapse_duplicated_barcodes" == "true" ]]; then printf "--collapse_duplicated_barcodes=barcodes_if_collapsed.tsv"; fi \
       --loglevel=DEBUG
+
+
 
 
     illumina.py guess_barcodes ~{'--number_of_negative_controls ' + numberOfNegativeControls} --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
