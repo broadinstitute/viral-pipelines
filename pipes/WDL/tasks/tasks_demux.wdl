@@ -142,15 +142,15 @@ task revcomp_i5 {
 
 task illumina_demux {
   input {
-    File?    flowcell_tgz
-    String? flowcell_dir_path
+    File?   flowcell_tgz
+    String? flowcell_dir
     Int     lane=1
     
     File?   samplesheet
     File?   runinfo
     String? sequencingCenter
 
-    Boolean rev_comp_barcodes_before_demux    = false
+    Boolean        rev_comp_barcodes_before_demux = false
     Array[String]? barcode_columns_to_rev_comp
 
     Boolean sort_reads=true
@@ -176,7 +176,7 @@ task illumina_demux {
 
     Int?    machine_mem_gb
     Int     disk_size = 2625
-    String  docker = "quay.io/broadinstitute/viral-core:2.4.1-21-g4f968929-ct-swiftseq-demux-integration" #skip-global-version-pin
+    String  docker    = "quay.io/broadinstitute/viral-core:2.4.1-21-g4f968929-ct-swiftseq-demux-integration" #skip-global-version-pin
   }
 
   parameter_meta {
@@ -212,9 +212,9 @@ task illumina_demux {
     # find N% memory
     mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 85)
 
-    # if flowcell_tgz and flowcell_dir_path are both empty strings, exit 1
-    if [ -z "~{flowcell_tgz}" ] && [ -z "~{flowcell_dir_path}" ]; then
-      echo "ERROR: One of flowcell_tgz or flowcell_dir_path must be provided."
+    # if flowcell_tgz and flowcell_dir are both empty strings, exit 1
+    if [ -z "~{flowcell_tgz}" ] && [ -z "~{flowcell_dir}" ]; then
+      echo "ERROR: One of flowcell_tgz or flowcell_dir must be provided."
       exit 1
     fi
 
@@ -222,8 +222,8 @@ task illumina_demux {
       export TMPDIR=$(pwd)
     fi
 
-    if ~{true="true" false="false" defined(flowcell_dir_path)}; then
-      FLOWCELL_DIR="~{flowcell_dir_path}"
+    if ~{true="true" false="false" defined(flowcell_dir)}; then
+      FLOWCELL_DIR="~{flowcell_dir}"
     else
       FLOWCELL_DIR=$(mktemp -d)
 
