@@ -142,7 +142,8 @@ task revcomp_i5 {
 
 task illumina_demux {
   input {
-    File    flowcell_tgz
+    File?    flowcell_tgz
+    String? flowcell_dir_path
     Int     lane=1
     
     File?   samplesheet
@@ -150,7 +151,7 @@ task illumina_demux {
     String? sequencingCenter
 
     Boolean rev_comp_barcodes_before_demux    = false
-    Array[String] barcode_columns_to_rev_comp = ["barcode_2"]
+    Array[String]? barcode_columns_to_rev_comp
 
     Boolean sort_reads=true
 
@@ -175,7 +176,7 @@ task illumina_demux {
 
     Int?    machine_mem_gb
     Int     disk_size = 2625
-    String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
+    String  docker = "quay.io/broadinstitute/viral-core:2.4.1-21-g4f968929-ct-swiftseq-demux-integration" #skip-global-version-pin
   }
 
   parameter_meta {
@@ -191,10 +192,6 @@ task illumina_demux {
         description: "if we are overriding the RunInfo file, use the path of the file provided. Otherwise the default will be RunInfo.xml. ",
         category: "advanced"
       }
-      collapse_duplicated_barcodes: {
-        description: "Collapse 'samples' with duplicated barcodes (or barcode pairs) into a single barcode (or single pair) in the output. Intended for protocols allowing an additional stage of demultiplexing downstream by other means (ex. breaking out samples based on a third (inner) barcode, added via swift-seq). If 'false', an error will be raised if duplicated barcodes (or barcode pairs) are present in the sample sheet.",
-        category: "advanced"
-      }
       rev_comp_barcodes_before_demux: {
         description: "Reverse-complement the barcode(s) before demultiplexing. By default, this action applies to values in the 'barcode_2' column unless overridden by 'barcode_columns_to_rev_comp'.",
         category: "advanced"
@@ -207,6 +204,7 @@ task illumina_demux {
 
   String out_base = "~{basename(basename(basename(basename(flowcell_tgz, '.zst'), '.gz'), '.tar'), '.tgz')}-L~{lane}"
   String splitcode_outdir="inner_barcode_demux"
+  Array[String] default_revcomp_barcode_column = ["barcode_2"]
 
   command <<<
     set -ex -o pipefail
@@ -214,16 +212,27 @@ task illumina_demux {
     # find N% memory
     mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 85)
 
+    # if flowcell_tgz and flowcell_dir_path are both empty strings, exit 1
+    if [ -z "~{flowcell_tgz}" ] && [ -z "~{flowcell_dir_path}" ]; then
+      echo "ERROR: One of flowcell_tgz or flowcell_dir_path must be provided."
+      exit 1
+    fi
+
     if [ -z "$TMPDIR" ]; then
       export TMPDIR=$(pwd)
     fi
-    FLOWCELL_DIR=$(mktemp -d)
 
-    read_utils.py --version | tee VERSION
+    if ~{true="true" false="false" defined(flowcell_dir_path)}; then
+      FLOWCELL_DIR="~{flowcell_dir_path}"
+    else
+      FLOWCELL_DIR=$(mktemp -d)
 
-    read_utils.py extract_tarball \
-      ~{flowcell_tgz} $FLOWCELL_DIR \
-      --loglevel=DEBUG
+      read_utils.py --version | tee VERSION
+
+      read_utils.py extract_tarball \
+        ~{flowcell_tgz} $FLOWCELL_DIR \
+        --loglevel=DEBUG
+    fi
 
     # if we are overriding the RunInfo file, use the path of the file provided. Otherwise find the file
     if [ -n "~{runinfo}" ]; then
@@ -372,7 +381,7 @@ task illumina_demux {
       ~{'--tile_limit=' + tileLimit} \
       ~{'--first_tile=' + firstTile} \
       ~{true="--sort=true" false="--sort=false" sort_reads} \
-      ~{true='~{sep=" " barcode_columns_to_rev_comp}' false='' rev_comp_barcodes_before_demux} \
+      ~{true='--rev_comp_barcodes_before_demux ' false='' rev_comp_barcodes_before_demux}~{if defined(barcode_columns_to_rev_comp) then '~{sep=" " default_revcomp_barcode_column}' else ''} \
       $max_records_in_ram \
       --JVMmemory="$mem_in_mb"m \
       $demux_threads \
@@ -383,6 +392,7 @@ task illumina_demux {
       --out_runinfo runinfo.json \
       if [[ "$collapse_duplicated_barcodes" == "true" ]]; then printf "--collapse_duplicated_barcodes=barcodes_if_collapsed.tsv"; fi \
       --loglevel=DEBUG
+
 
     illumina.py guess_barcodes ~{'--number_of_negative_controls ' + numberOfNegativeControls} --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
 

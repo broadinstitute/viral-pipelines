@@ -7,6 +7,12 @@
 # requires $MODULE_VERSIONS to be set to point to a text file with equal-sign-separated values
 # export MODULE_VERSIONS="./requirements-modules.txt" && ./github_actions_ci/version-wdl-runtimes.sh
 
+# determine the directory containing this script and set CONTAINING_DIR variable
+
+CONTAINING_DIR="$(realpath $(dirname $( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )))"
+
+export MODULE_VERSIONS="${CONTAINING_DIR}/requirements-modules.txt"
+
 printf "Updating docker image tags in WDL files with those in ${MODULE_VERSIONS}\n\n"
 
 while IFS='=' read module version; do
