@@ -525,11 +525,28 @@ task illumina_demux {
     mv metrics.txt "./picard_demux_metadata/~{out_base}-demux_metrics.txt"
     (
       # 1) From file1: remove lines starting with "#" and empty lines
-      grep -v '^#' "./picard_demux_metadata/~{out_base}-demux_metrics.txt" | grep -v '^[[:space:]]*$'
+      #    then add "DEMUX_TYPE" header and "illumina_picard" as appropriate
+      grep -v '^#' "./picard_demux_metadata/~{out_base}-demux_metrics.txt" \
+        | grep -v '^[[:space:]]*$' \
+        | awk 'BEGIN { OFS="\t" }
+           /^BARCODE/ {
+             print $0, "DEMUX_TYPE"
+             next
+           }
+           {
+             print $0, "illumina_picard"
+           }'
       
       if [ -f "barcodes_if_collapsed.tsv" ]; then
         # 2) From file2: remove lines starting with "#", remove the header line if it begins with "BARCODE", and remove empty lines
-        grep -v '^#' "~{splitcode_outdir}/inner_barcode_demux_metrics_picard-style.txt" | grep -v '^BARCODE' | grep -v '^[[:space:]]*$'
+        #    then append "inline_splitcode" to each data row.
+        grep -v '^#' "~{splitcode_outdir}/inner_barcode_demux_metrics_picard-style.txt" \
+          | grep -v '^BARCODE' \
+          | grep -v '^[[:space:]]*$' \
+          | awk 'BEGIN { OFS="\t" }
+             {
+               print $0, "inline_splitcode"
+             }'
       fi
     ) > "~{out_base}-demux_metrics.txt"
     # ---------------------------------------
