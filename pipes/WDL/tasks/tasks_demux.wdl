@@ -334,14 +334,10 @@ task illumina_demux {
     if [ -n "~{maxRecordsInRam}" ]; then max_records_in_ram="~{maxRecordsInRam}"; else max_records_in_ram="$max_records_in_ram"; fi
     if [ -n "$max_records_in_ram" ]; then max_records_in_ram="--max_records_in_ram=$max_records_in_ram"; fi
 
-    # ToDo: determine if collapsing of duplicated barcodes is needed
-    # based on inspection of provided sample sheet file.
-    # In the absense of a provided sample sheet, we will assume that no collapsing is needed.
-    collapse_duplicated_barcodes="false"
     # Inspect ~{samplesheet} tsv file for the presence of duplicated (barcode_1,barcode_2) pairs, and/or 
     # the presence of a barcode_3 column with values in at least some of the rows.
     # We can lean on a Python call out to the SampleSheet class in illumina.py for this.
-
+    collapse_duplicated_barcodes="false"
     sample_sheet_barcode_collapse_potential=$(python -c 'import os; import illumina as il; ss=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=False); ssc=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=True); print("sheet_collapse_possible_true") if len(ss.get_rows())!=len(ssc.get_rows()) else print("sheet_collapse_possible_false")')
     if [[ "$sample_sheet_barcode_collapse_potential" == "sheet_collapse_possible_true" ]]; then
       collapse_duplicated_barcodes="true"
