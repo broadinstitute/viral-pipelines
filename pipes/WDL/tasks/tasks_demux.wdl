@@ -142,8 +142,9 @@ task revcomp_i5 {
 
 task illumina_demux {
   input {
-    File?   flowcell_tgz
+    File   flowcell_tgz
     String? flowcell_dir
+    #Directory? flowcell_dir
     Int     lane=1
     
     File?   samplesheet
@@ -176,7 +177,7 @@ task illumina_demux {
 
     Int?    machine_mem_gb
     Int     disk_size = 2625
-    String  docker    = "quay.io/broadinstitute/viral-core:2.4.1-21-g4f968929-ct-swiftseq-demux-integration" #skip-global-version-pin
+    String  docker    = "quay.io/broadinstitute/viral-core:2.4.1-23-g243eaaff-ct-swiftseq-demux-integration" #skip-global-version-pin
   }
 
   parameter_meta {
@@ -211,12 +212,22 @@ task illumina_demux {
   command <<<
     set -ex -o pipefail
 
+    # dirs_to_list="/ ./ ~/"
+    # for d in $dirs_to_list; do
+    #   printf "\n-------------------------------------\n"
+    #   echo "  ls -lah $d:"
+    #   ls -lah $d
+    #   echo "-------------------------------------"
+    # done
+
     # find N% memory
     mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 85)
 
     # if flowcell_tgz and flowcell_dir are both empty strings, exit 1
-    if [ -z "~{flowcell_tgz}" ] && [ -z "~{flowcell_dir}" ]; then
-      echo "ERROR: One of flowcell_tgz or flowcell_dir must be provided."
+    flowcell_tgz_path="~{flowcell_tgz}"
+    flowcell_dir_path="~{flowcell_dir}"
+    if [ -z "${flowcell_tgz_path}" ] && [ -z "${flowcell_dir_path}" ]; then
+      echo "ERROR: Either 'flowcell_tgz' or 'flowcell_dir' must be provided."
       exit 1
     fi
 
@@ -232,7 +243,7 @@ task illumina_demux {
       read_utils.py --version | tee VERSION
 
       read_utils.py extract_tarball \
-        ~{flowcell_tgz} $FLOWCELL_DIR \
+        "~{flowcell_tgz}" "${FLOWCELL_DIR}" \
         --loglevel=DEBUG
     fi
 
@@ -361,10 +372,12 @@ task illumina_demux {
     sample_names_expected_from_samplesheet_list_txt="sample_names.txt"
     python -c 'import os; import illumina as il; ss=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=False); sample_name_list=[r["sample"]+"\n" for r in ss.get_rows()]; f=open("'${sample_names_expected_from_samplesheet_list_txt}'", "w"); f.writelines(sample_name_list); f.close()'
     
+    cols_to_revcomp="~{sep=' ' select_first([barcode_columns_to_rev_comp,[default_revcomp_barcode_column],['']])}"
+
     # note that we are intentionally setting --threads to about 2x the core
     # count. seems to still provide speed benefit (over 1x) when doing so.
     illumina.py illumina_demux \
-      $FLOWCELL_DIR \
+      "${FLOWCELL_DIR}" \
       ~{lane} \
       . \
       ~{'--sampleSheet=' + samplesheet} \
@@ -383,7 +396,7 @@ task illumina_demux {
       ~{'--tile_limit=' + tileLimit} \
       ~{'--first_tile=' + firstTile} \
       ~{true="--sort=true" false="--sort=false" sort_reads} \
-      ~{true='--rev_comp_barcodes_before_demux ' false='' rev_comp_barcodes_before_demux} "~{sep=' ' select_first([barcode_columns_to_rev_comp,[default_revcomp_barcode_column],['']])}" \
+      ~{true='--rev_comp_barcodes_before_demux ' false='' rev_comp_barcodes_before_demux} ~{true="${cols_to_revcomp} " false='' rev_comp_barcodes_before_demux} \
       $max_records_in_ram \
       --JVMmemory="$mem_in_mb"m \
       $demux_threads \
@@ -392,7 +405,7 @@ task illumina_demux {
       --out_meta_by_sample meta_by_sample.json \
       --out_meta_by_filename meta_by_fname.json \
       --out_runinfo runinfo.json \
-      if [[ "$collapse_duplicated_barcodes" == "true" ]]; then printf "--collapse_duplicated_barcodes=barcodes_if_collapsed.tsv"; fi \
+      $(if [[ "$collapse_duplicated_barcodes" == "true" ]]; then printf '%s' "--collapse_duplicated_barcodes=barcodes_if_collapsed.tsv"; fi) \
       --loglevel=DEBUG
 
 
@@ -400,7 +413,7 @@ task illumina_demux {
 
     illumina.py guess_barcodes ~{'--number_of_negative_controls ' + numberOfNegativeControls} --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
 
-    illumina.py flowcell_metadata --inDir $FLOWCELL_DIR flowcellMetadataFile.tsv
+    illumina.py flowcell_metadata --inDir "$FLOWCELL_DIR" flowcellMetadataFile.tsv
 
     mkdir -p picard_bams unmatched unmatched_picard picard_demux_metadata
 
@@ -428,9 +441,9 @@ task illumina_demux {
       ~{lane} \
       ~{splitcode_outdir} \
       ~{'--sampleSheet=' + samplesheet} \
-      '--runInfo=' ${RUNINFO_FILE} \
-      '--illuminaRunDirectory' ${FLOWCELL_DIR} \
-      --threads $demux_threads \
+      '--runInfo=' "${RUNINFO_FILE}" \
+      '--illuminaRunDirectory' "${FLOWCELL_DIR}" \
+      $demux_threads \
       --out_meta_by_sample ~{splitcode_outdir}/meta_by_sample.json \
       --out_meta_by_filename ~{splitcode_outdir}/meta_by_fname.json
       
@@ -442,8 +455,8 @@ task illumina_demux {
       # -------------
 
       # Rename splitcode splitcode metrics files
-      mv ./${splitcode_outdir}/bc2sample_lut.csv              ./${splitcode_outdir}/inner_barcode_demux_metrics.csv
-      mv ./${splitcode_outdir}/bc2sample_lut_picard-style.txt ./${splitcode_outdir}/inner_barcode_demux_metrics_picard-style.txt
+      mv ./~{splitcode_outdir}/bc2sample_lut.csv              ./~{splitcode_outdir}/inner_barcode_demux_metrics.csv
+      mv ./~{splitcode_outdir}/bc2sample_lut_picard-style.txt ./~{splitcode_outdir}/inner_barcode_demux_metrics_picard-style.txt
     fi
     # ======= end inner barcode demux =======
 
@@ -487,7 +500,7 @@ task illumina_demux {
     # output basenames (with extensions) for expected bam files to list in file
     OUT_BASENAMES_WITH_EXT=bam_basenames_with_ext.txt
     jq -r \
-      --rawfile sample_list "$sample_names_expected_from_sample_listheet_list_txt" \
+      --rawfile sample_list "$sample_names_expected_from_samplesheet_list_txt" \
       '
         .[] |= select(
           .sample
@@ -497,7 +510,7 @@ task illumina_demux {
         | keys[]
         | (.|= . + ".bam")
       ' \
-      meta_by_fname.json > $SAMPLESHEET_BASENAMES_WITH_EXT
+      meta_by_fname.json > $OUT_BASENAMES_WITH_EXT
     # ---------------------------------------
 
 
@@ -511,22 +524,22 @@ task illumina_demux {
         if ~{true="true" false="false" emit_unmatched_reads_bam}; then
           # if we are emitting unmatched reads as a bam, 
           # move bams containing such reads to a separate subdir for later merging
-          mv ${bam} ./unmatched/
+          mv "${bam}" ./unmatched/
         else
           # otherwise remove the unmatched bam
-          rm ${bam}
+          rm "${bam}"
         fi
       else
         # use grep to determine if the bam file found 
         # is one we expect from the sample sheet (i.e. not a pooled bam from collapsed barcodes)
-        if grep -q "$(basename $bam .bam)" $SAMPLESHEET_BASENAMES_WITH_EXT; then
+        if grep -q "$(basename $bam .bam)" $OUT_BASENAMES_WITH_EXT; then
           mv $bam . && \
             echo "$(basename $bam .bam)" >> $OUT_BASENAMES
         else
-          rm ${bam}
+          rm "${bam}"
         fi
       fi
-    do
+    done
     # ---------------------------------------
 
 
@@ -656,7 +669,7 @@ task illumina_demux {
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem3_ssd2_v2_x32"
     dx_timeout: "20H"
-    maxRetries: 2
+    maxRetries: 0
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
   }
 }
