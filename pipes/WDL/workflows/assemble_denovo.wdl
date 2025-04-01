@@ -195,7 +195,7 @@ workflow assemble_denovo {
     File    aligned_only_reads_fastqc             = refine.align_to_ref_fastqc
     File    coverage_tsv                          = refine.align_to_self_merged_coverage_tsv
     Int     read_pairs_aligned                    = refine.align_to_self_merged_read_pairs_aligned
-    Float   bases_aligned                         = refine.align_to_self_merged_bases_aligned
+    Int     bases_aligned                         = refine.align_to_self_merged_bases_aligned
     
     String  assembly_method = "viral-ngs/assemble_denovo"
     String  assemble_viral_assemble_version       = assemble.viralngs_version
