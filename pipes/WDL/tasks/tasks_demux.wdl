@@ -204,9 +204,9 @@ task illumina_demux {
   }
 
   # WDL 1.0 files running under miniwdl 1.12 cannot contain nested curly braces outside the command block
-  String? tarball_base = "~{basename(basename(basename(basename(select_first([flowcell_tgz,'']), '.zst'), '.gz'), '.tar'), '.tgz')}"
-  String out_base = "~{if(defined(flowcell_tgz)) then tarball_base else basename(select_first([flowcell_dir,'']))}"+'-L~{lane}'
-  String splitcode_outdir="inner_barcode_demux"
+  String? tarball_base                  = "~{basename(basename(basename(basename(select_first([flowcell_tgz,'']), '.zst'), '.gz'), '.tar'), '.tgz')}"
+  String out_base                       = "~{if(defined(flowcell_tgz)) then tarball_base else basename(select_first([flowcell_dir,'']))}"+'-L~{lane}'
+  String splitcode_outdir               = "inner_barcode_demux"
   String default_revcomp_barcode_column = "barcode_2"
 
   command <<<
@@ -372,7 +372,7 @@ task illumina_demux {
     sample_names_expected_from_samplesheet_list_txt="sample_names.txt"
     python -c 'import os; import illumina as il; ss=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=False); sample_name_list=[r["sample"]+"\n" for r in ss.get_rows()]; f=open("'${sample_names_expected_from_samplesheet_list_txt}'", "w"); f.writelines(sample_name_list); f.close()'
     
-    cols_to_revcomp="~{sep=' ' select_first([barcode_columns_to_rev_comp,[default_revcomp_barcode_column],['']])}"
+    cols_to_revcomp="~{sep=' ' select_first([barcode_columns_to_rev_comp,[default_revcomp_barcode_column]])}"
 
     # note that we are intentionally setting --threads to about 2x the core
     # count. seems to still provide speed benefit (over 1x) when doing so.
@@ -396,7 +396,7 @@ task illumina_demux {
       ~{'--tile_limit=' + tileLimit} \
       ~{'--first_tile=' + firstTile} \
       ~{true="--sort=true" false="--sort=false" sort_reads} \
-      ~{true='--rev_comp_barcodes_before_demux ' false='' rev_comp_barcodes_before_demux} ~{true="${cols_to_revcomp} " false='' rev_comp_barcodes_before_demux} \
+      ~{true='--rev_comp_barcodes_before_demux ' false='' rev_comp_barcodes_before_demux} ~{true="$cols_to_revcomp" false='' rev_comp_barcodes_before_demux} \
       $max_records_in_ram \
       --JVMmemory="$mem_in_mb"m \
       $demux_threads \
@@ -407,9 +407,6 @@ task illumina_demux {
       --out_runinfo runinfo.json \
       $(if [[ "$collapse_duplicated_barcodes" == "true" ]]; then printf '%s' "--collapse_duplicated_barcodes=barcodes_if_collapsed.tsv"; fi) \
       --loglevel=DEBUG
-
-
-
 
     illumina.py guess_barcodes ~{'--number_of_negative_controls ' + numberOfNegativeControls} --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
 
