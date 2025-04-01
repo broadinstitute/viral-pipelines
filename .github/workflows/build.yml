@@ -42,7 +42,7 @@ jobs:
   validate_wdl_miniwdl:
     # Run if not a push event or if there's no pull request for the branch
     if: github.event_name != 'push' || github.event.pull_request == null
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -97,7 +97,7 @@ jobs:
   validate_wdl_womtool:
     # Run if not a push event or if there's no pull request for the branch
     if: github.event_name != 'push' || github.event.pull_request == null
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -149,7 +149,7 @@ jobs:
   test_docs:
     # Run if not a push event or if there's no pull request for the branch
     if: github.event_name != 'push' || github.event.pull_request == null
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -196,7 +196,7 @@ jobs:
     # Run if not a push event or if there's no pull request for the branch
     if: github.event_name != 'push' || github.event.pull_request == null
     needs: validate_wdl_womtool
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -253,7 +253,7 @@ jobs:
     # Run if not a push event or if there's no pull request for the branch
     if: github.event_name != 'push' || github.event.pull_request == null
     needs: validate_wdl_miniwdl
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -318,7 +318,7 @@ jobs:
     needs:
       - validate_wdl_womtool
       - validate_wdl_miniwdl
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     env:
       # DX_API_TOKEN (for DNAnexus builds) -- GitHub Actions token #1, expires 2025-01-17
       # stored here: https://github.com/broadinstitute/viral-pipelines/settings/secrets/actions
