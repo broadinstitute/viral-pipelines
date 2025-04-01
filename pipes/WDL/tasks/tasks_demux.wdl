@@ -441,8 +441,8 @@ task illumina_demux {
       ~{lane} \
       ~{splitcode_outdir} \
       ~{'--sampleSheet=' + samplesheet} \
-      '--runInfo=' "${RUNINFO_FILE}" \
-      '--illuminaRunDirectory' "${FLOWCELL_DIR}" \
+      "--runInfo=${RUNINFO_FILE}" \
+      "--illuminaRunDirectory=${FLOWCELL_DIR}" \
       $demux_threads \
       --out_meta_by_sample ~{splitcode_outdir}/meta_by_sample.json \
       --out_meta_by_filename ~{splitcode_outdir}/meta_by_fname.json
@@ -491,7 +491,7 @@ task illumina_demux {
             | .
           ' \
           ${json_paths_to_merge} \
-        | tee "./merged_jsons/${jsonfile}"
+        | tee "./${jsonfile}"
     done
     # ---------------------------------------
 
