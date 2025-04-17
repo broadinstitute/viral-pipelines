@@ -170,6 +170,21 @@ task illumina_demux {
     Int?    maxRecordsInRam
     Int?    numberOfNegativeControls
 
+    # --- options specific to inner barcode demux ---
+    # non-null defaults commented out until these params are understood by viral-core
+    #Int inner_barcode_trim_r1_right_of_barcode = 10
+    #Int inner_barcode_predemux_trim_r1_3prime  = 18
+    #Int inner_barcode_predemux_trim_r2_5prime  = 18
+    #Int inner_barcode_predemux_trim_r2_3prime  = 18
+
+    # optional defaults until these params are understood by viral-core
+    # ToDo: replace with commented-out defaults above once corresponding changes have been merged into viral-core
+    Int? inner_barcode_trim_r1_right_of_barcode
+    Int? inner_barcode_predemux_trim_r1_3prime
+    Int? inner_barcode_predemux_trim_r2_5prime
+    Int? inner_barcode_predemux_trim_r2_3prime
+    # -----------------------------------------------
+
     # --- options for debugging or special use ----
     Int?    tileLimit  
     Int?    firstTile
@@ -437,6 +452,10 @@ task illumina_demux {
       ./picard_bams \
       ~{lane} \
       ~{splitcode_outdir} \
+      ~{'--trim_r1_right_of_barcode ' + inner_barcode_trim_r1_right_of_barcode} \
+      ~{'--predemux_trim_r1_3prime '  + inner_barcode_predemux_trim_r1_3prime} \
+      ~{'--predemux_trim_r2_5prime '  + inner_barcode_predemux_trim_r2_5prime} \
+      ~{'--predemux_trim_r2_3prime '  + inner_barcode_predemux_trim_r2_3prime} \
       ~{'--sampleSheet=' + samplesheet} \
       "--runInfo=${RUNINFO_FILE}" \
       "--illuminaRunDirectory=${FLOWCELL_DIR}" \
