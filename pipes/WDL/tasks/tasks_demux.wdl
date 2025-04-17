@@ -513,30 +513,57 @@ task illumina_demux {
 
     # --------- stage output bams -----------
     # glob the various bam files and direct them to the appropriate locations
+
+    # set the 'nullglob' shell option
+    # this is needed to prevent the shell from treating unmatched glob expansions as literal strings
+    #   (i.e. so './{picard_bams,~{splitcode_outdir}}/*.bam' [note the empty/invalid last element in brace expansion] 
+    #   does not output the literal '*.bam' as part of the expansion if ~{splitcode_outdir} does not exist)
+    # see:
+    #   https://www.gnu.org/software/bash/manual/html_node/The-Shopt-Builtin.html
+    #   https://linux.die.net/man/1/bash#:~:text=splitting%20is%20performed.-,Pathname%20Expansion,-After%20word%20splitting
+    #   https://linux.die.net/man/1/bash#:~:text=see%20PARAMETERS).-,Brace%20Expansion,-Brace%20expansion%20is
+    # NB: this is a bash-specific option and assumes the WDL executor is using bash to run the command block of this task
+    NULLGLOB_STARTING_STATE=$(shopt -p | grep nullglob)
+    shopt -s nullglob
+
     OUT_BASENAMES=bam_basenames.txt
     bams_created=(./{picard_bams,~{splitcode_outdir}}/*.bam)
     for bam in "${bams_created[@]}"; do
+      # check if the bam file exists
+      if [ ! -e "${bam}" ]; then
+        echo "BAM file not found after previously seeing it in picard_bams/ or ~{splitcode_outdir}: ${bam}"
+        continue
+      fi
+      echo "Staging before task completion: $bam"
       if [[ "$(basename $bam .bam)" =~ ^[Uu]nmatched.*$ ]]; then
         #if bam basename is (case-insensitive) unmatched*.bam
         if ~{true="true" false="false" emit_unmatched_reads_bam}; then
           # if we are emitting unmatched reads as a bam, 
           # move bams containing such reads to a separate subdir for later merging
+          echo "Moving unmatched ${bam} to ./unmatched/"
           mv "${bam}" ./unmatched/
         else
           # otherwise remove the unmatched bam
+          echo "Removing unmatched bam: ${bam}"
           rm "${bam}"
         fi
       else
         # use grep to determine if the bam file found 
         # is one we expect from the sample sheet (i.e. not a pooled bam from collapsed barcodes)
         if grep -q "$(basename $bam .bam)" $OUT_BASENAMES_WITH_EXT; then
+          echo "Moving ${bam} to ./"
           mv $bam . && \
             echo "$(basename $bam .bam)" >> $OUT_BASENAMES
         else
+          # otherwise remove the bam
+          echo "Removing ${bam}"
           rm "${bam}"
         fi
       fi
     done
+
+    # restore initial state of the nullglob bash option
+    eval "$NULLGLOB_STARTING_STATE"
     # ---------------------------------------
 
 
