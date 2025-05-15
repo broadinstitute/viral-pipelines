@@ -38,6 +38,7 @@ workflow assemble_denovo_metagenomic {
         Array[String] taxa_to_dehost         = ["Vertebrata"]
         Array[String] taxa_to_avoid_assembly = ["Vertebrata", "other sequences", "Bacteria"]
 
+        String        table_name = "sample"
     }
 
     Int    min_scaffold_unambig = 300 # in base-pairs; any scaffolded assembly < this length will not be refined/polished
@@ -257,7 +258,7 @@ workflow assemble_denovo_metagenomic {
 
             "batch_ids" :          unique_batch_ids.sorted_unique_joined,
 
-            "sample":              '{"entityType":"sample","entityName":"' + sample_id + '"}'
+            "~{table_name}":            '{"entityType":"~{table_name}","entityName":"' + sample_id + '"}'
         }
 
         if(assembly_length_unambiguous > min_scaffold_unambig) {

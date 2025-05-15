@@ -22,6 +22,8 @@ workflow scaffold_and_refine_multitaxa {
         File    taxid_to_ref_accessions_tsv
 
         String? biosample_accession
+
+        String  table_name = "sample"
     }
 
     Int    min_scaffold_unambig = 300 # in base-pairs; any scaffolded assembly < this length will not be refined/polished
@@ -133,7 +135,7 @@ workflow scaffold_and_refine_multitaxa {
 
             "biosample_accession" :     select_first([biosample_accession, ""]),
 
-            "sample":              '{"entityType":"sample","entityName":"' + sample_id + '"}'
+            "~{table_name}":            '{"entityType":"~{table_name}","entityName":"' + sample_id + '"}'
         }
 
         if(assembly_length_unambiguous > min_scaffold_unambig) {
