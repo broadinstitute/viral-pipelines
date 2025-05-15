@@ -39,7 +39,7 @@ workflow scaffold_and_refine_multitaxa {
     call assembly.select_references {
         input:
             reference_genomes_fastas = download_ref_genomes_from_tsv.ref_genomes_fastas,
-            contigs_fasta = spades.contigs_fasta
+            contigs_fasta = contigs_fasta
     }
 
     # assemble and produce stats for every reference cluster
