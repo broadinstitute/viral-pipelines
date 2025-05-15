@@ -27,26 +27,17 @@ workflow scaffold_and_refine_multitaxa {
     Int    min_scaffold_unambig = 300 # in base-pairs; any scaffolded assembly < this length will not be refined/polished
     String sample_original_name = select_first([sample_name, sample_id])
 
-    # download (multi-segment) genomes for each reference, fasta filename = colon-concatenated accession list
-    scatter(taxon in read_tsv(taxid_to_ref_accessions_tsv)) {
-        # taxon = [taxid, isolate_prefix, taxname, semicolon_delim_accession_list]
-        call utils.string_split {
-            input:
-                joined_string = taxon[3],
-                delimiter = ":"
-        }
-        call ncbi.download_annotations {
-            input:
-                accessions = string_split.tokens,
-                combined_out_prefix = sub(taxon[3], ":", "-")  # singularity does not like colons in filenames
-        }
+    # download (multi-segment) genomes for each reference, fasta filename = dash-concatenated accession list
+    call ncbi.download_ref_genomes_from_tsv {
+        input:
+            ref_genomes_tsv = taxid_to_ref_accessions_tsv
     }
 
     # subset reference genomes to those with ANI hits to contigs and cluster reference hits by any ANI similarity to each other
     call assembly.select_references {
         input:
-            reference_genomes_fastas = download_annotations.combined_fasta,
-            contigs_fasta = contigs_fasta
+            reference_genomes_fastas = download_ref_genomes_from_tsv.ref_genomes_fastas,
+            contigs_fasta = spades.contigs_fasta
     }
 
     # assemble and produce stats for every reference cluster
