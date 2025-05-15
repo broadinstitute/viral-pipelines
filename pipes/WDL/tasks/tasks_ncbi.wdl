@@ -94,6 +94,7 @@ task download_ref_genomes_from_tsv {
     with open("~{ref_genomes_tsv}", 'rt') as inf:
       reader = csv.DictReader(inf, delimiter='\t',
         fieldnames=['tax_id', 'isolate_prefix', 'taxname', 'accessions']) # backwards support for headerless tsvs
+      # for the future: batch all the downloads in a single call and re-organize output files afterwards
       for ref_genome in reader:
         if ref_genome['tax_id'] != 'tax_id': # skip header
           accessions = ref_genome['accessions'].split(':')
@@ -105,12 +106,12 @@ task download_ref_genomes_from_tsv {
             combinedFilePrefix="combined/" + '-'.join(accessions),
             removeSeparateFiles=False,
             chunkSize=500)
-
     CODE
   >>>
 
   output {
     Array[File] ref_genomes_fastas  = glob("combined/*.fasta")
+    Int         num_references      = length(ref_genomes_fastas)
   }
 
   runtime {
