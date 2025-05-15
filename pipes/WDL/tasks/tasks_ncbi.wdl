@@ -98,7 +98,7 @@ task download_ref_genomes_from_tsv {
         if ref_genome['tax_id'] != 'tax_id': # skip header
           accessions = ref_genome['accessions'].split(':')
           phylo.genbank.fetch_fastas_from_genbank(
-            accession_IDs=accessions,
+            accessionList=accessions,
             destinationDir=".",
             emailAddress="~{emailAddress}",
             forceOverwrite=True,
