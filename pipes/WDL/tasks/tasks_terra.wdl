@@ -33,7 +33,7 @@ task gcs_copy {
 
 task check_terra_env {
   input {
-    String docker = "quay.io/broadinstitute/viral-baseimage:0.2.4"
+    String docker = "quay.io/broadinstitute/viral-core:2.4.1"
   }
   meta {
     description: "task for inspection of backend to determine whether the task is running on Terra and/or GCP"
@@ -241,9 +241,10 @@ task check_terra_env {
 
     # pretty-print environment details to stdout
     # if wraping is desired, add to 'column' command: --output-width 120 --table-wrap 0
-    echo "=============================================="
-    find . -maxdepth 1 -type f \( -iname 'RUNNING*' -or -iname '*.txt' \) -exec sh -c 'printf "$(basename $1 .txt)\t$(head -n1 $1)\n"' _ {} \; | sort -k1 -d -t $'\t' | column --separator $'\t' --table --table-right 1 --output-separator $'  '
-    echo "=============================================="
+    ###### disable stdout messages until fixed
+    #echo "=============================================="
+    #find . -maxdepth 1 -type f \( -iname 'RUNNING*' -or -iname '*.txt' \) -exec sh -c 'printf "$(basename $1 .txt)\t$(head -n1 $1)\n"' _ {} \; | sort -k1 -d -t $'\t' | column --separator $'\t' --table --table-right 1 --output-separator $'  '
+    #echo "=============================================="
 
     echo -n'' "MEM_BYTES: "; { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } | tee MEM_BYTES
   >>>

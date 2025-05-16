@@ -109,6 +109,7 @@ workflow genbank_single {
             num_segments           = length(string_split.tokens),
             taxid                  = tax_id,
             organism_name_override = organism_name,
+            sequence_id_override   = assembly_id,
             filter_to_accession    = biosample_accession,
             out_basename           = assembly_id,
             source_overrides_json  = genbank_special_taxa.genbank_source_overrides_json

@@ -222,7 +222,7 @@ workflow assemble_refbased {
         File        align_to_ref_merged_coverage_tsv             = plot_ref_coverage.coverage_tsv
         Int         align_to_ref_merged_reads_aligned            = plot_ref_coverage.reads_aligned
         Int         align_to_ref_merged_read_pairs_aligned       = plot_ref_coverage.read_pairs_aligned
-        Float       align_to_ref_merged_bases_aligned            = plot_ref_coverage.bases_aligned
+        Int         align_to_ref_merged_bases_aligned            = floor(plot_ref_coverage.bases_aligned)
         File        align_to_ref_isnvs_vcf                       = isnvs_ref.report_vcf
         
         File        picard_metrics_wgs                           = alignment_metrics.wgs_metrics
@@ -238,7 +238,7 @@ workflow assemble_refbased {
         File        align_to_self_merged_coverage_tsv            = plot_self_coverage.coverage_tsv
         Int         align_to_self_merged_reads_aligned           = plot_self_coverage.reads_aligned
         Int         align_to_self_merged_read_pairs_aligned      = plot_self_coverage.read_pairs_aligned
-        Float       align_to_self_merged_bases_aligned           = plot_self_coverage.bases_aligned
+        Int         align_to_self_merged_bases_aligned           = floor(plot_self_coverage.bases_aligned)
         Float       align_to_self_merged_mean_coverage           = plot_self_coverage.mean_coverage
         File        align_to_self_isnvs_vcf                      = isnvs_self.report_vcf
         
