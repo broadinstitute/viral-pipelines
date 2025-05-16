@@ -75,6 +75,54 @@ task download_annotations {
   }
 }
 
+task download_ref_genomes_from_tsv {
+  input {
+    File      ref_genomes_tsv    # [tax_id, isolate_prefix, taxname, colon_delim_accession_list]
+    String    emailAddress
+
+    String    docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
+  }
+
+  command <<<
+    set -ex -o pipefail
+    ncbi.py --version | tee VERSION
+    mkdir -p combined
+
+    python3<<CODE
+    import csv
+    import phylo.genbank
+    with open("~{ref_genomes_tsv}", 'rt') as inf:
+      reader = csv.DictReader(inf, delimiter='\t',
+        fieldnames=['tax_id', 'isolate_prefix', 'taxname', 'accessions']) # backwards support for headerless tsvs
+      # for the future: batch all the downloads in a single call and re-organize output files afterwards
+      for ref_genome in reader:
+        if ref_genome['tax_id'] != 'tax_id': # skip header
+          accessions = ref_genome['accessions'].split(':')
+          phylo.genbank.fetch_fastas_from_genbank(
+            accessionList=accessions,
+            destinationDir=".",
+            emailAddress="~{emailAddress}",
+            forceOverwrite=True,
+            combinedFilePrefix="combined/" + '-'.join(accessions),
+            removeSeparateFiles=False,
+            chunkSize=500)
+    CODE
+  >>>
+
+  output {
+    Array[File] ref_genomes_fastas  = glob("combined/*.fasta")
+    Int         num_references      = length(ref_genomes_fastas)
+  }
+
+  runtime {
+    docker: docker
+    memory: "7 GB"
+    cpu: 2
+    dx_instance_type: "mem2_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
 task sequencing_platform_from_bam {
   input {
     File    bam

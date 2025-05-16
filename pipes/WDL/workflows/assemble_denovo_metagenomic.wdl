@@ -38,6 +38,7 @@ workflow assemble_denovo_metagenomic {
         Array[String] taxa_to_dehost         = ["Vertebrata"]
         Array[String] taxa_to_avoid_assembly = ["Vertebrata", "other sequences", "Bacteria"]
 
+        String        table_name = "sample"
     }
 
     Int    min_scaffold_unambig = 300 # in base-pairs; any scaffolded assembly < this length will not be refined/polished
@@ -149,30 +150,21 @@ workflow assemble_denovo_metagenomic {
             kraken_summary_report = kraken2.kraken2_summary_report
     }
 
-    # download (multi-segment) genomes for each reference, fasta filename = colon-concatenated accession list
-    scatter(taxon in read_tsv(taxid_to_ref_accessions_tsv)) {
-        # taxon = [taxid, isolate_prefix, taxname, semicolon_delim_accession_list]
-        call utils.string_split {
-            input:
-                joined_string = taxon[3],
-                delimiter = ":"
-        }
-        call ncbi.download_annotations {
-            input:
-                accessions = string_split.tokens,
-                combined_out_prefix = sub(taxon[3], ":", "-")  # singularity does not like colons in filenames
-        }
+    # download (multi-segment) genomes for each reference, fasta filename = dash-concatenated accession list
+    call ncbi.download_ref_genomes_from_tsv {
+        input:
+            ref_genomes_tsv = taxid_to_ref_accessions_tsv
     }
 
     # subset reference genomes to those with ANI hits to contigs and cluster reference hits by any ANI similarity to each other
     call assembly.select_references {
         input:
-            reference_genomes_fastas = download_annotations.combined_fasta,
+            reference_genomes_fastas = download_ref_genomes_from_tsv.ref_genomes_fastas,
             contigs_fasta = spades.contigs_fasta
     }
 
     # assemble and produce stats for every reference cluster
-    Array[String] assembly_header = ["entity:assembly_id", "assembly_name", "sample_id", "sample_name", "taxid", "tax_name", "tax_shortname", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "scaffolding_num_segments_recovered", "reference_num_segments_required", "reference_length", "reference_accessions", "skani_num_ref_clusters", "skani_this_cluster_num_refs", "skani_dist_tsv", "scaffolding_ani", "scaffolding_pct_ref_cov", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned", "assembly_method", "assembly_method_version", "biosample_accession", "batch_ids", "sample"]
+    Array[String] assembly_header = ["entity:assembly_id", "assembly_name", "sample_id", "sample_name", "taxid", "tax_name", "tax_shortname", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "scaffolding_num_segments_recovered", "reference_num_segments_required", "reference_length", "reference_accessions", "skani_num_ref_clusters", "skani_this_cluster_num_refs", "skani_dist_tsv", "scaffolding_ani", "scaffolding_pct_ref_cov", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned", "assembly_method", "assembly_method_version", "biosample_accession", "batch_ids", "~{table_name}"]
     scatter(ref_cluster_tar in select_references.matched_reference_clusters_fastas_tars) {
 
         call utils.tar_extract {
@@ -197,9 +189,9 @@ workflow assemble_denovo_metagenomic {
                 tsv = taxid_to_ref_accessions_tsv,
                 idx_col = "accessions",
                 idx_val = sub(scaffold.scaffolding_chosen_ref_basename, "-", ":"),
-                add_header = ["taxid", "isolate_prefix", "taxname", "accessions"]
+                add_header = ["tax_id", "isolate_prefix", "taxname", "accessions"]
         }
-        String taxid = tax_lookup.map["taxid"]
+        String taxid = tax_lookup.map["tax_id"]
         String tax_name = tax_lookup.map["taxname"]
         String isolate_prefix = tax_lookup.map["isolate_prefix"]
 
@@ -266,7 +258,7 @@ workflow assemble_denovo_metagenomic {
 
             "batch_ids" :          unique_batch_ids.sorted_unique_joined,
 
-            "sample":              '{"entityType":"sample","entityName":"' + sample_id + '"}'
+            "~{table_name}":            '{"entityType":"~{table_name}","entityName":"' + sample_id + '"}'
         }
 
         if(assembly_length_unambiguous > min_scaffold_unambig) {
