@@ -181,6 +181,7 @@ task align_and_annot_transfer_single {
     Array[File]+ reference_feature_tables
 
     String       out_basename = basename(genome_fasta, '.fasta')
+    Int          machine_mem_gb = 30
     String       docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
   }
 
@@ -222,8 +223,8 @@ task align_and_annot_transfer_single {
 
   runtime {
     docker: docker
-    memory: "15 GB"
-    cpu: 4
+    memory: machine_mem_gb + " GB"
+    cpu: 8
     dx_instance_type: "mem2_ssd1_v2_x4"
     preemptible: 1
     maxRetries: 2
@@ -954,8 +955,15 @@ task biosample_to_genbank {
               year = outrow['collection_date'].split('-')[0]
               country = outrow['geo_loc_name'].split(':')[0]
               host = outrow['host'].lower()
-              if host == 'homo sapiens':
-                host = 'human'
+
+              # host name mapping to the informal names used by NCBI in sequence titles for certain species
+              host_to_informal_name_map = {
+                'homo sapiens': 'human',
+                'sus scrofa domesticus': 'swine',
+                'sus scrofa': 'swine'
+              }
+              host = host_to_informal_name_map.get(host, host)
+
               if len(outrow['isolate'].split('/')) >= 2:
                 state_inst_labid = outrow['isolate'].split('/')[-2]
               else:
