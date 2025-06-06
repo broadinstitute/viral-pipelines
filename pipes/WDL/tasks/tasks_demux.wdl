@@ -420,10 +420,24 @@ task illumina_demux {
       --out_meta_by_sample meta_by_sample.json \
       --out_meta_by_filename meta_by_fname.json \
       --out_runinfo runinfo.json \
-      $(if [[ "$collapse_duplicated_barcodes" == "true" ]]; then printf '%s' "--collapse_duplicated_barcodes=barcodes_if_collapsed.tsv"; fi) \
+      $(if [[ "$collapse_duplicated_barcodes" == "true" ]]; then echo -n "--collapse_duplicated_barcodes=barcodes_if_collapsed.tsv"; fi) \
       --loglevel=DEBUG
 
-    illumina.py guess_barcodes ~{'--number_of_negative_controls ' + numberOfNegativeControls} --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
+    # if barcodes.txt exists
+    if [ -f "barcodes.txt" ]; then
+      echo "Barcodes file found, proceeding with demultiplexing."
+      echo "Lines in barcodes.txt: $(wc -l barcodes.txt | awk '{print $1}')"
+    else
+      echo "No barcodes file found. Exiting."
+      exit 1
+    fi
+    
+    illumina.py guess_barcodes \
+      ~{'--number_of_negative_controls ' + numberOfNegativeControls} \
+      --expected_assigned_fraction=0 \
+      barcodes.txt \
+      metrics.txt \
+      barcodes_outliers.txt
 
     illumina.py flowcell_metadata --inDir "$FLOWCELL_DIR" flowcellMetadataFile.tsv
 
