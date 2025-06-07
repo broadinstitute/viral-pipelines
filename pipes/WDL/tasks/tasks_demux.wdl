@@ -423,6 +423,8 @@ task illumina_demux {
       $(if [[ "$collapse_duplicated_barcodes" == "true" ]]; then echo -n "--collapse_duplicated_barcodes=barcodes_if_collapsed.tsv"; fi) \
       --loglevel=DEBUG
 
+    ls -lah
+
     # if barcodes.txt exists
     if [ -f "barcodes.txt" ]; then
       echo "Barcodes file found, proceeding with demultiplexing."
