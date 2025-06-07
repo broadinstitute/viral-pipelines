@@ -424,6 +424,7 @@ task illumina_demux {
       --loglevel=DEBUG
 
     ls -lah
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi }
 
     # if barcodes.txt exists
     if [ -f "barcodes.txt" ]; then
