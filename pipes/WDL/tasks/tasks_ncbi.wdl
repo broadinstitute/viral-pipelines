@@ -5,21 +5,31 @@ task download_fasta {
     String         out_prefix
     Array[String]+ accessions
     String         emailAddress
+    String         apiKeyNCBI
 
     String         docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
   }
 
+  parameter_meta {
+    out_prefix:   { description: "basename of the output fasta file. Will contain multiple sequences if multiple accessions are specified" }
+    accessions:   { description: "accessions of sequences to download" }
+    apiKeyNCBI:   { description: "NCBI API key for more frequent requests; see: https://support.nlm.nih.gov/knowledgebase/article/KA-05317/en-us" }
+  }
+
   command {
     ncbi.py --version | tee VERSION
+    mkdir -p combined
     ncbi.py fetch_fastas \
+        --combinedFilePrefix "tmp.${out_prefix}" \
+        ~{'--api_key ' + apiKeyNCBI} \
         ${emailAddress} \
         . \
-        ${sep=' ' accessions} \
-        --combinedFilePrefix ${out_prefix} \
+        ${sep=' ' accessions}
+    mv "tmp.${out_prefix}.fasta" "combined/${out_prefix}.fasta"
   }
 
   output {
-    File   sequences_fasta  = "${out_prefix}.fasta"
+    File   sequences_fasta  = "combined/${out_prefix}.fasta"
     String viralngs_version = read_string("VERSION")
   }
 
@@ -36,27 +46,37 @@ task download_annotations {
   input {
     Array[String]+ accessions
     String         emailAddress
+    String         apiKeyNCBI
     String         combined_out_prefix
 
     String         docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
+  }
+
+  parameter_meta {
+    combined_out_prefix: { description: "basename of the output fasta file. Will contain multiple sequences if multiple accessions are specified" }
+    accessions:          { description: "accessions for which sequences and feature tables will be downloaded" }
+    apiKeyNCBI:          { description: "NCBI API key for more frequent requests; see: https://support.nlm.nih.gov/knowledgebase/article/KA-05317/en-us" }
   }
 
   command <<<
     set -ex -o pipefail
     ncbi.py --version | tee VERSION
     ncbi.py fetch_feature_tables \
+        ~{'--api_key ' + apiKeyNCBI} \
         ~{emailAddress} \
         ./ \
         ~{sep=' ' accessions} \
         --loglevel DEBUG
     mkdir -p combined
     ncbi.py fetch_fastas \
+        --combinedFilePrefix "temp.~{combined_out_prefix}" \
+        ~{'--api_key ' + apiKeyNCBI} \
+        --forceOverwrite \
         ~{emailAddress} \
         ./ \
         ~{sep=' ' accessions} \
-        --combinedFilePrefix "combined/~{combined_out_prefix}" \
-        --forceOverwrite \
         --loglevel DEBUG
+    mv "temp.~{combined_out_prefix}.fasta" "combined/~{combined_out_prefix}.fasta"
   >>>
 
   output {
