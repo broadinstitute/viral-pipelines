@@ -247,8 +247,12 @@ task illumina_demux {
     fi
 
     if [ -z "$TMPDIR" ]; then
-      export TMPDIR=$(pwd)
+      export TMPDIR="$(pwd)/tmp"
     fi
+
+    mkdir -p "$TMPDIR"
+
+    echo "TMPDIR: $TMPDIR"
 
     if ~{true="true" false="false" defined(flowcell_dir)}; then
       FLOWCELL_DIR="~{flowcell_dir}"
@@ -420,6 +424,7 @@ task illumina_demux {
       --out_meta_by_sample meta_by_sample.json \
       --out_meta_by_filename meta_by_fname.json \
       --out_runinfo runinfo.json \
+      --tmp_dir "$TMPDIR" \
       $(if [[ "$collapse_duplicated_barcodes" == "true" ]]; then echo -n "--collapse_duplicated_barcodes=barcodes_if_collapsed.tsv"; fi) \
       --loglevel=DEBUG
 
