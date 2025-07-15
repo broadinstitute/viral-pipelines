@@ -192,7 +192,7 @@ task illumina_demux {
 
     Int?    machine_mem_gb
     Int     disk_size = 2625
-    String  docker    = "quay.io/broadinstitute/viral-core:2.4.1-23-g243eaaff-ct-swiftseq-demux-integration" #skip-global-version-pin
+    String  docker    = "quay.io/broadinstitute/viral-core:2.4.2-83-ga416102e-ct-swiftseq-demux-integration" #skip-global-version-pin
   }
 
   parameter_meta {
