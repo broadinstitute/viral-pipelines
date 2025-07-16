@@ -271,7 +271,7 @@ task illumina_demux {
       RUNINFO_FILE="~{runinfo}"
     else
       # full RunInfo.xml path
-      RUNINFO_FILE="$(find $FLOWCELL_DIR -type f -name RunInfo.xml | head -n 1)"
+      RUNINFO_FILE="$(find "$FLOWCELL_DIR" -type f -name 'RunInfo.xml' | head -n 1)"
     fi
     
     # Parse the lane count & run ID from RunInfo.xml file
@@ -296,7 +296,8 @@ task illumina_demux {
     fi
 
     # total data size more roughly tracks total tile count
-    total_tile_count=$((lane_count*surface_count*swath_count*tile_count))
+    total_tile_count=$(( ${lane_count:-1} * ${surface_count:-1} * \
+                         ${swath_count:-1} * ${tile_count:-1} ))
 
     demux_threads="$(nproc --all)"
     if [ "$total_tile_count" -le 2 ]; then
@@ -381,9 +382,11 @@ task illumina_demux {
     sample_sheet_barcode_collapse_potential=$(python -c 'import os; import illumina as il; ss=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=False); ssc=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=True); print("sheet_collapse_possible_true") if len(ss.get_rows())!=len(ssc.get_rows()) else print("sheet_collapse_possible_false")')
     if [[ "$sample_sheet_barcode_collapse_potential" == "sheet_collapse_possible_true" ]]; then
       collapse_duplicated_barcodes="true"
+      collapsed_barcodes_output_samplesheet_arg="--collapse_duplicated_barcodes=barcodes_if_collapsed.tsv"
       echo "Detected potential for barcode pair collapsing in provided sample sheet. Treating as two-stage demultiplexing..."
     else
       collapse_duplicated_barcodes="false"
+      collapsed_barcodes_output_samplesheet_arg=""
       echo "No potential for barcode pair collapsing detected in provided sample sheet. Proceeding with single-stage demultiplexing."
     fi
 
@@ -425,15 +428,16 @@ task illumina_demux {
       --out_meta_by_filename meta_by_fname.json \
       --out_runinfo runinfo.json \
       --tmp_dir "$TMPDIR" \
-      $(if [[ "$collapse_duplicated_barcodes" == "true" ]]; then echo -n "--collapse_duplicated_barcodes=barcodes_if_collapsed.tsv"; fi) \
+      $collapsed_barcodes_output_samplesheet_arg \
       --loglevel=DEBUG
 
     ls -lah
-    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi }
+
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; }
 
     # if barcodes.txt exists
     if [ -f "barcodes.txt" ]; then
-      echo "Barcodes file found, proceeding with demultiplexing."
+      echo "Barcodes file found, proceeding..."
       echo "Lines in barcodes.txt: $(wc -l barcodes.txt | awk '{print $1}')"
     else
       echo "No barcodes file found. Exiting."
@@ -447,7 +451,7 @@ task illumina_demux {
       metrics.txt \
       barcodes_outliers.txt
 
-    illumina.py flowcell_metadata --inDir "$FLOWCELL_DIR" flowcellMetadataFile.tsv
+    illumina.py flowcell_metadata --inDir "${FLOWCELL_DIR}" flowcellMetadataFile.tsv
 
     mkdir -p picard_bams unmatched unmatched_picard picard_demux_metadata
 
@@ -593,7 +597,7 @@ task illumina_demux {
         # is one we expect from the sample sheet (i.e. not a pooled bam from collapsed barcodes)
         if grep -q "$(basename $bam .bam)" $OUT_BASENAMES_WITH_EXT; then
           echo "Moving ${bam} to ./"
-          mv $bam . && \
+          mv "$bam" . && \
             echo "$(basename $bam .bam)" >> $OUT_BASENAMES
         else
           # otherwise remove the bam
@@ -690,7 +694,7 @@ task illumina_demux {
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
     set +o pipefail
-    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
   >>>
 
   output {
