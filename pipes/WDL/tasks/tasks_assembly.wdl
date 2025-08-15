@@ -904,6 +904,12 @@ task run_discordance {
 
         if [ ! -f everything.vcf ]; then
           # bcftools call snps while treating each RG as a separate sample
+
+          # first index the ref fasta, iff it contains non-N sequence
+          if [ $(grep -v '^>' "~{reference_fasta}" | tr -d '\nNn' | wc -c) != "0" ]; then
+            samtools faidx "~{reference_fasta}"
+          fi
+
           bcftools mpileup \
             -G readgroups.txt -d 10000 -a "FORMAT/DP,FORMAT/AD" \
             -q 1 -m 2 -Ou \
