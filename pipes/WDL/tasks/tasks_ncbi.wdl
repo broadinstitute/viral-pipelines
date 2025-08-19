@@ -1521,7 +1521,7 @@ task vadr {
     String? vadr_model_tar_subdir
 
     String out_basename = basename(genome_fasta, '.fasta')
-    String docker = "quay.io/staphb/vadr:1.6.4"
+    String docker = "mirror.gcr.io/staphb/vadr:1.6.4"
     Int    mem_size = 16  # the RSV model in particular seems to consume 15GB RAM
     Int    cpus = 4
   }
