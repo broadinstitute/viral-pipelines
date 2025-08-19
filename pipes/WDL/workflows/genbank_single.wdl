@@ -28,6 +28,9 @@ workflow genbank_single {
         String  email_address # required for fetching data from NCBI APIs
         File    authors_sbt
 
+        Array[File]?  custom_ref_fsas
+        Array[File]?  custom_ref_tbls
+
         String? biosample_attributes_json # if this is used, we will use this first
         File?   biosample_attributes_tsv # if no json, we will read this tsv
         # if both are unspecified, we will fetch from NCBI via biosample_accession
@@ -120,8 +123,8 @@ workflow genbank_single {
       call ncbi.align_and_annot_transfer_single as annot {
         input:
             genome_fasta             = assembly_fsa.sanitized_fasta,
-            reference_fastas         = flatten(download_annotations.genomes_fasta),
-            reference_feature_tables = flatten(download_annotations.features_tbl),
+            reference_fastas         = select_first([custom_ref_fsas, flatten(download_annotations.genomes_fasta)]),
+            reference_feature_tables = select_first([custom_ref_tbls, flatten(download_annotations.features_tbl)]),
             out_basename             = assembly_id
       }
     }
