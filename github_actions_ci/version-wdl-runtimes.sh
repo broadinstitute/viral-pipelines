@@ -29,7 +29,7 @@ REPO_PATH="$(realpath "$SCRIPTPATH/../")"
 
 # set MODULE_VERSIONS with default value of "$(realpath "$SCRIPTPATH/../requirements-modules.txt")", assumed to be located one level above this script
 MODULE_VERSIONS="${MODULE_VERSIONS:-"${REPO_PATH}/requirements-modules.txt"}"
-echo $MODULE_VERSIONS
+echo "$MODULE_VERSIONS"
 
 printf "Updating docker image tags in WDL files with those in ${MODULE_VERSIONS}\n"
 printf "Performing replacements in ${REPO_PATH}/pipes/WDL/tasks/*.wdl files\n\n"
