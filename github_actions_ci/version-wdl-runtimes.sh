@@ -23,7 +23,7 @@ function absolute_path() {
 SOURCE="${BASH_SOURCE[0]}"
 SCRIPT=$(absolute_path "$SOURCE")
 SCRIPT_DIRNAME="$(dirname "$SOURCE")"
-SCRIPTPATH="$(cd -P "$(echo $SCRIPT_DIRNAME)" &> /dev/null && pwd)"
+SCRIPTPATH="$(cd -P "$(echo "$SCRIPT_DIRNAME")" &> /dev/null && pwd)"
 SCRIPT="$SCRIPTPATH/$(basename "$SCRIPT")"
 REPO_PATH="$(realpath "$SCRIPTPATH/../")"
 
