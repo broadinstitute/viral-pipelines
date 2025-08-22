@@ -24,7 +24,7 @@ task gcs_copy {
     File logs = stdout()
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-baseimage:0.2.4"
+    docker: "quay.io/broadinstitute/viral-baseimage:0.3.0"
     memory: "1 GB"
     cpu: 1
     maxRetries: 1
@@ -440,7 +440,7 @@ task create_or_update_sample_tables {
     String  sample_table_name  = "sample"
     String  library_table_name = "library"
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
+    String  docker = "quay.io/broadinstitute/viral-core:2.4.3"
   }
 
   meta {
