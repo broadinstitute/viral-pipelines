@@ -75,6 +75,54 @@ task download_annotations {
   }
 }
 
+task download_ref_genomes_from_tsv {
+  input {
+    File      ref_genomes_tsv    # [tax_id, isolate_prefix, taxname, colon_delim_accession_list]
+    String    emailAddress
+
+    String    docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
+  }
+
+  command <<<
+    set -ex -o pipefail
+    ncbi.py --version | tee VERSION
+    mkdir -p combined
+
+    python3<<CODE
+    import csv
+    import phylo.genbank
+    with open("~{ref_genomes_tsv}", 'rt') as inf:
+      reader = csv.DictReader(inf, delimiter='\t',
+        fieldnames=['tax_id', 'isolate_prefix', 'taxname', 'accessions']) # backwards support for headerless tsvs
+      # for the future: batch all the downloads in a single call and re-organize output files afterwards
+      for ref_genome in reader:
+        if ref_genome['tax_id'] != 'tax_id': # skip header
+          accessions = ref_genome['accessions'].split(':')
+          phylo.genbank.fetch_fastas_from_genbank(
+            accessionList=accessions,
+            destinationDir=".",
+            emailAddress="~{emailAddress}",
+            forceOverwrite=True,
+            combinedFilePrefix="combined/" + '-'.join(accessions),
+            removeSeparateFiles=False,
+            chunkSize=500)
+    CODE
+  >>>
+
+  output {
+    Array[File] ref_genomes_fastas  = glob("combined/*.fasta")
+    Int         num_references      = length(ref_genomes_fastas)
+  }
+
+  runtime {
+    docker: docker
+    memory: "7 GB"
+    cpu: 2
+    dx_instance_type: "mem2_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
 task sequencing_platform_from_bam {
   input {
     File    bam
@@ -133,6 +181,7 @@ task align_and_annot_transfer_single {
     Array[File]+ reference_feature_tables
 
     String       out_basename = basename(genome_fasta, '.fasta')
+    Int          machine_mem_gb = 30
     String       docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
   }
 
@@ -174,8 +223,8 @@ task align_and_annot_transfer_single {
 
   runtime {
     docker: docker
-    memory: "15 GB"
-    cpu: 4
+    memory: machine_mem_gb + " GB"
+    cpu: 8
     dx_instance_type: "mem2_ssd1_v2_x4"
     preemptible: 1
     maxRetries: 2
@@ -745,6 +794,7 @@ task biosample_to_genbank {
     String? filter_to_accession
     Map[String,String] src_to_attr_map = {}
     String?  organism_name_override
+    String?  sequence_id_override
     String?  isolate_prefix_override
     File?    source_overrides_json # optional set of key-value pairs to override source metadata
 
@@ -905,8 +955,15 @@ task biosample_to_genbank {
               year = outrow['collection_date'].split('-')[0]
               country = outrow['geo_loc_name'].split(':')[0]
               host = outrow['host'].lower()
-              if host == 'homo sapiens':
-                host = 'human'
+
+              # host name mapping to the informal names used by NCBI in sequence titles for certain species
+              host_to_informal_name_map = {
+                'homo sapiens': 'human',
+                'sus scrofa domesticus': 'swine',
+                'sus scrofa': 'swine'
+              }
+              host = host_to_informal_name_map.get(host, host)
+
               if len(outrow['isolate'].split('/')) >= 2:
                 state_inst_labid = outrow['isolate'].split('/')[-2]
               else:
@@ -930,6 +987,10 @@ task biosample_to_genbank {
 
             # load the purpose of sequencing (or if not, the purpose of sampling) in the note field
             outrow['note'] = row.get('purpose_of_sequencing', row.get('purpose_of_sampling', ''))
+
+            # overwrite sequence ID if requested
+            if "~{default='' sequence_id_override}":
+                outrow['Sequence_ID'] = "~{default='' sequence_id_override}"
 
             # sanitize sequence IDs to match fasta headers
             if "~{sanitize_seq_ids}".lower() == 'true':
@@ -1460,7 +1521,7 @@ task vadr {
     String? vadr_model_tar_subdir
 
     String out_basename = basename(genome_fasta, '.fasta')
-    String docker = "quay.io/staphb/vadr:1.6.3"
+    String docker = "mirror.gcr.io/staphb/vadr:1.6.4"
     Int    mem_size = 16  # the RSV model in particular seems to consume 15GB RAM
     Int    cpus = 4
   }

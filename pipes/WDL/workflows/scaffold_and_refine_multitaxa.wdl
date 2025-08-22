@@ -22,35 +22,28 @@ workflow scaffold_and_refine_multitaxa {
         File    taxid_to_ref_accessions_tsv
 
         String? biosample_accession
+
+        String  table_name = "sample"
     }
 
     Int    min_scaffold_unambig = 300 # in base-pairs; any scaffolded assembly < this length will not be refined/polished
     String sample_original_name = select_first([sample_name, sample_id])
 
-    # download (multi-segment) genomes for each reference, fasta filename = colon-concatenated accession list
-    scatter(taxon in read_tsv(taxid_to_ref_accessions_tsv)) {
-        # taxon = [taxid, isolate_prefix, taxname, semicolon_delim_accession_list]
-        call utils.string_split {
-            input:
-                joined_string = taxon[3],
-                delimiter = ":"
-        }
-        call ncbi.download_annotations {
-            input:
-                accessions = string_split.tokens,
-                combined_out_prefix = sub(taxon[3], ":", "-")  # singularity does not like colons in filenames
-        }
+    # download (multi-segment) genomes for each reference, fasta filename = dash-concatenated accession list
+    call ncbi.download_ref_genomes_from_tsv {
+        input:
+            ref_genomes_tsv = taxid_to_ref_accessions_tsv
     }
 
     # subset reference genomes to those with ANI hits to contigs and cluster reference hits by any ANI similarity to each other
     call assembly.select_references {
         input:
-            reference_genomes_fastas = download_annotations.combined_fasta,
+            reference_genomes_fastas = download_ref_genomes_from_tsv.ref_genomes_fastas,
             contigs_fasta = contigs_fasta
     }
 
     # assemble and produce stats for every reference cluster
-    Array[String] assembly_header = ["entity:assembly_id", "assembly_name", "sample_id", "sample_name", "taxid", "tax_name", "tax_shortname", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "scaffolding_num_segments_recovered", "reference_num_segments_required", "reference_length", "reference_accessions", "skani_num_ref_clusters", "skani_this_cluster_num_refs", "skani_dist_tsv", "scaffolding_ani", "scaffolding_pct_ref_cov", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned", "assembly_method", "assembly_method_version", "biosample_accession", "sample"]
+    Array[String] assembly_header = ["entity:assembly_id", "assembly_name", "sample_id", "sample_name", "taxid", "tax_name", "tax_shortname", "assembly_fasta", "aligned_only_reads_bam", "coverage_plot", "assembly_length", "assembly_length_unambiguous", "reads_aligned", "mean_coverage", "percent_reference_covered", "scaffolding_num_segments_recovered", "reference_num_segments_required", "reference_length", "reference_accessions", "skani_num_ref_clusters", "skani_this_cluster_num_refs", "skani_dist_tsv", "scaffolding_ani", "scaffolding_pct_ref_cov", "intermediate_gapfill_fasta", "assembly_preimpute_length_unambiguous", "replicate_concordant_sites", "replicate_discordant_snps", "replicate_discordant_indels", "replicate_discordant_vcf", "isnvsFile", "aligned_bam", "coverage_tsv", "read_pairs_aligned", "bases_aligned", "assembly_method", "assembly_method_version", "biosample_accession", "~{table_name}"]
     scatter(ref_cluster_tar in select_references.matched_reference_clusters_fastas_tars) {
 
         call utils.tar_extract {
@@ -68,16 +61,6 @@ workflow scaffold_and_refine_multitaxa {
                 min_unambig = 0,
                 allow_incomplete_output = true
         }
-        if (scaffold.assembly_preimpute_length_unambiguous > min_scaffold_unambig) {
-            # polish de novo assembly with reads
-            call assemble_refbased.assemble_refbased as refine {
-                input:
-                    reads_unmapped_bams  = [reads_unmapped_bam],
-                    reference_fasta      = scaffold.scaffold_fasta,
-                    sample_name          = sample_id,
-                    sample_original_name = sample_original_name
-            }
-        }
 
         # get taxid and taxname from taxid_to_ref_accessions_tsv
         call utils.fetch_row_from_tsv as tax_lookup {
@@ -90,6 +73,16 @@ workflow scaffold_and_refine_multitaxa {
         String taxid = tax_lookup.map["taxid"]
         String tax_name = tax_lookup.map["taxname"]
         String isolate_prefix = tax_lookup.map["isolate_prefix"]
+
+        # polish de novo assembly with reads
+        if (scaffold.assembly_preimpute_length_unambiguous > min_scaffold_unambig) {
+            call assemble_refbased.assemble_refbased as refine {
+                input:
+                    reads_unmapped_bams  = [reads_unmapped_bam],
+                    reference_fasta      = scaffold.scaffold_fasta,
+                    sample_name          = sample_id + "-" + taxid
+            }
+        }
 
         # build output tsv row
         Int    assembly_length_unambiguous = select_first([refine.assembly_length_unambiguous, 0])
@@ -142,7 +135,7 @@ workflow scaffold_and_refine_multitaxa {
 
             "biosample_accession" :     select_first([biosample_accession, ""]),
 
-            "sample":              '{"entityType":"sample","entityName":"' + sample_id + '"}'
+            "~{table_name}":            '{"entityType":"~{table_name}","entityName":"' + sample_id + '"}'
         }
 
         if(assembly_length_unambiguous > min_scaffold_unambig) {

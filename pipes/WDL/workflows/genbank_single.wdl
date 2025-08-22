@@ -15,7 +15,8 @@ workflow genbank_single {
 
     input {
         File    assembly_fasta
-        String  assembly_id = basename(assembly_fasta, ".fasta")
+        String  assembly_id = basename(basename(basename(assembly_fasta, ".fasta"), ".fsa") , ".fa")
+        
         File?   aligned_bam
 
         String  ref_accessions_colon_delim
@@ -27,6 +28,9 @@ workflow genbank_single {
         String  email_address # required for fetching data from NCBI APIs
         File    authors_sbt
 
+        Array[File]?  custom_ref_fsas
+        Array[File]?  custom_ref_tbls
+
         String? biosample_attributes_json # if this is used, we will use this first
         File?   biosample_attributes_tsv # if no json, we will read this tsv
         # if both are unspecified, we will fetch from NCBI via biosample_accession
@@ -36,6 +40,10 @@ workflow genbank_single {
         assembly_fasta: {
           description: "Genome to prepare for Genbank submission. All segments/chromosomes included in one file. Must contain exactly the same number of sequences as reference_accessions.",
           patterns: ["*.fasta"]
+        }
+        assembly_id: {
+            description: "Unique identifier for this assembly. Defaults to the basename of assembly_fasta. table2asn requires this value to be <=50 characters; see: https://www.ncbi.nlm.nih.gov/genbank/table2asn/#fsa",
+            patterns: ["^[A-Za-z0-9\-_\.:\*#]{1,50}$"]
         }
         ref_accessions_colon_delim: {
           description: "Reference genome Genbank accessions, each segment/chromosome in the exact same count and order as the segments/chromosomes described in assemblies_fasta. List of accessions should be colon delimited.",
@@ -104,6 +112,7 @@ workflow genbank_single {
             num_segments           = length(string_split.tokens),
             taxid                  = tax_id,
             organism_name_override = organism_name,
+            sequence_id_override   = assembly_id,
             filter_to_accession    = biosample_accession,
             out_basename           = assembly_id,
             source_overrides_json  = genbank_special_taxa.genbank_source_overrides_json
@@ -114,8 +123,8 @@ workflow genbank_single {
       call ncbi.align_and_annot_transfer_single as annot {
         input:
             genome_fasta             = assembly_fsa.sanitized_fasta,
-            reference_fastas         = flatten(download_annotations.genomes_fasta),
-            reference_feature_tables = flatten(download_annotations.features_tbl),
+            reference_fastas         = select_first([custom_ref_fsas, flatten(download_annotations.genomes_fasta)]),
+            reference_feature_tables = select_first([custom_ref_tbls, flatten(download_annotations.features_tbl)]),
             out_basename             = assembly_id
       }
     }
