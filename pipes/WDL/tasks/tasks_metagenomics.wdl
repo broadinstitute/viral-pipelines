@@ -10,30 +10,25 @@ task krakenuniq {
     File        krakenuniq_db_tar_lz4  # {database.kdb,taxonomy}
     File        krona_taxonomy_db_tgz  # taxonomy.tab
 
-    Int         machine_mem_gb = 320
-    String      docker = "quay.io/broadinstitute/viral-classify:2.2.4.0" #skip-global-version-pin
+    Int?        machine_mem_gb
+    String      docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
-
-  Int disk_size = 750
 
   parameter_meta {
     reads_unmapped_bam: {
       description: "Reads to classify. May be unmapped or mapped or both, paired-end or single-end.",
-      patterns: ["*.bam"],
-      category: "required" }
+      patterns: ["*.bam"] }
     krakenuniq_db_tar_lz4: {
       description: "Pre-built Kraken database tarball.",
-      patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"],
-      category:"required"
+      patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
     }
     krona_taxonomy_db_tgz: {
       description: "Krona taxonomy database containing a single file: taxonomy.tab, or possibly just a compressed taxonomy.tab",
-      patterns: ["*.tab.zst", "*.tab.gz", "*.tab", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"],
-      category: "required"
+      patterns: ["*.tab.zst", "*.tab.gz", "*.tab", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
     }
   }
 
-  command <<<
+  command {
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
@@ -46,7 +41,7 @@ task krakenuniq {
 
     # decompress DB to $DB_DIR
     read_utils.py extract_tarball \
-      "~{krakenuniq_db_tar_lz4}" $DB_DIR/krakenuniq \
+      ${krakenuniq_db_tar_lz4} $DB_DIR/krakenuniq \
       --loglevel=DEBUG
     # Support old db tar format
     if [ -d "$DB_DIR/krakenuniq/krakenuniq" ]; then
@@ -54,19 +49,19 @@ task krakenuniq {
     fi
 
     # unpack krona taxonomy.tab
-    if [[ "~{krona_taxonomy_db_tgz}" == *.tar.* ]]; then
+    if [[ ${krona_taxonomy_db_tgz} == *.tar.* ]]; then
       read_utils.py extract_tarball \
-        "~{krona_taxonomy_db_tgz}" $DB_DIR/krona \
+        ${krona_taxonomy_db_tgz} $DB_DIR/krona \
         --loglevel=DEBUG &  # we don't need this until later
     else
-      if [[ "~{krona_taxonomy_db_tgz}" == *.zst ]]; then
-        cat "~{krona_taxonomy_db_tgz}" | zstd -d > $DB_DIR/krona/taxonomy.tab &
-      elif [[ "~{krona_taxonomy_db_tgz}" == *.gz ]]; then
-        cat "~{krona_taxonomy_db_tgz}" | pigz -dc > $DB_DIR/krona/taxonomy.tab &
-      elif [[ "~{krona_taxonomy_db_tgz}" == *.bz2 ]]; then
-        cat "~{krona_taxonomy_db_tgz}" | bzip -dc > $DB_DIR/krona/taxonomy.tab &
+      if [[ "${krona_taxonomy_db_tgz}" == *.zst ]]; then
+        cat "${krona_taxonomy_db_tgz}" | zstd -d > $DB_DIR/krona/taxonomy.tab &
+      elif [[ "${krona_taxonomy_db_tgz}" == *.gz ]]; then
+        cat "${krona_taxonomy_db_tgz}" | pigz -dc > $DB_DIR/krona/taxonomy.tab &
+      elif [[ "${krona_taxonomy_db_tgz}" == *.bz2 ]]; then
+        cat "${krona_taxonomy_db_tgz}" | bzip -dc > $DB_DIR/krona/taxonomy.tab &
       else
-        cp "~{krona_taxonomy_db_tgz}" $DB_DIR/krona/taxonomy.tab &
+        cp "${krona_taxonomy_db_tgz}" $DB_DIR/krona/taxonomy.tab &
       fi
     fi
 
@@ -74,7 +69,7 @@ task krakenuniq {
     OUT_READS=fnames_outreads.txt
     OUT_REPORTS=fnames_outreports.txt
     OUT_BASENAME=basenames_reports.txt
-    for bam in "~{sep='" "' reads_unmapped_bam}"; do
+    for bam in ${sep=' ' reads_unmapped_bam}; do
       echo "$(basename $bam .bam).krakenuniq-reads.txt.gz" >> $OUT_READS
       echo "$(basename $bam .bam)" >> $OUT_BASENAME
       echo "$(basename $bam .bam).krakenuniq-summary_report.txt" >> $OUT_REPORTS
@@ -84,7 +79,7 @@ task krakenuniq {
     # database load into ram
     metagenomics.py krakenuniq \
       $DB_DIR/krakenuniq \
-      "~{sep='" "' reads_unmapped_bam}" \
+      ${sep=' ' reads_unmapped_bam} \
       --outReads $(cat $OUT_READS) \
       --outReport $(cat $OUT_REPORTS) \
       --loglevel=DEBUG
@@ -108,52 +103,43 @@ task krakenuniq {
 
     # merge all krona reports
     ktImportKrona -o krakenuniq.krona.combined.html *.krakenuniq-krona.html
-
-    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
-  >>>
+  }
 
   output {
-    Array[File] krakenuniq_classified_reads = glob("*.krakenuniq-reads.txt.gz")
-    Array[File] krakenuniq_summary_reports  = glob("*.krakenuniq-summary_report.txt")
-    Array[File] krona_report_html           = glob("*.krakenuniq-krona.html")
-    File        krona_report_merged_html    = "krakenuniq.krona.combined.html"
-
-    Int         max_ram_gb                  = ceil(read_float("MEM_BYTES")/1000000000)
-
-    String      viralngs_version            = read_string("VERSION")
+    Array[File] krakenuniq_classified_reads   = glob("*.krakenuniq-reads.txt.gz")
+    Array[File] krakenuniq_summary_reports    = glob("*.krakenuniq-summary_report.txt")
+    Array[File] krona_report_html             = glob("*.krakenuniq-krona.html")
+    File        krona_report_merged_html      = "krakenuniq.krona.combined.html"
+    String      viralngs_version              = read_string("VERSION")
   }
 
   runtime {
-    docker: docker
-    memory: machine_mem_gb + " GB"
+    docker: "${docker}"
+    memory: select_first([machine_mem_gb, 320]) + " GB"
     cpu: 32
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk 750 LOCAL"
     dx_instance_type: "mem3_ssd1_v2_x48"
     preemptible: 0
-    maxRetries: 2
   }
 }
 
 task build_krakenuniq_db {
   input {
-    File     genome_fastas_tarball
-    File     taxonomy_db_tarball
-    String   db_basename
+    File        genome_fastas_tarball
+    File        taxonomy_db_tarball
+    String      db_basename
 
-    Boolean? subsetTaxonomy
-    Int?     minimizerLen
-    Int?     kmerLen
-    Int?     maxDbSize
-    Int?     zstd_compression_level
+    Boolean?    subsetTaxonomy
+    Int?        minimizerLen
+    Int?        kmerLen
+    Int?        maxDbSize
+    Int?        zstd_compression_level
 
-    Int      machine_mem_gb = 240
-    String   docker = "quay.io/broadinstitute/viral-classify:2.2.4.0" #skip-global-version-pin
+    Int?        machine_mem_gb
+    String      docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
 
-  Int disk_size = 750
-
-  command <<<
+  command {
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
@@ -161,47 +147,45 @@ task build_krakenuniq_db {
     fi
     TAXDB_DIR=$(mktemp -d --suffix _taxdb)
     FASTAS_DIR=$(mktemp -d --suffix fasta)
-    DB_DIR="$TMPDIR/~{db_basename}"
+    DB_DIR="$TMPDIR/${db_basename}"
     mkdir -p $DB_DIR
 
     metagenomics.py --version | tee VERSION
 
     # decompress input tarballs
     read_utils.py extract_tarball \
-      "~{genome_fastas_tarball}" $FASTAS_DIR \
+      ${genome_fastas_tarball} $FASTAS_DIR \
       --loglevel=DEBUG
     read_utils.py extract_tarball \
-      "~{taxonomy_db_tarball}" $TAXDB_DIR \
+      ${taxonomy_db_tarball} $TAXDB_DIR \
       --loglevel=DEBUG
 
     # build database
     metagenomics.py krakenuniq_build \
       $DB_DIR --library $FASTAS_DIR --taxonomy $TAXDB_DIR \
-      ~{true='--subsetTaxonomy=' false='' subsetTaxonomy} \
-      ~{'--minimizerLen=' + minimizerLen} \
-      ~{'--kmerLen=' + kmerLen} \
-      ~{'--maxDbSize=' + maxDbSize} \
+      ${true='--subsetTaxonomy=' false='' subsetTaxonomy} \
+      ${'--minimizerLen=' + minimizerLen} \
+      ${'--kmerLen=' + kmerLen} \
+      ${'--maxDbSize=' + maxDbSize} \
       --clean \
       --loglevel=DEBUG
 
     # tar it up
-    tar -c -C $DB_DIR . | zstd ~{"-" + zstd_compression_level} > "~{db_basename}.tar.zst"
-  >>>
+    tar -c -C $DB_DIR . | zstd ${"-" + zstd_compression_level} > ${db_basename}.tar.zst
+  }
 
   output {
-    File   krakenuniq_db    = "~{db_basename}.tar.zst"
-    String viralngs_version = read_string("VERSION")
+    File        krakenuniq_db    = "${db_basename}.tar.zst"
+    String      viralngs_version = read_string("VERSION")
   }
 
   runtime {
-    docker: docker
-    memory: machine_mem_gb + " GB"
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    docker: "${docker}"
+    memory: select_first([machine_mem_gb, 240]) + " GB"
+    disks: "local-disk 750 LOCAL"
     cpu: 32
     dx_instance_type: "mem3_ssd1_v2_x32"
     preemptible: 0
-    maxRetries: 2
   }
 }
 
@@ -211,14 +195,14 @@ task kraken2 {
   }
 
   input {
-    File   reads_bam
-    File   kraken2_db_tgz         # {database.kdb,taxonomy}
-    File   krona_taxonomy_db_tgz  # taxonomy.tab
-    Float? confidence_threshold = 0.05
-    Int?   min_base_qual
+    File     reads_bam
+    File     kraken2_db_tgz         # {database.kdb,taxonomy}
+    File     krona_taxonomy_db_tgz  # taxonomy.tab
+    Float?   confidence_threshold
+    Int?     min_base_qual
 
-    Int    machine_mem_gb = 90
-    String docker = "quay.io/broadinstitute/viral-classify:2.2.5"
+    Int?     machine_mem_gb
+    String   docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
 
   parameter_meta {
@@ -242,10 +226,9 @@ task kraken2 {
     }
   }
 
-  String out_basename = basename(basename(reads_bam, '.bam'), '.fasta')
-  Int disk_size = 750
+  String out_basename=basename(basename(reads_bam, '.bam'), '.fasta')
 
-  command <<<
+  command {
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
@@ -256,172 +239,76 @@ task kraken2 {
 
     # decompress DB to $DB_DIR
     read_utils.py extract_tarball \
-      "~{kraken2_db_tgz}" $DB_DIR/kraken2 \
+      ${kraken2_db_tgz} $DB_DIR/kraken2 \
       --loglevel=DEBUG
     du -hs $DB_DIR/kraken2
 
     # unpack krona taxonomy.tab
-    if [[ "~{krona_taxonomy_db_tgz}" == *.tar.* ]]; then
+    if [[ ${krona_taxonomy_db_tgz} == *.tar.* ]]; then
       read_utils.py extract_tarball \
-        "~{krona_taxonomy_db_tgz}" $DB_DIR/krona \
+        ${krona_taxonomy_db_tgz} $DB_DIR/krona \
         --loglevel=DEBUG &  # we don't need this until later
     else
-      if [[ "~{krona_taxonomy_db_tgz}" == *.zst ]]; then
-        cat "~{krona_taxonomy_db_tgz}" | zstd -d > $DB_DIR/krona/taxonomy.tab &
-      elif [[ "~{krona_taxonomy_db_tgz}" == *.gz ]]; then
-        cat "~{krona_taxonomy_db_tgz}" | pigz -dc > $DB_DIR/krona/taxonomy.tab &
-      elif [[ "~{krona_taxonomy_db_tgz}" == *.bz2 ]]; then
-        cat "~{krona_taxonomy_db_tgz}" | bzip -dc > $DB_DIR/krona/taxonomy.tab &
+      if [[ "${krona_taxonomy_db_tgz}" == *.zst ]]; then
+        cat "${krona_taxonomy_db_tgz}" | zstd -d > $DB_DIR/krona/taxonomy.tab &
+      elif [[ "${krona_taxonomy_db_tgz}" == *.gz ]]; then
+        cat "${krona_taxonomy_db_tgz}" | pigz -dc > $DB_DIR/krona/taxonomy.tab &
+      elif [[ "${krona_taxonomy_db_tgz}" == *.bz2 ]]; then
+        cat "${krona_taxonomy_db_tgz}" | bzip -dc > $DB_DIR/krona/taxonomy.tab &
       else
-        cp "~{krona_taxonomy_db_tgz}" $DB_DIR/krona/taxonomy.tab &
+        cp "${krona_taxonomy_db_tgz}" $DB_DIR/krona/taxonomy.tab &
       fi
     fi
 
     metagenomics.py --version | tee VERSION
 
-    if [[ "~{reads_bam}" == *.bam ]]; then
+    if [[ ${reads_bam} == *.bam ]]; then
         metagenomics.py kraken2 \
           $DB_DIR/kraken2 \
-          "~{reads_bam}" \
-          --outReads   "~{out_basename}".kraken2.reads.txt \
-          --outReports "~{out_basename}".kraken2.report.txt \
-          ~{"--confidence " + confidence_threshold} \
-          ~{"--min_base_qual " + min_base_qual} \
+          ${reads_bam} \
+          --outReads   "${out_basename}".kraken2.reads.txt \
+          --outReports "${out_basename}".kraken2.report.txt \
+          ${"--confidence " + confidence_threshold} \
+          ${"--min_base_qual " + min_base_qual} \
           --loglevel=DEBUG
     else # fasta input file: call kraken2 directly
         kraken2 \
           --db $DB_DIR/kraken2 \
-          "~{reads_bam}" \
-          --output "~{out_basename}".kraken2.reads.txt \
-          --report "~{out_basename}".kraken2.report.txt \
-          ~{"--confidence " + confidence_threshold} \
-          ~{"--min_base_qual " + min_base_qual}
+          ${reads_bam} \
+          --output "${out_basename}".kraken2.reads.txt \
+          --report "${out_basename}".kraken2.report.txt \
+          ${"--confidence " + confidence_threshold} \
+          ${"--min_base_qual " + min_base_qual}
     fi
 
     wait # for krona_taxonomy_db_tgz to download and extract
-    pigz "~{out_basename}".kraken2.reads.txt &
+    pigz "${out_basename}".kraken2.reads.txt &
 
     metagenomics.py krona \
-      "~{out_basename}".kraken2.report.txt \
+      "${out_basename}".kraken2.report.txt \
       $DB_DIR/krona \
-      "~{out_basename}".kraken2.krona.html \
-      --sample_name "~{out_basename}" \
+      "${out_basename}".kraken2.krona.html \
+      --sample_name "${out_basename}" \
       --noRank --noHits --inputType kraken2 \
       --loglevel=DEBUG
 
     wait # pigz reads.txt
-
-    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
-  >>>
+  }
 
   output {
-    File   kraken2_reads_report   = "~{out_basename}.kraken2.reads.txt.gz"
-    File   kraken2_summary_report = "~{out_basename}.kraken2.report.txt"
-    File   krona_report_html      = "~{out_basename}.kraken2.krona.html"
-
-    Int    max_ram_gb             = ceil(read_float("MEM_BYTES")/1000000000)
-
-    String viralngs_version       = read_string("VERSION")
+    File    kraken2_reads_report   = "${out_basename}.kraken2.reads.txt.gz"
+    File    kraken2_summary_report = "${out_basename}.kraken2.report.txt"
+    File    krona_report_html      = "${out_basename}.kraken2.krona.html"
+    String  viralngs_version       = read_string("VERSION")
   }
 
   runtime {
-    docker: docker
-    memory: machine_mem_gb + " GB"
-    cpu: 16
-    cpuPlatform: "Intel Ice Lake"
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TESs
+    docker: "${docker}"
+    memory: select_first([machine_mem_gb, 52]) + " GB"
+    cpu: 8
+    disks: "local-disk 750 LOCAL"
     dx_instance_type: "mem3_ssd1_v2_x8"
     preemptible: 2
-    maxRetries: 2
-  }
-}
-
-task report_primary_kraken_taxa {
-  meta {
-    description: "Interprets a kraken (or kraken2 or krakenuniq) summary report file and emits the primary contributing taxa under a focal taxon of interest."
-  }
-  input {
-    File          kraken_summary_report
-    String        focal_taxon = "Viruses"
-
-    String        docker = "quay.io/broadinstitute/viral-classify:2.2.5"
-  }
-  String out_basename = basename(kraken_summary_report, '.txt')
-  Int disk_size = 50
-  Int machine_mem_gb = 2
-
-  command <<<
-    set -e
-    metagenomics.py taxlevel_plurality "~{kraken_summary_report}" "~{focal_taxon}" "~{out_basename}.ranked_focal_report.tsv"
-    cat "~{out_basename}.ranked_focal_report.tsv" | head -2 | tail +2 > TOPROW
-    cut -f 2 TOPROW > NUM_FOCAL
-    cut -f 4 TOPROW > PCT_OF_FOCAL
-    cut -f 7 TOPROW > NUM_READS
-    cut -f 8 TOPROW > TAX_RANK
-    cut -f 9 TOPROW > TAX_ID
-    cut -f 10 TOPROW > TAX_NAME
-  >>>
-
-  output {
-    String focal_tax_name = focal_taxon
-    File   ranked_focal_report = "~{out_basename}.ranked_focal_report.tsv"
-    Int    total_focal_reads = read_int("NUM_FOCAL")
-    Float  percent_of_focal = read_float("PCT_OF_FOCAL")
-    Int    num_reads = read_int("NUM_READS")
-    String tax_rank = read_string("TAX_RANK")
-    String tax_id = read_string("TAX_ID")
-    String tax_name = read_string("TAX_NAME")
-  }
-
-  runtime {
-    docker: docker
-    memory: machine_mem_gb + " GB"
-    cpu: 1
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TESs
-    dx_instance_type: "mem1_ssd1_v2_x2"
-    preemptible: 2
-    maxRetries: 2
-  }
-}
-
-task filter_refs_to_found_taxa {
-  meta {
-    description: "Filters a taxid_to_ref_accessions_tsv to the set of taxa found in a focal_report."
-  }
-  input {
-    File          taxid_to_ref_accessions_tsv
-    File          focal_report_tsv
-    File          taxdump_tgz
-    Int           min_read_count = 100
-
-    String        docker = "quay.io/broadinstitute/viral-classify:2.2.5"
-  }
-  String ref_basename = basename(taxid_to_ref_accessions_tsv, '.tsv')
-  String hits_basename = basename(focal_report_tsv, '.tsv')
-  Int disk_size = 50
-
-  command <<<
-    set -e
-    mkdir -p taxdump
-    read_utils.py extract_tarball "~{taxdump_tgz}" taxdump
-    metagenomics.py filter_taxids_to_focal_hits "~{taxid_to_ref_accessions_tsv}" "~{focal_report_tsv}" taxdump ~{min_read_count} "~{ref_basename}-~{hits_basename}.tsv"
-  >>>
-
-  output {
-    File   filtered_taxid_to_ref_accessions_tsv = "~{ref_basename}-~{hits_basename}.tsv"
-  }
-
-  runtime {
-    docker: docker
-    memory: "2 GB"
-    cpu: 1
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TESs
-    dx_instance_type: "mem1_ssd1_v2_x2"
-    preemptible: 2
-    maxRetries: 2
   }
 }
 
@@ -438,19 +325,17 @@ task build_kraken2_db {
                       "viral", "human", "fungi", "protozoa",
                       "UniVec_Core"]
     Array[File]   custom_libraries = []
-    Boolean       protein = false
+    Boolean       protein=false
 
-    Int?          kmerLen
-    Int?          minimizerLen
-    Int?          minimizerSpaces
-    Int?          maxDbSize
-    Int?          zstd_compression_level
+    Int?        kmerLen
+    Int?        minimizerLen
+    Int?        minimizerSpaces
+    Int?        maxDbSize
+    Int?        zstd_compression_level
 
-    Int           machine_mem_gb = 100
-    String        docker = "quay.io/broadinstitute/viral-classify:2.2.5"
+    Int?        machine_mem_gb
+    String      docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
-
-  Int disk_size = 750
 
   parameter_meta {
     db_basename: { description: "A descriptive string used in output filenames. Outputs will be called kraken2-<db_basename>.tar.zst, krona-<db_basename>.tar.zst, and taxdump-<db_basename>.tar.gz" }
@@ -479,7 +364,7 @@ task build_kraken2_db {
     }
   }
 
-  command <<<
+  command {
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
@@ -493,9 +378,9 @@ task build_kraken2_db {
     metagenomics.py --version | tee VERSION
 
     # prep input taxonomy db, if specified
-    if [ -n "~{taxonomy_db_tgz}" ]; then
+    if [ -n "${taxonomy_db_tgz}" ]; then
       read_utils.py extract_tarball \
-        "~{taxonomy_db_tgz}" $TAXDB_DIR \
+        ${taxonomy_db_tgz} $TAXDB_DIR \
         --loglevel=DEBUG &
       TAX_INPUT_CMD="--tax_db=$TAXDB_DIR"
     else
@@ -504,9 +389,9 @@ task build_kraken2_db {
 
     # prep input custom fastas, if specified
     CUSTOM_INPUT_CMD=""
-    if [ -n "~{sep=' ' custom_libraries}" ]; then
+    if [ -n "${sep=' ' custom_libraries}" ]; then
       CUSTOM_INPUT_CMD="--custom_libraries "
-      for TGZ in ~{sep=' ' custom_libraries}; do
+      for TGZ in ${sep=' ' custom_libraries}; do
         if [[ ($TGZ == *.tar.*) || ($TGZ == *.tgz) ]]; then
           read_utils.py extract_tarball \
             $TGZ $FASTAS_DIR \
@@ -531,8 +416,8 @@ task build_kraken2_db {
 
     # prep standard libraries, if specified
     STD_INPUT_CMD=""
-    if [ -n "~{sep=' ' standard_libraries}" ]; then
-      STD_INPUT_CMD="--standard_libraries ~{sep=' ' standard_libraries}"
+    if [ -n "${sep=' ' standard_libraries}" ]; then
+      STD_INPUT_CMD="--standard_libraries ${sep=' ' standard_libraries}"
     fi
 
     # build kraken2 database
@@ -542,39 +427,37 @@ task build_kraken2_db {
       $TAX_INPUT_CMD \
       $STD_INPUT_CMD \
       $CUSTOM_INPUT_CMD \
-      --taxdump_out "taxdump-~{db_basename}.tar.gz" \
-      ~{true='--protein' false='' protein} \
-      ~{'--kmerLen=' + kmerLen} \
-      ~{'--minimizerLen=' + minimizerLen} \
-      ~{'--minimizerSpaces=' + minimizerSpaces} \
-      ~{'--maxDbSize=' + maxDbSize} \
+      --taxdump_out "taxdump-${db_basename}.tar.gz" \
+      ${true='--protein' false='' protein} \
+      ${'--kmerLen=' + kmerLen} \
+      ${'--minimizerLen=' + minimizerLen} \
+      ${'--minimizerSpaces=' + minimizerSpaces} \
+      ${'--maxDbSize=' + maxDbSize} \
       --loglevel=DEBUG
-    tar -c -C $DB_DIR . | zstd ~{"-" + zstd_compression_level} > "kraken2-~{db_basename}.tar.zst" &
+    tar -c -C $DB_DIR . | zstd ${"-" + zstd_compression_level} > "kraken2-${db_basename}.tar.zst" &
 
     # build matching krona db
     metagenomics.py krona_build \
-      $KRONA_DIR --taxdump_tar_gz "taxdump-~{db_basename}.tar.gz"
-    cat $KRONA_DIR/taxonomy.tab | zstd -19 > "krona-~{db_basename}-taxonomy.tab.zst"
+      $KRONA_DIR --taxdump_tar_gz "taxdump-${db_basename}.tar.gz"
+    cat $KRONA_DIR/taxonomy.tab | zstd -19 > "krona-${db_basename}-taxonomy.tab.zst"
 
     wait # tar/zst of kraken2 db
-  >>>
+  }
 
   output {
-    File   kraken2_db       = "kraken2-~{db_basename}.tar.zst"
-    File   taxdump_tgz      = "taxdump-~{db_basename}.tar.gz"
-    File   krona_db         = "krona-~{db_basename}-taxonomy.tab.zst"
-    String viralngs_version = read_string("VERSION")
+    File        kraken2_db       = "kraken2-${db_basename}.tar.zst"
+    File        taxdump_tgz      = "taxdump-${db_basename}.tar.gz"
+    File        krona_db         = "krona-${db_basename}-taxonomy.tab.zst"
+    String      viralngs_version = read_string("VERSION")
   }
 
   runtime {
-    docker: docker
-    memory: machine_mem_gb + " GB"
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    docker: "${docker}"
+    memory: select_first([machine_mem_gb, 100]) + " GB"
+    disks: "local-disk 750 LOCAL"
     cpu: 16
     dx_instance_type: "mem3_ssd1_v2_x16"
     preemptible: 0
-    maxRetries: 2
   }
 }
 
@@ -584,12 +467,12 @@ task blastx {
   }
 
   input {
-    File   contigs_fasta
-    File   blast_db_tgz
-    File   krona_taxonomy_db_tgz
+    File     contigs_fasta
+    File     blast_db_tgz
+    File     krona_taxonomy_db_tgz
 
-    Int    machine_mem_gb = 8
-    String docker = "quay.io/broadinstitute/viral-classify:2.2.5"
+    Int?     machine_mem_gb
+    String   docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
 
   parameter_meta {
@@ -606,10 +489,9 @@ task blastx {
     }
   }
 
-  String out_basename = basename(contigs_fasta, '.fasta')
-  Int    disk_size = 375
+  String out_basename=basename(contigs_fasta, '.fasta')
 
-  command <<<
+  command {
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
@@ -620,20 +502,20 @@ task blastx {
 
     # decompress DB to $DB_DIR
     read_utils.py extract_tarball \
-      "~{blast_db_tgz}" $DB_DIR/blast \
+      ${blast_db_tgz} $DB_DIR/blast \
       --loglevel=DEBUG
 
     # unpack krona taxonomy database
     read_utils.py extract_tarball \
-      "~{krona_taxonomy_db_tgz}" $DB_DIR/krona \
+      ${krona_taxonomy_db_tgz} $DB_DIR/krona \
       --loglevel=DEBUG &  # we don't need this until later
 
     blastx -version | tee VERSION
 
     blastx \
-      -query "~{contigs_fasta}" \
+      -query ${contigs_fasta} \
       -db $DB_DIR/blast/nr \
-      -out "~{out_basename}.blastx.contigs.txt" \
+      -out "${out_basename}.blastx.contigs.txt" \
       -outfmt 7 \
       -num_threads $(nproc)
 
@@ -642,49 +524,45 @@ task blastx {
     ktImportBLAST \
       -i -k \
       -tax $DB_DIR/krona \
-      -o "~{out_basename}.blastx.krona.html" \
-      "~{out_basename}.blastx.contigs.txt","~{out_basename}"
+      -o "${out_basename}.blastx.krona.html" \
+      "${out_basename}.blastx.contigs.txt","${out_basename}"
 
-    pigz "~{out_basename}".blastx.contigs.txt
-  >>>
+    pigz "${out_basename}".blastx.contigs.txt
+  }
 
   output {
-    File    blast_report       = "~{out_basename}.blastx.contigs.txt.gz"
-    File    krona_report_html  = "~{out_basename}.blastx.krona.html"
+    File    blast_report       = "${out_basename}.blastx.contigs.txt.gz"
+    File    krona_report_html  = "${out_basename}.blastx.krona.html"
     String  blastx_version     = read_string("VERSION")
   }
 
   runtime {
-    docker: docker
-    memory: machine_mem_gb + " GB"
+    docker: "${docker}"
+    memory: select_first([machine_mem_gb, 8]) + " GB"
     cpu: 32
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk 250 LOCAL"
     dx_instance_type: "mem1_ssd1_v2_x36"
     preemptible: 1
-    maxRetries: 2
   }
 }
 
 task krona {
   input {
-    Array[File]+ reports_txt_gz
-    File         krona_taxonomy_db_tgz
-    String       out_basename = basename(basename(reports_txt_gz[0], '.gz'), '.txt')
+    Array[File]+  reports_txt_gz
+    File          krona_taxonomy_db_tgz
+    String        out_basename = basename(basename(reports_txt_gz[0], '.gz'), '.txt')
 
-    String?      input_type
-    Int?         query_column
-    Int?         taxid_column
-    Int?         score_column
-    Int?         magnitude_column
+    String?  input_type
+    Int?     query_column
+    Int?     taxid_column
+    Int?     score_column
+    Int?     magnitude_column
 
-    Int          machine_mem_gb = 3
-    String       docker = "quay.io/broadinstitute/viral-classify:2.2.5"
+    Int?     machine_mem_gb
+    String   docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
 
-  Int disk_size = 50
-
-  command <<<
+  command {
     set -ex -o pipefail
     if [ -z "$TMPDIR" ]; then
       export TMPDIR=$(pwd)
@@ -695,81 +573,75 @@ task krona {
     metagenomics.py --version | tee VERSION
 
     # unpack krona taxonomy.tab
-    if [[ "~{krona_taxonomy_db_tgz}" == *.tar.* ]]; then
+    if [[ ${krona_taxonomy_db_tgz} == *.tar.* ]]; then
       read_utils.py extract_tarball \
-        "~{krona_taxonomy_db_tgz}" $DB_DIR/krona \
+        ${krona_taxonomy_db_tgz} $DB_DIR/krona \
         --loglevel=DEBUG
     else
-      if [[ "~{krona_taxonomy_db_tgz}" == *.zst ]]; then
-        cat "~{krona_taxonomy_db_tgz}" | zstd -d > $DB_DIR/krona/taxonomy.tab
-      elif [[ "~{krona_taxonomy_db_tgz}" == *.gz ]]; then
-        cat "~{krona_taxonomy_db_tgz}" | pigz -dc > $DB_DIR/krona/taxonomy.tab
-      elif [[ "~{krona_taxonomy_db_tgz}" == *.bz2 ]]; then
-        cat "~{krona_taxonomy_db_tgz}" | bzip -dc > $DB_DIR/krona/taxonomy.tab
+      if [[ "${krona_taxonomy_db_tgz}" == *.zst ]]; then
+        cat "${krona_taxonomy_db_tgz}" | zstd -d > $DB_DIR/krona/taxonomy.tab
+      elif [[ "${krona_taxonomy_db_tgz}" == *.gz ]]; then
+        cat "${krona_taxonomy_db_tgz}" | pigz -dc > $DB_DIR/krona/taxonomy.tab
+      elif [[ "${krona_taxonomy_db_tgz}" == *.bz2 ]]; then
+        cat "${krona_taxonomy_db_tgz}" | bzip -dc > $DB_DIR/krona/taxonomy.tab
       else
-        cp "~{krona_taxonomy_db_tgz}" $DB_DIR/krona/taxonomy.tab
+        cp "${krona_taxonomy_db_tgz}" $DB_DIR/krona/taxonomy.tab
       fi
     fi
 
     metagenomics.py krona \
-      "~{sep='" "' reports_txt_gz}" \
+      ${sep=' ' reports_txt_gz} \
       $DB_DIR/krona \
-      "~{out_basename}.html" \
-      ~{'--inputType=' + input_type} \
-      ~{'--queryColumn=' + query_column} \
-      ~{'--taxidColumn=' + taxid_column} \
-      ~{'--scoreColumn=' + score_column} \
-      ~{'--magnitudeColumn=' + magnitude_column} \
+      ${out_basename}.html \
+      ${'--inputType=' + input_type} \
+      ${'--queryColumn=' + query_column} \
+      ${'--taxidColumn=' + taxid_column} \
+      ${'--scoreColumn=' + score_column} \
+      ${'--magnitudeColumn=' + magnitude_column} \
       --noRank --noHits \
       --loglevel=DEBUG
-  >>>
+  }
 
   output {
-    File   krona_report_html = "~{out_basename}.html"
-    String viralngs_version  = read_string("VERSION")
+    File    krona_report_html  = "${out_basename}.html"
+    String  viralngs_version   = read_string("VERSION")
   }
 
   runtime {
-    docker: docker
-    memory: machine_mem_gb + " GB"
+    docker: "${docker}"
+    memory: "3 GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd2_v2_x2"
-    maxRetries: 2
   }
 }
 
 task krona_merge {
   input {
-    Array[File] krona_reports
-    String      out_basename
+    Array[File]  krona_reports
+    String       out_basename
 
-    Int         machine_mem_gb = 3
-    String      docker = "biocontainers/krona:v2.7.1_cv1"
+    Int?         machine_mem_gb
+    String       docker="biocontainers/krona:v2.7.1_cv1"
   }
 
-  Int disk_size = 50
-
-  command <<<
+  command {
     set -ex -o pipefail
     ktImportKrona | head -2 | tail -1 | cut -f 2-3 -d ' ' | tee VERSION
-    ktImportKrona -o "~{out_basename}.html" ~{sep=' ' krona_reports}
-  >>>
+    ktImportKrona -o "${out_basename}.html" ${sep=' ' krona_reports}
+  }
 
   output {
-    File   krona_report_html = "~{out_basename}.html"
-    String krona_version     = read_string("VERSION")
+    File    krona_report_html = "${out_basename}.html"
+    String  krona_version     = read_string("VERSION")
   }
 
   runtime {
-    docker: docker
-    memory: machine_mem_gb + " GB"
+    docker: "${docker}"
+    memory: select_first([machine_mem_gb, 3]) + " GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd2_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -781,18 +653,17 @@ task filter_bam_to_taxa {
     Array[String]? taxonomic_names
     Array[Int]?    taxonomic_ids
     Int?           minimum_hit_groups
-    Boolean        withoutChildren = false
-    Boolean        exclude_taxa = false
+    Boolean        withoutChildren=false
+    Boolean        exclude_taxa=false
     String         out_filename_suffix = "filtered"
 
-    Int            machine_mem_gb = 26 + 10 * ceil(size(classified_reads_txt_gz, "GB"))
-    String         docker = "quay.io/broadinstitute/viral-classify:2.2.5"
+    Int?           machine_mem_gb
+    String         docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
 
   String out_basename = basename(classified_bam, ".bam") + "." + out_filename_suffix
-  Int disk_size = 375 + 2 * ceil(size(classified_bam, "GB"))
 
-  command <<<
+  command {
     set -ex -o pipefail
     if [ -z "$TMPDIR" ]; then
       export TMPDIR=$(pwd)
@@ -803,19 +674,19 @@ task filter_bam_to_taxa {
 
     # decompress taxonomy DB to CWD
     read_utils.py extract_tarball \
-      "~{ncbi_taxonomy_db_tgz}" . \
+      ${ncbi_taxonomy_db_tgz} . \
       --loglevel=DEBUG
     if [ -d "taxonomy" ]; then mv taxonomy/* .; fi
 
     touch taxfilterargs
-    TAXNAMELIST="~{write_lines(select_first([taxonomic_names, []]))}"
+    TAXNAMELIST="${write_lines(select_first([taxonomic_names, []]))}"
     if [ -n "$(cat $TAXNAMELIST)" ]; then
       echo "--taxNames" >> taxfilterargs
       cat $TAXNAMELIST >> taxfilterargs
       echo "" >> taxfilterargs # cromwell write_lines lacks a final newline, so add one manually
     fi
 
-    TAXIDLIST="~{write_lines(select_first([taxonomic_ids, []]))}"
+    TAXIDLIST="${write_lines(select_first([taxonomic_ids, []]))}"
     if [ -n "$(cat $TAXIDLIST)" ]; then
       echo "--taxIDs" >> taxfilterargs
       cat $TAXIDLIST >> taxfilterargs
@@ -827,27 +698,27 @@ task filter_bam_to_taxa {
 
     metagenomics.py --version | tee VERSION
 
-    samtools view -c "~{classified_bam}" | tee classified_taxonomic_filter_read_count_pre &
+    samtools view -c ${classified_bam} | tee classified_taxonomic_filter_read_count_pre &
 
     cat taxfilterargs | grep . | xargs -d '\n' metagenomics.py filter_bam_to_taxa \
-      "~{classified_bam}" \
-      "~{classified_reads_txt_gz}" \
-      "~{out_basename}.bam" \
+      ${classified_bam} \
+      ${classified_reads_txt_gz} \
+      "${out_basename}.bam" \
       nodes.dmp \
       names.dmp \
-      ~{true='--exclude' false='' exclude_taxa} \
-      ~{true='--without-children' false='' withoutChildren} \
-      ~{'--minimum_hit_groups=' + minimum_hit_groups} \
+      ${true='--exclude' false='' exclude_taxa} \
+      ${true='--without-children' false='' withoutChildren} \
+      ${'--minimum_hit_groups=' + minimum_hit_groups} \
       --out_count COUNT \
       --JVMmemory "$mem_in_mb"m \
       --loglevel=DEBUG
 
-    samtools view -c "~{out_basename}.bam" | tee classified_taxonomic_filter_read_count_post
+    samtools view -c "${out_basename}.bam" | tee classified_taxonomic_filter_read_count_post
     wait
-  >>>
+  }
 
   output {
-    File    bam_filtered_to_taxa                        = "~{out_basename}.bam"
+    File    bam_filtered_to_taxa                        = "${out_basename}.bam"
     Int     classified_taxonomic_filter_read_count_pre  = read_int("classified_taxonomic_filter_read_count_pre")
     Int     reads_matching_taxa                         = read_int("COUNT")
     Int     classified_taxonomic_filter_read_count_post = read_int("classified_taxonomic_filter_read_count_post")
@@ -855,31 +726,29 @@ task filter_bam_to_taxa {
   }
 
   runtime {
-    docker: docker
-    memory: machine_mem_gb + " GB"
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
-    cpu: 8
+    docker: "${docker}"
+    memory: select_first([machine_mem_gb, 26]) + " GB"
+    disks: "local-disk 375 LOCAL"
+    cpu: 4
     dx_instance_type: "mem3_ssd1_v2_x4"
-    maxRetries: 2
   }
+
 }
 
-task kaiju {
+task kallisto {
   input {
-    File   reads_unmapped_bam
-    File   kaiju_db_lz4  # <something>.fmi
-    File   ncbi_taxonomy_db_tgz # taxonomy/{nodes.dmp, names.dmp}
-    File   krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
+    File     read_pairs_fastq_gz
+    File     kaiju_db_lz4  # <something>.fmi
+    File     ncbi_taxonomy_db_tgz # taxonomy/{nodes.dmp, names.dmp}
+    File     krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
 
-    Int    machine_mem_gb = 100
-    String docker = "quay.io/broadinstitute/viral-classify:2.2.5"
+    Int?     machine_mem_gb
+    String   docker="quay.io/broadinstitute/viral-classify:2.1.16.0"
   }
 
   String   input_basename = basename(reads_unmapped_bam, ".bam")
-  Int      disk_size = 375
 
-  command <<<
+  command {
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
@@ -888,10 +757,10 @@ task kaiju {
     DB_DIR=$(mktemp -d --suffix _db)
     mkdir -p $DB_DIR/kaiju $DB_DIR/krona $DB_DIR/taxonomy
 
-    lz4 -dc "~{kaiju_db_lz4}" > $DB_DIR/kaiju/kaiju.fmi
+    lz4 -dc ${kaiju_db_lz4} > $DB_DIR/kaiju/kaiju.fmi
 
     read_utils.py extract_tarball \
-      "~{ncbi_taxonomy_db_tgz}" $DB_DIR/taxonomy \
+      ${ncbi_taxonomy_db_tgz} $DB_DIR/taxonomy \
       --loglevel=DEBUG
     # Support old db tar format
     if [ -d "$DB_DIR/taxonomy/taxonomy" ]; then
@@ -899,44 +768,230 @@ task kaiju {
     fi
 
     read_utils.py extract_tarball \
-      "~{krona_taxonomy_db_tgz}" $DB_DIR/krona \
+      ${krona_taxonomy_db_tgz} $DB_DIR/krona \
       --loglevel=DEBUG
 
     metagenomics.py --version | tee VERSION
 
     # classify contigs
     metagenomics.py kaiju \
-      "~{reads_unmapped_bam}" \
+      ${reads_unmapped_bam} \
       $DB_DIR/kaiju/kaiju.fmi \
       $DB_DIR/taxonomy \
-      "~{input_basename}.kaiju.summary_report.txt" \
-      --outReads "~{input_basename}.kaiju.reads.txt.gz" \
+      ${input_basename}.kaiju.summary_report.txt \
+      --outReads ${input_basename}.kaiju.reads.txt.gz \
       --loglevel=DEBUG
 
     # run krona
     metagenomics.py krona \
-      "~{input_basename}.kaiju.summary_report.txt" \
+      ${input_basename}.kaiju.summary_report.txt \
       $DB_DIR/krona \
-      "~{input_basename}.kaiju-krona.html" \
+      ${input_basename}.kaiju-krona.html \
       --inputType kaiju \
       --noRank --noHits \
       --loglevel=DEBUG
-  >>>
+  }
 
   output {
-    File   kaiju_report      = "~{input_basename}.kaiju-summary_report.txt"
-    File   kaiju_reads       = "~{input_basename}.kaiju-reads.txt.gz"
-    File   krona_report_html = "~{input_basename}.kaiju-krona.html"
-    String viralngs_version  = read_string("VERSION")
+    File    kaiju_report       = "${input_basename}.kaiju-summary_report.txt"
+    File    kaiju_reads        = "${input_basename}.kaiju-reads.txt.gz"
+    File    krona_report_html  = "${input_basename}.kaiju-krona.html"
+    String  viralngs_version   = read_string("VERSION")
   }
 
   runtime {
-    docker: docker
-    memory: machine_mem_gb + " GB"
+    docker: "${docker}"
+    memory: select_first([machine_mem_gb, 100]) + " GB"
     cpu: 16
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk 375 LOCAL"
     dx_instance_type: "mem3_ssd1_v2_x16"
-    maxRetries: 2
+  }
+}
+
+
+task build_kallisto_db {
+  meta {
+    description: "Builds a custom kallisto index from provided input FASTA file."
+  }
+
+  input {
+    String      idx_basename
+    File        reference_sequences
+    Boolean     protein=false
+
+    Int?        kmer_size=31
+    String?     workflow_type
+
+    String      docker="ghcr.io/carze/docker-kallisto:1.0.0"
+  }
+
+  parameter_meta {
+    idx_basename { description: "A descriptive string used in output index filename. Output will be called kallisto-<idx_basename>.idx" }
+    reference_sequences: {
+      description: "FASTA file of reference sequences to index.",
+      patterns: ["*.fasta", "*.fa", "*.fa.gz", "*.fasta.gz"]
+    },
+    protein: {
+      description: "Generate an index from a FASTA file containing protein sequences. Default is nucleotide."
+    },
+    kmer_size: {
+      description: "K-mer size to use in index. Default is 31."
+    },
+    workflow_type: {
+      description: "Type of index to create {standard, nac, kite, custom}. Default is 'standard'."
+    }
+  }
+
+  command {
+    set -ex -o pipefail
+
+    if [ -z "$TMPDIR" ]; then
+      export TMPDIR=$(pwd)
+    fi
+
+    kb -h 2>&1 | grep "kb_python" | cut -d" " -f2 | tee VERSION
+    kallisto version | tee -a VERSION    
+
+    if [[ ${reference_sequences} == *.gz ]]; then
+      gunzip -c ${reference_sequences} > reference_sequences.fasta
+      REF_FASTA=reference_sequences.fasta
+    else
+      REF_FASTA=${reference_sequences}
+    fi
+
+    # build kallisto database
+    metagenomics.py kallisto_build \
+      ${true='--protein' false='' protein} \
+      ${'--kmerSize=' + kmer_size} \
+      ${'--workflowType=' + workflow_type} \
+      ${'--idxBasename=' + idx_basename} \
+      ${REF_FASTA} \
+      --loglevel=DEBUG
+  }
+
+  output {
+    File        kallisto_index   = "kallisto-${idx_basename}.tar.zst"
+    String      viralngs_version = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "${docker}"
+    memory: "32 GB"
+    disks: "local-disk 750 LOCAL"
+    cpu: 16
+    dx_instance_type: "mem3_ssd1_v2_x16"
+    preemptible: 0
+  }
+}
+
+task kallisto {
+  meta {
+    description: "Runs Kallisto classification"
+  }
+
+  input {
+    File     reads_bam
+    File     kallisto_index
+    File     t2g
+    Int      kmer_size=31
+    Int?     threads=8
+
+    String   technology
+    String   parity
+    Boolean  h5ad=false
+    Boolean  loom=false
+
+    String   docker="ghcr.io/carze/docker-kallisto:1.0.0"
+  }
+
+  parameter_meta {
+    reads_bam: {
+      description: "Reads to classify. Must be un-mapped reads, paired-end or single-end.",
+      patterns: ["*.bam", "*.fastq", "*.fastq.gz"]
+    },
+    kallisto_index: {
+      description: "Pre-built kallisto index tarball",
+      patterns: ["*.index"]
+    },
+    t2g: {
+      description: "Transcript-to-gene mapping file. Two-column TSV with transcript IDs in first column and gene IDs in second column.",
+      patterns: ["*.tsv", "*.txt"]
+    },
+    kmer_size: {
+      description: "K-mer size used in kallisto index. Must match the k-mer size used to build the index. Default is 31."
+    },
+    threads: {
+      description: "Number of threads to use. Default is 8."
+    },
+    technology: {
+      description: "Single-cell technology used  {10xv2, 10xv3, dropseq, inDrops, seqwell, smartseq2, bulk}."
+    },
+    parity: {
+      description: "Parity of input files {single, paired}"
+    },
+    h5ad: {
+      description: "Output an h5ad file (requires scanpy). Default is false"
+    },
+    loom: {
+      description: "Output a loom file (requires loompy). Default is false"
+    }
+  }
+
+  String out_basename=basename(basename(reads_bam, '.bam'), '.fasta')
+
+  command {
+    set -ex -o pipefail
+
+    if [ -z "$TMPDIR" ]; then
+      export TMPDIR=$(pwd)
+    fi
+
+    printf "kb_python %s\n" "$(kb -h 2>&1 | grep "kb_python" | cut -d" " -f2)" | tee VERSION
+    kallisto version | tee -a VERSION    
+    metagenomics.py --version | tee -a VERSION
+
+    if [[ ${reads_bam} == *.bam ]]; then
+        metagenomics.py kallisto \
+          ${reads_bam} \
+          --index ${kallisto_index} \
+          --t2g ${t2g} \
+          --kmerSize ${kmer_size} \
+          --threads ${threads} \
+          --technology ${technology} \
+          --parity ${parity} \
+          ~{if h5ad then "--h5ad" else ""} \
+          ~{if loom then "--loom" else ""} \
+          --outDir ${out_basename}_count 
+          --loglevel=DEBUG
+    else # we have a single-ended fastq file so just call it directly
+        kb count \
+          --kallisto kallisto \
+          -t ${threads} \
+          -k ${kmer_size} \
+          --parity single \
+          -i ${kallisto_index} \
+          -g ${t2g} \
+          -o ${out_basename}_count \
+          -t ${technology} \
+          ~{if h5ad then "--h5ad" else ""} \
+          ~{if loom then "--loom" else ""} \
+          ${reads_bam}
+    fi
+
+    tar -c -C ${out_basename}_count . | zstd > ${out_basename}_kallisto_count.tar.zst
+  }
+
+  output {
+    File    kallisto_count_tar  = "${out_basename}_kallisto_count.tar.zst"
+    String  viralngs_version    = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "${docker}"
+    memory: "32 GB"
+    cpu: 16
+    disks: "local-disk 350 LOCAL"
+    dx_instance_type: "mem3_ssd1_v2_x16"
+    preemptible: 2
   }
 }
