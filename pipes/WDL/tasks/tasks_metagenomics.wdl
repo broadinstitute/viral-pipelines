@@ -926,9 +926,6 @@ task kallisto {
     technology: {
       description: "Single-cell technology used  {10xv2, 10xv3, dropseq, inDrops, seqwell, smartseq2, bulk}."
     },
-    parity: {
-      description: "Parity of input files {single, paired}"
-    },
     h5ad: {
       description: "Output an h5ad file (requires scanpy). Default is false"
     },
@@ -956,7 +953,6 @@ task kallisto {
           --index ${kallisto_index} \
           --t2g ${t2g} \
           --kmerSize ${kmer_size} \
-          --threads ${threads} \
           --technology ${technology} \
           --parity ${parity} \
           ~{if h5ad then "--h5ad" else ""} \
