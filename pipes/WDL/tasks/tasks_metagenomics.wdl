@@ -941,9 +941,9 @@ task kaiju {
   }
 }
 
-task kallisto {
+task kb {
   meta {
-    description: "Runs Kallisto classification"
+    description: "Runs kb count classification tool"
   }
 
   input {
@@ -951,7 +951,7 @@ task kallisto {
     File     kallisto_index
     File     t2g
     Int      kmer_size=31
-    Int?     threads=8
+    Int      threads=8
 
     String   technology
     String   parity
@@ -966,8 +966,8 @@ task kallisto {
       description: "Reads to classify. Must be un-mapped reads, paired-end or single-end.",
       patterns: ["*.bam", "*.fastq", "*.fastq.gz"]
     },
-    kallisto_index: {
-      description: "Pre-built kallisto index tarball",
+    kb_index: {
+      description: "Pre-built kb index tarball",
       patterns: ["*.index"]
     },
     t2g: {
@@ -975,7 +975,7 @@ task kallisto {
       patterns: ["*.tsv", "*.txt"]
     },
     kmer_size: {
-      description: "K-mer size used in kallisto index. Must match the k-mer size used to build the index. Default is 31."
+      description: "K-mer size used in kb index. Must match the k-mer size used to build the index. Default is 31."
     },
     threads: {
       description: "Number of threads to use. Default is 8."
@@ -1005,9 +1005,9 @@ task kallisto {
     metagenomics.py --version | tee -a VERSION
 
     if [[ ${reads_bam} == *.bam ]]; then
-        metagenomics.py kallisto \
+        metagenomics.py kb \
           ${reads_bam} \
-          --index ${kallisto_index} \
+          --index ${kb_index} \
           --t2g ${t2g} \
           --kmerSize ${kmer_size} \
           --technology ${technology} \
@@ -1022,7 +1022,7 @@ task kallisto {
           -t ${threads} \
           -k ${kmer_size} \
           --parity single \
-          -i ${kallisto_index} \
+          -i ${kb_index} \
           -g ${t2g} \
           -o ${out_basename}_count \
           -t ${technology} \
@@ -1031,11 +1031,11 @@ task kallisto {
           ${reads_bam}
     fi
 
-    tar -c -C ${out_basename}_count . | zstd > ${out_basename}_kallisto_count.tar.zst
+    tar -c -C ${out_basename}_count . | zstd > ${out_basename}_kb_count.tar.zst
   }
 
   output {
-    File    kallisto_count_tar  = "${out_basename}_kallisto_count.tar.zst"
+    File    kb_count_tar  = "${out_basename}_kb_count.tar.zst"
     String  viralngs_version    = read_string("VERSION")
   }
 
@@ -1049,9 +1049,9 @@ task kallisto {
   }
 }
 
-task build_kalliasto_db {
+task build_kb_db {
   meta {
-    description: "Builds a custom kallisto index from provided input FASTA file."
+    description: "Builds a custom kb index from provided input FASTA file."
   }
 
   input {
@@ -1066,7 +1066,7 @@ task build_kalliasto_db {
   }
 
   parameter_meta {
-    idx_basename { description: "A descriptive string used in output index filename. Output will be called kallisto-<idx_basename>.idx" }
+    idx_basename { description: "A descriptive string used in output index filename. Output will be called kb-${idx_basename}.idx" }
     reference_sequences: {
       description: "FASTA file of reference sequences to index.",
       patterns: ["*.fasta", "*.fa", "*.fa.gz", "*.fasta.gz"]
@@ -1099,8 +1099,8 @@ task build_kalliasto_db {
       REF_FASTA=${reference_sequences}
     fi
 
-    # build kallisto database
-    metagenomics.py kallisto_build \
+    # build kb database
+    metagenomics.py kb_build \
       ${true='--protein' false='' protein} \
       ${'--kmerSize=' + kmer_size} \
       ${'--workflowType=' + workflow_type} \
@@ -1110,7 +1110,7 @@ task build_kalliasto_db {
   }
 
   output {
-    File        kallisto_index   = "kallisto-${idx_basename}.tar.zst"
+    File        kb_index   = "kb-${idx_basename}.tar.zst"
     String      viralngs_version = read_string("VERSION")
   }
 
@@ -1124,9 +1124,9 @@ task build_kalliasto_db {
   }
 }
 
-task kallisto_extract {
+task kb_extract {
   meta {
-    description: "Extracts reads that pseudoalign to a kallisto index"
+    description: "Extracts reads that pseudoalign to a kb index"
   }
 
   input {
@@ -1146,8 +1146,8 @@ task kallisto_extract {
       description: "Reads used by kb count to psuedoalign. Must be un-mapped or single-end.",
       patterns: ["*.bam", "*.fastq", "*.fastq.gz"]
     },
-    kallisto_index: {
-      description: "Kallisto index used to psuedoalign reads.",
+    kb_index: {
+      description: "kb index used to psuedoalign reads.",
       patterns: ["*.index"]
     },
     t2g: {
@@ -1179,9 +1179,9 @@ task kallisto_extract {
     metagenomics.py --version | tee -a VERSION
 
     if [[ ${reads_bam} == *.bam ]]; then
-        metagenomics.py kallisto \
+        metagenomics.py kb \
           ${reads_bam} \
-          --index ${kallisto_index} \
+          --index ${kb_index} \
           --t2g ${t2g} \
           --outDir ${out_basename}_extract \
           ~{if protein then "--aa" else ""} \
@@ -1190,18 +1190,18 @@ task kallisto_extract {
         kb extract \
           --kallisto kallisto \
           -t ${threads} \
-          -i ${kallisto_index} \
+          -i ${kb_index} \
           -g ${t2g} \
           ~{if protein then "--aa" else ""} \
           -o ${out_basename}_extract \
           ${reads_bam}
     fi
 
-    tar -c -C ${out_basename}_extract . | zstd > ${out_basename}_kallisto_extract.tar.zst
+    tar -c -C ${out_basename}_extract . | zstd > ${out_basename}_kb_extract.tar.zst
   }
 
   output {
-    File    kallisto_extract_tar  = "${out_basename}_kallisto_extract.tar.zst"
+    File    kb_extract_tar  = "${out_basename}_kb_extract.tar.zst"
     String  viralngs_version      = read_string("VERSION")
   }
 
@@ -1212,5 +1212,55 @@ task kallisto_extract {
     disks: "local-disk 350 LOCAL"
     dx_instance_type: "mem3_ssd1_v2_x16"
     preemptible: 2
+  }
+}
+
+task report_primary_kb_taxa {
+  meta {
+    description: "Interprets kb count output file and emits the primary contributing taxa under a focal taxon of interest."
+  }
+  input {
+    File          kb_count_tar
+    File          id_to_taxon_map
+    String        focal_taxon = "Viruses"
+
+    String        docker="ghcr.io/carze/docker-kallisto:1.0.0"
+  }
+  String out_basename = sub(basename(kb_count_tar, ".tar.zst"), "_kb_count", "")
+  Int disk_size = 50
+  Int machine_mem_gb = 2
+
+  command <<<
+    set -e
+    metagenomics.py kb_top_taxa "~{kb_count_tar}" "~{out_basename}.ranked_focal_report.tsv"
+    cat "~{out_basename}.ranked_focal_report.tsv" | head -2 | tail +2 > TOPROW
+    cut -f 2 TOPROW > NUM_FOCAL
+    cut -f 4 TOPROW > PCT_OF_FOCAL
+    cut -f 7 TOPROW > NUM_READS
+    cut -f 8 TOPROW > TAX_RANK
+    cut -f 9 TOPROW > TAX_ID
+    cut -f 10 TOPROW > TAX_NAME
+  >>>
+
+  output {
+    String focal_tax_name = focal_taxon
+    File   ranked_focal_report = "~{out_basename}.ranked_focal_report.tsv"
+    Int    total_focal_reads = read_int("NUM_FOCAL")
+    Float  percent_of_focal = read_float("PCT_OF_FOCAL")
+    Int    num_reads = read_int("NUM_READS")
+    String tax_rank = read_string("TAX_RANK")
+    String tax_id = read_string("TAX_ID")
+    String tax_name = read_string("TAX_NAME")
+  }
+
+  runtime {
+    docker: docker
+    memory: machine_mem_gb + " GB"
+    cpu: 1
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TESs
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible: 2
+    maxRetries: 2
   }
 }
