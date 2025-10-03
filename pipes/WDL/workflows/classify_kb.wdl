@@ -9,10 +9,10 @@ workflow classify_kallisto {
         email:  "viral-ngs@broadinstitute.org"
     }
 
-    call metagenomics.kallisto
+    call metagenomics.kb
 
     output {
-        File    kb_count_tar = kb.kb_count_tar
-        String  viral_classify_version = kb.viralngs_version
+        File    kb_extract_tar = kb_extract.kb_extract_tar
+        String  viral_classify_version = kb_extract.viralngs_version
     }
 }
