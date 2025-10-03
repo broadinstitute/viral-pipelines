@@ -1,0 +1,18 @@
+version 1.0
+
+import "../tasks/metagenomics" as metagenomics
+
+workflow merge_kb_h5ads {
+    meta {
+        description: "Merges multiple .h5ad files (output from kb_python) into a single .h5ad file."
+        author: "Broad Viral Genomics"
+        email:  "viral-ngs@broadinstitute.org"
+    }
+
+    call metagenomics.kb_merge_h5ads
+    output {
+        Array[File] in_h5ads        = kb_merge_h5ads.in_h5ads
+        File out_h5ad               = kb_merge_h5ads.out_h5ad
+        String viral_core_version   = kb_merge_h5ads.viralngs_version
+    }   
+}

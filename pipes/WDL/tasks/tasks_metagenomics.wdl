@@ -1264,3 +1264,74 @@ task report_primary_kb_taxa {
     maxRetries: 2
   }
 }
+
+task kb_merge_h5ads {
+  meta {
+    description: "Merges multiple .h5ad files (output from kb_python) into a single .h5ad file."
+  }
+
+  input {
+    Array[File]     in_h5ads
+    String          out_basename = basename(in_h5ads[0], '.h5ad')
+
+    String          docker="ghcr.io/carze/docker-kallisto:1.0.0"
+  }
+
+  parameter_meta {
+    in_h5ads: {
+      description: "List of .h5ad files to merge.",
+      patterns: ["*.h5ad"]
+    }
+    out_basename: {
+      description: "Basename for output merged .h5ad file. Output will be named <out_basename>.h5ad. Default is basename of first h5d file passed in."
+    }
+
+  }
+
+  command {
+    set -ex -o pipefail
+
+    if [ -z "$TMPDIR" ]; then
+      export TMPDIR=$(pwd)
+    fi
+
+    printf "kb_python %s\n" "$(kb -h 2>&1 | grep "kb_python" | cut -d" " -f2)" | tee VERSION
+    kallisto version | tee -a VERSION    
+    metagenomics.py --version | tee -a VERSION
+
+    if [[ ${reads_bam} == *.bam ]]; then
+        metagenomics.py kb \
+          ${reads_bam} \
+          --index ${kb_index} \
+          --t2g ${t2g} \
+          --outDir ${out_basename}_extract \
+          ~{if protein then "--aa" else ""} \
+          --loglevel=DEBUG
+    else # we have a single-ended fastq file so just call it directly
+        kb extract \
+          --kallisto kallisto \
+          -t ${threads} \
+          -i ${kb_index} \
+          -g ${t2g} \
+          ~{if protein then "--aa" else ""} \
+          -o ${out_basename}_extract \
+          ${reads_bam}
+    fi
+
+    tar -c -C ${out_basename}_extract . | zstd > ${out_basename}_kb_extract.tar.zst
+  }
+
+  output {
+    File    kb_extract_tar  = "${out_basename}_kb_extract.tar.zst"
+    String  viralngs_version      = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "${docker}"
+    memory: "16 GB"
+    cpu: 16
+    disks: "local-disk 350 LOCAL"
+    dx_instance_type: "mem3_ssd1_v2_x16"
+    preemptible: 2
+  }
+}
