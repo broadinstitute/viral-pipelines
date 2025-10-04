@@ -1,0 +1,5 @@
+{
+  "simulate_illumina_reads.accession_coverage_string": "KJ660346.2:12.5x NC_004296.1:0.9X",
+  "simulate_illumina_reads.download_fasta_from_accession_string.emailAddress": "viral-ngs@broadinstitute.org",
+  "simulate_illumina_reads.out_basename": "test_simulated"
+}
