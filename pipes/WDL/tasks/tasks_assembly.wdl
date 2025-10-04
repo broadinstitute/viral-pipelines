@@ -1152,9 +1152,9 @@ task simulate_illumina_reads {
 
         # Run simulate_illumina_reads
         assembly.py simulate_illumina_reads \
-            ~{if defined(coverage_bed) then '--coverage_bed "' + coverage_bed + '"' else '"' + coverage_string + '"'} \
             "~{reference_fasta}" \
             "~{out_basename}.bam" \
+            ~{if defined(coverage_bed) then '--coverage_bed "' + coverage_bed + '"' else '"' + coverage_string + '"'} \
             ~{'--read_length ' + read_length} \
             ~{'--outer_distance ' + outer_distance} \
             ~{'--mutation_rate ' + mutation_rate} \
