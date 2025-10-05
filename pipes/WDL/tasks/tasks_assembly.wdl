@@ -1081,7 +1081,7 @@ task filter_bad_ntc_batches {
     }
 }
 
-task simulate_illumina_reads {
+task wgsim {
     meta {
         description: "Generate synthetic Illumina paired-end reads from reference sequences using wgsim via assembly.py simulate_illumina_reads."
     }

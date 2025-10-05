@@ -34,7 +34,7 @@ workflow simulate_illumina_reads {
             out_prefix       = out_basename
     }
 
-    call assembly.simulate_illumina_reads as simulate_reads {
+    call assembly.wgsim as simulate_reads {
         input:
             coverage_string = accession_coverage_string,
             reference_fasta = download_fasta_from_accession_string.sequences_fasta,
