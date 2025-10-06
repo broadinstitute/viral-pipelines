@@ -15,7 +15,7 @@ task assemble {
       String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
       
       Int?     machine_mem_gb
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.4.2.0"
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.4.3.1"
     }
     parameter_meta{
       reads_unmapped_bam: {
@@ -116,7 +116,7 @@ task select_references {
     Int?          skani_c
     Int?          skani_n
 
-    String        docker = "quay.io/broadinstitute/viral-assemble:2.4.2.0"
+    String        docker = "quay.io/broadinstitute/viral-assemble:2.4.3.1"
     Int           machine_mem_gb = 4
     Int           cpu = 2
     Int           disk_size = 100
@@ -208,7 +208,7 @@ task scaffold {
       Float?       scaffold_min_pct_contig_aligned
 
       Int?         machine_mem_gb
-      String       docker="quay.io/broadinstitute/viral-assemble:2.4.2.0"
+      String       docker="quay.io/broadinstitute/viral-assemble:2.4.3.1"
 
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
@@ -722,7 +722,7 @@ task refine_assembly_with_aligned_reads {
       Int      min_coverage = 3
 
       Int      machine_mem_gb = 15
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.4.2.0"
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.4.3.1"
     }
 
     Int disk_size = 375
@@ -1078,5 +1078,108 @@ task filter_bad_ntc_batches {
         Array[String]  reject_batches   = read_lines("REJECT_BATCHES")
         Array[String]  reject_lanes     = read_lines("REJECT_LANES")
         File           fail_meta_json   = "genome_status.json"
+    }
+}
+
+task wgsim {
+    meta {
+        description: "Generate synthetic Illumina paired-end reads from reference sequences using wgsim via assembly.py simulate_illumina_reads."
+    }
+
+    input {
+        String coverage_string
+        File   reference_fasta
+        File?  coverage_bed
+        String out_basename = "simulated_reads"
+
+        Int?   read_length
+        Int?   outer_distance
+        Float? mutation_rate
+        Float? indel_fraction
+        Float? indel_extend_probability
+        Int?   random_seed
+
+        Int    machine_mem_gb = 7
+        String docker = "quay.io/broadinstitute/viral-assemble:2.4.3.1"
+    }
+
+    parameter_meta {
+        coverage_string: {
+            description: "Either a simple coverage value (e.g., '10X') or a space-separated string of colon-separated pairs where each pair consists of a GenBank accession and a coverage value (e.g., 'KJ660346.2:12.5x NC_004296.1:0.9X'). Ignored if coverage_bed is provided.",
+            category: "required"
+        }
+        reference_fasta: {
+            description: "Reference genome sequences in FASTA format from which to generate reads.",
+            patterns: ["*.fasta"],
+            category: "required"
+        }
+        coverage_bed: {
+            description: "Optional BED file specifying coverage per region. If provided, this overrides coverage_string.",
+            patterns: ["*.bed"],
+            category: "advanced"
+        }
+        read_length: {
+            description: "Length of simulated reads (default: 150bp).",
+            category: "advanced"
+        }
+        outer_distance: {
+            description: "Outer distance between paired reads (default: 500bp).",
+            category: "advanced"
+        }
+        mutation_rate: {
+            description: "Base mutation rate (default: 0.001).",
+            category: "advanced"
+        }
+        indel_fraction: {
+            description: "Fraction of mutations that are indels (default: 0.15).",
+            category: "advanced"
+        }
+        indel_extend_probability: {
+            description: "Probability an indel is extended (default: 0.3).",
+            category: "advanced"
+        }
+        random_seed: {
+            description: "Random seed for reproducibility.",
+            category: "advanced"
+        }
+    }
+
+    Int disk_size = 100
+
+    command <<<
+        set -e
+        assembly.py --version | tee VERSION
+
+        # Run simulate_illumina_reads
+        assembly.py simulate_illumina_reads \
+            "~{reference_fasta}" \
+            "~{out_basename}.bam" \
+            ~{if defined(coverage_bed) then '--coverage_bed "' + coverage_bed + '"' else '"' + coverage_string + '"'} \
+            ~{'--read_length ' + read_length} \
+            ~{'--outer_distance ' + outer_distance} \
+            ~{'--mutation_rate ' + mutation_rate} \
+            ~{'--indel_fraction ' + indel_fraction} \
+            ~{'--indel_extend_probability ' + indel_extend_probability} \
+            ~{'--random_seed ' + random_seed} \
+            --loglevel=DEBUG
+
+        # Count reads in output BAM
+        samtools view -c "~{out_basename}.bam" | tee READ_COUNT
+    >>>
+
+    output {
+        File   simulated_reads_bam = "~{out_basename}.bam"
+        Int    read_count          = read_int("READ_COUNT")
+        String viralngs_version    = read_string("VERSION")
+    }
+
+    runtime {
+        docker: docker
+        memory: machine_mem_gb + " GB"
+        cpu: 2
+        disks:  "local-disk " + disk_size + " HDD"
+        disk: disk_size + " GB" # TES
+        dx_instance_type: "mem1_ssd1_v2_x2"
+        maxRetries: 2
     }
 }
