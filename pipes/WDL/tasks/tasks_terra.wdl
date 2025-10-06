@@ -24,7 +24,7 @@ task gcs_copy {
     File logs = stdout()
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-baseimage:0.2.4"
+    docker: "quay.io/broadinstitute/viral-baseimage:0.3.0"
     memory: "1 GB"
     cpu: 1
     maxRetries: 1
