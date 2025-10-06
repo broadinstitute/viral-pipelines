@@ -2,7 +2,7 @@ version 1.0
 
 import "../tasks/tasks_metagenomics.wdl" as metagenomics
 
-workflow classify_kallisto {
+workflow classify_kb {
     meta {
         description: "Taxonomic classification of RNA-seq data via kb_python"
         author: "Broad Viral Genomics"
@@ -12,7 +12,7 @@ workflow classify_kallisto {
     call metagenomics.kb
 
     output {
-        File    kb_extract_tar = kb_extract.kb_extract_tar
-        String  viral_classify_version = kb_extract.viralngs_version
+        File    kb_extract_tar         = kb.kb_count_tar
+        String  viral_classify_version = kb.viralngs_version
     }
 }

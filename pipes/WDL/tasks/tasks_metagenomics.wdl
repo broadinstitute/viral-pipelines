@@ -948,7 +948,7 @@ task kb {
 
   input {
     File     reads_bam
-    File     kallisto_index
+    File     kb_index
     File     t2g
     Int      kmer_size=31
     Int      threads=8
@@ -958,7 +958,7 @@ task kb {
     Boolean  h5ad=false
     Boolean  loom=false
 
-    String   docker="ghcr.io/carze/docker-kallisto:1.0.0"
+    String   docker="ghcr.io/carze/viral-classify:latest"
   }
 
   parameter_meta {
@@ -1009,7 +1009,7 @@ task kb {
           ${reads_bam} \
           --index ${kb_index} \
           --t2g ${t2g} \
-          --kmerSize ${kmer_size} \
+          --kmer_len ${kmer_size} \
           --technology ${technology} \
           --parity ${parity} \
           ~{if h5ad then "--h5ad" else ""} \
@@ -1025,7 +1025,7 @@ task kb {
           -i ${kb_index} \
           -g ${t2g} \
           -o ${out_basename}_count \
-          -t ${technology} \
+          -x ${technology} \
           ~{if h5ad then "--h5ad" else ""} \
           ~{if loom then "--loom" else ""} \
           ${reads_bam}
@@ -1055,18 +1055,19 @@ task build_kb_db {
   }
 
   input {
-    String      idx_basename
+    String      out_basename
     File        reference_sequences
     Boolean     protein=false
 
     Int?        kmer_size=31
     String?     workflow_type
 
-    String      docker="ghcr.io/carze/docker-kallisto:1.0.0"
+    #String      docker="ghcr.io/carze/viral-classify:latest"
+    String      docker="viral-classify-local:latest"
   }
 
   parameter_meta {
-    idx_basename { description: "A descriptive string used in output index filename. Output will be called kb-${idx_basename}.idx" }
+    out_basename: { description: "A descriptive string used in output index filename. Output will be called <out_basename>.idx" }
     reference_sequences: {
       description: "FASTA file of reference sequences to index.",
       patterns: ["*.fasta", "*.fa", "*.fa.gz", "*.fasta.gz"]
@@ -1089,8 +1090,9 @@ task build_kb_db {
       export TMPDIR=$(pwd)
     fi
 
-    kb -h 2>&1 | grep "kb_python" | cut -d" " -f2 | tee VERSION
+    printf "kb_python %s\n" "$(kb -h 2>&1 | grep "kb_python" | cut -d" " -f2)" | tee VERSION
     kallisto version | tee -a VERSION    
+    metagenomics.py --version | tee -a VERSION
 
     if [[ ${reference_sequences} == *.gz ]]; then
       gunzip -c ${reference_sequences} > reference_sequences.fasta
@@ -1102,15 +1104,18 @@ task build_kb_db {
     # build kb database
     metagenomics.py kb_build \
       ${true='--protein' false='' protein} \
-      ${'--kmerSize=' + kmer_size} \
-      ${'--workflowType=' + workflow_type} \
-      ${'--idxBasename=' + idx_basename} \
-      ${REF_FASTA} \
+      --kmer_len=${kmer_size} \
+      --workflow=${workflow_type} \
+      --index=${out_basename}.idx \
+      $REF_FASTA \
       --loglevel=DEBUG
+
+
+       tar -c ${out_basename}.idx | zstd > ${out_basename}.idx.tar.zst
   }
 
   output {
-    File        kb_index   = "kb-${idx_basename}.tar.zst"
+    File        kb_index   = "${out_basename}.idx.tar.zst"
     String      viralngs_version = read_string("VERSION")
   }
 
@@ -1131,14 +1136,14 @@ task kb_extract {
 
   input {
     File            reads_bam
-    File            kallisto_index
+    File            kb_index
     File            t2g
     Array[String]   target_ids
 
     Int?            threads=8
-    Boolean?        protein=false
+    Boolean         protein=false
 
-    String          docker="ghcr.io/carze/docker-kallisto:1.0.0"
+    String          docker="ghcr.io/carze/viral-classify:latest"
   }
 
   parameter_meta {
@@ -1158,7 +1163,7 @@ task kb_extract {
       description: "List of target transcript or gene IDs to extract reads for."
     },
     protein: {
-      description: "Input sequences contain amino acid sequences.",
+      description: "Input sequences contain amino acid sequences."
     },
     threads: {
       description: "Number of threads to use. Default is 8."
@@ -1201,8 +1206,8 @@ task kb_extract {
   }
 
   output {
-    File    kb_extract_tar  = "${out_basename}_kb_extract.tar.zst"
-    String  viralngs_version      = read_string("VERSION")
+    File    kb_extract_tar    = "${out_basename}_kb_extract.tar.zst"
+    String  viralngs_version  = read_string("VERSION")
   }
 
   runtime {
@@ -1224,7 +1229,7 @@ task report_primary_kb_taxa {
     File          id_to_taxon_map
     String        focal_taxon = "Viruses"
 
-    String        docker="ghcr.io/carze/docker-kallisto:1.0.0"
+    String        docker="ghcr.io/carze/viral-classify:latest"
   }
   String out_basename = sub(basename(kb_count_tar, ".tar.zst"), "_kb_count", "")
   Int disk_size = 50
@@ -1274,7 +1279,7 @@ task kb_merge_h5ads {
     Array[File]     in_h5ads
     String          out_basename = basename(in_h5ads[0], '.h5ad')
 
-    String          docker="ghcr.io/carze/docker-kallisto:1.0.0"
+    String          docker="ghcr.io/carze/viral-classify:latest"
   }
 
   parameter_meta {
@@ -1299,14 +1304,7 @@ task kb_merge_h5ads {
     kallisto version | tee -a VERSION    
     metagenomics.py --version | tee -a VERSION
 
-    metagenomics.py kb \
-      ${reads_bam} \
-      --index ${kb_index} \
-      --t2g ${t2g} \
-      --outDir ${out_basename}_extract \
-      ~{if protein then "--aa" else ""} \
-      --loglevel=DEBUG
-  }
+   }
 
   output {
     File    kb_extract_tar  = "${out_basename}_kb_extract.tar.zst"
