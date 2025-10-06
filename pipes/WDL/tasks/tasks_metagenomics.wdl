@@ -1299,26 +1299,13 @@ task kb_merge_h5ads {
     kallisto version | tee -a VERSION    
     metagenomics.py --version | tee -a VERSION
 
-    if [[ ${reads_bam} == *.bam ]]; then
-        metagenomics.py kb \
-          ${reads_bam} \
-          --index ${kb_index} \
-          --t2g ${t2g} \
-          --outDir ${out_basename}_extract \
-          ~{if protein then "--aa" else ""} \
-          --loglevel=DEBUG
-    else # we have a single-ended fastq file so just call it directly
-        kb extract \
-          --kallisto kallisto \
-          -t ${threads} \
-          -i ${kb_index} \
-          -g ${t2g} \
-          ~{if protein then "--aa" else ""} \
-          -o ${out_basename}_extract \
-          ${reads_bam}
-    fi
-
-    tar -c -C ${out_basename}_extract . | zstd > ${out_basename}_kb_extract.tar.zst
+    metagenomics.py kb \
+      ${reads_bam} \
+      --index ${kb_index} \
+      --t2g ${t2g} \
+      --outDir ${out_basename}_extract \
+      ~{if protein then "--aa" else ""} \
+      --loglevel=DEBUG
   }
 
   output {
