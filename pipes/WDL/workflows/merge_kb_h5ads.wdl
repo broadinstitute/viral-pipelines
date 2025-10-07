@@ -1,6 +1,6 @@
 version 1.0
 
-import "../tasks/metagenomics" as metagenomics
+import "../tasks/tasks_metagenomics.wdl" as metagenomics
 
 workflow merge_kb_h5ads {
     meta {
@@ -11,7 +11,7 @@ workflow merge_kb_h5ads {
 
     call metagenomics.kb_merge_h5ads
     output {
-        File out_h5ad               = kb_merge_h5ads.out_h5ad
+        File out_h5ad               = kb_merge_h5ads.kb_merged_h5ad
         String viral_core_version   = kb_merge_h5ads.viralngs_version
     }   
 }

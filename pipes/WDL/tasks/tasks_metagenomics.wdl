@@ -958,7 +958,8 @@ task kb {
     Boolean  h5ad=false
     Boolean  loom=false
 
-    String   docker="ghcr.io/carze/viral-classify:latest"
+    #String   docker="ghcr.io/carze/viral-classify:latest"
+    String   docker="viral-classify-local:latest"
   }
 
   parameter_meta {
@@ -1030,6 +1031,11 @@ task kb {
           ~{if loom then "--loom" else ""} \
           ${reads_bam}
     fi
+
+    # Since we are running this file-by-file we need to add our sample name to the matrix.cells file
+    bn=$(basename "${reads_bam}")
+    sample_name=$(echo "$bn" | cut -d'.' -f1)
+    echo "$sample_name" > ${out_basename}_count/matrix.cells
 
     tar -c -C ${out_basename}_count . | zstd > ${out_basename}_kb_count.tar.zst
   }
@@ -1189,8 +1195,8 @@ task kb_extract {
           ${reads_bam} \
           --index ${kb_index} \
           --t2g ${t2g} \
-          --outDir ${out_basename}_extract \
-          ~{if protein then "--aa" else ""} \
+          --out_dir ${out_basename}_extract \
+          ~{if protein then "--protein" else ""} \
           --targets ${sep=',' target_ids} \
           --loglevel=DEBUG
     else # we have a single-ended fastq file so just call it directly
@@ -1279,11 +1285,11 @@ task report_primary_kb_taxa {
 
 task kb_merge_h5ads {
   meta {
-    description: "Merges multiple .h5ad files (output from kb_python) into a single .h5ad file."
+    description: "Merges multiple kb count output tarballs into a single .h5ad file with sample metadata."
   }
 
   input {
-    Array[File]     in_h5ads
+    Array[File]     in_count_tars
     String          out_basename
 
     #String          docker="ghcr.io/carze/viral-classify:latest"
@@ -1291,12 +1297,12 @@ task kb_merge_h5ads {
   }
 
   parameter_meta {
-    in_h5ads: {
-      description: "List of .h5ad files to merge.",
-      patterns: ["*.h5ad"]
+    in_count_tars: {
+      description: "List of kb count output tarballs to merge. Each tarball should contain counts_unfiltered/*.h5ad and matrix.cells.",
+      patterns: ["*.tar.zst", "*.tar.gz"]
     }
     out_basename: {
-      description: "Basename for output merged .h5ad file. Output will be named <out_basename>.h5ad. Default is basename of first h5d file passed in."
+      description: "Basename for output merged .h5ad file. Output will be named <out_basename>.h5ad."
     }
 
   }
@@ -1308,12 +1314,14 @@ task kb_merge_h5ads {
       export TMPDIR=$(pwd)
     fi
 
-    printf "kb_python %s\n" "$(kb -h 2>&1 | grep "kb_python" | cut -d" " -f2)" | tee VERSION
-    kallisto version | tee -a VERSION    
+    printf "%s\n" "$(kb -h 2>&1 | grep "kb_python" | tee VERSION)"
+    kallisto version | tee -a VERSION
     metagenomics.py --version | tee -a VERSION
 
+    paste -sd ';' VERSION | sed 's/;/; /g' > VERSION.tmp && mv VERSION.tmp VERSION
+
     metagenomics.py kb_merge_h5ads \
-      "~{sep='" "' in_h5ads}" \
+      "~{sep='" "' in_count_tars}" \
       --out-h5ad ${out_basename}.h5ad \
       --loglevel=DEBUG
    }
