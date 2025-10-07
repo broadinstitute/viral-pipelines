@@ -1140,10 +1140,11 @@ task kb_extract {
     File            t2g
     Array[String]   target_ids
 
-    Int?            threads=8
+    Int             threads=8
     Boolean         protein=false
 
-    String          docker="ghcr.io/carze/viral-classify:latest"
+    #String          docker="ghcr.io/carze/viral-classify:latest"
+    String          docker="viral-classify-local:latest"
   }
 
   parameter_meta {
@@ -1184,12 +1185,13 @@ task kb_extract {
     metagenomics.py --version | tee -a VERSION
 
     if [[ ${reads_bam} == *.bam ]]; then
-        metagenomics.py kb \
+        metagenomics.py kb_extract \
           ${reads_bam} \
           --index ${kb_index} \
           --t2g ${t2g} \
           --outDir ${out_basename}_extract \
           ~{if protein then "--aa" else ""} \
+          --targets ${sep=',' target_ids} \
           --loglevel=DEBUG
     else # we have a single-ended fastq file so just call it directly
         kb extract \
@@ -1197,6 +1199,7 @@ task kb_extract {
           -t ${threads} \
           -i ${kb_index} \
           -g ${t2g} \
+          -ts ${sep=',' target_ids} \
           ~{if protein then "--aa" else ""} \
           -o ${out_basename}_extract \
           ${reads_bam}
@@ -1237,14 +1240,18 @@ task report_primary_kb_taxa {
 
   command <<<
     set -e
-    metagenomics.py kb_top_taxa "~{kb_count_tar}" "~{out_basename}.ranked_focal_report.tsv"
+    metagenomics.py kb_top_taxa \
+      "~{kb_count_tar}" \
+      "~{out_basename}.ranked_focal_report.tsv" \
+      --id-to-tax-map "~{id_to_taxon_map}" \
+      --target-taxon "~{focal_taxon}"
     cat "~{out_basename}.ranked_focal_report.tsv" | head -2 | tail +2 > TOPROW
-    cut -f 2 TOPROW > NUM_FOCAL
-    cut -f 4 TOPROW > PCT_OF_FOCAL
-    cut -f 7 TOPROW > NUM_READS
-    cut -f 8 TOPROW > TAX_RANK
-    cut -f 9 TOPROW > TAX_ID
-    cut -f 10 TOPROW > TAX_NAME
+    cut -f 2 TOPROW > NUM_FOCAL           # focal_taxon_count
+    cut -f 6 TOPROW > PCT_OF_FOCAL        # pct_of_focal
+    cut -f 5 TOPROW > NUM_READS           # hit_reads
+    cut -f 3 TOPROW > TAX_ID              # hit_id
+    cut -f 4 TOPROW > TAX_NAME            # hit_lowest_taxa_name
+    echo "" > TAX_RANK                    # Not provided by kb_top_taxa
   >>>
 
   output {
@@ -1277,9 +1284,10 @@ task kb_merge_h5ads {
 
   input {
     Array[File]     in_h5ads
-    String          out_basename = basename(in_h5ads[0], '.h5ad')
+    String          out_basename
 
-    String          docker="ghcr.io/carze/viral-classify:latest"
+    #String          docker="ghcr.io/carze/viral-classify:latest"
+    String          docker="viral-classify-local:latest"
   }
 
   parameter_meta {
@@ -1304,10 +1312,14 @@ task kb_merge_h5ads {
     kallisto version | tee -a VERSION    
     metagenomics.py --version | tee -a VERSION
 
+    metagenomics.py kb_merge_h5ads \
+      "~{sep='" "' in_h5ads}" \
+      --out-h5ad ${out_basename}.h5ad \
+      --loglevel=DEBUG
    }
 
   output {
-    File    kb_extract_tar  = "${out_basename}_kb_extract.tar.zst"
+    File    kb_merged_h5ad        = "${out_basename}.h5ad"
     String  viralngs_version      = read_string("VERSION")
   }
 

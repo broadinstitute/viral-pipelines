@@ -12,7 +12,7 @@ workflow kb_build {
     call metagenomics.build_kb_db
 
     output {
-        File    kb_index                = build_kb_db.kb_index
+        File    kb_reads_extracted      = build_kb_db.kb_index
         String  viral_classify_version  = build_kb_db.viralngs_version
     }
 }
