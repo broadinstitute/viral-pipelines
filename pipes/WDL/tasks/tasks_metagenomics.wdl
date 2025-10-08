@@ -1238,11 +1238,12 @@ task report_primary_kb_taxa {
     File          id_to_taxon_map
     String        focal_taxon = "Viruses"
 
-    String        docker="ghcr.io/carze/viral-classify:latest"
+    #String        docker="ghcr.io/carze/viral-classify:latest"
+    String        docker="viral-classify-local:latest"
   }
   String out_basename = sub(basename(kb_count_tar, ".tar.zst"), "_kb_count", "")
-  Int disk_size = 50
-  Int machine_mem_gb = 2
+  Int disk_size = 200
+  Int machine_mem_gb = 16
 
   command <<<
     set -e
@@ -1253,10 +1254,10 @@ task report_primary_kb_taxa {
       --target-taxon "~{focal_taxon}"
     cat "~{out_basename}.ranked_focal_report.tsv" | head -2 | tail +2 > TOPROW
     cut -f 2 TOPROW > NUM_FOCAL           # focal_taxon_count
-    cut -f 6 TOPROW > PCT_OF_FOCAL        # pct_of_focal
-    cut -f 5 TOPROW > NUM_READS           # hit_reads
-    cut -f 3 TOPROW > TAX_ID              # hit_id
-    cut -f 4 TOPROW > TAX_NAME            # hit_lowest_taxa_name
+    cut -f 7 TOPROW > PCT_OF_FOCAL        # pct_of_focal
+    cut -f 6 TOPROW > NUM_READS           # hit_reads
+    cut -f 3 TOPROW > TAX_ID              # palmdb_id
+    cut -f 4 TOPROW > TAX_NAME            # hit_id (species name)
     echo "" > TAX_RANK                    # Not provided by kb_top_taxa
   >>>
 
@@ -1274,7 +1275,7 @@ task report_primary_kb_taxa {
   runtime {
     docker: docker
     memory: machine_mem_gb + " GB"
-    cpu: 1
+    cpu: 16
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
