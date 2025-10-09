@@ -172,6 +172,7 @@ task merge_and_reheader_bams {
       File?        reheader_table
       String       out_basename = basename(in_bams[0], ".bam")
 
+      Boolean      run_fastqc = false
       String       docker = "quay.io/broadinstitute/viral-core:2.4.1"
       Int          disk_size = 750
       Int          machine_mem_gb = 4
@@ -211,14 +212,18 @@ task merge_and_reheader_bams {
         # summary stats on merged output
         samtools view -c "~{out_basename}.bam" | tee read_count_merged
         samtools flagstat "~{out_basename}.bam" | tee "~{out_basename}.bam.flagstat.txt"
-        reports.py fastqc "~{out_basename}.bam" "~{out_basename}.fastqc.html"
+
+        # fastqc can be really slow on large files, make it optional
+        if [ "~{run_fastqc}" = "true" ]; then
+          reports.py fastqc "~{out_basename}.bam" "~{out_basename}.fastqc.html"
+        fi
     >>>
 
     output {
         File   out_bam          = "~{out_basename}.bam"
         Int    read_count       = read_int("read_count_merged")
         File   flagstat         = "~{out_basename}.bam.flagstat.txt"
-        File   fastqc           = "~{out_basename}.fastqc.html"
+        File?  fastqc           = "~{out_basename}.fastqc.html"
         String viralngs_version = read_string("VERSION")
     }
 
