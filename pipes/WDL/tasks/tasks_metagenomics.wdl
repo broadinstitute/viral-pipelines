@@ -972,27 +972,27 @@ task kb {
     reads_bam: {
       description: "Reads to classify. Must be un-mapped reads, paired-end or single-end.",
       patterns: ["*.bam", "*.fastq", "*.fastq.gz"]
-    },
+    }
     kb_index: {
       description: "Pre-built kb index tarball",
       patterns: ["*.index"]
-    },
+    }
     t2g: {
       description: "Transcript-to-gene mapping file. Two-column TSV with transcript IDs in first column and gene IDs in second column.",
       patterns: ["*.tsv", "*.txt"]
-    },
+    }
     kmer_size: {
       description: "K-mer size used in kb index. Must match the k-mer size used to build the index. Default is 31."
-    },
+    }
     threads: {
       description: "Number of threads to use. Default is 8."
-    },
+    }
     technology: {
       description: "Single-cell technology used  {10xv2, 10xv3, dropseq, inDrops, seqwell, smartseq2, bulk}."
-    },
+    }
     h5ad: {
       description: "Output an h5ad file (requires scanpy). Default is false"
-    },
+    }
     loom: {
       description: "Output a loom file (requires loompy). Default is false"
     }
@@ -1085,13 +1085,13 @@ task build_kb_db {
     reference_sequences: {
       description: "FASTA file of reference sequences to index.",
       patterns: ["*.fasta", "*.fa", "*.fa.gz", "*.fasta.gz"]
-    },
+    }
     protein: {
       description: "Generate an index from a FASTA file containing protein sequences. Default is nucleotide."
-    },
+    }
     kmer_size: {
       description: "K-mer size to use in index. Default is 31."
-    },
+    }
     workflow_type: {
       description: "Type of index to create {standard, nac, kite, custom}. Default is 'standard'."
     }
@@ -1165,21 +1165,21 @@ task kb_extract {
     reads_bam: {
       description: "Reads used by kb count to psuedoalign. Must be un-mapped or single-end.",
       patterns: ["*.bam", "*.fastq", "*.fastq.gz"]
-    },
+    }
     kb_index: {
       description: "kb index used to psuedoalign reads.",
       patterns: ["*.index"]
-    },
+    }
     t2g: {
       description: "Transcript-to-gene mapping file. Two-column TSV with transcript IDs in first column and gene IDs in second column.",
       patterns: ["*.tsv", "*.txt"]
-    },
+    }
     target_ids: {
       description: "List of target transcript or gene IDs to extract reads for."
-    },
+    }
     protein: {
       description: "Input sequences contain amino acid sequences."
-    },
+    }
     threads: {
       description: "Number of threads to use. Default is 8."
     }
