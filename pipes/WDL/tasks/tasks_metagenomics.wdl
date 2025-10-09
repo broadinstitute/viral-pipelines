@@ -1257,6 +1257,13 @@ task report_primary_kb_taxa {
 
   command <<<
     set -e
+
+    printf "%s\n" "$(kb -h 2>&1 | grep "kb_python" | tee VERSION)"
+    kallisto version | tee -a VERSION
+    metagenomics.py --version | tee -a VERSION
+
+    paste -sd ';' VERSION | sed 's/;/; /g' > VERSION.tmp && mv VERSION.tmp VERSION
+
     metagenomics.py kb_top_taxa \
       "~{kb_count_tar}" \
       "~{out_basename}.ranked_focal_report.tsv" \
