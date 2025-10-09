@@ -182,6 +182,7 @@ workflow classify_single {
         Int    read_counts_prespades_subsample = spades.subsample_read_count
         
         File   kraken2_summary_report          = kraken2.kraken2_summary_report
+        File   kraken2_reads_report            = kraken2.kraken2_reads_report
         File   kraken2_krona_plot              = kraken2.krona_report_html
         File   kraken2_top_taxa_report         = report_primary_kraken_taxa.ranked_focal_report
         String kraken2_focal_taxon_name        = report_primary_kraken_taxa.focal_tax_name
