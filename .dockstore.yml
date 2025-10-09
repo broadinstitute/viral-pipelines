@@ -244,6 +244,11 @@ workflows:
   - name: scaffold_and_refine_multitaxa
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/scaffold_and_refine_multitaxa.wdl
+  - name: simulate_illumina_reads
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/simulate_illumina_reads.wdl
+    testParameterFiles:
+    - /test/input/WDL/miniwdl-local/test_inputs-simulate_illumina_reads-local.json
   - name: submit_biosample
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/submit_biosample.wdl

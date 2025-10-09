@@ -32,6 +32,62 @@ task download_fasta {
   }
 }
 
+task download_fasta_from_accession_string {
+  meta {
+    description: "Download GenBank sequences from a space-separated string of accessions (optionally with coverage specifications like 'accession:12.5x') and combine into a single fasta file."
+  }
+
+  input {
+    String accession_string
+    String out_prefix
+    String emailAddress
+
+    String docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
+  }
+
+  command <<<
+    set -e
+    ncbi.py --version | tee VERSION
+
+    # Parse accession string to extract just the accession IDs (strip coverage values if present)
+    python3 <<CODE
+    import re
+    accession_string = "~{accession_string}"
+    # Split by whitespace and extract accession (before colon if present)
+    accessions = []
+    for pair in accession_string.split():
+        if ':' in pair:
+            accessions.append(pair.split(':')[0])
+        else:
+            accessions.append(pair)
+
+    with open('accessions.txt', 'w') as f:
+        for acc in accessions:
+            f.write(acc + '\n')
+    CODE
+
+    # Download sequences using extracted accessions
+    ncbi.py fetch_fastas \
+        ~{emailAddress} \
+        . \
+        $(cat accessions.txt | tr '\n' ' ') \
+        --combinedFilePrefix ~{out_prefix}
+  >>>
+
+  output {
+    File   sequences_fasta  = "~{out_prefix}.fasta"
+    String viralngs_version = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: "7 GB"
+    cpu: 2
+    dx_instance_type: "mem2_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
 task download_annotations {
   input {
     Array[String]+ accessions
@@ -1282,7 +1338,7 @@ task package_special_genbank_ftp_submission {
     String account_name
     String wizard="BankIt_SARSCoV2_api"
 
-    String  docker = "quay.io/broadinstitute/viral-baseimage:0.2.4"
+    String  docker = "quay.io/broadinstitute/viral-baseimage:0.3.0"
   }
   command <<<
     set -e
