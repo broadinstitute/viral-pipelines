@@ -1007,9 +1007,11 @@ task kb {
       export TMPDIR=$(pwd)
     fi
 
-    printf "kb_python %s\n" "$(kb -h 2>&1 | grep "kb_python" | cut -d" " -f2)" | tee VERSION
-    kallisto version | tee -a VERSION    
+    printf "%s\n" "$(kb -h 2>&1 | grep "kb_python" | tee VERSION)"
+    kallisto version | tee -a VERSION
     metagenomics.py --version | tee -a VERSION
+
+    paste -sd ';' VERSION | sed 's/;/; /g' > VERSION.tmp && mv VERSION.tmp VERSION
 
     if [[ ${reads_bam} == *.bam ]]; then
         metagenomics.py kb \
@@ -1192,9 +1194,11 @@ task kb_extract {
       export TMPDIR=$(pwd)
     fi
 
-    printf "kb_python %s\n" "$(kb -h 2>&1 | grep "kb_python" | cut -d" " -f2)" | tee VERSION
-    kallisto version | tee -a VERSION    
+    printf "%s\n" "$(kb -h 2>&1 | grep "kb_python" | tee VERSION)"
+    kallisto version | tee -a VERSION
     metagenomics.py --version | tee -a VERSION
+
+    paste -sd ';' VERSION | sed 's/;/; /g' > VERSION.tmp && mv VERSION.tmp VERSION
 
     if [[ ${reads_bam} == *.bam ]]; then
         metagenomics.py kb_extract \
