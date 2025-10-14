@@ -1152,13 +1152,14 @@ task kb_extract {
     File            reads_bam
     File            kb_index
     File            t2g
-    Array[String]   target_ids
+    Array[String]?  target_ids
+    File?           h5ad_file
 
     Int             threads=8
     Boolean         protein=false
 
     #String          docker="ghcr.io/carze/viral-classify:latest"
-    String          docker="viral-classify-local:latest"
+    String           docker="viral-classify-local:latest"
   }
 
   parameter_meta {
@@ -1177,6 +1178,10 @@ task kb_extract {
     target_ids: {
       description: "List of target transcript or gene IDs to extract reads for."
     }
+    h5ad_file: {
+      description: "If no target IDs are provided, an h5ad file may be provided from which to extract target IDs. The h5ad file must contain a 'gene_ids' column in the .var dataframe."
+      patterns: ["*.h5ad"]
+    }
     protein: {
       description: "Input sequences contain amino acid sequences."
     }
@@ -1189,6 +1194,7 @@ task kb_extract {
 
   command {
     set -ex -o pipefail
+    TARGET_BOOL=false
 
     if [ -z "$TMPDIR" ]; then
       export TMPDIR=$(pwd)
@@ -1200,26 +1206,23 @@ task kb_extract {
 
     paste -sd ';' VERSION | sed 's/;/; /g' > VERSION.tmp && mv VERSION.tmp VERSION
 
-    if [[ ${reads_bam} == *.bam ]]; then
-        metagenomics.py kb_extract \
-          ${reads_bam} \
-          --index ${kb_index} \
-          --t2g ${t2g} \
-          --out_dir ${out_basename}_extract \
-          ~{if protein then "--protein" else ""} \
-          --targets ${sep=',' target_ids} \
-          --loglevel=DEBUG
-    else # we have a single-ended fastq file so just call it directly
-        kb extract \
-          --kallisto kallisto \
-          -t ${threads} \
-          -i ${kb_index} \
-          -g ${t2g} \
-          -ts ${sep=',' target_ids} \
-          ~{if protein then "--aa" else ""} \
-          -o ${out_basename}_extract \
-          ${reads_bam}
+    # Determine source of target IDs
+    TARGET_IDS="~{sep=' ' select_first([target_ids, []])}"
+    if [ -z "$TARGET_IDS" ]; then
+      echo "No target IDs provided, will attempt to extract from h5ad!" >&2
+      TARGET_SOURCE="--h5ad ~{h5ad_file}"
+    else
+      TARGET_SOURCE="--targets $TARGET_IDS"
     fi
+
+    metagenomics.py kb_extract \
+      ${reads_bam} \
+      --index ${kb_index} \
+      --t2g ${t2g} \
+      --out_dir ${out_basename}_extract \
+      ~{if protein then "--protein" else ""} \
+      $TARGET_SOURCE \
+      --loglevel=DEBUG
 
     tar -c -C ${out_basename}_extract . | zstd > ${out_basename}_kb_extract.tar.zst
   }
