@@ -1156,6 +1156,7 @@ task kb_extract {
     File?           h5ad_file
 
     Int             threads=8
+    Int             threshold=1
     Boolean         protein=false
 
     #String          docker="ghcr.io/carze/viral-classify:latest"
@@ -1185,12 +1186,15 @@ task kb_extract {
     protein: {
       description: "Input sequences contain amino acid sequences."
     }
+    threshold: {
+      description: "Minimum number of pseudoalignments to a target ID for a read to be extracted. Default is 1."
+    }
     threads: {
       description: "Number of threads to use. Default is 8."
     }
   }
 
-  String out_basename=basename(basename(reads_bam, '.bam'), '.fasta')
+  String out_basename = sub(sub(sub(sub(basename(reads_bam), "\\.gz$", ""), "\\.fastq$", ""), "\\.R[12]$", ""), "\\.[12]$", "")
 
   command {
     set -ex -o pipefail
@@ -1221,6 +1225,7 @@ task kb_extract {
       --t2g ${t2g} \
       --out_dir ${out_basename}_extract \
       ~{if protein then "--protein" else ""} \
+      --threshold ${threshold} \
       $TARGET_SOURCE \
       --loglevel=DEBUG
 
