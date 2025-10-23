@@ -963,6 +963,7 @@ task kb {
     String   parity
     Boolean  h5ad=false
     Boolean  loom=false
+    Boolean  protein=false
 
     #String   docker="ghcr.io/carze/viral-classify:latest"
     String   docker="viral-classify-local:latest"
@@ -996,6 +997,9 @@ task kb {
     loom: {
       description: "Output a loom file (requires loompy). Default is false"
     }
+    protein: {
+      description: "Indicates that the kb index is built from protein sequences. Default is false"
+    } 
   }
 
   String out_basename=basename(basename(reads_bam, '.bam'), '.fasta')
@@ -1023,7 +1027,8 @@ task kb {
           --parity ${parity} \
           ~{if h5ad then "--h5ad" else ""} \
           ~{if loom then "--loom" else ""} \
-          --outDir ${out_basename}_count 
+          ~{true='--protein' false='' protein} \
+          --out_dir ${out_basename}_count \
           --loglevel=DEBUG
     else # we have a single-ended fastq file so just call it directly
         kb count \
@@ -1037,6 +1042,7 @@ task kb {
           -x ${technology} \
           ~{if h5ad then "--h5ad" else ""} \
           ~{if loom then "--loom" else ""} \
+          ~{true='--aa' false='' protein} \
           ${reads_bam}
     fi
 
@@ -1160,7 +1166,7 @@ task kb_extract {
     Boolean         protein=false
 
     #String          docker="ghcr.io/carze/viral-classify:latest"
-    String           docker="viral-classify-local:latest"
+     String          docker="viral-classify-local:latest"
   }
 
   parameter_meta {
@@ -1194,7 +1200,7 @@ task kb_extract {
     }
   }
 
-  String out_basename = sub(sub(sub(sub(basename(reads_bam), "\\.gz$", ""), "\\.fastq$", ""), "\\.R[12]$", ""), "\\.[12]$", "")
+  String out_basename = sub(sub(sub(sub(basename(reads_bam), "\\.bam$", ""), "\\.gz$", ""), "\\.fastq$", ""), "\\.fq$", "")
 
   command {
     set -ex -o pipefail
@@ -1239,8 +1245,8 @@ task kb_extract {
 
   runtime {
     docker: "${docker}"
-    memory: "16 GB"
-    cpu: 16
+    memory: "24 GB"
+    cpu: 8
     disks: "local-disk 350 LOCAL"
     dx_instance_type: "mem3_ssd1_v2_x16"
     preemptible: 2
