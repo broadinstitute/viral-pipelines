@@ -487,7 +487,8 @@ task illumina_demux {
       "--illuminaRunDirectory=${FLOWCELL_DIR}" \
       $demux_threads \
       --out_meta_by_sample ~{splitcode_outdir}/meta_by_sample.json \
-      --out_meta_by_filename ~{splitcode_outdir}/meta_by_fname.json
+      --out_meta_by_filename ~{splitcode_outdir}/meta_by_fname.json \
+      --loglevel DEBUG
       
       #~{'--runInfo=' + runinfo} \
       #--tmp_dir ./tmp/ \
