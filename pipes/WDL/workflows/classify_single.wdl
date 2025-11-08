@@ -20,7 +20,7 @@ workflow classify_single {
 
         File ncbi_taxdump_tgz
 
-        File spikein_db
+        File? spikein_db
         File trim_clip_db
 
         File kraken2_db_tgz
@@ -57,10 +57,6 @@ workflow classify_single {
           description: "An NCBI taxdump.tar.gz file that contains, at the minimum, a nodes.dmp and names.dmp file.",
           patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
         }
-        cleaned_fastqc: { 
-          description: "Output cleaned fastqc reports in HTML.",
-          category: "other"
-        }
         deduplicated_reads_unaligned: {
           description: "Deduplication on unaligned reads in BAM format using mvicuna or cdhit.",
           category: "other"
@@ -73,10 +69,6 @@ workflow classify_single {
           description: "Kraken report output file.",
           category: "other"
         }
-        raw_fastqc:{
-          description: "Merged raw fastqc reads.",
-          category: "other"
-        }
 
     }
 
@@ -86,10 +78,12 @@ workflow classify_single {
     }
     File reads_bam = merge_raw_reads.out_bam
 
-    call reports.align_and_count as spikein {
-        input:
-            reads_bam = reads_bam,
-            ref_db    = spikein_db
+    if(defined(spikein_db)) {
+      call reports.align_and_count as spikein {
+          input:
+              reads_bam = reads_bam,
+              ref_db    = select_first([spikein_db])
+      }
     }
     call metagenomics.kraken2 as kraken2 {
         input:
@@ -105,9 +99,6 @@ workflow classify_single {
             exclude_taxa            = true,
             taxonomic_names         = taxa_to_dehost,
             out_filename_suffix     = "hs_depleted"
-    }
-    call reports.fastqc as fastqc_cleaned {
-        input: reads_bam = deplete.bam_filtered_to_taxa
     }
     call metagenomics.filter_bam_to_taxa as filter_acellular {
         input:
@@ -182,6 +173,7 @@ workflow classify_single {
         Int    read_counts_prespades_subsample = spades.subsample_read_count
         
         File   kraken2_summary_report          = kraken2.kraken2_summary_report
+        File   kraken2_reads_report            = kraken2.kraken2_reads_report
         File   kraken2_krona_plot              = kraken2.krona_report_html
         File   kraken2_top_taxa_report         = report_primary_kraken_taxa.ranked_focal_report
         String kraken2_focal_taxon_name        = report_primary_kraken_taxa.focal_tax_name
@@ -197,12 +189,12 @@ workflow classify_single {
         Array[Int]? skani_hits_taxids          = skani_hit_taxid
         Array[String]? skani_hits_taxnames     = skani_hit_taxname
 
-        File   raw_fastqc                      = merge_raw_reads.fastqc
-        File   cleaned_fastqc                  = fastqc_cleaned.fastqc_html
-        File   spikein_report                  = spikein.report
-        String spikein_tophit                  = spikein.top_hit_id
-        String spikein_pct_of_total_reads      = spikein.pct_total_reads_mapped
-        String spikein_pct_lesser_hits         = spikein.pct_lesser_hits_of_mapped
+        File?   raw_fastqc                      = merge_raw_reads.fastqc
+        File?   cleaned_fastqc                  = deplete.fastqc_html_report
+        File?   spikein_report                  = spikein.report
+        String? spikein_tophit                  = spikein.top_hit_id
+        String? spikein_pct_of_total_reads      = spikein.pct_total_reads_mapped
+        String? spikein_pct_lesser_hits         = spikein.pct_lesser_hits_of_mapped
         
         String kraken2_viral_classify_version  = kraken2.viralngs_version
         String deplete_viral_classify_version  = deplete.viralngs_version

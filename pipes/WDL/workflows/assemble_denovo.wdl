@@ -158,15 +158,15 @@ workflow assemble_denovo {
     Float   mean_coverage                         = refine.align_to_self_merged_mean_coverage
     
     File    cleaned_bam                           = merge_cleaned_reads.out_bam
-    File    cleaned_fastqc                        = merge_cleaned_reads.fastqc
+    File?   cleaned_fastqc                        = merge_cleaned_reads.fastqc
     Int     depletion_read_count_post             = merge_cleaned_reads.read_count
     
     File    taxfilt_bam                           = merge_taxfilt_reads.out_bam
-    File    taxfilt_fastqc                        = merge_taxfilt_reads.fastqc
+    File?   taxfilt_fastqc                        = merge_taxfilt_reads.fastqc
     Int     filter_read_count_post                = merge_taxfilt_reads.read_count
     
     File    dedup_bam                             = merge_dedup_reads.out_bam
-    File    dedup_fastqc                          = merge_dedup_reads.fastqc
+    File?   dedup_fastqc                          = merge_dedup_reads.fastqc
     Int     dedup_read_count_post                 = merge_dedup_reads.read_count
     
     File    contigs_fasta                         = assemble.contigs_fasta

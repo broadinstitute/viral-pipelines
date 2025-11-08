@@ -27,7 +27,7 @@ workflow assemble_denovo_metagenomic {
 
         File          ncbi_taxdump_tgz
 
-        File          spikein_db
+        File?         spikein_db
         File          trim_clip_db
 
         File          kraken2_db_tgz
@@ -103,10 +103,12 @@ workflow assemble_denovo_metagenomic {
     }
     File reads_bam = merge_raw_reads.out_bam
 
-    call reports.align_and_count as spikein {
-        input:
-            reads_bam = reads_bam,
-            ref_db    = spikein_db
+    if(defined(spikein_db)) {
+        call reports.align_and_count as spikein {
+            input:
+                reads_bam = reads_bam,
+                ref_db    = select_first([spikein_db])
+        }
     }
     call metagenomics.kraken2 as kraken2 {
         input:
@@ -122,9 +124,6 @@ workflow assemble_denovo_metagenomic {
             exclude_taxa            = true,
             taxonomic_names         = taxa_to_dehost,
             out_filename_suffix     = "hs_depleted"
-    }
-    call reports.fastqc as fastqc_cleaned {
-        input: reads_bam = deplete.bam_filtered_to_taxa
     }
     call metagenomics.filter_bam_to_taxa as filter_acellular {
         input:
@@ -295,6 +294,7 @@ workflow assemble_denovo_metagenomic {
         Int    read_counts_prespades_subsample = spades.subsample_read_count
         
         File   kraken2_summary_report          = kraken2.kraken2_summary_report
+        File   kraken2_reads_report            = kraken2.kraken2_reads_report
         File   kraken2_krona_plot              = kraken2.krona_report_html
         File   kraken2_top_taxa_report         = report_primary_kraken_taxa.ranked_focal_report
         String kraken2_focal_taxon_name        = report_primary_kraken_taxa.focal_tax_name
@@ -305,12 +305,12 @@ workflow assemble_denovo_metagenomic {
         Int    kraken2_top_taxon_num_reads     = report_primary_kraken_taxa.num_reads
         Float  kraken2_top_taxon_pct_of_focal  = report_primary_kraken_taxa.percent_of_focal
 
-        File   raw_fastqc                      = merge_raw_reads.fastqc
-        File   cleaned_fastqc                  = fastqc_cleaned.fastqc_html
-        File   spikein_report                  = spikein.report
-        String spikein_tophit                  = spikein.top_hit_id
-        String spikein_pct_of_total_reads      = spikein.pct_total_reads_mapped
-        String spikein_pct_lesser_hits         = spikein.pct_lesser_hits_of_mapped
+        File?   raw_fastqc                     = merge_raw_reads.fastqc
+        File?   cleaned_fastqc                 = deplete.fastqc_html_report
+        File?   spikein_report                 = spikein.report
+        String? spikein_tophit                 = spikein.top_hit_id
+        String? spikein_pct_of_total_reads     = spikein.pct_total_reads_mapped
+        String? spikein_pct_lesser_hits        = spikein.pct_lesser_hits_of_mapped
         
         String viral_classify_version          = kraken2.viralngs_version
         String viral_assemble_version          = spades.viralngs_version
