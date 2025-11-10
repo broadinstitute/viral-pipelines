@@ -143,8 +143,6 @@ task revcomp_i5 {
 task illumina_demux {
   input {
     File   flowcell_tgz
-    String? flowcell_dir
-    #Directory? flowcell_dir
     Int     lane=1
     
     File?   samplesheet
@@ -219,8 +217,8 @@ task illumina_demux {
   }
 
   # WDL 1.0 files running under miniwdl 1.12 cannot contain nested curly braces outside the command block
-  String? tarball_base                  = "~{basename(basename(basename(basename(select_first([flowcell_tgz,'']), '.zst'), '.gz'), '.tar'), '.tgz')}"
-  String out_base                       = "~{if(defined(flowcell_tgz)) then tarball_base else basename(select_first([flowcell_dir,'']))}"+'-L~{lane}'
+  String tarball_base                   = basename(basename(basename(basename(flowcell_tgz, '.zst'), '.gz'), '.tar'), '.tgz')
+  String out_base                       = tarball_base + '-L~{lane}'
   String splitcode_outdir               = "inner_barcode_demux"
   String default_revcomp_barcode_column = "barcode_2"
 
@@ -238,40 +236,25 @@ task illumina_demux {
     # find N% memory
     mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 85)
 
-    # if flowcell_tgz and flowcell_dir are both empty strings, exit 1
-    flowcell_tgz_path="~{flowcell_tgz}"
-    flowcell_dir_path="~{flowcell_dir}"
-    if [ -z "${flowcell_tgz_path}" ] && [ -z "${flowcell_dir_path}" ]; then
-      echo "ERROR: Either 'flowcell_tgz' or 'flowcell_dir' must be provided."
-      exit 1
-    fi
-
     if [ -z "$TMPDIR" ]; then
       export TMPDIR="$(pwd)/tmp"
     fi
 
     mkdir -p "$TMPDIR"
-
     echo "TMPDIR: $TMPDIR"
+    FLOWCELL_DIR=$(mktemp -d)
+    read_utils.py --version | tee VERSION
 
-    if ~{true="true" false="false" defined(flowcell_dir)}; then
-      FLOWCELL_DIR="~{flowcell_dir}"
-    else
-      FLOWCELL_DIR=$(mktemp -d)
-
-      read_utils.py --version | tee VERSION
-
-      read_utils.py extract_tarball \
-        "~{flowcell_tgz}" "${FLOWCELL_DIR}" \
-        --loglevel=DEBUG
-    fi
+    read_utils.py extract_tarball \
+      "~{flowcell_tgz}" $FLOWCELL_DIR \
+      --loglevel=DEBUG
 
     # if we are overriding the RunInfo file, use the path of the file provided. Otherwise find the file
     if [ -n "~{runinfo}" ]; then
       RUNINFO_FILE="~{runinfo}"
     else
       # full RunInfo.xml path
-      RUNINFO_FILE="$(find "$FLOWCELL_DIR" -type f -name 'RunInfo.xml' | head -n 1)"
+      RUNINFO_FILE="$(find $FLOWCELL_DIR -type f -name 'RunInfo.xml' | head -n 1)"
     fi
     
     # Parse the lane count & run ID from RunInfo.xml file
@@ -399,7 +382,7 @@ task illumina_demux {
     # note that we are intentionally setting --threads to about 2x the core
     # count. seems to still provide speed benefit (over 1x) when doing so.
     illumina.py illumina_demux \
-      "${FLOWCELL_DIR}" \
+      $FLOWCELL_DIR \
       ~{lane} \
       . \
       ~{'--sampleSheet=' + samplesheet} \
@@ -451,7 +434,7 @@ task illumina_demux {
       metrics.txt \
       barcodes_outliers.txt
 
-    illumina.py flowcell_metadata --inDir "${FLOWCELL_DIR}" flowcellMetadataFile.tsv
+    illumina.py flowcell_metadata --inDir $FLOWCELL_DIR flowcellMetadataFile.tsv
 
     mkdir -p picard_bams unmatched unmatched_picard picard_demux_metadata
 
@@ -464,16 +447,6 @@ task illumina_demux {
     if [ -f "barcodes_if_collapsed.tsv" ]; then
       mkdir -p ./~{splitcode_outdir}
 
-      # NB: at present, splitcode_demux is unaware of 
-      #     whether its input directory
-      #     is a full Illumina run directory or a data directory
-      #     containing first-stage demux output,
-      #     of the sort created by a prior illumina_demux call
-      #
-      # ${FLOWCELL_DIR} is the full Illumina run directory
-      # ToDo: allow user to pass a list of input files (bams or fq) rather than a directory
-
-      # -------------
       illumina.py splitcode_demux \
       ./picard_bams \
       ~{lane} \
@@ -484,19 +457,13 @@ task illumina_demux {
       ~{'--predemux_trim_r2_3prime '  + inner_barcode_predemux_trim_r2_3prime} \
       ~{'--sampleSheet=' + samplesheet} \
       "--runInfo=${RUNINFO_FILE}" \
-      "--illuminaRunDirectory=${FLOWCELL_DIR}" \
+      --illuminaRunDirectory=$FLOWCELL_DIR \
       $demux_threads \
       --out_meta_by_sample ~{splitcode_outdir}/meta_by_sample.json \
       --out_meta_by_filename ~{splitcode_outdir}/meta_by_fname.json \
+      ~{'--runInfo=' + runinfo} \
       --loglevel DEBUG
       
-      #~{'--runInfo=' + runinfo} \
-      #--tmp_dir ./tmp/ \
-      #--tmp_dirKeep \
-      # --sampleSheet ${flowcell_dir}/SampleSheet.tsv \
-      # --runInfo ${flowcell_dir}/RunInfo.xml
-      # -------------
-
       # Rename splitcode splitcode metrics files
       mv ./~{splitcode_outdir}/bc2sample_lut.csv              ./~{splitcode_outdir}/inner_barcode_demux_metrics.csv
       mv ./~{splitcode_outdir}/bc2sample_lut_picard-style.txt ./~{splitcode_outdir}/inner_barcode_demux_metrics_picard-style.txt
