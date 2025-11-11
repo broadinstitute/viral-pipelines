@@ -225,14 +225,6 @@ task illumina_demux {
   command <<<
     set -ex -o pipefail
 
-    # dirs_to_list="/ ./ ~/"
-    # for d in $dirs_to_list; do
-    #   printf "\n-------------------------------------\n"
-    #   echo "  ls -lah $d:"
-    #   ls -lah $d
-    #   echo "-------------------------------------"
-    # done
-
     # find N% memory
     mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 85)
 
