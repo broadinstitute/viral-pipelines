@@ -643,7 +643,7 @@ task MultiQC {
     File?          config  # directory
     String?        config_yaml
 
-    String         docker = "quay.io/biocontainers/multiqc:1.8--py_2"
+    String         docker = "quay.io/biocontainers/multiqc:1.32--pyhdfd78af_1"
   }
 
   parameter_meta {
@@ -660,6 +660,8 @@ task MultiQC {
       echo "${sep='\n' input_files}" > input-filenames.txt
       echo "" >> input-filenames.txt
 
+      # Run MultiQC but allow it to fail (it crashes with exit 1 on empty/invalid zip files)
+      set +e
       multiqc \
       --file-list input-filenames.txt \
       --outdir "${out_dir}" \
@@ -687,15 +689,17 @@ task MultiQC {
       ${false="--no-megaqc-upload" true="" megaQC_upload} \
       ${"--config " + config} \
       ${"--cl-config " + config_yaml }
+      MULTIQC_EXIT_CODE=$?
+      set -e
 
-      # Ensure output directory exists (MultiQC may remove it if no results found)
+      # Ensure output directory exists (MultiQC may remove it if no results found or if it crashed)
       mkdir -p "${out_dir}"
 
       if [ -z "${file_name}" ]; then
-        mv "${out_dir}/${report_filename}_report.html" "${out_dir}/${report_filename}.html"
+        mv "${out_dir}/${report_filename}_report.html" "${out_dir}/${report_filename}.html" 2>/dev/null || true
       fi
 
-      # Create placeholder HTML report if MultiQC didn't create one (happens when no valid results found)
+      # Create placeholder HTML report if MultiQC didn't create one (happens when no valid results found or on crash)
       if [ ! -f "${out_dir}/${report_filename}.html" ]; then
         echo "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>MultiQC Report</title></head><body><h1>MultiQC Report</h1><p>No analysis results found in input files.</p></body></html>" > "${out_dir}/${report_filename}.html"
       fi
