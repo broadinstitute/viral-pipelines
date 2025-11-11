@@ -688,10 +688,20 @@ task MultiQC {
       ${"--config " + config} \
       ${"--cl-config " + config_yaml }
 
+      # Ensure output directory exists (MultiQC may remove it if no results found)
+      mkdir -p "${out_dir}"
+
       if [ -z "${file_name}" ]; then
         mv "${out_dir}/${report_filename}_report.html" "${out_dir}/${report_filename}.html"
       fi
 
+      # Create placeholder HTML report if MultiQC didn't create one (happens when no valid results found)
+      if [ ! -f "${out_dir}/${report_filename}.html" ]; then
+        echo "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>MultiQC Report</title></head><body><h1>MultiQC Report</h1><p>No analysis results found in input files.</p></body></html>" > "${out_dir}/${report_filename}.html"
+      fi
+
+      # Ensure data directory exists before tarring (MultiQC only creates it when results are found)
+      mkdir -p "${out_dir}/${report_filename}_data"
       tar -c "${out_dir}/${report_filename}_data" | gzip -c > "${report_filename}_data.tar.gz"
   }
 
