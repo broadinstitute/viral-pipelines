@@ -6,7 +6,7 @@ task merge_tarballs {
     String       out_filename
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.0"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.1"
   }
 
   Int disk_size = 2625
@@ -181,7 +181,7 @@ task illumina_demux {
     # --- options for VM shape ----------------------
     Int?    machine_mem_gb
     Int     disk_size = 2625
-    String  docker    = "quay.io/broadinstitute/viral-core:2.5.0"
+    String  docker    = "quay.io/broadinstitute/viral-core:2.5.1"
   }
 
   parameter_meta {

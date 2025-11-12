@@ -6,7 +6,7 @@ task download_fasta {
     Array[String]+ accessions
     String         emailAddress
 
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.5.1.0"
   }
 
   command {
@@ -42,7 +42,7 @@ task download_fasta_from_accession_string {
     String out_prefix
     String emailAddress
 
-    String docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
+    String docker = "quay.io/broadinstitute/viral-phylo:2.5.1.0"
   }
 
   command <<<
@@ -94,7 +94,7 @@ task download_annotations {
     String         emailAddress
     String         combined_out_prefix
 
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.5.1.0"
   }
 
   command <<<
@@ -136,7 +136,7 @@ task download_ref_genomes_from_tsv {
     File      ref_genomes_tsv    # [tax_id, isolate_prefix, taxname, colon_delim_accession_list]
     String    emailAddress
 
-    String    docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
+    String    docker = "quay.io/broadinstitute/viral-phylo:2.5.1.0"
   }
 
   command <<<
@@ -183,7 +183,7 @@ task sequencing_platform_from_bam {
   input {
     File    bam
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.0"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.1"
   }
 
   command <<<
@@ -238,7 +238,7 @@ task align_and_annot_transfer_single {
 
     String       out_basename = basename(genome_fasta, '.fasta')
     Int          machine_mem_gb = 30
-    String       docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
+    String       docker = "quay.io/broadinstitute/viral-phylo:2.5.1.0"
   }
 
   parameter_meta {
@@ -293,7 +293,7 @@ task structured_comments {
 
     File?  filter_to_ids
 
-    String docker = "quay.io/broadinstitute/viral-core:2.5.0"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.1"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -346,7 +346,7 @@ task structured_comments_from_aligned_bam {
     String  out_basename = basename(aligned_bam, '.bam')
     Boolean is_genome_assembly = true
     Boolean sanitize_ids = true
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.0"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.1"
   }
   # see https://www.ncbi.nlm.nih.gov/genbank/structuredcomment/
   command <<<
@@ -465,7 +465,7 @@ task rename_fasta_header {
 
     String out_basename = basename(genome_fasta, ".fasta")
 
-    String docker = "quay.io/broadinstitute/viral-core:2.5.0"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.1"
   }
   command {
     set -e
@@ -630,7 +630,7 @@ task sra_meta_prep {
     Boolean     paired
 
     String      out_name = "sra_metadata.tsv"
-    String      docker="quay.io/broadinstitute/viral-core:2.5.0"
+    String      docker="quay.io/broadinstitute/viral-core:2.5.1"
   }
   Int disk_size = 100
   parameter_meta {
@@ -1246,7 +1246,7 @@ task table2asn {
 
     String       out_basename = basename(assembly_fasta, ".fasta")
     Int          machine_mem_gb = 8
-    String       docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"  # this could be a simpler docker image, we don't use anything beyond table2asn itself
+    String       docker = "quay.io/broadinstitute/viral-phylo:2.5.1.0"  # this could be a simpler docker image, we don't use anything beyond table2asn itself
   }
   Int disk_size = 50
 
@@ -1403,7 +1403,7 @@ task genbank_special_taxa {
     Int     taxid
     File    taxdump_tgz
     File    vadr_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/annotation/vadr/vadr-by-taxid.tsv"
-    String  docker = "quay.io/broadinstitute/viral-classify:2.2.5"
+    String  docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
   }
 
   command <<<
