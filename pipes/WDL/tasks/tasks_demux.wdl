@@ -698,7 +698,7 @@ task illumina_demux {
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem3_ssd2_v2_x32"
     dx_timeout: "20H"
-    maxRetries: 0
+    maxRetries: 1
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
   }
 }
