@@ -640,20 +640,25 @@ task find_illumina_files_in_directory {
   command <<<
     set -e -o pipefail
 
+    # Strip trailing slashes from illumina_dir to avoid double-slash issues
+    ILLUMINA_DIR="~{illumina_dir}"
+    ILLUMINA_DIR="$(echo "$ILLUMINA_DIR" | sed 's:/*$::')"
+
     # Set default fastq_dir to illumina_dir/fastq if not provided
     FASTQ_DIR="~{select_first([fastq_dir, illumina_dir + '/fastq'])}"
+    FASTQ_DIR="$(echo "$FASTQ_DIR" | sed 's:/*$::')"
 
     # Find RunInfo.xml - check base level first, then search recursively
-    echo "Searching for RunInfo.xml at: ~{illumina_dir}/RunInfo.xml" >&2
-    if gcloud storage ls "~{illumina_dir}/RunInfo.xml" 2>gcloud_error.txt | head -1 > runinfo_path.txt && [ -s runinfo_path.txt ]; then
+    echo "Searching for RunInfo.xml at: $ILLUMINA_DIR/RunInfo.xml" >&2
+    if gcloud storage ls "$ILLUMINA_DIR/RunInfo.xml" 2>gcloud_error.txt | head -1 > runinfo_path.txt && [ -s runinfo_path.txt ]; then
       echo "Found RunInfo.xml at base level" >&2
     else
       echo "Not found at base level, searching recursively..." >&2
       cat gcloud_error.txt >&2
-      if gcloud storage ls "~{illumina_dir}/**/RunInfo.xml" 2>gcloud_error.txt | head -1 > runinfo_path.txt && [ -s runinfo_path.txt ]; then
+      if gcloud storage ls "$ILLUMINA_DIR/**/RunInfo.xml" 2>gcloud_error.txt | head -1 > runinfo_path.txt && [ -s runinfo_path.txt ]; then
         echo "Found RunInfo.xml via recursive search" >&2
       else
-        echo "ERROR: RunInfo.xml not found in ~{illumina_dir}" >&2
+        echo "ERROR: RunInfo.xml not found in $ILLUMINA_DIR" >&2
         echo "gcloud error output:" >&2
         cat gcloud_error.txt >&2
         exit 1
@@ -664,8 +669,8 @@ task find_illumina_files_in_directory {
     echo "Found RunInfo.xml at: $RUNINFO_PATH"
 
     # List all fastq.gz files in fastq_dir
-    gcloud storage ls "${FASTQ_DIR}/*.fastq.gz" 2>/dev/null > all_fastqs.txt || {
-      echo "WARNING: No fastq.gz files found in ${FASTQ_DIR}" >&2
+    gcloud storage ls "$FASTQ_DIR/*.fastq.gz" 2>/dev/null > all_fastqs.txt || {
+      echo "WARNING: No fastq.gz files found in $FASTQ_DIR" >&2
       touch all_fastqs.txt
     }
 
