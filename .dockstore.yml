@@ -126,6 +126,9 @@ workflows:
   - name: fetch_sra_to_bam
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/fetch_sra_to_bam.wdl
+  - name: find_illumina_files
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/find_illumina_files.wdl
   - name: filter_classified_bam_to_taxa
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/filter_classified_bam_to_taxa.wdl
