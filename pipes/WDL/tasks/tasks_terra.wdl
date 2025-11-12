@@ -645,8 +645,13 @@ task find_illumina_files_in_directory {
     ILLUMINA_DIR="$(echo "$ILLUMINA_DIR" | sed 's:/*$::')"
 
     # Set default fastq_dir to illumina_dir/fastq if not provided
-    FASTQ_DIR="~{select_first([fastq_dir, illumina_dir + '/fastq'])}"
-    FASTQ_DIR="$(echo "$FASTQ_DIR" | sed 's:/*$::')"
+    # Handle default in shell to avoid double-slash from WDL concatenation
+    if [ -n "~{fastq_dir}" ]; then
+      FASTQ_DIR="~{fastq_dir}"
+      FASTQ_DIR="$(echo "$FASTQ_DIR" | sed 's:/*$::')"
+    else
+      FASTQ_DIR="$ILLUMINA_DIR/fastq"
+    fi
 
     # Find RunInfo.xml - check base level first, then search recursively
     echo "Searching for RunInfo.xml at: $ILLUMINA_DIR/RunInfo.xml" >&2
