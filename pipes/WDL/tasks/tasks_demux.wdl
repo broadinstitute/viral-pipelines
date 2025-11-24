@@ -758,3 +758,298 @@ task merge_maps {
     maxRetries: 2
   }
 }
+
+task group_fastq_pairs {
+  meta {
+    description: "Groups FASTQ files into R1/R2 pairs based on DRAGEN naming convention. Supports paired-end and single-end FASTQs. Uses string operations only to avoid file localization."
+  }
+
+  input {
+    Array[String] fastq_uris
+  }
+
+  parameter_meta {
+    fastq_uris: {
+      description: "Array of FASTQ file URIs (as strings, not File type) to be paired. Files should follow DRAGEN naming convention with _R1_ or _R2_ in the filename.",
+      category: "required"
+    }
+  }
+
+  Int disk_size = 50
+
+  command <<<
+    python3 << CODE
+import re
+import json
+from collections import defaultdict
+
+# Parse FASTQ URIs from write_json
+with open('~{write_json(fastq_uris)}', 'r') as f:
+    fastq_uris = json.load(f)
+
+# Group by base name (everything except R1/R2 and extension)
+# DRAGEN pattern: *_R1_*.fastq.gz or *_R2_*.fastq.gz
+groups = defaultdict(lambda: {'R1': None, 'R2': None})
+
+r1_pattern = re.compile(r'(.+)_R1_(.+\.fastq(?:\.gz)?)$')
+r2_pattern = re.compile(r'(.+)_R2_(.+\.fastq(?:\.gz)?)$')
+
+for uri in fastq_uris:
+    # Get basename from URI (handles both local paths and gs://, s3://, etc.)
+    basename = uri.split('/')[-1]
+
+    # Try to match R1 pattern
+    r1_match = r1_pattern.search(basename)
+    if r1_match:
+        base_key = r1_match.group(1) + '_' + r1_match.group(2)
+        groups[base_key]['R1'] = uri
+        continue
+
+    # Try to match R2 pattern
+    r2_match = r2_pattern.search(basename)
+    if r2_match:
+        base_key = r2_match.group(1) + '_' + r2_match.group(2)
+        groups[base_key]['R2'] = uri
+        continue
+
+    # If no pattern matches, treat as single-end R1
+    print(f"Warning: {uri} doesn't match R1/R2 pattern, treating as single-end R1", flush=True)
+    groups[basename]['R1'] = uri
+
+# Build output pairs
+paired_fastqs = []
+for base_key, files in sorted(groups.items()):
+    if files['R1'] and files['R2']:
+        # Paired-end
+        paired_fastqs.append([files['R1'], files['R2']])
+    elif files['R1']:
+        # Single-end (R1 only)
+        paired_fastqs.append([files['R1']])
+    elif files['R2']:
+        # R2 without R1 (unusual, but handle it as single-end)
+        print(f"Warning: Found R2 without R1 for {base_key}, treating as single-end", flush=True)
+        paired_fastqs.append([files['R2']])
+
+# Write output
+with open('paired_fastqs.json', 'w') as f:
+    json.dump(paired_fastqs, f, indent=2)
+
+print(f"Grouped {len(fastq_uris)} FASTQ files into {len(paired_fastqs)} pairs", flush=True)
+CODE
+  >>>
+
+  output {
+    Array[Array[String]] paired_fastqs = read_json("paired_fastqs.json")
+  }
+
+  runtime {
+    docker: "python:slim"
+    memory: "3 GB"
+    cpu: 1
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
+task get_illumina_run_metadata {
+  meta {
+    description: "Extracts metadata from Illumina samplesheets and RunInfo.xml using illumina.py illumina_metadata. Generates JSON files with sample metadata, filename metadata, and run information."
+  }
+
+  input {
+    File   samplesheet
+    File?  dragen_samplesheet
+    File   runinfo_xml
+    Int    lane = 1
+
+    Int?   machine_mem_gb
+    String docker = "quay.io/broadinstitute/viral-core:2.5.1"
+  }
+
+  parameter_meta {
+    samplesheet: {
+      description: "TSV samplesheet with sample names, library IDs, and barcodes.",
+      category: "required"
+    }
+    dragen_samplesheet: {
+      description: "Optional DRAGEN-style CSV samplesheet (SampleSheet.csv).",
+      category: "advanced"
+    }
+    runinfo_xml: {
+      description: "Illumina RunInfo.xml file describing the sequencing run configuration.",
+      category: "required"
+    }
+    lane: {
+      description: "Lane number (default: 1).",
+      category: "advanced"
+    }
+  }
+
+  Int disk_size = 50
+
+  command <<<
+    set -ex -o pipefail
+
+    if [ -z "$TMPDIR" ]; then
+      export TMPDIR=$(pwd)
+    fi
+
+    illumina.py --version | tee VERSION
+
+    illumina.py illumina_metadata \
+      --samplesheet ~{samplesheet} \
+      ~{'--dragen_samplesheet ' + dragen_samplesheet} \
+      --runinfo ~{runinfo_xml} \
+      --lane ~{lane} \
+      --out_meta_by_sample meta_by_sample.json \
+      --out_meta_by_filename meta_by_filename.json \
+      --out_runinfo runinfo.json \
+      --loglevel=DEBUG
+  >>>
+
+  output {
+    File   meta_by_sample_json   = "meta_by_sample.json"
+    File   meta_by_filename_json = "meta_by_filename.json"
+    File   runinfo_json          = "runinfo.json"
+
+    Map[String,Map[String,String]] meta_by_sample   = read_json("meta_by_sample.json")
+    Map[String,Map[String,String]] meta_by_filename = read_json("meta_by_filename.json")
+    Map[String,String]             run_info         = read_json("runinfo.json")
+
+    String viralngs_version      = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: select_first([machine_mem_gb, 7]) + " GB"
+    cpu: 4
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x4"
+    maxRetries: 2
+  }
+}
+
+task demux_fastqs {
+  meta {
+    description: "Demultiplex DRAGEN FASTQ files to BAM files using illumina.py splitcode_demux_fastqs. Auto-detects whether to use splitcode (3-barcode) or direct FASTQ-to-BAM conversion (2-barcode)."
+  }
+
+  input {
+    File   fastq_r1
+    File?  fastq_r2
+    File   samplesheet
+    File   runinfo_xml
+
+    String run_date
+    String flowcell_id
+
+    String? sequencingCenter
+
+    Int?    machine_mem_gb
+    Int?    cpu_count
+    Int     disk_size = 375
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.1"
+  }
+
+  parameter_meta {
+    fastq_r1: {
+      description: "R1 FASTQ file with DRAGEN-style headers containing barcodes.",
+      category: "required"
+    }
+    fastq_r2: {
+      description: "Optional R2 FASTQ file (for paired-end sequencing).",
+      category: "required"
+    }
+    samplesheet: {
+      description: "TSV samplesheet with barcode columns. Presence of barcode_3 values triggers splitcode demux.",
+      category: "required"
+    }
+    runinfo_xml: {
+      description: "Illumina RunInfo.xml file.",
+      category: "required"
+    }
+    run_date: {
+      description: "Run date string for BAM headers.",
+      category: "required"
+    }
+    flowcell_id: {
+      description: "Flowcell ID for BAM headers.",
+      category: "required"
+    }
+  }
+
+  command <<<
+    set -ex -o pipefail
+
+    if [ -z "$TMPDIR" ]; then
+      export TMPDIR=$(pwd)
+    fi
+
+    illumina.py --version | tee VERSION
+
+    # Determine number of CPUs to use
+    cpu_count=~{select_first([cpu_count, 8])}
+
+    illumina.py splitcode_demux_fastqs \
+      ~{fastq_r1} \
+      ~{'--fastq_r2 ' + fastq_r2} \
+      --samplesheet ~{samplesheet} \
+      --runinfo ~{runinfo_xml} \
+      --run_date ~{run_date} \
+      --flowcell_id ~{flowcell_id} \
+      ~{'--sequencing_center ' + sequencingCenter} \
+      --out_dir . \
+      --out_metrics demux_metrics.json \
+      --threads $cpu_count \
+      --loglevel=DEBUG
+
+    # Count output BAMs
+    ls -lh *.bam || echo "No BAM files found"
+
+    # Generate summary metrics text file
+    if [ -f demux_metrics.json ]; then
+      python3 << 'PYCODE'
+import json
+with open('demux_metrics.json', 'r') as f:
+    metrics = json.load(f)
+with open('demux_metrics.txt', 'w') as f:
+    json.dump(metrics, f, indent=2)
+PYCODE
+    fi
+
+    # Run FastQC on output BAMs (optional, if BAMs were created)
+    if ls *.bam 1> /dev/null 2>&1; then
+      for bam in *.bam; do
+        reports.py fastqc \
+          "$bam" \
+          "${bam%.bam}_fastqc.html" \
+          --out_zip "${bam%.bam}_fastqc.zip" \
+          --threads 2 \
+          || echo "FastQC failed for $bam, continuing..."
+      done
+    fi
+  >>>
+
+  output {
+    Array[File] output_bams   = glob("*.bam")
+    File        metrics_json  = "demux_metrics.json"
+    File        metrics_txt   = "demux_metrics.txt"
+    Array[File] fastqc_html   = glob("*_fastqc.html")
+    Array[File] fastqc_zip    = glob("*_fastqc.zip")
+
+    String      viralngs_version = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: select_first([machine_mem_gb, 30]) + " GB"
+    cpu: select_first([cpu_count, 8])
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
+    dx_instance_type: "mem3_ssd1_v2_x8"
+    maxRetries: 2
+  }
+}
