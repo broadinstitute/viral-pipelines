@@ -6,7 +6,7 @@ task merge_tarballs {
     String       out_filename
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.1"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.2"
   }
 
   Int disk_size = 2625
@@ -181,7 +181,7 @@ task illumina_demux {
     # --- options for VM shape ----------------------
     Int?    machine_mem_gb
     Int     disk_size = 2625
-    String  docker    = "quay.io/broadinstitute/viral-core:2.5.1"
+    String  docker    = "quay.io/broadinstitute/viral-core:2.5.2"
   }
 
   parameter_meta {
@@ -865,7 +865,7 @@ task get_illumina_run_metadata {
     String sequencing_center = "Broad"
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.5.1"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.2"
   }
 
   parameter_meta {
@@ -898,6 +898,9 @@ task get_illumina_run_metadata {
 
     illumina.py --version | tee VERSION
 
+    # NOTE: This command currently fails in viral-core:2.5.1 due to bug #127
+    # See: https://github.com/broadinstitute/viral-core/issues/127
+    # Will work once viral-core is updated
     illumina.py illumina_metadata \
       --samplesheet ~{samplesheet} \
       --runinfo ~{runinfo_xml} \
@@ -939,19 +942,15 @@ task demux_fastqs {
 
   input {
     File   fastq_r1
-    File?  fastq_r2
+    File   fastq_r2
     File   samplesheet
     File   runinfo_xml
-
-    String run_date
-    String flowcell_id
 
     String? sequencingCenter
 
     Int?    machine_mem_gb
-    Int?    cpu_count
     Int     disk_size = 375
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.1"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.2"
   }
 
   parameter_meta {
@@ -960,7 +959,7 @@ task demux_fastqs {
       category: "required"
     }
     fastq_r2: {
-      description: "Optional R2 FASTQ file (for paired-end sequencing).",
+      description: "R2 FASTQ file (for paired-end sequencing).",
       category: "required"
     }
     samplesheet: {
@@ -968,15 +967,7 @@ task demux_fastqs {
       category: "required"
     }
     runinfo_xml: {
-      description: "Illumina RunInfo.xml file.",
-      category: "required"
-    }
-    run_date: {
-      description: "Run date string for BAM headers.",
-      category: "required"
-    }
-    flowcell_id: {
-      description: "Flowcell ID for BAM headers.",
+      description: "Illumina RunInfo.xml file. NOTE: run_date and flowcell_id are extracted from this file and cannot be overridden due to viral-core limitations. Feature request needed to expose these as CLI parameters.",
       category: "required"
     }
   }
@@ -990,35 +981,21 @@ task demux_fastqs {
 
     illumina.py --version | tee VERSION
 
-    # Determine number of CPUs to use
-    cpu_count=~{select_first([cpu_count, 8])}
-
+    # NOTE: This command currently fails in viral-core:2.5.1 due to bug #127
+    # See: https://github.com/broadinstitute/viral-core/issues/127
+    # Also note: run_date and flowcell_id are extracted from RunInfo.xml internally
+    # and cannot be overridden (feature request in same issue)
     illumina.py splitcode_demux_fastqs \
-      ~{fastq_r1} \
-      ~{'--fastq_r2 ' + fastq_r2} \
+      --fastq_r1 ~{fastq_r1} \
+      --fastq_r2 ~{fastq_r2} \
       --samplesheet ~{samplesheet} \
       --runinfo ~{runinfo_xml} \
-      --run_date ~{run_date} \
-      --flowcell_id ~{flowcell_id} \
       ~{'--sequencing_center ' + sequencingCenter} \
-      --out_dir . \
-      --out_metrics demux_metrics.json \
-      --threads $cpu_count \
+      --outdir . \
       --loglevel=DEBUG
 
     # Count output BAMs
     ls -lh *.bam || echo "No BAM files found"
-
-    # Generate summary metrics text file
-    if [ -f demux_metrics.json ]; then
-      python3 << 'PYCODE'
-import json
-with open('demux_metrics.json', 'r') as f:
-    metrics = json.load(f)
-with open('demux_metrics.txt', 'w') as f:
-    json.dump(metrics, f, indent=2)
-PYCODE
-    fi
 
     # Run FastQC on output BAMs (optional, if BAMs were created)
     if ls *.bam 1> /dev/null 2>&1; then
@@ -1034,19 +1011,16 @@ PYCODE
   >>>
 
   output {
-    Array[File] output_bams   = glob("*.bam")
-    File        metrics_json  = "demux_metrics.json"
-    File        metrics_txt   = "demux_metrics.txt"
-    Array[File] fastqc_html   = glob("*_fastqc.html")
-    Array[File] fastqc_zip    = glob("*_fastqc.zip")
-
+    Array[File] output_bams      = glob("*.bam")
+    Array[File] fastqc_html      = glob("*_fastqc.html")
+    Array[File] fastqc_zip       = glob("*_fastqc.zip")
     String      viralngs_version = read_string("VERSION")
   }
 
   runtime {
     docker: docker
     memory: select_first([machine_mem_gb, 30]) + " GB"
-    cpu: select_first([cpu_count, 8])
+    cpu: 8
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x8"
