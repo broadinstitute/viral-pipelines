@@ -860,9 +860,9 @@ task get_illumina_run_metadata {
 
   input {
     File   samplesheet
-    File?  dragen_samplesheet
     File   runinfo_xml
     Int    lane = 1
+    String sequencing_center = "Broad"
 
     Int?   machine_mem_gb
     String docker = "quay.io/broadinstitute/viral-core:2.5.1"
@@ -873,16 +873,16 @@ task get_illumina_run_metadata {
       description: "TSV samplesheet with sample names, library IDs, and barcodes.",
       category: "required"
     }
-    dragen_samplesheet: {
-      description: "Optional DRAGEN-style CSV samplesheet (SampleSheet.csv).",
-      category: "advanced"
-    }
     runinfo_xml: {
       description: "Illumina RunInfo.xml file describing the sequencing run configuration.",
       category: "required"
     }
     lane: {
       description: "Lane number (default: 1).",
+      category: "advanced"
+    }
+    sequencing_center: {
+      description: "Sequencing center name (default: Broad).",
       category: "advanced"
     }
   }
@@ -900,9 +900,9 @@ task get_illumina_run_metadata {
 
     illumina.py illumina_metadata \
       --samplesheet ~{samplesheet} \
-      ~{'--dragen_samplesheet ' + dragen_samplesheet} \
       --runinfo ~{runinfo_xml} \
       --lane ~{lane} \
+      --sequencing_center ~{sequencing_center} \
       --out_meta_by_sample meta_by_sample.json \
       --out_meta_by_filename meta_by_filename.json \
       --out_runinfo runinfo.json \
