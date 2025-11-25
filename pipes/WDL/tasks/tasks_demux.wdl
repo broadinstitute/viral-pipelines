@@ -937,7 +937,7 @@ task demux_fastqs {
 
   input {
     File   fastq_r1
-    File   fastq_r2
+    File?  fastq_r2
     File   samplesheet
     File   runinfo_xml
 
@@ -954,8 +954,8 @@ task demux_fastqs {
       category: "required"
     }
     fastq_r2: {
-      description: "R2 FASTQ file (for paired-end sequencing).",
-      category: "required"
+      description: "R2 FASTQ file (for paired-end sequencing). Optional for single-end data.",
+      category: "optional"
     }
     samplesheet: {
       description: "TSV samplesheet with barcode columns. Presence of barcode_3 values triggers splitcode demux.",
@@ -982,7 +982,7 @@ task demux_fastqs {
     # and cannot be overridden (feature request in same issue)
     illumina.py splitcode_demux_fastqs \
       --fastq_r1 ~{fastq_r1} \
-      --fastq_r2 ~{fastq_r2} \
+      ~{'--fastq_r2 ' + fastq_r2} \
       --samplesheet ~{samplesheet} \
       --runinfo ~{runinfo_xml} \
       ~{'--sequencing_center ' + sequencingCenter} \

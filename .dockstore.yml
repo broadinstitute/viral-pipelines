@@ -90,6 +90,11 @@ workflows:
   - name: demux_deplete
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/demux_deplete.wdl
+  - name: load_illumina_fastqs
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/load_illumina_fastqs.wdl
+    testParameterFiles:
+    - /test/input/WDL/miniwdl-local/test_inputs-load_illumina_fastqs-local.json
   - name: demux_metadata_only
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/demux_metadata_only.wdl
