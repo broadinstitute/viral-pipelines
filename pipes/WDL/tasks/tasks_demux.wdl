@@ -780,12 +780,11 @@ task group_fastq_pairs {
   command <<<
     python3 << CODE
 import re
-import json
 from collections import defaultdict
 
-# Parse FASTQ URIs from write_json
-with open('~{write_json(fastq_uris)}', 'r') as f:
-    fastq_uris = json.load(f)
+# Parse FASTQ URIs from write_lines (one per line)
+with open('~{write_lines(fastq_uris)}', 'r') as f:
+    fastq_uris = [line.strip() for line in f if line.strip()]
 
 # Group by base name (everything except R1/R2 and extension)
 # DRAGEN pattern: *_R1_*.fastq.gz or *_R2_*.fastq.gz
@@ -816,30 +815,26 @@ for uri in fastq_uris:
     print(f"Warning: {uri} doesn't match R1/R2 pattern, treating as single-end R1", flush=True)
     groups[basename]['R1'] = uri
 
-# Build output pairs
-paired_fastqs = []
-for base_key, files in sorted(groups.items()):
-    if files['R1'] and files['R2']:
-        # Paired-end
-        paired_fastqs.append([files['R1'], files['R2']])
-    elif files['R1']:
-        # Single-end (R1 only)
-        paired_fastqs.append([files['R1']])
-    elif files['R2']:
-        # R2 without R1 (unusual, but handle it as single-end)
-        print(f"Warning: Found R2 without R1 for {base_key}, treating as single-end", flush=True)
-        paired_fastqs.append([files['R2']])
+# Build output - write TSV format where each line is tab-separated R1\tR2 or just R1
+with open('paired_fastqs.tsv', 'w') as f:
+    for base_key, files in sorted(groups.items()):
+        if files['R1'] and files['R2']:
+            # Paired-end: R1\tR2
+            f.write(f"{files['R1']}\t{files['R2']}\n")
+        elif files['R1']:
+            # Single-end: just R1
+            f.write(f"{files['R1']}\n")
+        elif files['R2']:
+            # R2 without R1 (unusual, but handle it as single-end)
+            print(f"Warning: Found R2 without R1 for {base_key}, treating as single-end", flush=True)
+            f.write(f"{files['R2']}\n")
 
-# Write output
-with open('paired_fastqs.json', 'w') as f:
-    json.dump(paired_fastqs, f, indent=2)
-
-print(f"Grouped {len(fastq_uris)} FASTQ files into {len(paired_fastqs)} pairs", flush=True)
+print(f"Grouped {len(fastq_uris)} FASTQ files into {len(groups)} pairs", flush=True)
 CODE
   >>>
 
   output {
-    Array[Array[String]] paired_fastqs = read_json("paired_fastqs.json")
+    Array[Array[String]] paired_fastqs = read_tsv("paired_fastqs.tsv")
   }
 
   runtime {
