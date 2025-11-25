@@ -1,0 +1,8 @@
+{
+  "group_fastq_pairs.fastq_uris": [
+    "test/input/TestSplitcodeDemuxFastqs/TestPool1_S1_L001_R1_001.fastq.gz",
+    "test/input/TestSplitcodeDemuxFastqs/TestPool1_S1_L001_R2_001.fastq.gz",
+    "test/input/TestSplitcodeDemuxFastqs/TestPool3_S3_L001_R1_001.fastq.gz",
+    "test/input/TestSplitcodeDemuxFastqs/TestPool3_S3_L001_R2_001.fastq.gz"
+  ]
+}
