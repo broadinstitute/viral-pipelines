@@ -893,9 +893,6 @@ task get_illumina_run_metadata {
 
     illumina.py --version | tee VERSION
 
-    # NOTE: This command currently fails in viral-core:2.5.1 due to bug #127
-    # See: https://github.com/broadinstitute/viral-core/issues/127
-    # Will work once viral-core is updated
     illumina.py illumina_metadata \
       --samplesheet ~{samplesheet} \
       --runinfo ~{runinfo_xml} \
@@ -976,10 +973,6 @@ task demux_fastqs {
 
     illumina.py --version | tee VERSION
 
-    # NOTE: This command currently fails in viral-core:2.5.1 due to bug #127
-    # See: https://github.com/broadinstitute/viral-core/issues/127
-    # Also note: run_date and flowcell_id are extracted from RunInfo.xml internally
-    # and cannot be overridden (feature request in same issue)
     illumina.py splitcode_demux_fastqs \
       --fastq_r1 ~{fastq_r1} \
       ~{'--fastq_r2 ' + fastq_r2} \
@@ -992,9 +985,16 @@ task demux_fastqs {
     # Count output BAMs
     ls -lh *.bam || echo "No BAM files found"
 
-    # Run FastQC on output BAMs (optional, if BAMs were created)
+    # Initialize read counts file (empty in case no BAMs are created)
+    touch read_counts.txt
+
+    # Run FastQC and count reads for output BAMs
     if ls *.bam 1> /dev/null 2>&1; then
       for bam in *.bam; do
+        # Count reads in BAM and append to read counts file
+        samtools view -c "$bam" >> read_counts.txt
+
+        # Run FastQC
         reports.py fastqc \
           "$bam" \
           "${bam%.bam}_fastqc.html" \
@@ -1007,6 +1007,7 @@ task demux_fastqs {
 
   output {
     Array[File] output_bams      = glob("*.bam")
+    Array[Int]  read_counts      = read_lines("read_counts.txt")
     Array[File] fastqc_html      = glob("*_fastqc.html")
     Array[File] fastqc_zip       = glob("*_fastqc.zip")
     String      viralngs_version = read_string("VERSION")

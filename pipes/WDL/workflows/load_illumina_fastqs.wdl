@@ -55,6 +55,7 @@ workflow load_illumina_fastqs {
   output {
     # BAM outputs (flattened)
     Array[File] raw_reads_unaligned_bams = flatten(demux_fastqs.output_bams)
+    Array[Int]  read_counts_raw          = flatten(demux_fastqs.read_counts)
 
     # QC outputs (flattened)
     Array[File] fastqc_html = flatten(demux_fastqs.fastqc_html)

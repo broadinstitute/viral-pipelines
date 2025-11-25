@@ -86,9 +86,13 @@ workflow load_illumina_fastqs_deplete {
   }
 
   Array[File] raw_bams = flatten(demux_fastqs.output_bams)
+  Array[Int]  raw_read_counts = flatten(demux_fastqs.read_counts)
 
   # Step 6: Spike-in counting and depletion for all BAMs
-  scatter (raw_reads in raw_bams) {
+  scatter (idx in range(length(raw_bams))) {
+    File raw_reads = raw_bams[idx]
+    Int  raw_count = raw_read_counts[idx]
+
     # Spike-in counting (if spikein_db provided)
     if (defined(spikein_db)) {
       call reports.align_and_count as spikein {
@@ -97,7 +101,6 @@ workflow load_illumina_fastqs_deplete {
           ref_db = select_first([spikein_db])
       }
     }
-    Int reads_total_count = select_first([spikein.reads_total, 0])
 
     # Depletion (if any depletion db provided)
     if (length(flatten(select_all([bmtaggerDbs, blastDbs, bwaDbs]))) > 0) {
@@ -110,7 +113,7 @@ workflow load_illumina_fastqs_deplete {
       }
     }
 
-    Int  read_count_post_depletion = select_first([deplete.depletion_read_count_post, reads_total_count])
+    Int  read_count_post_depletion = select_first([deplete.depletion_read_count_post, raw_count])
     File cleaned_bam = select_first([deplete.cleaned_bam, raw_reads])
 
     if (read_count_post_depletion >= min_reads_per_bam) {
@@ -120,7 +123,7 @@ workflow load_illumina_fastqs_deplete {
       File empty_bam = raw_reads
     }
 
-    Pair[String,Int] count_raw = (basename(raw_reads, '.bam'), reads_total_count)
+    Pair[String,Int] count_raw = (basename(raw_reads, '.bam'), raw_count)
     Pair[String,Int] count_cleaned = (basename(raw_reads, '.bam'), read_count_post_depletion)
   }
 
@@ -212,7 +215,7 @@ workflow load_illumina_fastqs_deplete {
   output {
     # Raw BAM outputs
     Array[File] raw_reads_unaligned_bams = raw_bams
-    Array[Int]  read_counts_raw          = reads_total_count
+    Array[Int]  read_counts_raw          = raw_read_counts
 
     # Metadata outputs (with defaults applied)
     Map[String,Map[String,String]] meta_by_sample   = read_json(meta_default_sample.out_json)
