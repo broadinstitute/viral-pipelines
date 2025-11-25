@@ -1,0 +1,11 @@
+{
+  "load_illumina_fastqs_deplete.fastq_files": [
+    "test/input/TestSplitcodeDemuxFastqs/TestPool1_S1_L001_R1_001.fastq.gz",
+    "test/input/TestSplitcodeDemuxFastqs/TestPool1_S1_L001_R2_001.fastq.gz",
+    "test/input/TestSplitcodeDemuxFastqs/TestPool3_S3_L001_R1_001.fastq.gz",
+    "test/input/TestSplitcodeDemuxFastqs/TestPool3_S3_L001_R2_001.fastq.gz"
+  ],
+  "load_illumina_fastqs_deplete.samplesheet": "test/input/TestSplitcodeDemuxFastqs/samples_3bc.tsv",
+  "load_illumina_fastqs_deplete.runinfo_xml": "test/input/TestSplitcodeDemuxFastqs/RunInfo.xml",
+  "load_illumina_fastqs_deplete.sample_rename_map": "test/input/TestSplitcodeDemuxFastqs/sample_rename_map.tsv"
+}
