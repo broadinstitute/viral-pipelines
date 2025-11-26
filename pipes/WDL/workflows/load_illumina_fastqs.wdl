@@ -46,7 +46,13 @@ workflow load_illumina_fastqs {
     }
   }
 
-  # Step 4: Aggregate QC reports with MultiQC
+  # Step 4: Merge demux metrics from all FASTQ pairs
+  call demux.merge_demux_metrics {
+    input:
+      metrics_files = demux_fastqs.demux_metrics
+  }
+
+  # Step 5: Aggregate QC reports with MultiQC
   call reports.MultiQC {
     input:
       input_files = flatten(demux_fastqs.fastqc_zip)
@@ -64,6 +70,9 @@ workflow load_illumina_fastqs {
     # MultiQC aggregated report
     File multiqc_report      = MultiQC.multiqc_report
     File multiqc_data_tar_gz = MultiQC.multiqc_data_dir_tarball
+
+    # Demux metrics
+    File demux_metrics = merge_demux_metrics.merged_metrics
 
     # Metadata outputs
     Map[String,Map[String,String]] meta_by_sample   = get_illumina_run_metadata.meta_by_sample

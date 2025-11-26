@@ -14,5 +14,6 @@
     "tile_count": "6",
     "total_tile_count": "12"
   },
-  "load_illumina_fastqs.read_counts_raw": [200, 150, 100, 0, 160]
+  "load_illumina_fastqs.read_counts_raw": [200, 150, 100, 0, 160],
+  "load_illumina_fastqs.demux_metrics": {"_test": "existence"}
 }

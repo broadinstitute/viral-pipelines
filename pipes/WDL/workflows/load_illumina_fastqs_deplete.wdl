@@ -88,6 +88,12 @@ workflow load_illumina_fastqs_deplete {
   Array[File] raw_bams = flatten(demux_fastqs.output_bams)
   Array[Int]  raw_read_counts = flatten(demux_fastqs.read_counts)
 
+  # Step 5.5: Merge demux metrics from all FASTQ pairs
+  call demux.merge_demux_metrics {
+    input:
+      metrics_files = demux_fastqs.demux_metrics
+  }
+
   # Step 6: Spike-in counting and depletion for all BAMs
   scatter (idx in range(length(raw_bams))) {
     File raw_reads = raw_bams[idx]
@@ -235,6 +241,9 @@ workflow load_illumina_fastqs_deplete {
     # QC outputs
     Array[File] fastqc_html = flatten(demux_fastqs.fastqc_html)
     Array[File] fastqc_zip  = flatten(demux_fastqs.fastqc_zip)
+
+    # Demux metrics
+    File demux_metrics = merge_demux_metrics.merged_metrics
 
     # MultiQC reports
     File  multiqc_report_raw     = multiqc_raw.multiqc_report

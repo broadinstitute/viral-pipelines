@@ -1010,6 +1010,7 @@ task demux_fastqs {
     Array[Int]  read_counts      = read_lines("read_counts.txt")
     Array[File] fastqc_html      = glob("*_fastqc.html")
     Array[File] fastqc_zip       = glob("*_fastqc.zip")
+    File        demux_metrics    = "demux_metrics_picard-style.txt"
     String      viralngs_version = read_string("VERSION")
   }
 
@@ -1020,6 +1021,54 @@ task demux_fastqs {
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x8"
+    maxRetries: 2
+  }
+}
+
+
+task merge_demux_metrics {
+  meta {
+    description: "Merge multiple Picard-style demux metrics files into a single TSV using illumina.py merge_demux_metrics."
+  }
+
+  input {
+    Array[File]+ metrics_files
+    String       output_filename = "merged_demux_metrics.txt"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.5"
+  }
+
+  parameter_meta {
+    metrics_files: {
+      description: "Array of Picard-style demux metrics TSV files to merge.",
+      category: "required"
+    }
+    output_filename: {
+      description: "Name for the merged output metrics file.",
+      category: "optional"
+    }
+  }
+
+  command <<<
+    set -ex -o pipefail
+    illumina.py --version | tee VERSION
+    illumina.py merge_demux_metrics \
+      ~{sep=' ' metrics_files} \
+      ~{output_filename} \
+      --loglevel=DEBUG
+  >>>
+
+  output {
+    File   merged_metrics   = output_filename
+    String viralngs_version = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: "4 GB"
+    cpu: 2
+    disks: "local-disk 50 HDD"
+    disk: "50 GB"
+    dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
 }
