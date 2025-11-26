@@ -84,7 +84,7 @@ task group_bams_by_sample {
 task get_bam_samplename {
   input {
     File    bam
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.3"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.4"
   }
   Int   disk_size = round(size(bam, "GB")) + 50
   command <<<
@@ -111,7 +111,7 @@ task get_sample_meta {
   input {
     Array[File] samplesheets_extended
 
-    String      docker = "quay.io/broadinstitute/viral-core:2.5.3"
+    String      docker = "quay.io/broadinstitute/viral-core:2.5.4"
   }
   Int disk_size = 50
   command <<<
@@ -173,7 +173,7 @@ task merge_and_reheader_bams {
       String       out_basename = basename(in_bams[0], ".bam")
 
       Boolean      run_fastqc = false
-      String       docker = "quay.io/broadinstitute/viral-core:2.5.3"
+      String       docker = "quay.io/broadinstitute/viral-core:2.5.4"
       Int          disk_size = 750
       Int          machine_mem_gb = 4
     }
@@ -249,7 +249,7 @@ task rmdup_ubam {
     String  method = "mvicuna"
 
     Int     machine_mem_gb = 7
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.3"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.4"
   }
 
   Int disk_size = 375 + 2 * ceil(size(reads_unmapped_bam, "GB"))
@@ -308,7 +308,7 @@ task downsample_bams {
     Boolean      deduplicateAfter = false
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.3"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.4"
   }
 
   Int disk_size = 750
@@ -375,7 +375,7 @@ task FastqToUBAM {
     Int     cpus = 2
     Int     mem_gb = 4
     Int     disk_size = 750
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.3"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.4"
   }
   parameter_meta {
     fastq_1: { description: "Unaligned read1 file in fastq format", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }
@@ -429,7 +429,7 @@ task read_depths {
     File      aligned_bam
 
     String    out_basename = basename(aligned_bam, '.bam')
-    String    docker = "quay.io/broadinstitute/viral-core:2.5.3"
+    String    docker = "quay.io/broadinstitute/viral-core:2.5.4"
   }
   Int disk_size = 200
   command <<<
