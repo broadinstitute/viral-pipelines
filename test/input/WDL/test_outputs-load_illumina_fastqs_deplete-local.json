@@ -15,7 +15,6 @@
     "total_tile_count": "12"
   },
   "load_illumina_fastqs_deplete.read_counts_raw": [200, 150, 100, 0, 160],
-  "load_illumina_fastqs_deplete.demux_metrics": {"_test": "existence"},
   "load_illumina_fastqs_deplete.meta_by_sample": {
     "RenamedSample1": {
       "amplicon_set": "",
