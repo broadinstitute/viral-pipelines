@@ -16,8 +16,8 @@ workflow load_illumina_fastqs {
     File        samplesheet   # TSV samplesheet with barcodes
     File        runinfo_xml   # Illumina RunInfo.xml
 
-    Int         demux_cpu_splitcode       = 48
-    Int         demux_memory_splitcode    = 180
+    Int         demux_cpu_splitcode       = 32
+    Int         demux_memory_splitcode    = 120
     Int         demux_cpu_no_splitcode    = 4
     Int         demux_memory_no_splitcode = 15
   }
