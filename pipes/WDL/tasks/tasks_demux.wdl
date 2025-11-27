@@ -978,6 +978,8 @@ task demux_fastqs {
 
     String? sequencingCenter
 
+    Boolean run_fastqc = true
+
     Int?    cpu
     Int?    memory_gb
     Int?    machine_mem_gb
@@ -1001,6 +1003,10 @@ task demux_fastqs {
     runinfo_xml: {
       description: "Illumina RunInfo.xml file. NOTE: run_date and flowcell_id are extracted from this file and cannot be overridden due to viral-core limitations. Feature request needed to expose these as CLI parameters.",
       category: "required"
+    }
+    run_fastqc: {
+      description: "Whether to run FastQC on output BAM files. Set to false to skip FastQC and return empty arrays for fastqc_html and fastqc_zip outputs.",
+      category: "advanced"
     }
   }
 
@@ -1028,20 +1034,61 @@ task demux_fastqs {
     # Initialize read counts file (empty in case no BAMs are created)
     touch read_counts.txt
 
-    # Run FastQC and count reads for output BAMs
+    # Collect read counts for output BAMs
     if ls *.bam 1> /dev/null 2>&1; then
       for bam in *.bam; do
-        # Count reads in BAM and append to read counts file
         samtools view -c "$bam" >> read_counts.txt
-
-        # Run FastQC
-        reports.py fastqc \
-          "$bam" \
-          "${bam%.bam}_fastqc.html" \
-          --out_zip "${bam%.bam}_fastqc.zip" \
-          --threads 2 \
-          || echo "FastQC failed for $bam, continuing..."
       done
+    fi
+
+    # Run FastQC on output BAMs (if enabled)
+    if ~{true="true" false="false" run_fastqc}; then
+      # Calculate available memory for FastQC parallelization
+      mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 85)
+
+      if ls *.bam 1> /dev/null 2>&1; then
+        # Create list of BAM basenames for parallel processing
+        ls *.bam | sed 's/\.bam$//' > bam_basenames.txt
+        num_bam_files=$(cat bam_basenames.txt | wc -l)
+
+        if [[ $num_bam_files -gt 0 ]]; then
+          # Dynamic resource allocation for FastQC (adapted from illumina_demux)
+          FASTQC_HARDCODED_MEM_PER_THREAD=250 # the value fastqc sets for -Xmx per thread
+          num_cpus=$(nproc)
+          num_fastqc_jobs=1
+          num_fastqc_threads=1
+          total_ram_needed_mb=250
+
+          # Determine the number of parallel fastqc jobs
+          while [[ $total_ram_needed_mb -lt $mem_in_mb ]] && \
+                [[ $num_fastqc_jobs -lt $num_cpus ]] && \
+                [[ $num_fastqc_jobs -lt $num_bam_files ]]; do
+              num_fastqc_jobs=$(($num_fastqc_jobs+1))
+              total_ram_needed_mb=$(($total_ram_needed_mb+$FASTQC_HARDCODED_MEM_PER_THREAD))
+          done
+
+          # Determine the number of fastqc threads per job
+          while [[ $total_ram_needed_mb -lt $mem_in_mb ]] && \
+                [[ $(($num_fastqc_jobs*$num_fastqc_threads)) -lt $num_cpus ]]; do
+              if [[ $(($num_fastqc_jobs * $(($num_fastqc_threads+1)))) -le $num_cpus ]]; then
+                  num_fastqc_threads=$(($num_fastqc_threads+1))
+                  total_ram_needed_mb=$(($num_fastqc_jobs*($FASTQC_HARDCODED_MEM_PER_THREAD*$num_fastqc_threads)))
+              else
+                  break
+              fi
+          done
+
+          # GNU Parallel: run FastQC on all BAMs in parallel
+          # ",," is the replacement string; values after ":::" are substituted where it appears
+          parallel --jobs $num_fastqc_jobs -I ,, \
+            "reports.py fastqc \
+              ,,.bam \
+              ,,_fastqc.html \
+              --out_zip ,,_fastqc.zip \
+              --threads $num_fastqc_threads" \
+            ::: $(cat bam_basenames.txt)
+        fi
+      fi
     fi
   >>>
 
