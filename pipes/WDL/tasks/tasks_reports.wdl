@@ -14,7 +14,7 @@ task alignment_metrics {
     Int    max_amp_len=5000
     Int    max_amplicons=500
 
-    Int    machine_mem_gb=32
+    Int    machine_mem_gb=16
     String docker = "quay.io/broadinstitute/viral-core:2.5.7"
   }
 
@@ -24,6 +24,7 @@ task alignment_metrics {
   command <<<
     set -e
     MEM_MB=$(free -m | head -2 | tail -1 | awk '{print $4}')
+    MEM_MB=$(( MEM_MB > 2048 ? MEM_MB : 2048 ))  # Minimum 2GB heap
     XMX=$(echo "-Xmx"$MEM_MB"m")
     echo "Requesting $MEM_MB MB of RAM for Java"
 
