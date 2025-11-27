@@ -854,10 +854,10 @@ task get_illumina_run_metadata {
   }
 
   input {
-    File   samplesheet
-    File   runinfo_xml
-    Int    lane = 1
-    String sequencing_center
+    File    samplesheet
+    File    runinfo_xml
+    Int     lane = 1
+    String? sequencing_center
 
     Int?   machine_mem_gb
     String docker = "quay.io/broadinstitute/viral-core:2.5.7"
