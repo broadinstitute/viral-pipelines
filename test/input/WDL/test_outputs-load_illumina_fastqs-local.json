@@ -8,7 +8,7 @@
     "run_id": "250101_TEST_0001_BTESTFC01",
     "run_start_date": "2025-01-01",
     "sequencer_model": "UNKNOWN",
-    "sequencing_center": "Broad",
+    "sequencing_center": "TEST001",
     "surface_count": "2",
     "swath_count": "1",
     "tile_count": "6",
