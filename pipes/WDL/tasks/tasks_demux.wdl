@@ -1043,40 +1043,30 @@ task demux_fastqs {
 
     # Run FastQC on output BAMs (if enabled)
     if ~{true="true" false="false" run_fastqc}; then
-      # Calculate available memory for FastQC parallelization
-      mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 85)
-
       if ls *.bam 1> /dev/null 2>&1; then
         # Create list of BAM basenames for parallel processing
         ls *.bam | sed 's/\.bam$//' > bam_basenames.txt
         num_bam_files=$(cat bam_basenames.txt | wc -l)
 
         if [[ $num_bam_files -gt 0 ]]; then
-          # Dynamic resource allocation for FastQC (adapted from illumina_demux)
-          FASTQC_HARDCODED_MEM_PER_THREAD=250 # the value fastqc sets for -Xmx per thread
+          # Over-allocate threads to maximize tail utilization
+          # This works regardless of how many CPUs the executor actually provides
           num_cpus=$(nproc)
-          num_fastqc_jobs=1
-          num_fastqc_threads=1
-          total_ram_needed_mb=250
+          num_fastqc_jobs=$num_bam_files
 
-          # Determine the number of parallel fastqc jobs
-          while [[ $total_ram_needed_mb -lt $mem_in_mb ]] && \
-                [[ $num_fastqc_jobs -lt $num_cpus ]] && \
-                [[ $num_fastqc_jobs -lt $num_bam_files ]]; do
-              num_fastqc_jobs=$(($num_fastqc_jobs+1))
-              total_ram_needed_mb=$(($total_ram_needed_mb+$FASTQC_HARDCODED_MEM_PER_THREAD))
-          done
+          # Over-allocate: 2x the "fair share" threads per job, minimum 4
+          # Initially each job gets ~(cpus/samples) actual CPU time
+          # As jobs finish, remaining jobs opportunistically get more CPU time
+          fair_share_threads=$(( num_cpus / num_bam_files ))
+          if [[ $fair_share_threads -lt 1 ]]; then
+            fair_share_threads=1
+          fi
+          num_fastqc_threads=$(( fair_share_threads * 2 ))
+          if [[ $num_fastqc_threads -lt 4 ]]; then
+            num_fastqc_threads=4
+          fi
 
-          # Determine the number of fastqc threads per job
-          while [[ $total_ram_needed_mb -lt $mem_in_mb ]] && \
-                [[ $(($num_fastqc_jobs*$num_fastqc_threads)) -lt $num_cpus ]]; do
-              if [[ $(($num_fastqc_jobs * $(($num_fastqc_threads+1)))) -le $num_cpus ]]; then
-                  num_fastqc_threads=$(($num_fastqc_threads+1))
-                  total_ram_needed_mb=$(($num_fastqc_jobs*($FASTQC_HARDCODED_MEM_PER_THREAD*$num_fastqc_threads)))
-              else
-                  break
-              fi
-          done
+          echo "FastQC parallelization: $num_fastqc_jobs jobs x $num_fastqc_threads threads (nproc=$num_cpus, samples=$num_bam_files)"
 
           # GNU Parallel: run FastQC on all BAMs in parallel
           # ",," is the replacement string; values after ":::" are substituted where it appears
