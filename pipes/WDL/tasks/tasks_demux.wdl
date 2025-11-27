@@ -927,6 +927,44 @@ task get_illumina_run_metadata {
   }
 }
 
+task check_for_barcode3 {
+  meta {
+    description: "Check if any sample in the samplesheet has a non-empty barcode_3 value. Used to determine resource allocation for demultiplexing."
+  }
+
+  input {
+    File   samplesheet
+    String docker = "python:slim"
+  }
+
+  command <<<
+    python3 << 'CODE'
+    import csv
+
+    has_barcode3 = False
+    with open('~{samplesheet}', 'r') as f:
+        reader = csv.DictReader(f, delimiter='\t')
+        for row in reader:
+            if row.get('barcode_3', '').strip():
+                has_barcode3 = True
+                break
+
+    with open('has_barcode3.txt', 'w') as out:
+        out.write('true' if has_barcode3 else 'false')
+    CODE
+  >>>
+
+  output {
+    Boolean has_barcode3 = read_boolean("has_barcode3.txt")
+  }
+
+  runtime {
+    docker: docker
+    memory: "1 GB"
+    cpu: 1
+  }
+}
+
 task demux_fastqs {
   meta {
     description: "Demultiplex DRAGEN FASTQ files to BAM files using illumina.py splitcode_demux_fastqs. Auto-detects whether to use splitcode (3-barcode) or direct FASTQ-to-BAM conversion (2-barcode)."
@@ -940,6 +978,8 @@ task demux_fastqs {
 
     String? sequencingCenter
 
+    Int?    cpu
+    Int?    memory_gb
     Int?    machine_mem_gb
     Int     disk_size = 750
     String  docker = "quay.io/broadinstitute/viral-core:2.5.7"
@@ -1016,8 +1056,8 @@ task demux_fastqs {
 
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 60]) + " GB"
-    cpu: 16
+    memory: select_first([memory_gb, machine_mem_gb, 60]) + " GB"
+    cpu: select_first([cpu, 16])
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x16"
