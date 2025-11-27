@@ -6,7 +6,7 @@ task merge_tarballs {
     String       out_filename
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.6"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.7"
   }
 
   Int disk_size = 2625
@@ -181,7 +181,7 @@ task illumina_demux {
     # --- options for VM shape ----------------------
     Int?    machine_mem_gb
     Int     disk_size = 2625
-    String  docker    = "quay.io/broadinstitute/viral-core:2.5.6"
+    String  docker    = "quay.io/broadinstitute/viral-core:2.5.7"
   }
 
   parameter_meta {
@@ -860,7 +860,7 @@ task get_illumina_run_metadata {
     String sequencing_center = "Broad"
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.5.6"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.7"
   }
 
   parameter_meta {
@@ -942,7 +942,7 @@ task demux_fastqs {
 
     Int?    machine_mem_gb
     Int     disk_size = 375
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.6"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.7"
   }
 
   parameter_meta {
@@ -1034,7 +1034,7 @@ task merge_demux_metrics {
   input {
     Array[File]+ metrics_files
     String       output_filename = "merged_demux_metrics.txt"
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.6"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.7"
   }
 
   parameter_meta {
