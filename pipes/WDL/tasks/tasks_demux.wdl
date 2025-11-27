@@ -779,58 +779,58 @@ task group_fastq_pairs {
 
   command <<<
     python3 << CODE
-import re
-from collections import defaultdict
+    import re
+    from collections import defaultdict
 
-# Parse FASTQ URIs from write_lines (one per line)
-with open('~{write_lines(fastq_uris)}', 'r') as f:
-    fastq_uris = [line.strip() for line in f if line.strip()]
+    # Parse FASTQ URIs from write_lines (one per line)
+    with open('~{write_lines(fastq_uris)}', 'r') as f:
+        fastq_uris = [line.strip() for line in f if line.strip()]
 
-# Group by base name (everything except R1/R2 and extension)
-# DRAGEN pattern: *_R1_*.fastq.gz or *_R2_*.fastq.gz
-groups = defaultdict(lambda: {'R1': None, 'R2': None})
+    # Group by base name (everything except R1/R2 and extension)
+    # DRAGEN pattern: *_R1_*.fastq.gz or *_R2_*.fastq.gz
+    groups = defaultdict(lambda: {'R1': None, 'R2': None})
 
-r1_pattern = re.compile(r'(.+)_R1_(.+\.fastq(?:\.gz)?)$')
-r2_pattern = re.compile(r'(.+)_R2_(.+\.fastq(?:\.gz)?)$')
+    r1_pattern = re.compile(r'(.+)_R1_(.+\.fastq(?:\.gz)?)$')
+    r2_pattern = re.compile(r'(.+)_R2_(.+\.fastq(?:\.gz)?)$')
 
-for uri in fastq_uris:
-    # Get basename from URI (handles both local paths and gs://, s3://, etc.)
-    basename = uri.split('/')[-1]
+    for uri in fastq_uris:
+        # Get basename from URI (handles both local paths and gs://, s3://, etc.)
+        basename = uri.split('/')[-1]
 
-    # Try to match R1 pattern
-    r1_match = r1_pattern.search(basename)
-    if r1_match:
-        base_key = r1_match.group(1) + '_' + r1_match.group(2)
-        groups[base_key]['R1'] = uri
-        continue
+        # Try to match R1 pattern
+        r1_match = r1_pattern.search(basename)
+        if r1_match:
+            base_key = r1_match.group(1) + '_' + r1_match.group(2)
+            groups[base_key]['R1'] = uri
+            continue
 
-    # Try to match R2 pattern
-    r2_match = r2_pattern.search(basename)
-    if r2_match:
-        base_key = r2_match.group(1) + '_' + r2_match.group(2)
-        groups[base_key]['R2'] = uri
-        continue
+        # Try to match R2 pattern
+        r2_match = r2_pattern.search(basename)
+        if r2_match:
+            base_key = r2_match.group(1) + '_' + r2_match.group(2)
+            groups[base_key]['R2'] = uri
+            continue
 
-    # If no pattern matches, treat as single-end R1
-    print(f"Warning: {uri} doesn't match R1/R2 pattern, treating as single-end R1", flush=True)
-    groups[basename]['R1'] = uri
+        # If no pattern matches, treat as single-end R1
+        print(f"Warning: {uri} doesn't match R1/R2 pattern, treating as single-end R1", flush=True)
+        groups[basename]['R1'] = uri
 
-# Build output - write TSV format where each line is tab-separated R1\tR2 or just R1
-with open('paired_fastqs.tsv', 'w') as f:
-    for base_key, files in sorted(groups.items()):
-        if files['R1'] and files['R2']:
-            # Paired-end: R1\tR2
-            f.write(f"{files['R1']}\t{files['R2']}\n")
-        elif files['R1']:
-            # Single-end: just R1
-            f.write(f"{files['R1']}\n")
-        elif files['R2']:
-            # R2 without R1 (unusual, but handle it as single-end)
-            print(f"Warning: Found R2 without R1 for {base_key}, treating as single-end", flush=True)
-            f.write(f"{files['R2']}\n")
+    # Build output - write TSV format where each line is tab-separated R1\tR2 or just R1
+    with open('paired_fastqs.tsv', 'w') as f:
+        for base_key, files in sorted(groups.items()):
+            if files['R1'] and files['R2']:
+                # Paired-end: R1\tR2
+                f.write(f"{files['R1']}\t{files['R2']}\n")
+            elif files['R1']:
+                # Single-end: just R1
+                f.write(f"{files['R1']}\n")
+            elif files['R2']:
+                # R2 without R1 (unusual, but handle it as single-end)
+                print(f"Warning: Found R2 without R1 for {base_key}, treating as single-end", flush=True)
+                f.write(f"{files['R2']}\n")
 
-print(f"Grouped {len(fastq_uris)} FASTQ files into {len(groups)} pairs", flush=True)
-CODE
+    print(f"Grouped {len(fastq_uris)} FASTQ files into {len(groups)} pairs", flush=True)
+    CODE
   >>>
 
   output {
@@ -857,7 +857,7 @@ task get_illumina_run_metadata {
     File   samplesheet
     File   runinfo_xml
     Int    lane = 1
-    String sequencing_center = "Broad"
+    String sequencing_center
 
     Int?   machine_mem_gb
     String docker = "quay.io/broadinstitute/viral-core:2.5.7"
@@ -897,7 +897,7 @@ task get_illumina_run_metadata {
       --samplesheet ~{samplesheet} \
       --runinfo ~{runinfo_xml} \
       --lane ~{lane} \
-      --sequencing_center ~{sequencing_center} \
+      ~{'--sequencing_center ' + sequencing_center} \
       --out_meta_by_sample meta_by_sample.json \
       --out_meta_by_filename meta_by_filename.json \
       --out_runinfo runinfo.json \
@@ -919,7 +919,7 @@ task get_illumina_run_metadata {
   runtime {
     docker: docker
     memory: select_first([machine_mem_gb, 7]) + " GB"
-    cpu: 4
+    cpu: 2
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
@@ -941,7 +941,7 @@ task demux_fastqs {
     String? sequencingCenter
 
     Int?    machine_mem_gb
-    Int     disk_size = 375
+    Int     disk_size = 750
     String  docker = "quay.io/broadinstitute/viral-core:2.5.7"
   }
 
@@ -1016,11 +1016,11 @@ task demux_fastqs {
 
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 30]) + " GB"
-    cpu: 8
+    memory: select_first([machine_mem_gb, 60]) + " GB"
+    cpu: 16
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
-    dx_instance_type: "mem3_ssd1_v2_x8"
+    dx_instance_type: "mem1_ssd1_v2_x16"
     maxRetries: 2
   }
 }
