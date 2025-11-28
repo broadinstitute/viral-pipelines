@@ -856,7 +856,7 @@ task get_illumina_run_metadata {
   input {
     File    samplesheet
     File    runinfo_xml
-    Int     lane = 1
+    Int?    lane
     String? sequencing_center
 
     Int?   machine_mem_gb
@@ -873,7 +873,7 @@ task get_illumina_run_metadata {
       category: "required"
     }
     lane: {
-      description: "Lane number (default: 1).",
+      description: "Lane number. Optional - if not specified, illumina.py will use all lanes or default behavior.",
       category: "advanced"
     }
     sequencing_center: {
@@ -896,7 +896,7 @@ task get_illumina_run_metadata {
     illumina.py illumina_metadata \
       --samplesheet ~{samplesheet} \
       --runinfo ~{runinfo_xml} \
-      --lane ~{lane} \
+      ~{'--lane ' + lane} \
       ~{'--sequencing_center ' + sequencing_center} \
       --out_meta_by_sample meta_by_sample.json \
       --out_meta_by_filename meta_by_filename.json \
