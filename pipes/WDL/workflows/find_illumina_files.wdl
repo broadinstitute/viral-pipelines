@@ -17,6 +17,5 @@ workflow find_illumina_files {
     output {
         String               runinfo_xml           = find_illumina_files_in_directory.runinfo_xml
         Array[String]        fastqs                = find_illumina_files_in_directory.fastqs
-        Array[Array[String]] raw_reads_fastq_pairs = find_illumina_files_in_directory.raw_reads_fastq_pairs
     }
 }
