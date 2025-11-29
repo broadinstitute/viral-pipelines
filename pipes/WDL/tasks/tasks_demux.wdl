@@ -1026,6 +1026,7 @@ task demux_fastqs {
       --runinfo ~{runinfo_xml} \
       ~{'--sequencing_center ' + sequencingCenter} \
       --outdir . \
+      --append_run_id \
       --loglevel=DEBUG
 
     # Count output BAMs
