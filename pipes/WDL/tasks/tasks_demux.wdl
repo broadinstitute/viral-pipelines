@@ -6,7 +6,7 @@ task merge_tarballs {
     String       out_filename
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.1"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.10"
   }
 
   Int disk_size = 2625
@@ -181,7 +181,7 @@ task illumina_demux {
     # --- options for VM shape ----------------------
     Int?    machine_mem_gb
     Int     disk_size = 2625
-    String  docker    = "quay.io/broadinstitute/viral-core:2.5.1"
+    String  docker    = "quay.io/broadinstitute/viral-core:2.5.10"
   }
 
   parameter_meta {
@@ -754,6 +754,414 @@ task merge_maps {
     cpu: 1
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
+task group_fastq_pairs {
+  meta {
+    description: "Groups FASTQ files into R1/R2 pairs based on DRAGEN naming convention. Supports paired-end and single-end FASTQs. Uses string operations only to avoid file localization."
+  }
+
+  input {
+    Array[String] fastq_uris
+  }
+
+  parameter_meta {
+    fastq_uris: {
+      description: "Array of FASTQ file URIs (as strings, not File type) to be paired. Files should follow DRAGEN naming convention with _R1_ or _R2_ in the filename.",
+      category: "required"
+    }
+  }
+
+  Int disk_size = 50
+
+  command <<<
+    python3 << CODE
+    import re
+    from collections import defaultdict
+
+    # Parse FASTQ URIs from write_lines (one per line)
+    with open('~{write_lines(fastq_uris)}', 'r') as f:
+        fastq_uris = [line.strip() for line in f if line.strip()]
+
+    # Group by base name (everything except R1/R2 and extension)
+    # DRAGEN pattern: *_R1_*.fastq.gz or *_R2_*.fastq.gz
+    groups = defaultdict(lambda: {'R1': None, 'R2': None})
+
+    r1_pattern = re.compile(r'(.+)_R1_(.+\.fastq(?:\.gz)?)$')
+    r2_pattern = re.compile(r'(.+)_R2_(.+\.fastq(?:\.gz)?)$')
+
+    for uri in fastq_uris:
+        # Get basename from URI (handles both local paths and gs://, s3://, etc.)
+        basename = uri.split('/')[-1]
+
+        # Try to match R1 pattern
+        r1_match = r1_pattern.search(basename)
+        if r1_match:
+            base_key = r1_match.group(1) + '_' + r1_match.group(2)
+            groups[base_key]['R1'] = uri
+            continue
+
+        # Try to match R2 pattern
+        r2_match = r2_pattern.search(basename)
+        if r2_match:
+            base_key = r2_match.group(1) + '_' + r2_match.group(2)
+            groups[base_key]['R2'] = uri
+            continue
+
+        # If no pattern matches, treat as single-end R1
+        print(f"Warning: {uri} doesn't match R1/R2 pattern, treating as single-end R1", flush=True)
+        groups[basename]['R1'] = uri
+
+    # Build output - write TSV format where each line is tab-separated R1\tR2 or just R1
+    with open('paired_fastqs.tsv', 'w') as f:
+        for base_key, files in sorted(groups.items()):
+            if files['R1'] and files['R2']:
+                # Paired-end: R1\tR2
+                f.write(f"{files['R1']}\t{files['R2']}\n")
+            elif files['R1']:
+                # Single-end: just R1
+                f.write(f"{files['R1']}\n")
+            elif files['R2']:
+                # R2 without R1 (unusual, but handle it as single-end)
+                print(f"Warning: Found R2 without R1 for {base_key}, treating as single-end", flush=True)
+                f.write(f"{files['R2']}\n")
+
+    print(f"Grouped {len(fastq_uris)} FASTQ files into {len(groups)} pairs", flush=True)
+    CODE
+  >>>
+
+  output {
+    Array[Array[String]] paired_fastqs = read_tsv("paired_fastqs.tsv")
+  }
+
+  runtime {
+    docker: "python:slim"
+    memory: "3 GB"
+    cpu: 1
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
+task get_illumina_run_metadata {
+  meta {
+    description: "Extracts metadata from Illumina samplesheets and RunInfo.xml using illumina.py illumina_metadata. Generates JSON files with sample metadata, filename metadata, and run information."
+  }
+
+  input {
+    File    samplesheet
+    File    runinfo_xml
+    Int?    lane
+    String? sequencing_center
+
+    Int?   machine_mem_gb
+    String docker = "quay.io/broadinstitute/viral-core:2.5.10"
+  }
+
+  parameter_meta {
+    samplesheet: {
+      description: "TSV samplesheet with sample names, library IDs, and barcodes.",
+      category: "required"
+    }
+    runinfo_xml: {
+      description: "Illumina RunInfo.xml file describing the sequencing run configuration.",
+      category: "required"
+    }
+    lane: {
+      description: "Lane number. Optional - if not specified, illumina.py will use all lanes or default behavior.",
+      category: "advanced"
+    }
+    sequencing_center: {
+      description: "Sequencing center name (default: Broad).",
+      category: "advanced"
+    }
+  }
+
+  Int disk_size = 50
+
+  command <<<
+    set -ex -o pipefail
+
+    if [ -z "$TMPDIR" ]; then
+      export TMPDIR=$(pwd)
+    fi
+
+    illumina.py --version | tee VERSION
+
+    illumina.py illumina_metadata \
+      --samplesheet ~{samplesheet} \
+      --runinfo ~{runinfo_xml} \
+      ~{'--lane ' + lane} \
+      ~{'--sequencing_center ' + sequencing_center} \
+      --out_meta_by_sample meta_by_sample.json \
+      --out_meta_by_filename meta_by_filename.json \
+      --out_runinfo runinfo.json \
+      --loglevel=DEBUG
+  >>>
+
+  output {
+    File   meta_by_sample_json   = "meta_by_sample.json"
+    File   meta_by_filename_json = "meta_by_filename.json"
+    File   runinfo_json          = "runinfo.json"
+
+    Map[String,Map[String,String]] meta_by_sample   = read_json("meta_by_sample.json")
+    Map[String,Map[String,String]] meta_by_filename = read_json("meta_by_filename.json")
+    Map[String,String]             run_info         = read_json("runinfo.json")
+
+    String viralngs_version      = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: select_first([machine_mem_gb, 7]) + " GB"
+    cpu: 2
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x4"
+    maxRetries: 2
+  }
+}
+
+task check_for_barcode3 {
+  meta {
+    description: "Check if any sample in the samplesheet has a non-empty barcode_3 value. Used to determine resource allocation for demultiplexing."
+  }
+
+  input {
+    File   samplesheet
+    String docker = "python:slim"
+  }
+
+  command <<<
+    python3 << 'CODE'
+    import csv
+
+    has_barcode3 = False
+    with open('~{samplesheet}', 'r') as f:
+        reader = csv.DictReader(f, delimiter='\t')
+        for row in reader:
+            if row.get('barcode_3', '').strip():
+                has_barcode3 = True
+                break
+
+    with open('has_barcode3.txt', 'w') as out:
+        out.write('true' if has_barcode3 else 'false')
+    CODE
+  >>>
+
+  output {
+    Boolean has_barcode3 = read_boolean("has_barcode3.txt")
+  }
+
+  runtime {
+    docker: docker
+    memory: "1 GB"
+    cpu: 1
+  }
+}
+
+task demux_fastqs {
+  meta {
+    description: "Demultiplex DRAGEN FASTQ files to BAM files using illumina.py splitcode_demux_fastqs. Auto-detects whether to use splitcode (3-barcode) or direct FASTQ-to-BAM conversion (2-barcode)."
+  }
+
+  input {
+    File   fastq_r1
+    File?  fastq_r2
+    File   samplesheet
+    File   runinfo_xml
+
+    String? sequencingCenter
+
+    Boolean run_fastqc = true
+
+    Int?    cpu
+    Int?    memory_gb
+    Int?    machine_mem_gb
+    Int     disk_size = 750
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.10"
+  }
+
+  parameter_meta {
+    fastq_r1: {
+      description: "R1 FASTQ file with DRAGEN-style headers containing barcodes.",
+      category: "required"
+    }
+    fastq_r2: {
+      description: "R2 FASTQ file (for paired-end sequencing). Optional for single-end data.",
+      category: "optional"
+    }
+    samplesheet: {
+      description: "TSV samplesheet with barcode columns. Presence of barcode_3 values triggers splitcode demux.",
+      category: "required"
+    }
+    runinfo_xml: {
+      description: "Illumina RunInfo.xml file. NOTE: run_date and flowcell_id are extracted from this file and cannot be overridden due to viral-core limitations. Feature request needed to expose these as CLI parameters.",
+      category: "required"
+    }
+    run_fastqc: {
+      description: "Whether to run FastQC on output BAM files. Set to false to skip FastQC and return empty arrays for fastqc_html and fastqc_zip outputs.",
+      category: "advanced"
+    }
+  }
+
+  command <<<
+    set -ex -o pipefail
+
+    if [ -z "$TMPDIR" ]; then
+      export TMPDIR=$(pwd)
+    fi
+
+    illumina.py --version | tee VERSION
+
+    illumina.py splitcode_demux_fastqs \
+      --fastq_r1 ~{fastq_r1} \
+      ~{'--fastq_r2 ' + fastq_r2} \
+      --samplesheet ~{samplesheet} \
+      --runinfo ~{runinfo_xml} \
+      ~{'--sequencing_center ' + sequencingCenter} \
+      --outdir . \
+      --append_run_id \
+      --loglevel=DEBUG
+
+    # Log performance metrics after splitcode demux
+    echo "=== Performance metrics after splitcode_demux_fastqs ===" >&2
+    echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%S)" >&2
+    echo "Uptime (seconds): $(cat /proc/uptime | cut -f 1 -d ' ')" >&2
+    echo "Load average (1/5/15 min): $(cat /proc/loadavg | cut -f 1-3 -d ' ')" >&2
+    echo "Memory usage (bytes): $(if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi)" >&2
+    echo "=======================================================" >&2
+
+    # Count output BAMs
+    ls -lh *.bam || echo "No BAM files found"
+
+    # Initialize read counts file (empty in case no BAMs are created)
+    touch read_counts.txt
+
+    # Collect read counts for output BAMs
+    if ls *.bam 1> /dev/null 2>&1; then
+      for bam in *.bam; do
+        samtools view -c "$bam" >> read_counts.txt
+      done
+    fi
+
+    # Run FastQC on output BAMs (if enabled)
+    if ~{true="true" false="false" run_fastqc}; then
+      if ls *.bam 1> /dev/null 2>&1; then
+        # Create list of BAM basenames for parallel processing
+        ls *.bam | sed 's/\.bam$//' > bam_basenames.txt
+        num_bam_files=$(cat bam_basenames.txt | wc -l)
+
+        if [[ $num_bam_files -gt 0 ]]; then
+          # Over-allocate threads to maximize tail utilization
+          # This works regardless of how many CPUs the executor actually provides
+          num_cpus=$(nproc)
+          num_fastqc_jobs=$num_bam_files
+
+          # Over-allocate: 2x the "fair share" threads per job, minimum 4
+          # Initially each job gets ~(cpus/samples) actual CPU time
+          # As jobs finish, remaining jobs opportunistically get more CPU time
+          fair_share_threads=$(( num_cpus / num_bam_files ))
+          if [[ $fair_share_threads -lt 1 ]]; then
+            fair_share_threads=1
+          fi
+          num_fastqc_threads=$(( fair_share_threads * 2 ))
+          if [[ $num_fastqc_threads -lt 4 ]]; then
+            num_fastqc_threads=4
+          fi
+
+          echo "FastQC parallelization: $num_fastqc_jobs jobs x $num_fastqc_threads threads (nproc=$num_cpus, samples=$num_bam_files)"
+
+          # GNU Parallel: run FastQC on all BAMs in parallel
+          # ",," is the replacement string; values after ":::" are substituted where it appears
+          parallel --jobs $num_fastqc_jobs -I ,, \
+            "reports.py fastqc \
+              ,,.bam \
+              ,,_fastqc.html \
+              --out_zip ,,_fastqc.zip \
+              --threads $num_fastqc_threads" \
+            ::: $(cat bam_basenames.txt)
+        fi
+      fi
+    fi
+
+    cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+    cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+    set +o pipefail
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
+  >>>
+
+  output {
+    Array[File] output_bams      = glob("*.bam")
+    Array[Int]  read_counts      = read_lines("read_counts.txt")
+    Array[File] fastqc_html      = glob("*_fastqc.html")
+    Array[File] fastqc_zip       = glob("*_fastqc.zip")
+    File        demux_metrics    = "demux_metrics_picard-style.txt"
+    Int         max_ram_gb       = ceil(read_float("MEM_BYTES")/1000000000)
+    Int         runtime_sec      = ceil(read_float("UPTIME_SEC"))
+    Int         cpu_load_15min   = ceil(read_float("LOAD_15M"))
+    String      viralngs_version = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: select_first([memory_gb, machine_mem_gb, 60]) + " GB"
+    cpu: select_first([cpu, 16])
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x16"
+    maxRetries: 2
+  }
+}
+
+
+task merge_demux_metrics {
+  meta {
+    description: "Merge multiple Picard-style demux metrics files into a single TSV using illumina.py merge_demux_metrics."
+  }
+
+  input {
+    Array[File]+ metrics_files
+    String       output_filename = "merged_demux_metrics.txt"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.10"
+  }
+
+  parameter_meta {
+    metrics_files: {
+      description: "Array of Picard-style demux metrics TSV files to merge.",
+      category: "required"
+    }
+    output_filename: {
+      description: "Name for the merged output metrics file.",
+      category: "optional"
+    }
+  }
+
+  command <<<
+    set -ex -o pipefail
+    illumina.py --version | tee VERSION
+    illumina.py merge_demux_metrics \
+      ~{sep=' ' metrics_files} \
+      ~{output_filename} \
+      --loglevel=DEBUG
+  >>>
+
+  output {
+    File   merged_metrics   = output_filename
+    String viralngs_version = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: "4 GB"
+    cpu: 2
+    disks: "local-disk 50 HDD"
+    disk: "50 GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
