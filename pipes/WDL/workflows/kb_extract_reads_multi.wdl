@@ -48,7 +48,7 @@ workflow kb_extract_reads {
 
     # Create a map from h5ad basenames to h5ad files
     scatter(h5ad in h5ad_files) {
-        String h5ad_basename = basename(h5ad, ".h5ad")
+        String h5ad_basename = basename(basename(h5ad, ".h5ad"), "_kb_count.tar.zst")
     }
     Map[String, File] h5ad_map = as_map(zip(h5ad_basename, h5ad_files))
     
