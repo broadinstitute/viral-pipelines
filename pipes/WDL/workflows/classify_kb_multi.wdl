@@ -7,6 +7,7 @@ workflow kb_classify_reads {
         description: "Runs multiple FASTQ/BAM files through kb classify process"
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     input {
