@@ -290,4 +290,4 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/unpack_archive_to_bucket.wdl
   - name: classify_kallisto_multi
     subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/classify_kallisto_multi.wdl
+    primaryDescriptorPath: /pipes/WDL/workflows/classify_kb_mult.wdl
