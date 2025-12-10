@@ -420,6 +420,92 @@ task scaffold {
     }
 }
 
+task skani_triangle {
+  meta {
+    description: "Compute pairwise distances between all sequences in a FASTA file using skani triangle. This produces a sparse distance matrix suitable for large-scale genome comparisons."
+  }
+  input {
+    File    sequences_fasta
+    String  out_basename
+
+    Int     marker_compression = 15
+    Int     sketch_size = 50
+    Int     compression_factor = 10
+    Int     min_aligned_frac = 15
+
+    String  docker = "quay.io/broadinstitute/viral-assemble:2.5.1.0"
+    Int     machine_mem_gb = 8
+    Int     cpu = 4
+    Int     disk_size = 100
+  }
+
+  parameter_meta {
+    sequences_fasta: {
+      description: "Input sequences in FASTA format for pairwise distance computation",
+      patterns: ["*.fasta", "*.fa"],
+      category: "required"
+    }
+    out_basename: {
+      description: "Base name for output files",
+      category: "required"
+    }
+    marker_compression: {
+      description: "Marker compression factor for skani (-m parameter, default 15)",
+      category: "advanced"
+    }
+    sketch_size: {
+      description: "Sketch size parameter for skani (-s parameter, default 50)",
+      category: "advanced"
+    }
+    compression_factor: {
+      description: "Compression factor for skani (-c parameter, default 10)",
+      category: "advanced"
+    }
+    min_aligned_frac: {
+      description: "Minimum aligned fraction for skani (--min-af parameter, default 15)",
+      category: "advanced"
+    }
+    skani_triangle_tsv: {
+      description: "Sparse pairwise distance matrix in TSV format",
+      patterns: ["*.tsv"],
+      category: "other"
+    }
+  }
+
+  command <<<
+    set -e
+
+    skani triangle \
+      -i "~{sequences_fasta}" \
+      -o "~{out_basename}.skani_triangle.tsv" \
+      -m ~{marker_compression} \
+      -s ~{sketch_size} \
+      -c ~{compression_factor} \
+      --min-af ~{min_aligned_frac} \
+      --sparse \
+      --no-learned-ani \
+      --robust \
+      --ci \
+      --detailed \
+      -t $(nproc)
+  >>>
+
+  output {
+    File skani_triangle_tsv = "~{out_basename}.skani_triangle.tsv"
+  }
+
+  runtime {
+    docker: docker
+    memory: machine_mem_gb + " GB"
+    cpu:    cpu
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x4"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
+
 task ivar_trim {
     meta {
       description: "this runs ivar trim on aligned reads, which results in soft-clipping of alignments"
@@ -432,7 +518,7 @@ task ivar_trim {
       Int?   sliding_window
       Int?   min_quality = 1
       Int?   primer_offset
-      
+
       Int?   machine_mem_gb
       String docker = "andersenlabapps/ivar:1.3.1"
 
