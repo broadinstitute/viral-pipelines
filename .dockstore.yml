@@ -201,6 +201,9 @@ workflows:
   - name: nextclade_single
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/nextclade_single.wdl
+  - name: pairwise_distances
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/pairwise_distances.wdl
   - name: populate_library_and_sample_tables_from_flowcell
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/populate_library_and_sample_tables_from_flowcell.wdl

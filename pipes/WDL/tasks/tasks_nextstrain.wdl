@@ -997,7 +997,7 @@ task mafft_one_chr {
         File?    ref_fasta
         String   basename
         Boolean  remove_reference = false
-        Boolean  keep_length = true
+        Boolean? keep_length
         Boolean  large = false
         Boolean  memsavetree = false
 
@@ -1006,6 +1006,8 @@ task mafft_one_chr {
         Int      cpus = 64
         Int      disk_size = 750
     }
+
+    Boolean  keep_length_actual = select_first([keep_length, defined(ref_fasta)])
     command <<<
         set -e
 
@@ -1036,7 +1038,7 @@ task mafft_one_chr {
 
         # mafft align to reference in "closely related" mode
         cat args.txt | grep . | xargs -d '\n' mafft --thread -1 \
-            ~{true='--keeplength --mapout' false='' keep_length} \
+            ~{true='--keeplength --mapout' false='' keep_length_actual} \
             > msa.fasta
 
         REMOVE_REF="~{true='--remove-reference' false='' remove_reference}"
