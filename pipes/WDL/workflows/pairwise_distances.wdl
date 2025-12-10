@@ -13,8 +13,8 @@ workflow pairwise_distances {
     }
 
     parameter_meta {
-        accessions: {
-            description: "List of GenBank accession numbers for single segment genomes to download and compare",
+        accessions_file: {
+            description: "Text file with GenBank accession numbers for single segment genomes, one per line",
             category: "required"
         }
         emailAddress: {
@@ -32,11 +32,14 @@ workflow pairwise_distances {
     }
 
     input {
-        Array[String]+ accessions
-        String         emailAddress
-        Boolean        make_tree = true
-        String         out_prefix = "pairwise_dist"
+        File    accessions_file
+        String  emailAddress
+        Boolean make_tree = true
+        String  out_prefix = "pairwise_dist"
     }
+
+    # Read accessions from file (one per line)
+    Array[String] accessions = read_lines(accessions_file)
 
     # Download sequences from GenBank
     call ncbi.download_fasta {
