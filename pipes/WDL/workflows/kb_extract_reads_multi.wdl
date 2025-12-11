@@ -46,17 +46,20 @@ workflow kb_extract_reads {
         }
     }
 
-    # Create a map from h5ad basenames to h5ad files
-    scatter(h5ad in h5ad_files) {
-        String h5ad_basename = basename(basename(h5ad, ".h5ad"), "_kb_count.tar.zst")
-    }
-    Map[String, File] h5ad_map = as_map(zip(h5ad_basename, h5ad_files))
-    
-    # Process each BAM file and lookup corresponding h5ad
+    # Process each BAM file with its matched h5ad
     scatter(reads_bam in reads_bams) {
-        # Strip common read file extensions to get sample basename
-        String bam_basename = basename(basename(basename(reads_bam, ".bam"), ".fastq.gz"), ".fastq")
-        File matched_h5ad = h5ad_map[bam_basename]
+        # Extract basename from reads file
+        String reads_basename = sub(sub(sub(sub(basename(reads_bam), "\\.gz$", ""), "\\.fastq$", ""), "\\.R[12]$", ""), "\\.[12]$", "")
+        
+        # Find matching h5ad file by comparing basenames
+        scatter(h5ad in h5ad_files) {
+            String h5ad_basename = sub(basename(h5ad), "\\.h5ad$", "")
+            Boolean is_match = (reads_basename == h5ad_basename)
+        }
+        
+        # Select the matching h5ad (will have exactly one true value)
+        Array[File] matched = select_all(if is_match then [h5ad] else [])
+        File matched_h5ad = matched[0]
         
         call metagenomics.kb_extract as kb_extract_single {
             input: 
