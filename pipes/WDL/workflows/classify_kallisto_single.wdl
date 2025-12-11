@@ -85,8 +85,8 @@ workflow classify_kallisto_single {
 
     call metagenomics.kb_extract as kb_extract_single {
         input: 
-            reads_bam = reads_bam,
-            h5ad_file = count_tar,
+            reads_bam = classify_kb_single.kb_count_tar,
+            h5ad_file = reads_bam,
             protein = protein,
             kb_index = kallisto_index,
             t2g = t2g,
@@ -96,7 +96,7 @@ workflow classify_kallisto_single {
     call metagenomics.report_primary_kb_taxa {
         input:
             kb_count_tar = classify_kb_single.kb_count_tar,
-            id_to_taxa_map = id_to_taxa_map
+            id_to_taxon_map = id_to_taxa_map
     }
 
     ## TODO: Re-tag all of our sequence IDs from extract reads with our sample names + kallisto DB IDs
