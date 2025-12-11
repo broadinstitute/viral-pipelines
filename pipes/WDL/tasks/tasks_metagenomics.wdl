@@ -1183,7 +1183,7 @@ task kb_extract {
       description: "List of target transcript or gene IDs to extract reads for."
     }
     h5ad_file: {
-      description: "If no target IDs are provided, an h5ad file may be provided from which to extract target IDs. The h5ad file must contain a 'gene_ids' column in the .var dataframe."
+      description: "If no target IDs are provided, an h5ad file may be provided from which to extract target IDs. The h5ad file must contain a 'gene_ids' column in the .var dataframe.",
       patterns: ["*.h5ad"]
     }
     protein: {

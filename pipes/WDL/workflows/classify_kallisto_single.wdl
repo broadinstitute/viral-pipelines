@@ -30,7 +30,7 @@ workflow classify_kallisto_single {
 
     parameter_meta {
         reads_bams: {
-          description: "Set of files containing reads to process. Single-end or paired-end."
+          description: "Set of files containing reads to process. Single-end or paired-end.",
           patterns: ["*.bam", "*.fastq", "*.fastq.gz"]
         }
         kmer_size: {
