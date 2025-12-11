@@ -85,8 +85,8 @@ workflow classify_kallisto_single {
 
     call metagenomics.kb_extract as kb_extract_single {
         input: 
-            reads_bam = classify_kb_single.kb_count_tar,
-            h5ad_file = reads_bam,
+            reads_bam = reads_bam,
+            h5ad_file = classify_kb_single.kb_count_tar,
             protein = protein,
             kb_index = kallisto_index,
             t2g = t2g,
