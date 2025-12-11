@@ -55,10 +55,11 @@ workflow kb_extract_reads {
         scatter(h5ad in h5ad_files) {
             String h5ad_basename = sub(basename(h5ad), "\\.h5ad$", "")
             Boolean is_match = (reads_basename == h5ad_basename)
+            File? matched_file = if is_match then h5ad else None
         }
         
-        # Select the matching h5ad (will have exactly one true value)
-        Array[File] matched = select_all(if is_match then [h5ad] else [])
+        # Select the matching h5ad (will have exactly one non-None value)
+        Array[File] matched = select_all(matched_file)
         File matched_h5ad = matched[0]
         
         call metagenomics.kb_extract as kb_extract_single {
