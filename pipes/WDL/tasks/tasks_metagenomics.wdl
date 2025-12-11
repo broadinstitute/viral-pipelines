@@ -965,8 +965,7 @@ task kb {
     Boolean  loom=false
     Boolean  protein=false
 
-    #String   docker="ghcr.io/carze/viral-classify:latest"
-    String   docker="viral-classify-local:latest"
+    String   docker="quay.io/broadinstitute/viral-classify:2.2.5-44-g7908c9ca-ca-kb_python"
   }
 
   parameter_meta {
@@ -1082,8 +1081,7 @@ task build_kb_db {
     Int?        kmer_size=31
     String?     workflow_type
 
-    #String      docker="ghcr.io/carze/viral-classify:latest"
-    String      docker="viral-classify-local:latest"
+    String      docker="quay.io/broadinstitute/viral-classify:2.2.5-44-g7908c9ca-ca-kb_python"
   }
 
   parameter_meta {
@@ -1165,8 +1163,7 @@ task kb_extract {
     Int             threshold=1
     Boolean         protein=false
 
-    #String          docker="ghcr.io/carze/viral-classify:latest"
-     String          docker="viral-classify-local:latest"
+     String          docker="quay.io/broadinstitute/viral-classify:2.2.5-44-g7908c9ca-ca-kb_python"
   }
 
   parameter_meta {
@@ -1262,8 +1259,7 @@ task report_primary_kb_taxa {
     File          id_to_taxon_map
     String        focal_taxon = "Viruses"
 
-    #String        docker="ghcr.io/carze/viral-classify:latest"
-    String        docker="viral-classify-local:latest"
+    String        docker="quay.io/broadinstitute/viral-classify:2.2.5-44-g7908c9ca-ca-kb_python"
   }
   String out_basename = sub(basename(kb_count_tar, ".tar.zst"), "_kb_count", "")
   Int disk_size = 200
@@ -1293,8 +1289,8 @@ task report_primary_kb_taxa {
   >>>
 
   output {
-    String focal_tax_name = focal_taxon
     File   ranked_focal_report = "~{out_basename}.ranked_focal_report.tsv"
+    String focal_tax_name = focal_taxon
     Int    total_focal_reads = read_int("NUM_FOCAL")
     Float  percent_of_focal = read_float("PCT_OF_FOCAL")
     Int    num_reads = read_int("NUM_READS")
@@ -1324,8 +1320,7 @@ task kb_merge_h5ads {
     Array[File]     in_count_tars
     String          out_basename
 
-    #String          docker="ghcr.io/carze/viral-classify:latest"
-    String          docker="viral-classify-local:latest"
+    String          docker="quay.io/broadinstitute/viral-classify:2.2.5-44-g7908c9ca-ca-kb_python"
   }
 
   parameter_meta {
