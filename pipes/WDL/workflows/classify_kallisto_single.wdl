@@ -104,8 +104,8 @@ workflow classify_kallisto_single {
     ## TODO: Run kallisto - kallisto read classifier script to create a classification table
     
     output {
-        Array  kb_classify_reads                = classify_kb_single.kb_count_tar
-        Array  kb_extracted_reads               = kb_extract_single.kb_extract_tar
+        File  kb_classify_reads                 = classify_kb_single.kb_count_tar
+        File  kb_extracted_reads                = kb_extract_single.kb_extract_tar
         File   kallisto_top_taxa_report         = report_primary_kb_taxa.ranked_focal_report
         String kallisto_focal_taxon_name        = report_primary_kb_taxa.focal_tax_name
         Int    kallisto_focal_total_reads       = report_primary_kb_taxa.total_focal_reads
