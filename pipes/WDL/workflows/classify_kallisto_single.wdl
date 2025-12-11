@@ -95,7 +95,7 @@ workflow classify_kallisto_single {
 
     call metagenomics.report_primary_kb_taxa {
         input:
-            kb_count_tar = classify_kb_single.kb_count_tar
+            kb_count_tar = classify_kb_single.kb_count_tar,
             id_to_taxa_map = id_to_taxa_map
     }
 
