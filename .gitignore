@@ -78,4 +78,6 @@ tools/conda-tools/
 # miniWDL
 default.profraw
 
-.vscode/
+.vscode/# pixi environments
+.pixi/*
+!.pixi/config.toml
