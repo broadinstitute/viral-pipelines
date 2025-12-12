@@ -33,7 +33,7 @@ task gcs_copy {
 
 task check_terra_env {
   input {
-    String docker = "quay.io/broadinstitute/viral-core:2.4.1"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.10"
   }
   meta {
     description: "task for inspection of backend to determine whether the task is running on Terra and/or GCP"
@@ -440,7 +440,7 @@ task create_or_update_sample_tables {
     String  sample_table_name  = "sample"
     String  library_table_name = "library"
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.10"
   }
 
   meta {
@@ -605,5 +605,162 @@ task create_or_update_sample_tables {
     File stdout_log = stdout()
     File stderr_log = stderr()
     Int  max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
+  }
+}
+
+task find_illumina_files_in_directory {
+  input {
+    String  illumina_dir
+    String? fastq_dir
+    String  docker = "quay.io/broadinstitute/viral-baseimage:0.3.0"
+  }
+  parameter_meta {
+    illumina_dir: {
+      description: "GCS bucket path to Illumina run directory (e.g., gs://bucket/path/to/run)",
+      category: "required"
+    }
+    fastq_dir: {
+      description: "Override path to fastq files (defaults to {illumina_dir}/fastq)",
+      category: "advanced"
+    }
+    runinfo_xml: {
+      description: "GCS path to RunInfo.xml file from the Illumina run directory",
+      category: "output"
+    }
+    fastqs: {
+      description: "All FASTQ files found in the fastq directory",
+      category: "output"
+    }
+    raw_reads_fastq_pairs: {
+      description: "FASTQ files grouped by sample, as pairs (PE) or singles (SE). Array of arrays where each inner array contains 1 (SE) or 2 (PE) file paths.",
+      category: "output"
+    }
+  }
+  Int disk_size = 20
+  command <<<
+    set -e -o pipefail
+
+    # Strip trailing slashes from illumina_dir to avoid double-slash issues
+    ILLUMINA_DIR="~{illumina_dir}"
+    ILLUMINA_DIR="$(echo "$ILLUMINA_DIR" | sed 's:/*$::')"
+
+    # Set default fastq_dir to illumina_dir/fastq if not provided
+    # Handle default in shell to avoid double-slash from WDL concatenation
+    if [ -n "~{fastq_dir}" ]; then
+      FASTQ_DIR="~{fastq_dir}"
+      FASTQ_DIR="$(echo "$FASTQ_DIR" | sed 's:/*$::')"
+    else
+      FASTQ_DIR="$ILLUMINA_DIR/fastq"
+    fi
+
+    # Find RunInfo.xml - check base level first, then search recursively
+    echo "Searching for RunInfo.xml at: $ILLUMINA_DIR/RunInfo.xml" >&2
+    if gcloud storage ls "$ILLUMINA_DIR/RunInfo.xml" 2>gcloud_error.txt | head -1 > runinfo_path.txt && [ -s runinfo_path.txt ]; then
+      echo "Found RunInfo.xml at base level" >&2
+    else
+      echo "Not found at base level, searching recursively..." >&2
+      cat gcloud_error.txt >&2
+      if gcloud storage ls "$ILLUMINA_DIR/**/RunInfo.xml" 2>gcloud_error.txt | head -1 > runinfo_path.txt && [ -s runinfo_path.txt ]; then
+        echo "Found RunInfo.xml via recursive search" >&2
+      else
+        echo "ERROR: RunInfo.xml not found in $ILLUMINA_DIR" >&2
+        echo "gcloud error output:" >&2
+        cat gcloud_error.txt >&2
+        exit 1
+      fi
+    fi
+
+    RUNINFO_PATH=$(cat runinfo_path.txt)
+    echo "Found RunInfo.xml at: $RUNINFO_PATH"
+
+    # List all fastq.gz files in fastq_dir
+    gcloud storage ls "$FASTQ_DIR/*.fastq.gz" 2>/dev/null > all_fastqs.txt || {
+      echo "WARNING: No fastq.gz files found in $FASTQ_DIR" >&2
+      touch all_fastqs.txt
+    }
+
+    # Parse fastq filenames and group into pairs/singles
+    python3 << 'CODE'
+    import re
+    import json
+
+    # Read all fastq paths
+    with open('all_fastqs.txt', 'rt') as f:
+        fastqs = [line.strip() for line in f if line.strip()]
+
+    # Write all fastqs to output
+    with open('all_fastqs_output.txt', 'wt') as f:
+        for fq in fastqs:
+            f.write(fq + '\n')
+
+    # Pattern: anything ending with _R1_###.fastq.gz or _R2_###.fastq.gz
+    # Where ### is one or more digits
+    # Example: Sample1_S1_L001_R1_001.fastq.gz
+    pattern = re.compile(r'^(.+)_R([12])_(\d+)\.fastq\.gz$')
+
+    groups = {}
+    unmatched = []
+
+    for fq_path in fastqs:
+        # Get basename from full GCS path
+        basename = fq_path.split('/')[-1]
+
+        match = pattern.search(basename)
+        if match:
+            sample_basename = match.group(1)
+            read_num = match.group(2)
+
+            if sample_basename not in groups:
+                groups[sample_basename] = {}
+
+            groups[sample_basename][f'R{read_num}'] = fq_path
+        else:
+            unmatched.append(fq_path)
+
+    # Create output array of arrays
+    # Each inner array is either [R1, R2] for PE or [R1] for SE
+    pairs = []
+
+    for sample_basename in sorted(groups.keys()):
+        sample_files = groups[sample_basename]
+
+        if 'R1' in sample_files and 'R2' in sample_files:
+            # Paired-end
+            pairs.append([sample_files['R1'], sample_files['R2']])
+        elif 'R1' in sample_files:
+            # Single-end (R1 only)
+            pairs.append([sample_files['R1']])
+        elif 'R2' in sample_files:
+            # Single-end (R2 only, unusual but possible)
+            pairs.append([sample_files['R2']])
+
+    # Write output as JSON
+    with open('raw_reads_fastq_pairs.json', 'wt') as f:
+        json.dump(pairs, f, indent=2)
+
+    # Report unmatched files
+    if unmatched:
+        print(f"WARNING: {len(unmatched)} fastq files did not match expected pattern *_R[12]_\d+.fastq.gz:")
+        for u in unmatched[:10]:  # Show first 10
+            print(f"  {u}")
+        if len(unmatched) > 10:
+            print(f"  ... and {len(unmatched) - 10} more")
+
+    print(f"Found {len(groups)} samples with {len(pairs)} read groups")
+    CODE
+  >>>
+  output {
+    String               runinfo_xml           = read_string("runinfo_path.txt")
+    Array[String]        fastqs                = read_lines("all_fastqs_output.txt")
+    Array[Array[String]] raw_reads_fastq_pairs = read_json("raw_reads_fastq_pairs.json")
+  }
+  runtime {
+    docker: docker
+    memory: "3.75 GB"
+    cpu: 1
+    disks: "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
   }
 }

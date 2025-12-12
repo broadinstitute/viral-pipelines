@@ -130,8 +130,8 @@ jobs:
       - name: install java
         uses: actions/setup-java@v4
         with:
-          distribution: 'adopt'
-          java-version: '11'
+          distribution: 'temurin'
+          java-version: '17'
       - name: install cromwell+womtool+dxWDL
         shell: bash
         run: |
@@ -236,8 +236,8 @@ jobs:
       - name: install java
         uses: actions/setup-java@v4
         with:
-          distribution: 'adopt'
-          java-version: '11'
+          distribution: 'temurin'
+          java-version: '17'
       - name: install cromwell+womtool+dxWDL
         shell: bash
         run: |
@@ -365,8 +365,8 @@ jobs:
       - name: install java
         uses: actions/setup-java@v4
         with:
-          distribution: 'adopt'
-          java-version: '11'
+          distribution: 'temurin'
+          java-version: '17'
       - name: install miniwdl
         run: |
           pip3 install pyyaml dxpy

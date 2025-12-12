@@ -5,7 +5,7 @@ task taxid_to_nextclade_dataset_name {
         Int     taxid
         File    taxdump_tgz
         File    nextclade_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/typing/nextclade-by-taxid.tsv"
-        String  docker = "quay.io/broadinstitute/viral-classify:2.2.5"
+        String  docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
     }
     command <<<
         set -e
@@ -62,7 +62,7 @@ task nextclade_one_sample {
         File? gene_annotations_json
         String? dataset_name
         Int    disk_size = 50
-        String docker = "nextstrain/nextclade:3.9.1"
+        String docker = "nextstrain/nextclade:3.18.0"
     }
     String basename = basename(genome_fasta, ".fasta")
     command <<<
@@ -155,7 +155,7 @@ task nextclade_many_samples {
         String       basename
         File?        genome_ids_setdefault_blank
         Int          disk_size = 150
-        String       docker = "nextstrain/nextclade:3.9.1"
+        String       docker = "nextstrain/nextclade:3.18.0"
     }
     command <<<
         set -e
@@ -332,7 +332,7 @@ task derived_cols {
         String?       lab_highlight_loc
         Array[File]   table_map = []
 
-        String        docker = "quay.io/broadinstitute/viral-core:2.4.1"
+        String        docker = "quay.io/broadinstitute/viral-core:2.5.10"
         Int           disk_size = 50
     }
     parameter_meta {
@@ -900,7 +900,7 @@ task filter_sequences_to_list {
 
         String       out_fname = sub(sub(basename(sequences, ".zst"), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
         # Prior docker image: "nextstrain/base:build-20240318T173028Z"
-        String       docker = "quay.io/broadinstitute/viral-core:2.4.1"
+        String       docker = "quay.io/broadinstitute/viral-core:2.5.10"
         Int          disk_size = 750
     }
     parameter_meta {
@@ -997,15 +997,17 @@ task mafft_one_chr {
         File?    ref_fasta
         String   basename
         Boolean  remove_reference = false
-        Boolean  keep_length = true
+        Boolean? keep_length
         Boolean  large = false
         Boolean  memsavetree = false
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
+        String   docker = "quay.io/broadinstitute/viral-phylo:2.5.1.0"
         Int      mem_size = 500
         Int      cpus = 64
         Int      disk_size = 750
     }
+
+    Boolean  keep_length_actual = select_first([keep_length, defined(ref_fasta)])
     command <<<
         set -e
 
@@ -1036,7 +1038,7 @@ task mafft_one_chr {
 
         # mafft align to reference in "closely related" mode
         cat args.txt | grep . | xargs -d '\n' mafft --thread -1 \
-            ~{true='--keeplength --mapout' false='' keep_length} \
+            ~{true='--keeplength --mapout' false='' keep_length_actual} \
             > msa.fasta
 
         REMOVE_REF="~{true='--remove-reference' false='' remove_reference}"
@@ -1089,7 +1091,7 @@ task mafft_one_chr_chunked {
         Int      batch_chunk_size = 2000
         Int      threads_per_job = 2
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.4.1.0"
+        String   docker = "quay.io/broadinstitute/viral-phylo:2.5.1.0"
         Int      mem_size = 32
         Int      cpus = 64
         Int      disk_size = 750

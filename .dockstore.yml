@@ -90,6 +90,16 @@ workflows:
   - name: demux_deplete
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/demux_deplete.wdl
+  - name: load_illumina_fastqs
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/load_illumina_fastqs.wdl
+    testParameterFiles:
+    - /test/input/WDL/miniwdl-local/test_inputs-load_illumina_fastqs-local.json
+  - name: load_illumina_fastqs_deplete
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/load_illumina_fastqs_deplete.wdl
+    testParameterFiles:
+    - /test/input/WDL/miniwdl-local/test_inputs-load_illumina_fastqs_deplete-local.json
   - name: demux_metadata_only
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/demux_metadata_only.wdl
@@ -126,6 +136,9 @@ workflows:
   - name: fetch_sra_to_bam
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/fetch_sra_to_bam.wdl
+  - name: find_illumina_files
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/find_illumina_files.wdl
   - name: filter_classified_bam_to_taxa
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/filter_classified_bam_to_taxa.wdl
@@ -188,6 +201,9 @@ workflows:
   - name: nextclade_single
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/nextclade_single.wdl
+  - name: pairwise_distances
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/pairwise_distances.wdl
   - name: populate_library_and_sample_tables_from_flowcell
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/populate_library_and_sample_tables_from_flowcell.wdl

@@ -6,7 +6,7 @@ task merge_tarballs {
     String       out_filename
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-core:2.4.1"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.10"
   }
 
   Int disk_size = 2625
@@ -142,13 +142,20 @@ task revcomp_i5 {
 
 task illumina_demux {
   input {
-    File    flowcell_tgz
+    File   flowcell_tgz
     Int     lane=1
-    Boolean sort_reads=true
+    
     File?   samplesheet
     File?   runinfo
     String? sequencingCenter
 
+    Boolean        rev_comp_barcodes_before_demux = false
+    Array[String]? barcode_columns_to_rev_comp
+
+    Boolean sort_reads=true
+
+    Boolean emit_unmatched_reads_bam=false
+    
     String? flowcell
     Int?    minimumBaseQuality = 10
     Int?    maxMismatches = 0
@@ -161,9 +168,20 @@ task illumina_demux {
     Int?    maxRecordsInRam
     Int?    numberOfNegativeControls
 
+    # --- options specific to inner barcode demux ---
+    Int     inner_barcode_trim_r1_right_of_barcode = 10
+    Int     inner_barcode_predemux_trim_r1_3prime  = 18
+    Int     inner_barcode_predemux_trim_r2_5prime  = 18
+    Int     inner_barcode_predemux_trim_r2_3prime  = 18
+
+    # --- options for debugging or special use ------
+    Int?    tileLimit  
+    Int?    firstTile
+
+    # --- options for VM shape ----------------------
     Int?    machine_mem_gb
     Int     disk_size = 2625
-    String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
+    String  docker    = "quay.io/broadinstitute/viral-core:2.5.10"
   }
 
   parameter_meta {
@@ -172,16 +190,28 @@ task illumina_demux {
           patterns: ["*.tar.gz", ".tar.zst", ".tar.bz2", ".tar.lz4", ".tgz"]
       }
       samplesheet: {
-        description: "CSV file with the library chemistry, sample names and the index tag used for each sample, in addition to some other metrics describing the run.",
+        description: "TSV or CSV file with sample names, library IDs, and the barcode or barcodes (indices) associated with each sample, in addition to other per-sample attributes.",
         category: "required"
       }
       runinfo: { 
         description: "if we are overriding the RunInfo file, use the path of the file provided. Otherwise the default will be RunInfo.xml. ",
         category: "advanced"
       }
+      rev_comp_barcodes_before_demux: {
+        description: "Reverse-complement the barcode(s) before demultiplexing. By default, this action applies to values in the 'barcode_2' column unless overridden by 'barcode_columns_to_rev_comp'.",
+        category: "advanced"
+      }
+      barcode_columns_to_rev_comp: {
+        description: "Columns in the sample sheet to reverse-complement. Only used if 'rev_comp_barcodes_before_demux' is true. Defaults to 'barcode_2'.",
+        category: "advanced"
+      }
   }
 
-  String out_base = "~{basename(basename(basename(basename(flowcell_tgz, '.zst'), '.gz'), '.tar'), '.tgz')}-L~{lane}"
+  # WDL 1.0 files running under miniwdl 1.12 cannot contain nested curly braces outside the command block
+  String tarball_base                   = basename(basename(basename(basename(flowcell_tgz, '.zst'), '.gz'), '.tar'), '.tgz')
+  String out_base                       = tarball_base + '-L~{lane}'
+  String splitcode_outdir               = "inner_barcode_demux"
+  String default_revcomp_barcode_column = "barcode_2"
 
   command <<<
     set -ex -o pipefail
@@ -190,14 +220,16 @@ task illumina_demux {
     mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 85)
 
     if [ -z "$TMPDIR" ]; then
-      export TMPDIR=$(pwd)
+      export TMPDIR="$(pwd)/tmp"
     fi
-    FLOWCELL_DIR=$(mktemp -d)
 
+    mkdir -p "$TMPDIR"
+    echo "TMPDIR: $TMPDIR"
+    FLOWCELL_DIR=$(mktemp -d)
     read_utils.py --version | tee VERSION
 
     read_utils.py extract_tarball \
-      ~{flowcell_tgz} $FLOWCELL_DIR \
+      "~{flowcell_tgz}" $FLOWCELL_DIR \
       --loglevel=DEBUG
 
     # if we are overriding the RunInfo file, use the path of the file provided. Otherwise find the file
@@ -205,7 +237,7 @@ task illumina_demux {
       RUNINFO_FILE="~{runinfo}"
     else
       # full RunInfo.xml path
-      RUNINFO_FILE="$(find $FLOWCELL_DIR -type f -name RunInfo.xml | head -n 1)"
+      RUNINFO_FILE="$(find $FLOWCELL_DIR -type f -name 'RunInfo.xml' | head -n 1)"
     fi
     
     # Parse the lane count & run ID from RunInfo.xml file
@@ -230,7 +262,8 @@ task illumina_demux {
     fi
 
     # total data size more roughly tracks total tile count
-    total_tile_count=$((lane_count*surface_count*swath_count*tile_count))
+    total_tile_count=$(( ${lane_count:-1} * ${surface_count:-1} * \
+                         ${swath_count:-1} * ${tile_count:-1} ))
 
     demux_threads="$(nproc --all)"
     if [ "$total_tile_count" -le 2 ]; then
@@ -308,6 +341,27 @@ task illumina_demux {
     if [ -n "~{maxRecordsInRam}" ]; then max_records_in_ram="~{maxRecordsInRam}"; else max_records_in_ram="$max_records_in_ram"; fi
     if [ -n "$max_records_in_ram" ]; then max_records_in_ram="--max_records_in_ram=$max_records_in_ram"; fi
 
+    # Inspect ~{samplesheet} tsv file for the presence of duplicated (barcode_1,barcode_2) pairs, and/or 
+    # the presence of a barcode_3 column with values in at least some of the rows.
+    # We can lean on a Python call out to the SampleSheet class in illumina.py for this.
+    collapse_duplicated_barcodes="false"
+    sample_sheet_barcode_collapse_potential=$(python -c 'import os; import illumina as il; ss=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=False); ssc=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=True); print("sheet_collapse_possible_true") if len(ss.get_rows())!=len(ssc.get_rows()) else print("sheet_collapse_possible_false")')
+    if [[ "$sample_sheet_barcode_collapse_potential" == "sheet_collapse_possible_true" ]]; then
+      collapse_duplicated_barcodes="true"
+      collapsed_barcodes_output_samplesheet_arg="--collapse_duplicated_barcodes=barcodes_if_collapsed.tsv"
+      echo "Detected potential for barcode pair collapsing in provided sample sheet. Treating as two-stage demultiplexing..."
+    else
+      collapse_duplicated_barcodes="false"
+      collapsed_barcodes_output_samplesheet_arg=""
+      echo "No potential for barcode pair collapsing detected in provided sample sheet. Proceeding with single-stage demultiplexing."
+    fi
+
+    # dump sample names from input sample sheet 'sample' col to sample_names.txt
+    sample_names_expected_from_samplesheet_list_txt="sample_names.txt"
+    python -c 'import os; import illumina as il; ss=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=False); sample_name_list=[r["sample"]+"\n" for r in ss.get_rows()]; f=open("'${sample_names_expected_from_samplesheet_list_txt}'", "w"); f.writelines(sample_name_list); f.close()'
+    
+    cols_to_revcomp="~{sep=' ' select_first([barcode_columns_to_rev_comp,[default_revcomp_barcode_column]])}"
+
     # note that we are intentionally setting --threads to about 2x the core
     # count. seems to still provide speed benefit (over 1x) when doing so.
     illumina.py illumina_demux \
@@ -327,7 +381,10 @@ task illumina_demux {
       ~{'--read_structure=' + readStructure} \
       ~{'--minimum_quality=' + minimumQuality} \
       ~{'--run_start_date=' + runStartDate} \
+      ~{'--tile_limit=' + tileLimit} \
+      ~{'--first_tile=' + firstTile} \
       ~{true="--sort=true" false="--sort=false" sort_reads} \
+      ~{true='--rev_comp_barcodes_before_demux ' false='' rev_comp_barcodes_before_demux} ~{true="$cols_to_revcomp" false='' rev_comp_barcodes_before_demux} \
       $max_records_in_ram \
       --JVMmemory="$mem_in_mb"m \
       $demux_threads \
@@ -336,19 +393,219 @@ task illumina_demux {
       --out_meta_by_sample meta_by_sample.json \
       --out_meta_by_filename meta_by_fname.json \
       --out_runinfo runinfo.json \
+      --tmp_dir "$TMPDIR" \
+      $collapsed_barcodes_output_samplesheet_arg \
       --loglevel=DEBUG
 
-    illumina.py guess_barcodes ~{'--number_of_negative_controls ' + numberOfNegativeControls} --expected_assigned_fraction=0 barcodes.txt metrics.txt barcodes_outliers.txt
+    ls -lah
+
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; }
+
+    # if barcodes.txt exists
+    if [ -f "barcodes.txt" ]; then
+      echo "Barcodes file found, proceeding..."
+      echo "Lines in barcodes.txt: $(wc -l barcodes.txt | awk '{print $1}')"
+    else
+      echo "No barcodes file found. Exiting."
+      exit 1
+    fi
+    
+    illumina.py guess_barcodes \
+      ~{'--number_of_negative_controls ' + numberOfNegativeControls} \
+      --expected_assigned_fraction=0 \
+      barcodes.txt \
+      metrics.txt \
+      barcodes_outliers.txt
 
     illumina.py flowcell_metadata --inDir $FLOWCELL_DIR flowcellMetadataFile.tsv
 
-    mkdir -p unmatched
-    mv Unmatched.bam unmatched/
+    mkdir -p picard_bams unmatched unmatched_picard picard_demux_metadata
+
+    # move picard outputs to separate subdirs (for now)
+    mv ./meta_by_sample.json ./meta_by_fname.json picard_demux_metadata
+    mv ./*.bam picard_bams    
+
+    # ======= inner barcode demux =======
+    # if we collapsed barcode pairs, we need to run splitcode_demux
+    if [ -f "barcodes_if_collapsed.tsv" ]; then
+      mkdir -p ./~{splitcode_outdir}
+
+      illumina.py splitcode_demux \
+      ./picard_bams \
+      ~{lane} \
+      ~{splitcode_outdir} \
+      ~{'--trim_r1_right_of_barcode ' + inner_barcode_trim_r1_right_of_barcode} \
+      ~{'--predemux_trim_r1_3prime '  + inner_barcode_predemux_trim_r1_3prime} \
+      ~{'--predemux_trim_r2_5prime '  + inner_barcode_predemux_trim_r2_5prime} \
+      ~{'--predemux_trim_r2_3prime '  + inner_barcode_predemux_trim_r2_3prime} \
+      ~{'--sampleSheet=' + samplesheet} \
+      "--runInfo=${RUNINFO_FILE}" \
+      --illuminaRunDirectory=$FLOWCELL_DIR \
+      $demux_threads \
+      --out_meta_by_sample ~{splitcode_outdir}/meta_by_sample.json \
+      --out_meta_by_filename ~{splitcode_outdir}/meta_by_fname.json \
+      ~{'--runInfo=' + runinfo} \
+      --loglevel DEBUG
+      
+      # Rename splitcode splitcode metrics files
+      mv ./~{splitcode_outdir}/bc2sample_lut.csv              ./~{splitcode_outdir}/inner_barcode_demux_metrics.csv
+      mv ./~{splitcode_outdir}/bc2sample_lut_picard-style.txt ./~{splitcode_outdir}/inner_barcode_demux_metrics_picard-style.txt
+    fi
+    # ======= end inner barcode demux =======
+
+
+    # --- consolidate metadata json files ---
+    # ToDo: make sure single-demux IDs do not collide with splitcode IDs?
+    json_dirs_to_check=("./picard_demux_metadata" "./~{splitcode_outdir}")
+    for jsonfile in "meta_by_fname.json" "meta_by_sample.json"; do
+        echo ""
+        json_paths_to_merge=""
+        echo "Checking for $jsonfile in:"
+        for json_dir in "${json_dirs_to_check[@]}"; do
+            json_full_path="${json_dir}/${jsonfile}"
+            if [ -f "${json_full_path}" ]; then
+                printf "      [found] %s\n" "$json_full_path"
+                json_paths_to_merge="${json_paths_to_merge} ${json_full_path}"
+            else
+                printf "  [not found] %s\n" "$json_full_path"
+                continue 
+            fi
+        done
+        printf "   Merging metadata from:\n\t$json_paths_to_merge\n\n"
+
+        # perform the merge with jq
+        jq -rn \
+          --rawfile sample_list "${sample_names_expected_from_samplesheet_list_txt}" '
+            (reduce inputs as $jsf ({}; . += $jsf))
+            | .[] |= select(
+                .sample
+                | IN($sample_list | split("\n")[])
+              )
+            | .
+          ' \
+          ${json_paths_to_merge} \
+        | tee "./${jsonfile}"
+    done
+    # ---------------------------------------
+
+
+    # ---- output bam basenames to file -----
+    # output basenames (with extensions) for expected bam files to list in file
+    OUT_BASENAMES_WITH_EXT=bam_basenames_with_ext.txt
+    jq -r \
+      --rawfile sample_list "$sample_names_expected_from_samplesheet_list_txt" \
+      '
+        .[] |= select(
+          .sample
+          | IN($sample_list | split("\n")[])
+        )
+        | .
+        | keys[]
+        | (.|= . + ".bam")
+      ' \
+      meta_by_fname.json > $OUT_BASENAMES_WITH_EXT
+    # ---------------------------------------
+
+
+    # --------- stage output bams -----------
+    # glob the various bam files and direct them to the appropriate locations
+
+    # set the 'nullglob' shell option
+    # this is needed to prevent the shell from treating unmatched glob expansions as literal strings
+    #   (i.e. so './{picard_bams,~{splitcode_outdir}}/*.bam' [note the empty/invalid last element in brace expansion] 
+    #   does not output the literal '*.bam' as part of the expansion if ~{splitcode_outdir} does not exist)
+    # see:
+    #   https://www.gnu.org/software/bash/manual/html_node/The-Shopt-Builtin.html
+    #   https://linux.die.net/man/1/bash#:~:text=splitting%20is%20performed.-,Pathname%20Expansion,-After%20word%20splitting
+    #   https://linux.die.net/man/1/bash#:~:text=see%20PARAMETERS).-,Brace%20Expansion,-Brace%20expansion%20is
+    # NB: this is a bash-specific option and assumes the WDL executor is using bash to run the command block of this task
+    NULLGLOB_STARTING_STATE=$(shopt -p | grep nullglob)
+    shopt -s nullglob
 
     OUT_BASENAMES=bam_basenames.txt
-    for bam in *.bam; do
-      echo "$(basename $bam .bam)" >> $OUT_BASENAMES
+    bams_created=(./{picard_bams,~{splitcode_outdir}}/*.bam)
+    for bam in "${bams_created[@]}"; do
+      # check if the bam file exists
+      if [ ! -e "${bam}" ]; then
+        echo "BAM file not found after previously seeing it in picard_bams/ or ~{splitcode_outdir}: ${bam}"
+        continue
+      fi
+      echo "Staging before task completion: $bam"
+      if [[ "$(basename $bam .bam)" =~ ^[Uu]nmatched.*$ ]]; then
+        #if bam basename is (case-insensitive) unmatched*.bam
+        if ~{true="true" false="false" emit_unmatched_reads_bam}; then
+          # if we are emitting unmatched reads as a bam, 
+          # move bams containing such reads to a separate subdir for later merging
+          echo "Moving unmatched ${bam} to ./unmatched/"
+          mv "${bam}" ./unmatched/
+        else
+          # otherwise remove the unmatched bam
+          echo "Removing unmatched bam: ${bam}"
+          rm "${bam}"
+        fi
+      else
+        # use grep to determine if the bam file found 
+        # is one we expect from the sample sheet (i.e. not a pooled bam from collapsed barcodes)
+        if grep -q "$(basename $bam .bam)" $OUT_BASENAMES_WITH_EXT; then
+          echo "Moving ${bam} to ./"
+          mv "$bam" . && \
+            echo "$(basename $bam .bam)" >> $OUT_BASENAMES
+        else
+          # otherwise remove the bam
+          echo "Removing ${bam}"
+          rm "${bam}"
+        fi
+      fi
     done
+
+    # restore initial state of the nullglob bash option
+    eval "$NULLGLOB_STARTING_STATE"
+    # ---------------------------------------
+
+
+    # ----- merge picard-style metrics ------
+    mv metrics.txt "./picard_demux_metadata/~{out_base}-demux_metrics.txt"
+    (
+      # 1) From file1: remove lines starting with "#" and empty lines
+      #    then add "DEMUX_TYPE" header and "illumina_picard" as appropriate
+      grep -v '^#' "./picard_demux_metadata/~{out_base}-demux_metrics.txt" \
+        | grep -v '^[[:space:]]*$' \
+        | awk 'BEGIN { OFS="\t" }
+           /^BARCODE/ {
+             print $0, "DEMUX_TYPE"
+             next
+           }
+           {
+             print $0, "illumina_picard"
+           }'
+      
+      if [ -f "barcodes_if_collapsed.tsv" ]; then
+        # 2) From file2: remove lines starting with "#", remove the header line if it begins with "BARCODE", and remove empty lines
+        #    then append "inline_splitcode" to each data row.
+        grep -v '^#' "~{splitcode_outdir}/inner_barcode_demux_metrics_picard-style.txt" \
+          | grep -v '^BARCODE' \
+          | grep -v '^[[:space:]]*$' \
+          | awk 'BEGIN { OFS="\t" }
+             {
+               print $0, "inline_splitcode"
+             }'
+      fi
+    ) > "~{out_base}-demux_metrics.txt"
+    # ---------------------------------------
+
+
+    # ---- merge unmapped bams (optional) ---
+    # if unmatched bam files should be part of the output
+    if ~{true="true" false="false" emit_unmatched_reads_bam}; then
+      if [ -f "barcodes_if_collapsed.tsv" ]; then
+        # if we collapsed duplicated barcodes, we need to merge the unmatched bams
+        read_utils.py merge_bams unmatched/*.bam ./unmatched.bam
+      else
+        # otherwise we only have the single bam of unmatched reads from picard
+        mv unmatched/Unmatched.picard.bam ./unmatched.bam
+      fi
+    fi
+    # ---------------------------------------
 
     # fastqc
     FASTQC_HARDCODED_MEM_PER_THREAD=250 # the value fastqc sets for -Xmx per thread, not adjustable
@@ -383,26 +640,33 @@ task illumina_demux {
         --threads $num_fastqc_threads" \
       ::: $(cat $OUT_BASENAMES)
 
-    mv metrics.txt  "~{out_base}-demux_metrics.txt"
     mv runinfo.json "~{out_base}-runinfo.json"
 
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
     set +o pipefail
-    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
   >>>
 
   output {
     File        metrics                  = "~{out_base}-demux_metrics.txt"
+    File        metrics_picard           = "./picard_demux_metadata/~{out_base}-demux_metrics.txt"
     File        commonBarcodes           = "barcodes.txt"
     File        outlierBarcodes          = "barcodes_outliers.txt"
     Array[File] raw_reads_unaligned_bams = glob("*.bam")
-    File        unmatched_reads_bam      = "unmatched/Unmatched.bam"
+    File?       unmatched_reads_bam      = "unmatched.bam"
     Array[File] raw_reads_fastqc         = glob("*_fastqc.html")
     Array[File] raw_reads_fastqc_zip     = glob("*_fastqc.zip")
     Int         max_ram_gb               = ceil(read_float("MEM_BYTES")/1000000000)
     Int         runtime_sec              = ceil(read_float("UPTIME_SEC"))
     Int         cpu_load_15min           = ceil(read_float("LOAD_15M"))
+
+    File? metrics_inner_barcode_demux_csv                     = "./~{splitcode_outdir}/inner_barcode_demux_metrics.csv"
+    File? metrics_inner_barcode_demux_picard_style            = "./~{splitcode_outdir}/inner_barcode_demux_metrics_picard-style.txt"
+    File? reads_per_pool_inner_barcode_demux_pdf              = "./~{splitcode_outdir}/reads_per_pool.pdf"
+    File? reads_per_pool_inner_barcode_demux_png              = "./~{splitcode_outdir}/reads_per_pool.png"
+    File? reads_per_pool_sorted_curve_inner_barcode_demux_pdf = "./~{splitcode_outdir}/reads_per_pool_sorted_curve.pdf"
+    File? reads_per_pool_sorted_curve_inner_barcode_demux_png = "./~{splitcode_outdir}/reads_per_pool_sorted_curve.png"
 
     String      instrument_model         = read_json("~{out_base}-runinfo.json")["sequencer_model"]
     String      flowcell_lane_count      = read_json("~{out_base}-runinfo.json")["lane_count"]
@@ -425,7 +689,7 @@ task illumina_demux {
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem3_ssd2_v2_x32"
     dx_timeout: "20H"
-    maxRetries: 2
+    maxRetries: 1
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
   }
 }
@@ -490,6 +754,414 @@ task merge_maps {
     cpu: 1
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
+task group_fastq_pairs {
+  meta {
+    description: "Groups FASTQ files into R1/R2 pairs based on DRAGEN naming convention. Supports paired-end and single-end FASTQs. Uses string operations only to avoid file localization."
+  }
+
+  input {
+    Array[String] fastq_uris
+  }
+
+  parameter_meta {
+    fastq_uris: {
+      description: "Array of FASTQ file URIs (as strings, not File type) to be paired. Files should follow DRAGEN naming convention with _R1_ or _R2_ in the filename.",
+      category: "required"
+    }
+  }
+
+  Int disk_size = 50
+
+  command <<<
+    python3 << CODE
+    import re
+    from collections import defaultdict
+
+    # Parse FASTQ URIs from write_lines (one per line)
+    with open('~{write_lines(fastq_uris)}', 'r') as f:
+        fastq_uris = [line.strip() for line in f if line.strip()]
+
+    # Group by base name (everything except R1/R2 and extension)
+    # DRAGEN pattern: *_R1_*.fastq.gz or *_R2_*.fastq.gz
+    groups = defaultdict(lambda: {'R1': None, 'R2': None})
+
+    r1_pattern = re.compile(r'(.+)_R1_(.+\.fastq(?:\.gz)?)$')
+    r2_pattern = re.compile(r'(.+)_R2_(.+\.fastq(?:\.gz)?)$')
+
+    for uri in fastq_uris:
+        # Get basename from URI (handles both local paths and gs://, s3://, etc.)
+        basename = uri.split('/')[-1]
+
+        # Try to match R1 pattern
+        r1_match = r1_pattern.search(basename)
+        if r1_match:
+            base_key = r1_match.group(1) + '_' + r1_match.group(2)
+            groups[base_key]['R1'] = uri
+            continue
+
+        # Try to match R2 pattern
+        r2_match = r2_pattern.search(basename)
+        if r2_match:
+            base_key = r2_match.group(1) + '_' + r2_match.group(2)
+            groups[base_key]['R2'] = uri
+            continue
+
+        # If no pattern matches, treat as single-end R1
+        print(f"Warning: {uri} doesn't match R1/R2 pattern, treating as single-end R1", flush=True)
+        groups[basename]['R1'] = uri
+
+    # Build output - write TSV format where each line is tab-separated R1\tR2 or just R1
+    with open('paired_fastqs.tsv', 'w') as f:
+        for base_key, files in sorted(groups.items()):
+            if files['R1'] and files['R2']:
+                # Paired-end: R1\tR2
+                f.write(f"{files['R1']}\t{files['R2']}\n")
+            elif files['R1']:
+                # Single-end: just R1
+                f.write(f"{files['R1']}\n")
+            elif files['R2']:
+                # R2 without R1 (unusual, but handle it as single-end)
+                print(f"Warning: Found R2 without R1 for {base_key}, treating as single-end", flush=True)
+                f.write(f"{files['R2']}\n")
+
+    print(f"Grouped {len(fastq_uris)} FASTQ files into {len(groups)} pairs", flush=True)
+    CODE
+  >>>
+
+  output {
+    Array[Array[String]] paired_fastqs = read_tsv("paired_fastqs.tsv")
+  }
+
+  runtime {
+    docker: "python:slim"
+    memory: "3 GB"
+    cpu: 1
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
+task get_illumina_run_metadata {
+  meta {
+    description: "Extracts metadata from Illumina samplesheets and RunInfo.xml using illumina.py illumina_metadata. Generates JSON files with sample metadata, filename metadata, and run information."
+  }
+
+  input {
+    File    samplesheet
+    File    runinfo_xml
+    Int?    lane
+    String? sequencing_center
+
+    Int?   machine_mem_gb
+    String docker = "quay.io/broadinstitute/viral-core:2.5.10"
+  }
+
+  parameter_meta {
+    samplesheet: {
+      description: "TSV samplesheet with sample names, library IDs, and barcodes.",
+      category: "required"
+    }
+    runinfo_xml: {
+      description: "Illumina RunInfo.xml file describing the sequencing run configuration.",
+      category: "required"
+    }
+    lane: {
+      description: "Lane number. Optional - if not specified, illumina.py will use all lanes or default behavior.",
+      category: "advanced"
+    }
+    sequencing_center: {
+      description: "Sequencing center name (default: Broad).",
+      category: "advanced"
+    }
+  }
+
+  Int disk_size = 50
+
+  command <<<
+    set -ex -o pipefail
+
+    if [ -z "$TMPDIR" ]; then
+      export TMPDIR=$(pwd)
+    fi
+
+    illumina.py --version | tee VERSION
+
+    illumina.py illumina_metadata \
+      --samplesheet ~{samplesheet} \
+      --runinfo ~{runinfo_xml} \
+      ~{'--lane ' + lane} \
+      ~{'--sequencing_center ' + sequencing_center} \
+      --out_meta_by_sample meta_by_sample.json \
+      --out_meta_by_filename meta_by_filename.json \
+      --out_runinfo runinfo.json \
+      --loglevel=DEBUG
+  >>>
+
+  output {
+    File   meta_by_sample_json   = "meta_by_sample.json"
+    File   meta_by_filename_json = "meta_by_filename.json"
+    File   runinfo_json          = "runinfo.json"
+
+    Map[String,Map[String,String]] meta_by_sample   = read_json("meta_by_sample.json")
+    Map[String,Map[String,String]] meta_by_filename = read_json("meta_by_filename.json")
+    Map[String,String]             run_info         = read_json("runinfo.json")
+
+    String viralngs_version      = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: select_first([machine_mem_gb, 7]) + " GB"
+    cpu: 2
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x4"
+    maxRetries: 2
+  }
+}
+
+task check_for_barcode3 {
+  meta {
+    description: "Check if any sample in the samplesheet has a non-empty barcode_3 value. Used to determine resource allocation for demultiplexing."
+  }
+
+  input {
+    File   samplesheet
+    String docker = "python:slim"
+  }
+
+  command <<<
+    python3 << 'CODE'
+    import csv
+
+    has_barcode3 = False
+    with open('~{samplesheet}', 'r') as f:
+        reader = csv.DictReader(f, delimiter='\t')
+        for row in reader:
+            if row.get('barcode_3', '').strip():
+                has_barcode3 = True
+                break
+
+    with open('has_barcode3.txt', 'w') as out:
+        out.write('true' if has_barcode3 else 'false')
+    CODE
+  >>>
+
+  output {
+    Boolean has_barcode3 = read_boolean("has_barcode3.txt")
+  }
+
+  runtime {
+    docker: docker
+    memory: "1 GB"
+    cpu: 1
+  }
+}
+
+task demux_fastqs {
+  meta {
+    description: "Demultiplex DRAGEN FASTQ files to BAM files using illumina.py splitcode_demux_fastqs. Auto-detects whether to use splitcode (3-barcode) or direct FASTQ-to-BAM conversion (2-barcode)."
+  }
+
+  input {
+    File   fastq_r1
+    File?  fastq_r2
+    File   samplesheet
+    File   runinfo_xml
+
+    String? sequencingCenter
+
+    Boolean run_fastqc = true
+
+    Int?    cpu
+    Int?    memory_gb
+    Int?    machine_mem_gb
+    Int     disk_size = 750
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.10"
+  }
+
+  parameter_meta {
+    fastq_r1: {
+      description: "R1 FASTQ file with DRAGEN-style headers containing barcodes.",
+      category: "required"
+    }
+    fastq_r2: {
+      description: "R2 FASTQ file (for paired-end sequencing). Optional for single-end data.",
+      category: "optional"
+    }
+    samplesheet: {
+      description: "TSV samplesheet with barcode columns. Presence of barcode_3 values triggers splitcode demux.",
+      category: "required"
+    }
+    runinfo_xml: {
+      description: "Illumina RunInfo.xml file. NOTE: run_date and flowcell_id are extracted from this file and cannot be overridden due to viral-core limitations. Feature request needed to expose these as CLI parameters.",
+      category: "required"
+    }
+    run_fastqc: {
+      description: "Whether to run FastQC on output BAM files. Set to false to skip FastQC and return empty arrays for fastqc_html and fastqc_zip outputs.",
+      category: "advanced"
+    }
+  }
+
+  command <<<
+    set -ex -o pipefail
+
+    if [ -z "$TMPDIR" ]; then
+      export TMPDIR=$(pwd)
+    fi
+
+    illumina.py --version | tee VERSION
+
+    illumina.py splitcode_demux_fastqs \
+      --fastq_r1 ~{fastq_r1} \
+      ~{'--fastq_r2 ' + fastq_r2} \
+      --samplesheet ~{samplesheet} \
+      --runinfo ~{runinfo_xml} \
+      ~{'--sequencing_center ' + sequencingCenter} \
+      --outdir . \
+      --append_run_id \
+      --loglevel=DEBUG
+
+    # Log performance metrics after splitcode demux
+    echo "=== Performance metrics after splitcode_demux_fastqs ===" >&2
+    echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%S)" >&2
+    echo "Uptime (seconds): $(cat /proc/uptime | cut -f 1 -d ' ')" >&2
+    echo "Load average (1/5/15 min): $(cat /proc/loadavg | cut -f 1-3 -d ' ')" >&2
+    echo "Memory usage (bytes): $(if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi)" >&2
+    echo "=======================================================" >&2
+
+    # Count output BAMs
+    ls -lh *.bam || echo "No BAM files found"
+
+    # Initialize read counts file (empty in case no BAMs are created)
+    touch read_counts.txt
+
+    # Collect read counts for output BAMs
+    if ls *.bam 1> /dev/null 2>&1; then
+      for bam in *.bam; do
+        samtools view -c "$bam" >> read_counts.txt
+      done
+    fi
+
+    # Run FastQC on output BAMs (if enabled)
+    if ~{true="true" false="false" run_fastqc}; then
+      if ls *.bam 1> /dev/null 2>&1; then
+        # Create list of BAM basenames for parallel processing
+        ls *.bam | sed 's/\.bam$//' > bam_basenames.txt
+        num_bam_files=$(cat bam_basenames.txt | wc -l)
+
+        if [[ $num_bam_files -gt 0 ]]; then
+          # Over-allocate threads to maximize tail utilization
+          # This works regardless of how many CPUs the executor actually provides
+          num_cpus=$(nproc)
+          num_fastqc_jobs=$num_bam_files
+
+          # Over-allocate: 2x the "fair share" threads per job, minimum 4
+          # Initially each job gets ~(cpus/samples) actual CPU time
+          # As jobs finish, remaining jobs opportunistically get more CPU time
+          fair_share_threads=$(( num_cpus / num_bam_files ))
+          if [[ $fair_share_threads -lt 1 ]]; then
+            fair_share_threads=1
+          fi
+          num_fastqc_threads=$(( fair_share_threads * 2 ))
+          if [[ $num_fastqc_threads -lt 4 ]]; then
+            num_fastqc_threads=4
+          fi
+
+          echo "FastQC parallelization: $num_fastqc_jobs jobs x $num_fastqc_threads threads (nproc=$num_cpus, samples=$num_bam_files)"
+
+          # GNU Parallel: run FastQC on all BAMs in parallel
+          # ",," is the replacement string; values after ":::" are substituted where it appears
+          parallel --jobs $num_fastqc_jobs -I ,, \
+            "reports.py fastqc \
+              ,,.bam \
+              ,,_fastqc.html \
+              --out_zip ,,_fastqc.zip \
+              --threads $num_fastqc_threads" \
+            ::: $(cat bam_basenames.txt)
+        fi
+      fi
+    fi
+
+    cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+    cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+    set +o pipefail
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
+  >>>
+
+  output {
+    Array[File] output_bams      = glob("*.bam")
+    Array[Int]  read_counts      = read_lines("read_counts.txt")
+    Array[File] fastqc_html      = glob("*_fastqc.html")
+    Array[File] fastqc_zip       = glob("*_fastqc.zip")
+    File        demux_metrics    = "demux_metrics_picard-style.txt"
+    Int         max_ram_gb       = ceil(read_float("MEM_BYTES")/1000000000)
+    Int         runtime_sec      = ceil(read_float("UPTIME_SEC"))
+    Int         cpu_load_15min   = ceil(read_float("LOAD_15M"))
+    String      viralngs_version = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: select_first([memory_gb, machine_mem_gb, 60]) + " GB"
+    cpu: select_first([cpu, 16])
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x16"
+    maxRetries: 2
+  }
+}
+
+
+task merge_demux_metrics {
+  meta {
+    description: "Merge multiple Picard-style demux metrics files into a single TSV using illumina.py merge_demux_metrics."
+  }
+
+  input {
+    Array[File]+ metrics_files
+    String       output_filename = "merged_demux_metrics.txt"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.10"
+  }
+
+  parameter_meta {
+    metrics_files: {
+      description: "Array of Picard-style demux metrics TSV files to merge.",
+      category: "required"
+    }
+    output_filename: {
+      description: "Name for the merged output metrics file.",
+      category: "optional"
+    }
+  }
+
+  command <<<
+    set -ex -o pipefail
+    illumina.py --version | tee VERSION
+    illumina.py merge_demux_metrics \
+      ~{sep=' ' metrics_files} \
+      ~{output_filename} \
+      --loglevel=DEBUG
+  >>>
+
+  output {
+    File   merged_metrics   = output_filename
+    String viralngs_version = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: "4 GB"
+    cpu: 2
+    disks: "local-disk 50 HDD"
+    disk: "50 GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }

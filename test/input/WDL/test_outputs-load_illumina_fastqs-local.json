@@ -1,0 +1,18 @@
+{
+  "load_illumina_fastqs.run_info": {
+    "flowcell": "TESTFC01",
+    "indexes": "2",
+    "lane": "0",
+    "lane_count": "1",
+    "read_structure": "50T8B8B50T",
+    "run_id": "250101_TEST_0001_BTESTFC01",
+    "run_start_date": "2025-01-01",
+    "sequencer_model": "UNKNOWN",
+    "sequencing_center": "TEST001",
+    "surface_count": "2",
+    "swath_count": "1",
+    "tile_count": "6",
+    "total_tile_count": "12"
+  },
+  "load_illumina_fastqs.read_counts_raw": [200, 150, 100, 0, 160]
+}

@@ -14,8 +14,8 @@ task alignment_metrics {
     Int    max_amp_len=5000
     Int    max_amplicons=500
 
-    Int    machine_mem_gb=32
-    String docker = "quay.io/broadinstitute/viral-core:2.4.1"
+    Int    machine_mem_gb=16
+    String docker = "quay.io/broadinstitute/viral-core:2.5.10"
   }
 
   String out_basename = basename(aligned_bam, ".bam")
@@ -24,6 +24,7 @@ task alignment_metrics {
   command <<<
     set -e
     MEM_MB=$(free -m | head -2 | tail -1 | awk '{print $4}')
+    MEM_MB=$(( MEM_MB > 2048 ? MEM_MB : 2048 ))  # Minimum 2GB heap
     XMX=$(echo "-Xmx"$MEM_MB"m")
     echo "Requesting $MEM_MB MB of RAM for Java"
 
@@ -142,7 +143,7 @@ task plot_coverage {
     String? plotXLimits # of the form "min max" (ints, space between)
     String? plotYLimits # of the form "min max" (ints, space between)
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.4.1"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.10"
   }
 
   Int disk_size = 375
@@ -289,7 +290,7 @@ task coverage_report {
     Array[File]  mapped_bam_idx = []  # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name = "coverage_report.txt"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.4.1"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.10"
   }
 
   Int disk_size = 375
@@ -364,7 +365,7 @@ task fastqc {
   input {
     File   reads_bam
 
-    String docker = "quay.io/broadinstitute/viral-core:2.4.1"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.10"
   }
   parameter_meta {
     reads_bam:{ 
@@ -412,7 +413,7 @@ task align_and_count {
     Boolean keep_duplicates_when_filtering                    = false
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.4.1"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.10"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
@@ -535,7 +536,7 @@ task align_and_count_summary {
 
     String       output_prefix = "count_summary"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.4.1"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.10"
   }
 
   Int disk_size = 100
@@ -570,7 +571,7 @@ task aggregate_metagenomics_reports {
     String       aggregate_taxlevel_focus                 = "species"
     Int          aggregate_top_N_hits                     = 5
 
-    String       docker = "quay.io/broadinstitute/viral-classify:2.2.5"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
   }
 
   parameter_meta {
@@ -643,7 +644,7 @@ task MultiQC {
     File?          config  # directory
     String?        config_yaml
 
-    String         docker = "quay.io/biocontainers/multiqc:1.8--py_2"
+    String         docker = "quay.io/biocontainers/multiqc:1.32--pyhdfd78af_1"
   }
 
   parameter_meta {
@@ -660,6 +661,8 @@ task MultiQC {
       echo "${sep='\n' input_files}" > input-filenames.txt
       echo "" >> input-filenames.txt
 
+      # Run MultiQC but allow it to fail (it crashes with exit 1 on empty/invalid zip files)
+      set +e
       multiqc \
       --file-list input-filenames.txt \
       --outdir "${out_dir}" \
@@ -687,11 +690,23 @@ task MultiQC {
       ${false="--no-megaqc-upload" true="" megaQC_upload} \
       ${"--config " + config} \
       ${"--cl-config " + config_yaml }
+      MULTIQC_EXIT_CODE=$?
+      set -e
+
+      # Ensure output directory exists (MultiQC may remove it if no results found or if it crashed)
+      mkdir -p "${out_dir}"
 
       if [ -z "${file_name}" ]; then
-        mv "${out_dir}/${report_filename}_report.html" "${out_dir}/${report_filename}.html"
+        mv "${out_dir}/${report_filename}_report.html" "${out_dir}/${report_filename}.html" 2>/dev/null || true
       fi
 
+      # Create placeholder HTML report if MultiQC didn't create one (happens when no valid results found or on crash)
+      if [ ! -f "${out_dir}/${report_filename}.html" ]; then
+        echo "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>MultiQC Report</title></head><body><h1>MultiQC Report</h1><p>No analysis results found in input files.</p></body></html>" > "${out_dir}/${report_filename}.html"
+      fi
+
+      # Ensure data directory exists before tarring (MultiQC only creates it when results are found)
+      mkdir -p "${out_dir}/${report_filename}_data"
       tar -c "${out_dir}/${report_filename}_data" | gzip -c > "${report_filename}_data.tar.gz"
   }
 
@@ -717,7 +732,7 @@ task compare_two_genomes {
     File   genome_two
     String out_basename
 
-    String docker = "quay.io/broadinstitute/viral-assemble:2.4.3.1"
+    String docker = "quay.io/broadinstitute/viral-assemble:2.5.1.0"
   }
 
   Int disk_size = 50
