@@ -81,3 +81,4 @@ default.profraw
 .vscode/# pixi environments
 .pixi/*
 !.pixi/config.toml
+pixi*
