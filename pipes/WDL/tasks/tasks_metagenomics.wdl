@@ -1242,8 +1242,8 @@ task kb_extract {
 
   runtime {
     docker: "${docker}"
-    memory: "24 GB"
-    cpu: 8
+    memory: "32 GB"
+    cpu: 16
     disks: "local-disk 350 LOCAL"
     dx_instance_type: "mem3_ssd1_v2_x16"
     preemptible: 2
