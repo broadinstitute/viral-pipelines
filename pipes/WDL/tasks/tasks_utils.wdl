@@ -50,8 +50,8 @@ task unpack_archive_to_bucket_path {
         String  gcloud_storage_cp_opts = ""
 
         # execution and resource requirements
-        Int    disk_size      = 500
-        Int    machine_mem_gb = 128
+        Int    disk_size      = ceil(3.0 * size(input_archive_files[0], "GB")) + 50
+        Int    machine_mem_gb = 8
         String docker         = "quay.io/broadinstitute/viral-core:2.5.10"
     }
 
@@ -104,6 +104,8 @@ task unpack_archive_to_bucket_path {
     }
 
     command <<<
+        set -e
+
         # verify gcloud is installed (it should be, if the default docker image is used)
         if ! command -v gcloud &> /dev/null; then
             echo "ERROR: gcloud is not installed; it is required to authenticate to Google Cloud Storage" >&2
@@ -208,7 +210,7 @@ task unpack_archive_to_bucket_path {
         cpu:    16
         disks:  "local-disk " + disk_size + " LOCAL"
         disk: disk_size + " GB" # TES
-        dx_instance_type: "mem3_ssd1_v2_x16"
+        dx_instance_type: "mem1_ssd1_v2_x16"
         preemptible: 0
         maxRetries: 1
     }
