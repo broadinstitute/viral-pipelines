@@ -418,7 +418,7 @@ task align_and_count {
 
   String  reads_basename=basename(reads_bam, ".bam")
   String  ref_basename=basename(ref_db, ".fasta")
-  Int disk_size = ceil((3 * size(reads_bam, "GB") + 2 * size(ref_db, "GB") + 100) / 375.0) * 375
+  Int disk_size = ceil((6 * size(reads_bam, "GB") + 2 * size(ref_db, "GB") + 100) / 375.0) * 375
 
   parameter_meta {
     reads_bam: {

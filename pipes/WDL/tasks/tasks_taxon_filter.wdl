@@ -38,7 +38,7 @@ task deplete_taxa {
   Float        blast_db_size = if defined(blastDbs) then size(select_first([blastDbs, []]), "GB") else 0
   Float        bwa_db_size = if defined(bwaDbs) then size(select_first([bwaDbs, []]), "GB") else 0
   Float        total_db_size = bmtagger_db_size + blast_db_size + bwa_db_size
-  Int          disk_size = ceil((3 * size(raw_reads_unmapped_bam, "GB") + 2 * total_db_size + 100) / 375.0) * 375
+  Int          disk_size = ceil((6 * size(raw_reads_unmapped_bam, "GB") + 2 * total_db_size + 100) / 375.0) * 375
 
   command <<<
     set -ex -o pipefail
@@ -122,7 +122,7 @@ task filter_to_taxon {
 
   # do this in two steps in case the input doesn't actually have "cleaned" in the name
   String   bam_basename = basename(basename(reads_unmapped_bam, ".bam"), ".cleaned")
-  Int disk_size = ceil((3 * size(reads_unmapped_bam, "GB") + 2 * size(lastal_db_fasta, "GB") + 100) / 375.0) * 375
+  Int disk_size = ceil((6 * size(reads_unmapped_bam, "GB") + 2 * size(lastal_db_fasta, "GB") + 100) / 375.0) * 375
 
   command <<<
     set -ex -o pipefail
