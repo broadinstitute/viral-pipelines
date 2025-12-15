@@ -670,13 +670,21 @@ task align_reads {
     String?  aligner_options
     Boolean  skip_mark_dupes = false
 
+    Int?     cpu
     Int?     machine_mem_gb
     String   docker = "quay.io/broadinstitute/viral-core:2.5.11"
 
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
   }
 
-  Int disk_size = 375
+  Int disk_size = ceil((6 * size(reads_unmapped_bam, "GB") + 2 * size(reference_fasta, "GB") + 100) / 375.0) * 375
+
+  # Autoscale CPU based on input size: 8 CPUs for small inputs, up to 64 CPUs for ~15 GB inputs
+  # Linear scaling: 8 + (input_GB / 15) * 56, capped at 64, rounded to nearest multiple of 4
+  Float        cpu_unclamped = 8.0 + (size(reads_unmapped_bam, "GB") / 15.0) * 56.0
+  Int          cpu_actual = select_first([cpu, floor(((if cpu_unclamped > 64.0 then 64.0 else cpu_unclamped) + 2.0) / 4.0) * 4])
+  # Memory scales with CPU at 2x ratio (default), or use override
+  Int          machine_mem_gb_actual = select_first([machine_mem_gb, cpu_actual * 2])
 
   parameter_meta {
     reference_fasta: {
@@ -782,8 +790,8 @@ task align_reads {
 
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 15]) + " GB"
-    cpu: 8
+    memory: machine_mem_gb_actual + " GB"
+    cpu: cpu_actual
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"

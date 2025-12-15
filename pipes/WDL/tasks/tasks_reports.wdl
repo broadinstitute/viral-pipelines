@@ -412,6 +412,7 @@ task align_and_count {
     Boolean keep_singletons_when_filtering                    = false
     Boolean keep_duplicates_when_filtering                    = false
 
+    Int?   cpu
     Int?   machine_mem_gb
     String docker = "quay.io/broadinstitute/viral-core:2.5.11"
   }
@@ -419,6 +420,13 @@ task align_and_count {
   String  reads_basename=basename(reads_bam, ".bam")
   String  ref_basename=basename(ref_db, ".fasta")
   Int disk_size = ceil((10 * size(reads_bam, "GB") + 2 * size(ref_db, "GB") + 150) / 375.0) * 375
+
+  # Autoscale CPU based on input size: 4 CPUs for small inputs, up to 64 CPUs for ~15 GB inputs
+  # Linear scaling: 4 + (input_GB / 15) * 60, capped at 64, rounded to nearest multiple of 4
+  Float        cpu_unclamped = 4.0 + (size(reads_bam, "GB") / 15.0) * 60.0
+  Int          cpu_actual = select_first([cpu, floor(((if cpu_unclamped > 64.0 then 64.0 else cpu_unclamped) + 2.0) / 4.0) * 4])
+  # Memory scales with CPU at 2x ratio (default), or use override
+  Int          machine_mem_gb_actual = select_first([machine_mem_gb, cpu_actual * 2])
 
   parameter_meta {
     reads_bam: {
@@ -520,8 +528,8 @@ task align_and_count {
   }
 
   runtime {
-    memory: select_first([machine_mem_gb, 15]) + " GB"
-    cpu: 4
+    memory: machine_mem_gb_actual + " GB"
+    cpu: cpu_actual
     docker: "${docker}"
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
