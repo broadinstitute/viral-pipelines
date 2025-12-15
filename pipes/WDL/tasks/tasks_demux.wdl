@@ -978,7 +978,7 @@ task demux_fastqs {
 
     String? sequencingCenter
 
-    Boolean run_fastqc = true
+    Boolean run_fastqc = false
 
     Int?    cpu
     Int?    memory_gb
@@ -1128,6 +1128,7 @@ task demux_fastqs {
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x16"
     maxRetries: 2
+    preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
   }
 }
 
