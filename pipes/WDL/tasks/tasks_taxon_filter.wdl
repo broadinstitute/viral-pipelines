@@ -12,14 +12,17 @@ task deplete_taxa {
     Boolean      clear_tags = false
     String       tags_to_clear_space_separated = "XT X0 X1 XA AM SM BQ CT XN OC OP"
 
-    # Autoscale CPU based on input size: 8 CPUs for ~1M reads (0.15 GB), 96 CPUs for ~100M reads (15 GB)
-    # Linear scaling: 8 + (input_GB / 15) * 88, capped at 96, rounded to nearest multiple of 4
-    Float        cpu_unclamped = 8.0 + (size(raw_reads_unmapped_bam, "GB") / 15.0) * 88.0
-    Int          cpu = floor(((if cpu_unclamped > 96.0 then 96.0 else cpu_unclamped) + 2.0) / 4.0) * 4
-    # Memory scales with CPU at 2x ratio
-    Int          machine_mem_gb = cpu * 2
+    Int?         cpu
+    Int?         machine_mem_gb
     String       docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
   }
+
+  # Autoscale CPU based on input size: 8 CPUs for ~1M reads (0.15 GB), 96 CPUs for ~100M reads (15 GB)
+  # Linear scaling: 8 + (input_GB / 15) * 88, capped at 96, rounded to nearest multiple of 4
+  Float        cpu_unclamped = 8.0 + (size(raw_reads_unmapped_bam, "GB") / 15.0) * 88.0
+  Int          cpu_actual = select_first([cpu, floor(((if cpu_unclamped > 96.0 then 96.0 else cpu_unclamped) + 2.0) / 4.0) * 4])
+  # Memory scales with CPU at 2x ratio (default), or use override
+  Int          machine_mem_gb_actual = select_first([machine_mem_gb, cpu_actual * 2])
 
   parameter_meta {
     raw_reads_unmapped_bam: { description: "unaligned reads in BAM format", patterns: ["*.bam"] }
@@ -100,8 +103,8 @@ task deplete_taxa {
   }
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
-    cpu: cpu
+    memory: machine_mem_gb_actual + " GB"
+    cpu: cpu_actual
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
