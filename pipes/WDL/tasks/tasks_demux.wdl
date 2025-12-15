@@ -987,6 +987,18 @@ task demux_fastqs {
     String  docker = "quay.io/broadinstitute/viral-core:2.5.11"
   }
 
+  # Calculate total input size for autoscaling
+  Float fastq_r1_size = size(fastq_r1, "GB")
+  Float fastq_r2_size = if defined(fastq_r2) then size(select_first([fastq_r2]), "GB") else 0.0
+  Float total_fastq_size = fastq_r1_size + fastq_r2_size
+
+  # Autoscale CPU based on input size: 4 CPUs for small inputs, up to 64 CPUs for ~15 GB inputs
+  # Linear scaling: 4 + (input_GB / 15) * 60, capped at 64, rounded to nearest multiple of 4
+  Float        cpu_unclamped = 4.0 + (total_fastq_size / 15.0) * 60.0
+  Int          cpu_actual = select_first([cpu, floor(((if cpu_unclamped > 64.0 then 64.0 else cpu_unclamped) + 2.0) / 4.0) * 4])
+  # Memory scales with CPU at 4x ratio (default), or use override
+  Int          machine_mem_gb_actual = select_first([memory_gb, machine_mem_gb, cpu_actual * 4])
+
   parameter_meta {
     fastq_r1: {
       description: "R1 FASTQ file with DRAGEN-style headers containing barcodes.",
@@ -1110,8 +1122,8 @@ task demux_fastqs {
 
   runtime {
     docker: docker
-    memory: select_first([memory_gb, machine_mem_gb, 60]) + " GB"
-    cpu: select_first([cpu, 16])
+    memory: machine_mem_gb_actual + " GB"
+    cpu: cpu_actual
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x16"
