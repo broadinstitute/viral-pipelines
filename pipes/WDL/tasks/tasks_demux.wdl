@@ -983,7 +983,7 @@ task demux_fastqs {
     Int?    cpu
     Int?    memory_gb
     Int?    machine_mem_gb
-    Int     disk_size = 750
+    Int     disk_size = 2000  # EXPERIMENT: increased for uncompressed FASTQ storage
     String  docker = "quay.io/broadinstitute/viral-core:2.5.12"
   }
 
@@ -1031,15 +1031,60 @@ task demux_fastqs {
 
     illumina.py --version | tee VERSION
 
+    # ============================================================================
+    # BEGIN EXPERIMENT: Pre-decompress FASTQ to test samtools import I/O bottleneck
+    # This experimental code tests whether samtools import is I/O bound on gzip
+    # decompression. If runtime improves proportionally to CPU cores after this
+    # change, the bottleneck is gzip decompression, not samtools import itself.
+    # TO REVERT: Remove everything between BEGIN EXPERIMENT and END EXPERIMENT,
+    # and restore the original illumina.py splitcode_demux_fastqs call that used
+    # the original compressed ~{fastq_r1} and ~{fastq_r2} files directly.
+    # Also revert disk_size from 2000 back to 750.
+    # ============================================================================
+    echo "=== EXPERIMENT: Pre-decompressing FASTQ files with pigz ===" >&2
+    echo "Timestamp before decompress: $(date -u +%Y-%m-%dT%H:%M:%S)" >&2
+    echo "Uptime before decompress (seconds): $(cat /proc/uptime | cut -f 1 -d ' ')" >&2
+
+    NUM_CPUS=$(nproc)
+    echo "Using $NUM_CPUS threads for pigz decompression" >&2
+
+    # Decompress R1
+    FASTQ_R1_UNCOMPRESSED="fastq_r1_uncompressed.fastq"
+    pigz -d -c -p $NUM_CPUS ~{fastq_r1} > "$FASTQ_R1_UNCOMPRESSED"
+    echo "Timestamp after R1 decompress: $(date -u +%Y-%m-%dT%H:%M:%S)" >&2
+    echo "Uptime after R1 decompress (seconds): $(cat /proc/uptime | cut -f 1 -d ' ')" >&2
+    echo "R1 uncompressed size: $(ls -lh $FASTQ_R1_UNCOMPRESSED)" >&2
+
+    # Decompress R2 if it exists
+    FASTQ_R2_ARG=""
+    ~{if defined(fastq_r2) then "FASTQ_R2_UNCOMPRESSED='fastq_r2_uncompressed.fastq'" else ""}
+    ~{if defined(fastq_r2) then "pigz -d -c -p $NUM_CPUS " + select_first([fastq_r2, ""]) + " > \"$FASTQ_R2_UNCOMPRESSED\"" else ""}
+    ~{if defined(fastq_r2) then "echo \"Timestamp after R2 decompress: $(date -u +%Y-%m-%dT%H:%M:%S)\" >&2" else ""}
+    ~{if defined(fastq_r2) then "echo \"Uptime after R2 decompress (seconds): $(cat /proc/uptime | cut -f 1 -d ' ')\" >&2" else ""}
+    ~{if defined(fastq_r2) then "echo \"R2 uncompressed size: $(ls -lh $FASTQ_R2_UNCOMPRESSED)\" >&2" else ""}
+    ~{if defined(fastq_r2) then "FASTQ_R2_ARG=\"--fastq_r2 $FASTQ_R2_UNCOMPRESSED\"" else ""}
+
+    echo "=== Starting splitcode_demux_fastqs on uncompressed files ===" >&2
+    echo "Timestamp before splitcode: $(date -u +%Y-%m-%dT%H:%M:%S)" >&2
+    echo "Uptime before splitcode (seconds): $(cat /proc/uptime | cut -f 1 -d ' ')" >&2
+    echo "Load average before splitcode: $(cat /proc/loadavg | cut -f 1-3 -d ' ')" >&2
+
     illumina.py splitcode_demux_fastqs \
-      --fastq_r1 ~{fastq_r1} \
-      ~{'--fastq_r2 ' + fastq_r2} \
+      --fastq_r1 "$FASTQ_R1_UNCOMPRESSED" \
+      $FASTQ_R2_ARG \
       --samplesheet ~{samplesheet} \
       --runinfo ~{runinfo_xml} \
       ~{'--sequencing_center ' + sequencingCenter} \
       --outdir . \
       --append_run_id \
       --loglevel=DEBUG
+
+    # Clean up uncompressed files to save disk space
+    rm -f "$FASTQ_R1_UNCOMPRESSED"
+    ~{if defined(fastq_r2) then "rm -f \"$FASTQ_R2_UNCOMPRESSED\"" else ""}
+    # ============================================================================
+    # END EXPERIMENT: Pre-decompress FASTQ to test samtools import I/O bottleneck
+    # ============================================================================
 
     # Log performance metrics after splitcode demux
     echo "=== Performance metrics after splitcode_demux_fastqs ===" >&2
