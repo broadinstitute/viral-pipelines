@@ -979,10 +979,6 @@ task demux_fastqs {
       description: "Illumina RunInfo.xml file. NOTE: run_date and flowcell_id are extracted from this file and cannot be overridden due to viral-core limitations. Feature request needed to expose these as CLI parameters.",
       category: "required"
     }
-    run_fastqc: {
-      description: "Whether to run FastQC on output BAM files. Set to false to skip FastQC and return empty arrays for fastqc_html and fastqc_zip outputs.",
-      category: "advanced"
-    }
   }
 
   command <<<
