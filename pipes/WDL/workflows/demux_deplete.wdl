@@ -256,16 +256,16 @@ workflow demux_deplete {
     }
 
     #### summary stats
-    call reports.MultiQC as multiqc_raw {
+    call reports.multiqc_from_bams as multiqc_raw {
         input:
-            input_files = flatten(illumina_demux.raw_reads_fastqc_zip),
-            file_name   = "multiqc-raw.html"
+            input_bams   = flatten(illumina_demux.raw_reads_unaligned_bams),
+            out_basename = "multiqc-raw"
     }
     if (length(flatten(select_all([bmtaggerDbs, blastDbs, bwaDbs]))) > 0) {
-        call reports.MultiQC as multiqc_cleaned {
+        call reports.multiqc_from_bams as multiqc_cleaned {
             input:
-                input_files = select_all(deplete.cleaned_fastqc_zip),
-                file_name   = "multiqc-cleaned.html"
+                input_bams   = select_all(cleaned_bam_passing),
+                out_basename = "multiqc-cleaned"
         }
     }
     call reports.align_and_count_summary as spike_summary {

@@ -52,24 +52,26 @@ workflow load_illumina_fastqs {
       metrics_files = demux_fastqs.demux_metrics
   }
 
-  # Step 5: Aggregate QC reports with MultiQC
-  call reports.MultiQC {
+  # Flatten BAMs for convenience
+  Array[File] raw_bams = flatten(demux_fastqs.output_bams)
+
+  # Step 5: Aggregate QC reports with MultiQC (FastQC + MultiQC in one step)
+  call reports.multiqc_from_bams as multiqc {
     input:
-      input_files = flatten(demux_fastqs.fastqc_zip)
+      input_bams = raw_bams
   }
 
   output {
     # BAM outputs (flattened)
-    Array[File] raw_reads_unaligned_bams = flatten(demux_fastqs.output_bams)
+    Array[File] raw_reads_unaligned_bams = raw_bams
     Array[Int]  read_counts_raw          = flatten(demux_fastqs.read_counts)
 
-    # QC outputs (flattened)
-    Array[File] fastqc_html = flatten(demux_fastqs.fastqc_html)
-    Array[File] fastqc_zip  = flatten(demux_fastqs.fastqc_zip)
+    # QC outputs (FastQC HTML files from multiqc_from_bams)
+    Array[File] fastqcs = multiqc.fastqc_html
 
     # MultiQC aggregated report
-    File multiqc_report      = MultiQC.multiqc_report
-    File multiqc_data_tar_gz = MultiQC.multiqc_data_dir_tarball
+    File multiqc_report      = multiqc.multiqc_report
+    File multiqc_data_tar_gz = multiqc.multiqc_data_dir_tarball
 
     # Demux metrics
     File demux_metrics = merge_demux_metrics.merged_metrics

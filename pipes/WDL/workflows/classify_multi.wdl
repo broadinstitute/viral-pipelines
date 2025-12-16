@@ -53,9 +53,6 @@ workflow classify_multi {
     }
 
     scatter(raw_reads in reads_bams) {
-        call reports.fastqc as fastqc_raw {
-            input: reads_bam = raw_reads
-        }
         call reports.align_and_count as spikein {
             input:
                 reads_bam = raw_reads,
@@ -79,9 +76,6 @@ workflow classify_multi {
                 exclude_taxa            = true,
                 taxonomic_names         = ["Vertebrata"],
                 out_filename_suffix     = "hs_depleted"
-        }
-        call reports.fastqc as fastqc_cleaned {
-            input: reads_bam = deplete.bam_filtered_to_taxa
         }
         call metagenomics.filter_bam_to_taxa as filter_acellular {
             input:
@@ -107,22 +101,22 @@ workflow classify_multi {
         }
     }
 
-    call reports.MultiQC as multiqc_raw {
+    call reports.multiqc_from_bams as multiqc_raw {
         input:
-            input_files = fastqc_raw.fastqc_zip,
-            file_name   = "multiqc-raw.html"
+            input_bams   = reads_bams,
+            out_basename = "multiqc-raw"
     }
 
-    call reports.MultiQC as multiqc_cleaned {
+    call reports.multiqc_from_bams as multiqc_cleaned {
         input:
-            input_files = fastqc_cleaned.fastqc_zip,
-            file_name   = "multiqc-cleaned.html"
+            input_bams   = deplete.bam_filtered_to_taxa,
+            out_basename = "multiqc-cleaned"
     }
 
-    call reports.MultiQC as multiqc_dedup {
+    call reports.multiqc_from_bams as multiqc_dedup {
         input:
-            input_files = rmdup_ubam.dedup_fastqc_zip,
-            file_name   = "multiqc-dedup.html"
+            input_bams   = rmdup_ubam.dedup_bam,
+            out_basename = "multiqc-dedup"
     }
 
     call reports.align_and_count_summary as spike_summary {

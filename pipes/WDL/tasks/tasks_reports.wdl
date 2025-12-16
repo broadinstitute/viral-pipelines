@@ -743,6 +743,180 @@ task MultiQC {
   }
 }
 
+task multiqc_from_bams {
+  meta {
+    description: "Run FastQC on a set of BAM files in parallel, then aggregate results with MultiQC. This task consolidates what was previously done by separate FastQC calls in individual tasks."
+  }
+
+  input {
+    Array[File]+   input_bams
+
+    String?        title
+    String?        comment
+    String         out_basename      = "multiqc"
+    Boolean        full_names        = false
+    Boolean        interactive       = true
+    File?          config
+    String?        config_yaml
+
+    String         docker = "ghcr.io/broadinstitute/read-qc-tools:1.0.1"
+  }
+
+  parameter_meta {
+    input_bams: {
+      description: "Array of BAM files to run FastQC on. FastQC is run in parallel, then MultiQC aggregates all results.",
+      patterns: ["*.bam"],
+      category: "required"
+    }
+    out_basename: {
+      description: "Base name for the MultiQC output file (without .html extension). Default: 'multiqc'",
+      category: "optional"
+    }
+  }
+
+  # Resource scaling based on number of BAMs
+  Int num_bams = length(input_bams)
+  Int cpu_raw = num_bams * 2
+  Int cpu = if cpu_raw > 32 then 32 else (if cpu_raw < 4 then 4 else cpu_raw)
+  Int machine_mem_gb = cpu * 2
+  Int disk_size = ceil((3 * size(input_bams, "GB") + 50) / 375.0) * 375
+
+  # Strip .html extension if present in out_basename
+  String report_filename = basename(out_basename, ".html")
+
+  command <<<
+    set -ex -o pipefail
+
+    echo "=== multiqc_from_bams START ==="
+    date -u +"%Y-%m-%dT%H:%M:%SZ"
+    uptime
+
+    # Write BAM paths to file for parallel processing
+    BAM_LIST="bam_files.txt"
+    for bam in ~{sep=' ' input_bams}; do
+      echo "$bam" >> "$BAM_LIST"
+    done
+
+    num_bams=$(wc -l < "$BAM_LIST")
+    num_cpus=$(nproc)
+
+    # Calculate parallel jobs: try to use all CPUs, but cap at number of BAMs
+    num_fastqc_jobs=$num_cpus
+    if [[ $num_fastqc_jobs -gt $num_bams ]]; then
+      num_fastqc_jobs=$num_bams
+    fi
+    if [[ $num_fastqc_jobs -lt 1 ]]; then
+      num_fastqc_jobs=1
+    fi
+
+    echo "=== Running FastQC on $num_bams BAM files with $num_fastqc_jobs parallel jobs ==="
+    date -u +"%Y-%m-%dT%H:%M:%SZ"
+
+    # Create output directory for FastQC results
+    mkdir -p fastqc_output
+
+    # Define a wrapper function that handles empty BAM files gracefully
+    # FastQC fails on empty BAMs, so we create placeholder outputs for those
+    run_fastqc_safe() {
+      local bam_file="$1"
+      local out_dir="$2"
+      local bam_basename=$(basename "$bam_file" .bam)
+      local html_out="${out_dir}/${bam_basename}_fastqc.html"
+      local zip_out="${out_dir}/${bam_basename}_fastqc.zip"
+
+      # Check if BAM has any reads
+      read_count=$(samtools view -c "$bam_file" 2>/dev/null || echo "0")
+
+      if [[ "$read_count" -eq 0 ]]; then
+        # Empty BAM: create placeholder outputs
+        echo "<html><body>Input BAM has zero reads.</body></html>" > "$html_out"
+        # Create a minimal valid zip file with a placeholder
+        echo "Input BAM has zero reads." > "${out_dir}/${bam_basename}_fastqc_data.txt"
+        (cd "$out_dir" && zip -q "${bam_basename}_fastqc.zip" "${bam_basename}_fastqc_data.txt")
+        rm "${out_dir}/${bam_basename}_fastqc_data.txt"
+        echo "Created placeholder FastQC output for empty BAM: $bam_file"
+      else
+        # Non-empty BAM: run FastQC normally
+        fastqc "$bam_file" --outdir "$out_dir" --quiet
+      fi
+    }
+    export -f run_fastqc_safe
+
+    # Run FastQC in parallel on all BAM files using the safe wrapper
+    cat "$BAM_LIST" | parallel --jobs $num_fastqc_jobs \
+      "run_fastqc_safe {} fastqc_output"
+
+    echo "=== FastQC complete ==="
+    date -u +"%Y-%m-%dT%H:%M:%SZ"
+    uptime
+    ls -la fastqc_output/
+
+    echo "=== Running MultiQC ==="
+    date -u +"%Y-%m-%dT%H:%M:%SZ"
+
+    # Run MultiQC on all FastQC outputs (it reads _fastqc.zip files)
+    mkdir -p multiqc_output
+    set +e
+    multiqc \
+      fastqc_output \
+      --outdir multiqc_output \
+      --filename "~{report_filename}" \
+      ~{true="--fullnames" false="" full_names} \
+      ~{"--title " + title} \
+      ~{"--comment " + comment} \
+      ~{true="--interactive" false="" interactive} \
+      ~{"--config " + config} \
+      ~{"--cl-config " + config_yaml}
+    MULTIQC_EXIT_CODE=$?
+    set -e
+    echo "MultiQC exit code: $MULTIQC_EXIT_CODE"
+
+    echo "=== MultiQC complete ==="
+    date -u +"%Y-%m-%dT%H:%M:%SZ"
+    ls -la multiqc_output/
+
+    # Create placeholder HTML report if MultiQC didn't create one
+    if [ ! -f "multiqc_output/~{report_filename}.html" ]; then
+      echo "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>MultiQC Report</title></head><body><h1>MultiQC Report</h1><p>No analysis results found in input files.</p></body></html>" > "multiqc_output/~{report_filename}.html"
+    fi
+
+    # Create data tarball
+    mkdir -p "multiqc_output/~{report_filename}_data"
+    tar -c "multiqc_output/~{report_filename}_data" | gzip -c > "~{report_filename}_data.tar.gz"
+
+    # Move FastQC HTML files to working directory for output
+    mv fastqc_output/*_fastqc.html . 2>/dev/null || true
+
+    echo "=== multiqc_from_bams END ==="
+    date -u +"%Y-%m-%dT%H:%M:%SZ"
+    uptime
+
+    cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+    cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+    set +o pipefail
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
+  >>>
+
+  output {
+    File        multiqc_report            = "multiqc_output/~{report_filename}.html"
+    File        multiqc_data_dir_tarball  = "~{report_filename}_data.tar.gz"
+    Array[File] fastqc_html               = glob("*_fastqc.html")
+    Int         max_ram_gb                = ceil(read_float("MEM_BYTES")/1000000000)
+    Int         runtime_sec               = ceil(read_float("UPTIME_SEC"))
+    Int         cpu_load_15min            = ceil(read_float("LOAD_15M"))
+  }
+
+  runtime {
+    docker: docker
+    memory: machine_mem_gb + " GB"
+    cpu: cpu
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x8"
+    maxRetries: 2
+  }
+}
+
 task compare_two_genomes {
   input {
     File   genome_one
