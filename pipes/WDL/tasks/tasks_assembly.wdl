@@ -672,7 +672,7 @@ task align_reads {
 
     Int?     cpu
     Int?     machine_mem_gb
-    String   docker = "quay.io/broadinstitute/viral-core:2.5.11"
+    String   docker = "quay.io/broadinstitute/viral-core:2.5.12"
 
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
   }
@@ -945,7 +945,7 @@ task run_discordance {
       String out_basename = "run"
       Int    min_coverage = 4
 
-      String docker = "quay.io/broadinstitute/viral-core:2.5.11"
+      String docker = "quay.io/broadinstitute/viral-core:2.5.12"
     }
     parameter_meta {
       reads_aligned_bam: {
