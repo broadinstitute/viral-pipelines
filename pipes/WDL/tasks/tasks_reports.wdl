@@ -508,6 +508,11 @@ task align_and_count {
         PCT_TOP_HIT_OF_TOTAL_READS=$( echo "null" | tee '~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt')
       fi
     fi
+
+    cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+    cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+    set +o pipefail
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
   >>>
 
   output {
@@ -523,7 +528,10 @@ task align_and_count {
     String pct_total_reads_mapped     = read_string('~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt')
     String pct_top_hit_of_total_reads = read_string('~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt')
     String pct_lesser_hits_of_mapped  = read_string('~{reads_basename}.count.~{ref_basename}.pct_lesser_hits_of_mapped.txt')
-    
+
+    Int    max_ram_gb       = ceil(read_float("MEM_BYTES")/1000000000)
+    Int    runtime_sec      = ceil(read_float("UPTIME_SEC"))
+    Int    cpu_load_15min   = ceil(read_float("LOAD_15M"))
     String viralngs_version = read_string("VERSION")
   }
 

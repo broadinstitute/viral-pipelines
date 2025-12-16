@@ -45,7 +45,7 @@ task deplete_taxa {
   Float        blast_db_size = if defined(blastDbs) then size(select_first([blastDbs, []]), "GB") else 0
   Float        bwa_db_size = if defined(bwaDbs) then size(select_first([bwaDbs, []]), "GB") else 0
   Float        total_db_size = bmtagger_db_size + blast_db_size + bwa_db_size
-  Int          disk_size = ceil((6 * size(raw_reads_unmapped_bam, "GB") + 2 * total_db_size + 100) / 375.0) * 375
+  Int          disk_size = ceil((10 * size(raw_reads_unmapped_bam, "GB") + 2 * total_db_size + 100) / 375.0) * 375
 
   command <<<
     set -ex -o pipefail
@@ -91,6 +91,11 @@ task deplete_taxa {
     samtools view -c "~{raw_reads_unmapped_bam}" | tee depletion_read_count_pre
     samtools view -c "~{bam_basename}.cleaned.bam" | tee depletion_read_count_post
     reports.py fastqc "~{bam_basename}.cleaned.bam" "~{bam_basename}.cleaned_fastqc.html" --out_zip "~{bam_basename}.cleaned_fastqc.zip"
+
+    cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+    cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+    set +o pipefail
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
   >>>
 
   output {
@@ -99,6 +104,9 @@ task deplete_taxa {
     File   cleaned_fastqc_zip        = "~{bam_basename}.cleaned_fastqc.zip"
     Int    depletion_read_count_pre  = read_int("depletion_read_count_pre")
     Int    depletion_read_count_post = read_int("depletion_read_count_post")
+    Int    max_ram_gb                = ceil(read_float("MEM_BYTES")/1000000000)
+    Int    runtime_sec               = ceil(read_float("UPTIME_SEC"))
+    Int    cpu_load_15min            = ceil(read_float("LOAD_15M"))
     String viralngs_version          = read_string("VERSION")
   }
   runtime {
@@ -109,7 +117,7 @@ task deplete_taxa {
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: 1
-    maxRetries: 2
+    maxRetries: 1
   }
 }
 
