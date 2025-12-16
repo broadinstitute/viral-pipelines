@@ -227,8 +227,7 @@ workflow metagenomic_denovo {
     File    raw_fastqc                            = fastqc_raw.fastqc_html
     File    depleted_fastqc                       = fastqc_dehosted.fastqc_html
     File    taxfilt_fastqc                        = fastqc_taxfilt.fastqc_html
-    File    dedup_fastqc                          = rmdup_ubam.dedup_fastqc
-    
+
     File    contigs_fasta                         = assemble.contigs_fasta
     File    scaffold_fasta                        = scaffold.scaffold_fasta
     File    intermediate_scaffold_fasta           = scaffold.intermediate_scaffold_fasta
@@ -249,7 +248,6 @@ workflow metagenomic_denovo {
     File    isnvs_vcf                             = refine.align_to_self_isnvs_vcf
     
     File    aligned_bam                           = refine.align_to_self_merged_aligned_only_bam
-    File    aligned_only_reads_fastqc             = refine.align_to_ref_fastqc
     File    coverage_tsv                          = refine.align_to_self_merged_coverage_tsv
     Int     read_pairs_aligned                    = refine.align_to_self_merged_read_pairs_aligned
     Float   bases_aligned                         = refine.align_to_self_merged_bases_aligned

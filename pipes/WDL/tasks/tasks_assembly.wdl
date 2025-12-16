@@ -761,9 +761,6 @@ task align_reads {
     samtools view "~{sample_name}.mapped.bam" | cut -f10 | tr -d '\n' | wc -c | tee bases_aligned
     python -c "print (float("$(cat bases_aligned)")/"$(cat assembly_length_unambiguous)") if "$(cat assembly_length_unambiguous)">0 else print(0)" > mean_coverage
 
-    # fastqc mapped bam
-    reports.py fastqc ~{sample_name}.mapped.bam ~{sample_name}.mapped_fastqc.html --out_zip ~{sample_name}.mapped_fastqc.zip
-
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
   >>>
@@ -774,8 +771,6 @@ task align_reads {
     File   aligned_bam_flagstat          = "~{sample_name}.all.bam.flagstat.txt"
     File   aligned_only_reads_bam        = "~{sample_name}.mapped.bam"
     File   aligned_only_reads_bam_idx    = "~{sample_name}.mapped.bai"
-    File   aligned_only_reads_fastqc     = "~{sample_name}.mapped_fastqc.html"
-    File   aligned_only_reads_fastqc_zip = "~{sample_name}.mapped_fastqc.zip"
     Int    reference_length              = read_int("assembly_length")
     Int    reads_provided                = read_int("reads_provided")
     Int    reads_aligned                 = read_int("reads_aligned")

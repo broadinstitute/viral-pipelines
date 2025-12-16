@@ -158,15 +158,12 @@ workflow assemble_denovo {
     Float   mean_coverage                         = refine.align_to_self_merged_mean_coverage
     
     File    cleaned_bam                           = merge_cleaned_reads.out_bam
-    File?   cleaned_fastqc                        = merge_cleaned_reads.fastqc
     Int     depletion_read_count_post             = merge_cleaned_reads.read_count
     
     File    taxfilt_bam                           = merge_taxfilt_reads.out_bam
-    File?   taxfilt_fastqc                        = merge_taxfilt_reads.fastqc
     Int     filter_read_count_post                = merge_taxfilt_reads.read_count
     
     File    dedup_bam                             = merge_dedup_reads.out_bam
-    File?   dedup_fastqc                          = merge_dedup_reads.fastqc
     Int     dedup_read_count_post                 = merge_dedup_reads.read_count
     
     File    contigs_fasta                         = assemble.contigs_fasta
@@ -192,7 +189,6 @@ workflow assemble_denovo {
     File    isnvs_vcf                             = refine.align_to_self_isnvs_vcf
     
     File    aligned_bam                           = refine.align_to_self_merged_aligned_only_bam
-    File    aligned_only_reads_fastqc             = refine.align_to_ref_fastqc
     File    coverage_tsv                          = refine.align_to_self_merged_coverage_tsv
     Int     read_pairs_aligned                    = refine.align_to_self_merged_read_pairs_aligned
     Int     bases_aligned                         = refine.align_to_self_merged_bases_aligned

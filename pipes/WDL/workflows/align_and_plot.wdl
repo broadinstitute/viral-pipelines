@@ -24,8 +24,6 @@ workflow align_and_plot {
         File   aligned_bam_flagstat          = align.aligned_bam_flagstat
         File   aligned_only_reads_bam        = align.aligned_only_reads_bam
         File   aligned_only_reads_bam_idx    = align.aligned_only_reads_bam_idx
-        File   aligned_only_reads_fastqc     = align.aligned_only_reads_fastqc
-        File   aligned_only_reads_fastqc_zip = align.aligned_only_reads_fastqc_zip
         Int    reads_provided                = align.reads_provided
         Int    reads_aligned                 = align.reads_aligned
         Int    read_pairs_aligned            = align.read_pairs_aligned

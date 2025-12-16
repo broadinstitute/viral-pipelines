@@ -90,7 +90,6 @@ task deplete_taxa {
 
     samtools view -c "~{raw_reads_unmapped_bam}" | tee depletion_read_count_pre
     samtools view -c "~{bam_basename}.cleaned.bam" | tee depletion_read_count_post
-    reports.py fastqc "~{bam_basename}.cleaned.bam" "~{bam_basename}.cleaned_fastqc.html" --out_zip "~{bam_basename}.cleaned_fastqc.zip"
 
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
@@ -100,8 +99,6 @@ task deplete_taxa {
 
   output {
     File   cleaned_bam               = "~{bam_basename}.cleaned.bam"
-    File   cleaned_fastqc            = "~{bam_basename}.cleaned_fastqc.html"
-    File   cleaned_fastqc_zip        = "~{bam_basename}.cleaned_fastqc.zip"
     Int    depletion_read_count_pre  = read_int("depletion_read_count_pre")
     Int    depletion_read_count_post = read_int("depletion_read_count_post")
     Int    max_ram_gb                = ceil(read_float("MEM_BYTES")/1000000000)
@@ -165,13 +162,10 @@ task filter_to_taxon {
       --loglevel=DEBUG
 
     samtools view -c "~{bam_basename}.taxfilt.bam" | tee filter_read_count_post
-    reports.py fastqc "~{bam_basename}.taxfilt.bam" "~{bam_basename}.taxfilt_fastqc.html" --out_zip "~{bam_basename}.taxfilt_fastqc.zip"
   >>>
 
   output {
     File   taxfilt_bam            = "~{bam_basename}.taxfilt.bam"
-    File   taxfilt_fastqc         = "~{bam_basename}.taxfilt_fastqc.html"
-    File   taxfilt_fastqc_zip     = "~{bam_basename}.taxfilt_fastqc.zip"
     Int    filter_read_count_post = read_int("filter_read_count_post")
     String viralngs_version       = read_string("VERSION")
   }

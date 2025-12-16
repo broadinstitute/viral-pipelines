@@ -13,8 +13,6 @@ workflow deplete_only {
 
     output {
         File   cleaned_bam               = deplete_taxa.cleaned_bam
-        File   cleaned_fastqc            = deplete_taxa.cleaned_fastqc
-        File   cleaned_fastqc_zip        = deplete_taxa.cleaned_fastqc_zip
         Int    depletion_read_count_pre  = deplete_taxa.depletion_read_count_pre
         Int    depletion_read_count_post = deplete_taxa.depletion_read_count_post
         String viral_classify_version    = deplete_taxa.viralngs_version

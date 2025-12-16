@@ -784,7 +784,6 @@ task filter_bam_to_taxa {
     Boolean        withoutChildren = false
     Boolean        exclude_taxa = false
     String         out_filename_suffix = "filtered"
-    Boolean        run_fastqc = false
 
     Int            machine_mem_gb = 26 + 10 * ceil(size(classified_reads_txt_gz, "GB"))
     String         docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
@@ -844,9 +843,6 @@ task filter_bam_to_taxa {
       --loglevel=DEBUG
 
     samtools view -c "~{out_basename}.bam" | tee classified_taxonomic_filter_read_count_post
-    if [ "~{run_fastqc}" = "true" ]; then
-      reports.py fastqc "~{out_basename}.bam" "~{out_basename}.fastqc.html"
-    fi
     wait
   >>>
 
@@ -856,7 +852,6 @@ task filter_bam_to_taxa {
     Int     reads_matching_taxa                         = read_int("COUNT")
     Int     classified_taxonomic_filter_read_count_post = read_int("classified_taxonomic_filter_read_count_post")
     String  viralngs_version                            = read_string("VERSION")
-    File?   fastqc_html_report                          = "~{out_basename}.fastqc.html"
   }
 
   runtime {
