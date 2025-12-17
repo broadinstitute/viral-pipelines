@@ -1048,16 +1048,18 @@ task demux_fastqs {
     NUM_CPUS=$(nproc)
     echo "Using $NUM_CPUS threads for pigz decompression" >&2
 
-    # Decompress R1
-    FASTQ_R1_UNCOMPRESSED="fastq_r1_uncompressed.fastq"
+    # Decompress R1 - preserve original filename (strip .gz) for illumina.py filename parsing
+    FASTQ_R1_BASENAME=$(basename "~{fastq_r1}" .gz)
+    FASTQ_R1_UNCOMPRESSED="$FASTQ_R1_BASENAME"
     pigz -d -c -p $NUM_CPUS ~{fastq_r1} > "$FASTQ_R1_UNCOMPRESSED"
     echo "Timestamp after R1 decompress: $(date -u +%Y-%m-%dT%H:%M:%S)" >&2
     echo "Uptime after R1 decompress (seconds): $(cat /proc/uptime | cut -f 1 -d ' ')" >&2
     echo "R1 uncompressed size: $(ls -lh $FASTQ_R1_UNCOMPRESSED)" >&2
 
-    # Decompress R2 if it exists
+    # Decompress R2 if it exists - preserve original filename (strip .gz)
     FASTQ_R2_ARG=""
-    ~{if defined(fastq_r2) then "FASTQ_R2_UNCOMPRESSED='fastq_r2_uncompressed.fastq'" else ""}
+    ~{if defined(fastq_r2) then "FASTQ_R2_BASENAME=$(basename \"" + select_first([fastq_r2, ""]) + "\" .gz)" else ""}
+    ~{if defined(fastq_r2) then "FASTQ_R2_UNCOMPRESSED=\"$FASTQ_R2_BASENAME\"" else ""}
     ~{if defined(fastq_r2) then "pigz -d -c -p $NUM_CPUS " + select_first([fastq_r2, ""]) + " > \"$FASTQ_R2_UNCOMPRESSED\"" else ""}
     ~{if defined(fastq_r2) then "echo \"Timestamp after R2 decompress: $(date -u +%Y-%m-%dT%H:%M:%S)\" >&2" else ""}
     ~{if defined(fastq_r2) then "echo \"Uptime after R2 decompress (seconds): $(cat /proc/uptime | cut -f 1 -d ' ')\" >&2" else ""}
