@@ -944,8 +944,8 @@ task demux_fastqs {
     String? sequencingCenter
 
     Int?    cpu
-    Int?    memory_gb
     Int?    machine_mem_gb
+    Int     max_cpu = 32       # Maximum CPU cap for autoscaling (use 16 for 2-barcode, 64 for 3-barcode)
     Int     disk_size = 750
     String  docker = "quay.io/broadinstitute/viral-core:2.5.12"
   }
@@ -955,12 +955,14 @@ task demux_fastqs {
   Float fastq_r2_size = if defined(fastq_r2) then size(select_first([fastq_r2]), "GB") else 0.0
   Float total_fastq_size = fastq_r1_size + fastq_r2_size
 
-  # Autoscale CPU based on input size: 4 CPUs for small inputs, up to 96 CPUs for ~23 GB inputs
-  # Linear scaling: 4 + (input_GB / 15) * 60, capped at 96, rounded to nearest multiple of 4
+  # Autoscale CPU based on input size, capped by max_cpu parameter
+  # Linear scaling: 4 + (input_GB / 15) * 60, rounded to nearest multiple of 4
+  # Use max_cpu to differentiate 2-barcode (16) vs 3-barcode (64) workloads
   Float        cpu_unclamped = 4.0 + (total_fastq_size / 15.0) * 60.0
-  Int          cpu_actual = select_first([cpu, floor(((if cpu_unclamped > 96.0 then 96.0 else cpu_unclamped) + 2.0) / 4.0) * 4])
+  Float        max_cpu_float = max_cpu + 0.0
+  Int          cpu_actual = select_first([cpu, floor(((if cpu_unclamped > max_cpu_float then max_cpu_float else cpu_unclamped) + 2.0) / 4.0) * 4])
   # Memory scales with CPU at 4x ratio (default), or use override
-  Int          machine_mem_gb_actual = select_first([memory_gb, machine_mem_gb, cpu_actual * 4])
+  Int          machine_mem_gb_actual = select_first([machine_mem_gb, cpu_actual * 4])
 
   parameter_meta {
     fastq_r1: {
