@@ -15,7 +15,7 @@ task alignment_metrics {
     Int    max_amplicons=500
 
     Int    machine_mem_gb=16
-    String docker = "quay.io/broadinstitute/viral-core:2.5.10"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.12"
   }
 
   String out_basename = basename(aligned_bam, ".bam")
@@ -143,7 +143,7 @@ task plot_coverage {
     String? plotXLimits # of the form "min max" (ints, space between)
     String? plotYLimits # of the form "min max" (ints, space between)
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.10"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.12"
   }
 
   Int disk_size = 375
@@ -290,7 +290,7 @@ task coverage_report {
     Array[File]  mapped_bam_idx = []  # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name = "coverage_report.txt"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.10"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.12"
   }
 
   Int disk_size = 375
@@ -365,7 +365,7 @@ task fastqc {
   input {
     File   reads_bam
 
-    String docker = "quay.io/broadinstitute/viral-core:2.5.10"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.12"
   }
   parameter_meta {
     reads_bam:{ 
@@ -412,13 +412,22 @@ task align_and_count {
     Boolean keep_singletons_when_filtering                    = false
     Boolean keep_duplicates_when_filtering                    = false
 
+    Int?   cpu
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.5.10"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.12"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
   String  ref_basename=basename(ref_db, ".fasta")
-  Int disk_size = 375
+  Int disk_size = ceil((10 * size(reads_bam, "GB") + 2 * size(ref_db, "GB") + 150) / 375.0) * 375
+
+  # Autoscale CPU based on input size: 4 CPUs for small inputs, up to 96 CPUs for larger inputs
+  # Linear scaling: 4 + (input_GB / 15) * 60, capped at 96, rounded to nearest multiple of 4
+  # NOTE: Previously capped at 16 due to minimap2_idxstats bottleneck (broadinstitute/viral-core#145), fixed in viral-core 2.5.12
+  Float        cpu_unclamped = 4.0 + (size(reads_bam, "GB") / 15.0) * 60.0
+  Int          cpu_actual = select_first([cpu, floor(((if cpu_unclamped > 96.0 then 96.0 else cpu_unclamped) + 2.0) / 4.0) * 4])
+  # Memory scales with CPU at 2x ratio (default), or use override
+  Int          machine_mem_gb_actual = select_first([machine_mem_gb, cpu_actual * 2])
 
   parameter_meta {
     reads_bam: {
@@ -500,6 +509,11 @@ task align_and_count {
         PCT_TOP_HIT_OF_TOTAL_READS=$( echo "null" | tee '~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt')
       fi
     fi
+
+    cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+    cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+    set +o pipefail
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
   >>>
 
   output {
@@ -515,13 +529,16 @@ task align_and_count {
     String pct_total_reads_mapped     = read_string('~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt')
     String pct_top_hit_of_total_reads = read_string('~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt')
     String pct_lesser_hits_of_mapped  = read_string('~{reads_basename}.count.~{ref_basename}.pct_lesser_hits_of_mapped.txt')
-    
+
+    Int    max_ram_gb       = ceil(read_float("MEM_BYTES")/1000000000)
+    Int    runtime_sec      = ceil(read_float("UPTIME_SEC"))
+    Int    cpu_load_15min   = ceil(read_float("LOAD_15M"))
     String viralngs_version = read_string("VERSION")
   }
 
   runtime {
-    memory: select_first([machine_mem_gb, 15]) + " GB"
-    cpu: 4
+    memory: machine_mem_gb_actual + " GB"
+    cpu: cpu_actual
     docker: "${docker}"
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
@@ -536,7 +553,7 @@ task align_and_count_summary {
 
     String       output_prefix = "count_summary"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.10"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.12"
   }
 
   Int disk_size = 100

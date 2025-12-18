@@ -16,10 +16,8 @@ workflow load_illumina_fastqs {
     File        samplesheet   # TSV samplesheet with barcodes
     File        runinfo_xml   # Illumina RunInfo.xml
 
-    Int         demux_cpu_splitcode       = 32
-    Int         demux_memory_splitcode    = 120
-    Int         demux_cpu_no_splitcode    = 4
-    Int         demux_memory_no_splitcode = 15
+    Int         demux_max_cpu_splitcode    = 64   # CPU cap for 3-barcode samples (splitcode)
+    Int         demux_max_cpu_no_splitcode = 16   # CPU cap for 2-barcode samples (samtools import)
   }
 
   # Step 1: Group FASTQs into R1/R2 pairs (convert Files to Strings to avoid localization)
@@ -35,7 +33,7 @@ workflow load_illumina_fastqs {
       runinfo_xml = runinfo_xml
   }
 
-  # Step 2b: Check if samplesheet has barcode_3 (determines demux resource allocation)
+  # Step 2b: Check if samplesheet has barcode_3 (determines demux CPU allocation)
   call demux.check_for_barcode3 {
     input:
       samplesheet = samplesheet
@@ -54,8 +52,7 @@ workflow load_illumina_fastqs {
         fastq_r2    = if length(fastq_pair) > 1 then fastq_pair[1] else null_file,
         samplesheet = samplesheet,
         runinfo_xml = runinfo_xml,
-        cpu         = if check_for_barcode3.has_barcode3 then demux_cpu_splitcode else demux_cpu_no_splitcode,
-        memory_gb   = if check_for_barcode3.has_barcode3 then demux_memory_splitcode else demux_memory_no_splitcode
+        max_cpu     = if check_for_barcode3.has_barcode3 then demux_max_cpu_splitcode else demux_max_cpu_no_splitcode
     }
   }
 
