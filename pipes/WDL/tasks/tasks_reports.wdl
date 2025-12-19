@@ -800,16 +800,24 @@ task multiqc_from_bams {
     num_bams=$(wc -l < "$BAM_LIST")
     num_cpus=$(nproc)
 
-    # Calculate parallel jobs: try to use all CPUs, but cap at number of BAMs
-    num_fastqc_jobs=$num_cpus
-    if [[ $num_fastqc_jobs -gt $num_bams ]]; then
-      num_fastqc_jobs=$num_bams
-    fi
-    if [[ $num_fastqc_jobs -lt 1 ]]; then
-      num_fastqc_jobs=1
-    fi
+    # Over-allocate threads to maximize tail utilization
+    # Run all BAMs as separate parallel jobs
+    num_fastqc_jobs=$num_bams
 
-    echo "=== Running FastQC on $num_bams BAM files with $num_fastqc_jobs parallel jobs ==="
+    # Over-allocate: 2x the "fair share" threads per job, minimum 4
+    # Initially each job gets ~(cpus/samples) actual CPU time
+    # As jobs finish, remaining jobs opportunistically get more CPU time
+    fair_share_threads=$(( num_cpus / num_bams ))
+    if [[ $fair_share_threads -lt 1 ]]; then
+      fair_share_threads=1
+    fi
+    num_fastqc_threads=$(( fair_share_threads * 2 ))
+    if [[ $num_fastqc_threads -lt 4 ]]; then
+      num_fastqc_threads=4
+    fi
+    export FASTQC_THREADS=$num_fastqc_threads
+
+    echo "=== Running FastQC on $num_bams BAM files with $num_fastqc_jobs parallel jobs ($num_fastqc_threads threads each, nproc=$num_cpus) ==="
     date -u +"%Y-%m-%dT%H:%M:%SZ"
 
     # Create output directory for FastQC results
@@ -836,8 +844,8 @@ task multiqc_from_bams {
         rm "${out_dir}/${bam_basename}_fastqc_data.txt"
         echo "Created placeholder FastQC output for empty BAM: $bam_file"
       else
-        # Non-empty BAM: run FastQC normally
-        fastqc "$bam_file" --outdir "$out_dir" --quiet
+        # Non-empty BAM: run FastQC with threading
+        fastqc "$bam_file" --outdir "$out_dir" --quiet --threads $FASTQC_THREADS
       fi
     }
     export -f run_fastqc_safe
