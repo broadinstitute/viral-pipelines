@@ -17,9 +17,9 @@ workflow demux_only {
 
     call tasks_demux.illumina_demux
 
-    call reports.MultiQC {
+    call reports.multiqc_from_bams as multiqc {
         input:
-            input_files = illumina_demux.raw_reads_fastqc_zip
+            input_bams = illumina_demux.raw_reads_unaligned_bams
     }
 
     output {
@@ -27,7 +27,8 @@ workflow demux_only {
         File        demux_metrics             = illumina_demux.metrics
         File        demux_commonBarcodes      = illumina_demux.commonBarcodes
         File        demux_outlierBarcodes     = illumina_demux.outlierBarcodes
-        File        multiqc_report_raw        = MultiQC.multiqc_report
+        File        multiqc_report_raw        = multiqc.multiqc_report
+        Array[File] fastqcs                   = multiqc.fastqc_html
 
         String             run_date           = illumina_demux.run_info['run_start_date']
         Map[String,String] run_info           = illumina_demux.run_info

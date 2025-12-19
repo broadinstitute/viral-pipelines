@@ -205,18 +205,18 @@ workflow load_illumina_fastqs_deplete {
     }
   }
 
-  # Step 9: MultiQC reports
-  call reports.MultiQC as multiqc_raw {
+  # Step 9: MultiQC reports (FastQC + MultiQC in one step)
+  call reports.multiqc_from_bams as multiqc_raw {
     input:
-      input_files = flatten(demux_fastqs.fastqc_zip),
-      file_name   = "multiqc-raw.html"
+      input_bams   = raw_bams,
+      out_basename = "multiqc-raw"
   }
 
   if (length(flatten(select_all([bmtaggerDbs, blastDbs, bwaDbs]))) > 0) {
-    call reports.MultiQC as multiqc_cleaned {
+    call reports.multiqc_from_bams as multiqc_cleaned {
       input:
-        input_files = select_all(deplete.cleaned_fastqc_zip),
-        file_name   = "multiqc-cleaned.html"
+        input_bams   = select_all(cleaned_bam_passing),
+        out_basename = "multiqc-cleaned"
     }
   }
 
@@ -248,9 +248,9 @@ workflow load_illumina_fastqs_deplete {
     File? sra_metadata     = sra_meta_prep.sra_metadata
     File? cleaned_bam_uris = sra_meta_prep.cleaned_bam_uris
 
-    # QC outputs
-    Array[File] fastqc_html = flatten(demux_fastqs.fastqc_html)
-    Array[File] fastqc_zip  = flatten(demux_fastqs.fastqc_zip)
+    # QC outputs (FastQC HTML files from multiqc_from_bams)
+    Array[File] fastqcs_raw     = multiqc_raw.fastqc_html
+    Array[File] fastqcs_cleaned = select_first([multiqc_cleaned.fastqc_html, []])
 
     # Demux metrics
     File demux_metrics = merge_demux_metrics.merged_metrics

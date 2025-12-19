@@ -189,8 +189,6 @@ workflow classify_single {
         Array[Int]? skani_hits_taxids          = skani_hit_taxid
         Array[String]? skani_hits_taxnames     = skani_hit_taxname
 
-        File?   raw_fastqc                      = merge_raw_reads.fastqc
-        File?   cleaned_fastqc                  = deplete.fastqc_html_report
         File?   spikein_report                  = spikein.report
         String? spikein_tophit                  = spikein.top_hit_id
         String? spikein_pct_of_total_reads      = spikein.pct_total_reads_mapped

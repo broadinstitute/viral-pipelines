@@ -172,7 +172,6 @@ task merge_and_reheader_bams {
       File?        reheader_table
       String       out_basename = basename(in_bams[0], ".bam")
 
-      Boolean      run_fastqc = false
       String       docker = "quay.io/broadinstitute/viral-core:2.5.12"
       Int          disk_size = 750
       Int          machine_mem_gb = 4
@@ -212,18 +211,12 @@ task merge_and_reheader_bams {
         # summary stats on merged output
         samtools view -c "~{out_basename}.bam" | tee read_count_merged
         samtools flagstat "~{out_basename}.bam" | tee "~{out_basename}.bam.flagstat.txt"
-
-        # fastqc can be really slow on large files, make it optional
-        if [ "~{run_fastqc}" = "true" ]; then
-          reports.py fastqc "~{out_basename}.bam" "~{out_basename}.fastqc.html"
-        fi
     >>>
 
     output {
         File   out_bam          = "~{out_basename}.bam"
         Int    read_count       = read_int("read_count_merged")
         File   flagstat         = "~{out_basename}.bam.flagstat.txt"
-        File?  fastqc           = "~{out_basename}.fastqc.html"
         String viralngs_version = read_string("VERSION")
     }
 
@@ -273,13 +266,10 @@ task rmdup_ubam {
       --loglevel=DEBUG
 
     samtools view -c "~{reads_basename}.dedup.bam" | tee dedup_read_count_post
-    reports.py fastqc "~{reads_basename}.dedup.bam" "~{reads_basename}.dedup_fastqc.html" --out_zip "~{reads_basename}.dedup_fastqc.zip"
   >>>
 
   output {
     File   dedup_bam             = "~{reads_basename}.dedup.bam"
-    File   dedup_fastqc          = "~{reads_basename}.dedup_fastqc.html"
-    File   dedup_fastqc_zip      = "~{reads_basename}.dedup_fastqc.zip"
     Int    dedup_read_count_post = read_int("dedup_read_count_post")
     String viralngs_version      = read_string("VERSION")
   }

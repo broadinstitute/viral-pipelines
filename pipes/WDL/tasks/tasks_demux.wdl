@@ -607,39 +607,6 @@ task illumina_demux {
     fi
     # ---------------------------------------
 
-    # fastqc
-    FASTQC_HARDCODED_MEM_PER_THREAD=250 # the value fastqc sets for -Xmx per thread, not adjustable
-    num_cpus=$(nproc)
-    num_bam_files=$(cat $OUT_BASENAMES | wc -l)
-    num_fastqc_jobs=1
-    num_fastqc_threads=1
-    total_ram_needed_mb=250
-
-    # determine the number of fastqc jobs
-    while [[ $total_ram_needed_mb -lt $mem_in_mb ]] && [[ $num_fastqc_jobs -lt $num_cpus ]] && [[ $num_fastqc_jobs -lt $num_bam_files ]]; do
-        num_fastqc_jobs=$(($num_fastqc_jobs+1))
-        total_ram_needed_mb=$(($total_ram_needed_mb+$FASTQC_HARDCODED_MEM_PER_THREAD))
-    done
-    # determine the number of fastqc threads per job
-    while [[ $(($total_ram_needed_mb)) -lt $mem_in_mb ]] && [[ $(($num_fastqc_jobs*$num_fastqc_threads)) -lt $num_cpus ]]; do
-        if [[ $(( $num_fastqc_jobs * $(($num_fastqc_threads+1)) )) -le $num_cpus ]]; then
-            num_fastqc_threads=$(($num_fastqc_threads+1))
-            total_ram_needed_mb=$(($num_fastqc_jobs*($FASTQC_HARDCODED_MEM_PER_THREAD*$num_fastqc_threads)))
-        else
-            break
-        fi
-    done
-
-    # GNU Parallel refresher:
-    # ",," is the replacement string; values after ":::" are substituted where it appears
-    parallel --jobs $num_fastqc_jobs -I ,, \
-      "reports.py fastqc \
-        ,,.bam \
-        ,,_fastqc.html \
-        --out_zip ,,_fastqc.zip \
-        --threads $num_fastqc_threads" \
-      ::: $(cat $OUT_BASENAMES)
-
     mv runinfo.json "~{out_base}-runinfo.json"
 
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
@@ -655,8 +622,6 @@ task illumina_demux {
     File        outlierBarcodes          = "barcodes_outliers.txt"
     Array[File] raw_reads_unaligned_bams = glob("*.bam")
     File?       unmatched_reads_bam      = "unmatched.bam"
-    Array[File] raw_reads_fastqc         = glob("*_fastqc.html")
-    Array[File] raw_reads_fastqc_zip     = glob("*_fastqc.zip")
     Int         max_ram_gb               = ceil(read_float("MEM_BYTES")/1000000000)
     Int         runtime_sec              = ceil(read_float("UPTIME_SEC"))
     Int         cpu_load_15min           = ceil(read_float("LOAD_15M"))
@@ -978,8 +943,6 @@ task demux_fastqs {
 
     String? sequencingCenter
 
-    Boolean run_fastqc = false
-
     Int?    cpu
     Int?    machine_mem_gb
     Int     max_cpu = 32       # Maximum CPU cap for autoscaling (use 16 for 2-barcode, 64 for 3-barcode)
@@ -1017,10 +980,6 @@ task demux_fastqs {
     runinfo_xml: {
       description: "Illumina RunInfo.xml file. NOTE: run_date and flowcell_id are extracted from this file and cannot be overridden due to viral-core limitations. Feature request needed to expose these as CLI parameters.",
       category: "required"
-    }
-    run_fastqc: {
-      description: "Whether to run FastQC on output BAM files. Set to false to skip FastQC and return empty arrays for fastqc_html and fastqc_zip outputs.",
-      category: "advanced"
     }
   }
 
@@ -1064,46 +1023,6 @@ task demux_fastqs {
       done
     fi
 
-    # Run FastQC on output BAMs (if enabled)
-    if ~{true="true" false="false" run_fastqc}; then
-      if ls *.bam 1> /dev/null 2>&1; then
-        # Create list of BAM basenames for parallel processing
-        ls *.bam | sed 's/\.bam$//' > bam_basenames.txt
-        num_bam_files=$(cat bam_basenames.txt | wc -l)
-
-        if [[ $num_bam_files -gt 0 ]]; then
-          # Over-allocate threads to maximize tail utilization
-          # This works regardless of how many CPUs the executor actually provides
-          num_cpus=$(nproc)
-          num_fastqc_jobs=$num_bam_files
-
-          # Over-allocate: 2x the "fair share" threads per job, minimum 4
-          # Initially each job gets ~(cpus/samples) actual CPU time
-          # As jobs finish, remaining jobs opportunistically get more CPU time
-          fair_share_threads=$(( num_cpus / num_bam_files ))
-          if [[ $fair_share_threads -lt 1 ]]; then
-            fair_share_threads=1
-          fi
-          num_fastqc_threads=$(( fair_share_threads * 2 ))
-          if [[ $num_fastqc_threads -lt 4 ]]; then
-            num_fastqc_threads=4
-          fi
-
-          echo "FastQC parallelization: $num_fastqc_jobs jobs x $num_fastqc_threads threads (nproc=$num_cpus, samples=$num_bam_files)"
-
-          # GNU Parallel: run FastQC on all BAMs in parallel
-          # ",," is the replacement string; values after ":::" are substituted where it appears
-          parallel --jobs $num_fastqc_jobs -I ,, \
-            "reports.py fastqc \
-              ,,.bam \
-              ,,_fastqc.html \
-              --out_zip ,,_fastqc.zip \
-              --threads $num_fastqc_threads" \
-            ::: $(cat bam_basenames.txt)
-        fi
-      fi
-    fi
-
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
     set +o pipefail
@@ -1113,8 +1032,6 @@ task demux_fastqs {
   output {
     Array[File] output_bams      = glob("*.bam")
     Array[Int]  read_counts      = read_lines("read_counts.txt")
-    Array[File] fastqc_html      = glob("*_fastqc.html")
-    Array[File] fastqc_zip       = glob("*_fastqc.zip")
     File        demux_metrics    = "demux_metrics_picard-style.txt"
     Int         max_ram_gb       = ceil(read_float("MEM_BYTES")/1000000000)
     Int         runtime_sec      = ceil(read_float("UPTIME_SEC"))

@@ -57,10 +57,6 @@ workflow sarscov2_sra_to_genbank {
             String biosample_accession     = Fetch_SRA_to_BAM.biosample_accession
             Int num_reads                  = Fetch_SRA_to_BAM.num_reads
             String seq_platform            = Fetch_SRA_to_BAM.sequencing_platform
-            call reports.fastqc {
-                input:
-                    reads_bam = Fetch_SRA_to_BAM.reads_ubam
-            }
             call reports.align_and_count as spikein {
                 input:
                     reads_bam = Fetch_SRA_to_BAM.reads_ubam,
@@ -224,10 +220,10 @@ workflow sarscov2_sra_to_genbank {
     }
 
     #### summary stats
-    call reports.MultiQC as multiqc_raw {
+    call reports.multiqc_from_bams as multiqc_raw {
         input:
-            input_files = select_all(fastqc.fastqc_zip),
-            file_name   = "multiqc-raw.html"
+            input_bams   = select_all(reads_ubam),
+            out_basename = "multiqc-raw"
     }
     call reports.align_and_count_summary as spike_summary {
         input:
