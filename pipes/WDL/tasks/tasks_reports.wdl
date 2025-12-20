@@ -563,7 +563,7 @@ task aggregate_metagenomics_reports {
     String       aggregate_taxlevel_focus                 = "species"
     Int          aggregate_top_N_hits                     = 5
 
-    String       docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.5.14.0"
   }
 
   parameter_meta {

@@ -1403,7 +1403,7 @@ task genbank_special_taxa {
     Int     taxid
     File    taxdump_tgz
     File    vadr_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/annotation/vadr/vadr-by-taxid.tsv"
-    String  docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+    String  docker = "quay.io/broadinstitute/viral-classify:2.5.14.0"
   }
 
   command <<<
