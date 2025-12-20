@@ -414,7 +414,7 @@ task align_and_count {
 
   String  reads_basename=basename(reads_bam, ".bam")
   String  ref_basename=basename(ref_db, ".fasta")
-  Int disk_size = ceil((10 * size(reads_bam, "GB") + 2 * size(ref_db, "GB") + 150) / 375.0) * 375
+  Int disk_size = ceil((3 * size(reads_bam, "GB") + 2 * size(ref_db, "GB") + 150) / 375.0) * 375
 
   # Autoscale CPU based on input size: 4 CPUs for small inputs, up to 96 CPUs for larger inputs
   # Linear scaling: 4 + (input_GB / 15) * 60, capped at 96, rounded to nearest multiple of 4
