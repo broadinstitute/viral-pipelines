@@ -14,7 +14,7 @@ task deplete_taxa {
 
     Int?         cpu
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-classify:2.5.14.0"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.5.14.1"
   }
 
   # Autoscale CPU based on input size: 8 CPUs for ~1M reads (0.15 GB), 96 CPUs for ~100M reads (15 GB)
@@ -129,7 +129,7 @@ task filter_to_taxon {
     String   neg_control_prefixes_space_separated = "neg water NTC"
 
     Int      machine_mem_gb = 15
-    String   docker = "quay.io/broadinstitute/viral-classify:2.5.14.0"
+    String   docker = "quay.io/broadinstitute/viral-classify:2.5.14.1"
   }
 
   # do this in two steps in case the input doesn't actually have "cleaned" in the name
@@ -185,7 +185,7 @@ task build_lastal_db {
     File   sequences_fasta
 
     Int    machine_mem_gb = 7
-    String docker = "quay.io/broadinstitute/viral-classify:2.5.14.0"
+    String docker = "quay.io/broadinstitute/viral-classify:2.5.14.1"
   }
 
   String db_name = basename(sequences_fasta, ".fasta")
