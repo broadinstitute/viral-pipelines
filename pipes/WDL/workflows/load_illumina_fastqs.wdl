@@ -26,10 +26,9 @@ workflow load_illumina_fastqs {
       fastq_uris = fastq_files
   }
 
-  # Step 2: Extract run metadata (once for entire run)
+  # Step 2: Extract run-level metadata (flowcell info, tile counts, etc.)
   call demux.get_illumina_run_metadata {
     input:
-      samplesheet = samplesheet,
       runinfo_xml = runinfo_xml
   }
 
@@ -62,6 +61,13 @@ workflow load_illumina_fastqs {
       metrics_files = demux_fastqs.demux_metrics
   }
 
+  # Step 4b: Merge sample metadata from all FASTQ pairs
+  call demux.merge_sample_metadata {
+    input:
+      meta_by_sample_jsons   = demux_fastqs.meta_by_sample_json,
+      meta_by_filename_jsons = demux_fastqs.meta_by_filename_json
+  }
+
   # Flatten BAMs for convenience
   Array[File] raw_bams = flatten(demux_fastqs.output_bams)
 
@@ -87,12 +93,12 @@ workflow load_illumina_fastqs {
     File demux_metrics = merge_demux_metrics.merged_metrics
 
     # Metadata outputs
-    Map[String,Map[String,String]] meta_by_sample   = get_illumina_run_metadata.meta_by_sample
-    Map[String,Map[String,String]] meta_by_filename = get_illumina_run_metadata.meta_by_filename
+    Map[String,Map[String,String]] meta_by_sample   = read_json(merge_sample_metadata.merged_meta_by_sample)
+    Map[String,Map[String,String]] meta_by_filename = read_json(merge_sample_metadata.merged_meta_by_filename)
     Map[String,String]             run_info         = get_illumina_run_metadata.run_info
 
-    File   meta_by_sample_json   = get_illumina_run_metadata.meta_by_sample_json
-    File   meta_by_filename_json = get_illumina_run_metadata.meta_by_filename_json
+    File   meta_by_sample_json   = merge_sample_metadata.merged_meta_by_sample
+    File   meta_by_filename_json = merge_sample_metadata.merged_meta_by_filename
     File   run_info_json         = get_illumina_run_metadata.runinfo_json
 
     String viralngs_version = get_illumina_run_metadata.viralngs_version

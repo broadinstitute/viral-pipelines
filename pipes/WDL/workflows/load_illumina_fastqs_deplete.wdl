@@ -57,26 +57,13 @@ workflow load_illumina_fastqs_deplete {
       fastq_uris = fastq_files
   }
 
-  # Step 3: Extract run metadata
+  # Step 3: Extract run-level metadata (flowcell info, tile counts, etc.)
   call demux.get_illumina_run_metadata {
     input:
-      samplesheet = samplesheet_rename_ids.new_sheet,
       runinfo_xml = runinfo_xml
   }
 
-  # Step 4: Set default metadata keys
-  call demux.map_map_setdefault as meta_default_sample {
-    input:
-      map_map_json = get_illumina_run_metadata.meta_by_sample_json,
-      sub_keys     = default_sample_keys
-  }
-  call demux.map_map_setdefault as meta_default_filename {
-    input:
-      map_map_json = get_illumina_run_metadata.meta_by_filename_json,
-      sub_keys     = default_filename_keys
-  }
-
-  # Step 4b: Check if samplesheet has barcode_3 (determines demux CPU allocation)
+  # Step 3b: Check if samplesheet has barcode_3 (determines demux CPU allocation)
   call demux.check_for_barcode3 {
     input:
       samplesheet = samplesheet_rename_ids.new_sheet
@@ -103,6 +90,25 @@ workflow load_illumina_fastqs_deplete {
   call demux.merge_demux_metrics {
     input:
       metrics_files = demux_fastqs.demux_metrics
+  }
+
+  # Step 5.6: Merge sample metadata from all FASTQ pairs
+  call demux.merge_sample_metadata {
+    input:
+      meta_by_sample_jsons   = demux_fastqs.meta_by_sample_json,
+      meta_by_filename_jsons = demux_fastqs.meta_by_filename_json
+  }
+
+  # Step 5.7: Set default metadata keys
+  call demux.map_map_setdefault as meta_default_sample {
+    input:
+      map_map_json = merge_sample_metadata.merged_meta_by_sample,
+      sub_keys     = default_sample_keys
+  }
+  call demux.map_map_setdefault as meta_default_filename {
+    input:
+      map_map_json = merge_sample_metadata.merged_meta_by_filename,
+      sub_keys     = default_filename_keys
   }
 
   # Step 6: Spike-in counting and depletion for all BAMs

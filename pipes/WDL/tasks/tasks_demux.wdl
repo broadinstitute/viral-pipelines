@@ -815,13 +815,11 @@ task group_fastq_pairs {
 
 task get_illumina_run_metadata {
   meta {
-    description: "Extracts metadata from Illumina samplesheets and RunInfo.xml using illumina.py illumina_metadata. Generates JSON files with sample metadata, filename metadata, and run information."
+    description: "Extracts run-level metadata from Illumina RunInfo.xml using illumina.py illumina_metadata. Generates JSON with flowcell info, tile counts, and other run configuration. Sample-specific metadata is now produced by demux_fastqs."
   }
 
   input {
-    File    samplesheet
     File    runinfo_xml
-    Int?    lane
     String? sequencing_center
 
     Int?   machine_mem_gb
@@ -829,20 +827,12 @@ task get_illumina_run_metadata {
   }
 
   parameter_meta {
-    samplesheet: {
-      description: "TSV samplesheet with sample names, library IDs, and barcodes.",
-      category: "required"
-    }
     runinfo_xml: {
       description: "Illumina RunInfo.xml file describing the sequencing run configuration.",
       category: "required"
     }
-    lane: {
-      description: "Lane number. Optional - if not specified, illumina.py will use all lanes or default behavior.",
-      category: "advanced"
-    }
     sequencing_center: {
-      description: "Sequencing center name (default: Broad).",
+      description: "Sequencing center name (default: derived from RunInfo.xml).",
       category: "advanced"
     }
   }
@@ -859,36 +849,25 @@ task get_illumina_run_metadata {
     illumina.py --version | tee VERSION
 
     illumina.py illumina_metadata \
-      --samplesheet ~{samplesheet} \
       --runinfo ~{runinfo_xml} \
-      ~{'--lane ' + lane} \
       ~{'--sequencing_center ' + sequencing_center} \
-      --append_run_id \
-      --out_meta_by_sample meta_by_sample.json \
-      --out_meta_by_filename meta_by_filename.json \
       --out_runinfo runinfo.json \
       --loglevel=DEBUG
   >>>
 
   output {
-    File   meta_by_sample_json   = "meta_by_sample.json"
-    File   meta_by_filename_json = "meta_by_filename.json"
-    File   runinfo_json          = "runinfo.json"
-
-    Map[String,Map[String,String]] meta_by_sample   = read_json("meta_by_sample.json")
-    Map[String,Map[String,String]] meta_by_filename = read_json("meta_by_filename.json")
-    Map[String,String]             run_info         = read_json("runinfo.json")
-
-    String viralngs_version      = read_string("VERSION")
+    File               runinfo_json     = "runinfo.json"
+    Map[String,String] run_info         = read_json("runinfo.json")
+    String             viralngs_version = read_string("VERSION")
   }
 
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 7]) + " GB"
-    cpu: 2
+    memory: select_first([machine_mem_gb, 4]) + " GB"
+    cpu: 1
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
-    dx_instance_type: "mem1_ssd1_v2_x4"
+    dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
 }
@@ -984,6 +963,9 @@ task demux_fastqs {
     }
   }
 
+  # Derive base name from fastq_r1 for output file naming
+  String fastq_basename = basename(basename(basename(fastq_r1, ".gz"), ".fastq"), ".fq")
+
   command <<<
     set -ex -o pipefail
 
@@ -1001,6 +983,8 @@ task demux_fastqs {
       ~{'--sequencing_center ' + sequencingCenter} \
       --outdir . \
       --append_run_id \
+      --out_meta_by_sample ~{fastq_basename}-meta_by_sample.json \
+      --out_meta_by_filename ~{fastq_basename}-meta_by_filename.json \
       --loglevel=DEBUG
 
     # Log performance metrics after splitcode demux
@@ -1031,13 +1015,15 @@ task demux_fastqs {
   >>>
 
   output {
-    Array[File] output_bams      = glob("*.bam")
-    Array[Int]  read_counts      = read_lines("read_counts.txt")
-    File        demux_metrics    = "demux_metrics_picard-style.txt"
-    Int         max_ram_gb       = ceil(read_float("MEM_BYTES")/1000000000)
-    Int         runtime_sec      = ceil(read_float("UPTIME_SEC"))
-    Int         cpu_load_15min   = ceil(read_float("LOAD_15M"))
-    String      viralngs_version = read_string("VERSION")
+    Array[File] output_bams           = glob("*.bam")
+    Array[Int]  read_counts           = read_lines("read_counts.txt")
+    File        demux_metrics         = "demux_metrics_picard-style.txt"
+    File        meta_by_sample_json   = "~{fastq_basename}-meta_by_sample.json"
+    File        meta_by_filename_json = "~{fastq_basename}-meta_by_filename.json"
+    Int         max_ram_gb            = ceil(read_float("MEM_BYTES")/1000000000)
+    Int         runtime_sec           = ceil(read_float("UPTIME_SEC"))
+    Int         cpu_load_15min        = ceil(read_float("LOAD_15M"))
+    String      viralngs_version      = read_string("VERSION")
   }
 
   runtime {
@@ -1093,6 +1079,74 @@ task merge_demux_metrics {
     docker: docker
     memory: "4 GB"
     cpu: 2
+    disks: "local-disk 50 HDD"
+    disk: "50 GB"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
+
+task merge_sample_metadata {
+  meta {
+    description: "Merge multiple sample metadata JSON files from scattered demux_fastqs calls into single consolidated JSON files."
+  }
+
+  input {
+    Array[File]+ meta_by_sample_jsons
+    Array[File]+ meta_by_filename_jsons
+    String       out_meta_by_sample   = "merged_meta_by_sample.json"
+    String       out_meta_by_filename = "merged_meta_by_filename.json"
+  }
+
+  parameter_meta {
+    meta_by_sample_jsons: {
+      description: "Array of meta_by_sample.json files from scattered demux_fastqs calls.",
+      category: "required"
+    }
+    meta_by_filename_jsons: {
+      description: "Array of meta_by_filename.json files from scattered demux_fastqs calls.",
+      category: "required"
+    }
+  }
+
+  command <<<
+    python3 << CODE
+    import json
+
+    # Merge meta_by_sample JSONs
+    merged_by_sample = {}
+    for fpath in '~{sep="," meta_by_sample_jsons}'.split(','):
+        with open(fpath.strip(), 'r') as f:
+            data = json.load(f)
+            merged_by_sample.update(data)
+
+    with open('~{out_meta_by_sample}', 'w') as f:
+        json.dump(merged_by_sample, f, indent=2)
+
+    # Merge meta_by_filename JSONs
+    merged_by_filename = {}
+    for fpath in '~{sep="," meta_by_filename_jsons}'.split(','):
+        with open(fpath.strip(), 'r') as f:
+            data = json.load(f)
+            merged_by_filename.update(data)
+
+    with open('~{out_meta_by_filename}', 'w') as f:
+        json.dump(merged_by_filename, f, indent=2)
+
+    print(f"Merged {len(merged_by_sample)} samples and {len(merged_by_filename)} filenames")
+    CODE
+  >>>
+
+  output {
+    File merged_meta_by_sample   = out_meta_by_sample
+    File merged_meta_by_filename = out_meta_by_filename
+  }
+
+  runtime {
+    docker: "python:3.10-slim"
+    memory: "2 GB"
+    cpu: 1
     disks: "local-disk 50 HDD"
     disk: "50 GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
