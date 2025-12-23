@@ -863,6 +863,7 @@ task get_illumina_run_metadata {
       --runinfo ~{runinfo_xml} \
       ~{'--lane ' + lane} \
       ~{'--sequencing_center ' + sequencing_center} \
+      --append_run_id \
       --out_meta_by_sample meta_by_sample.json \
       --out_meta_by_filename meta_by_filename.json \
       --out_runinfo runinfo.json \
