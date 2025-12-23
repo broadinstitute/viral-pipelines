@@ -92,14 +92,13 @@ workflow load_illumina_fastqs {
     # Demux metrics
     File demux_metrics = merge_demux_metrics.merged_metrics
 
-    # Metadata outputs
-    Map[String,Map[String,String]] meta_by_sample   = read_json(merge_sample_metadata.merged_meta_by_sample)
-    Map[String,Map[String,String]] meta_by_filename = read_json(merge_sample_metadata.merged_meta_by_filename)
-    Map[String,String]             run_info         = get_illumina_run_metadata.run_info
-
+    # Metadata outputs (File only - Map types not supported by womtool)
     File   meta_by_sample_json   = merge_sample_metadata.merged_meta_by_sample
     File   meta_by_filename_json = merge_sample_metadata.merged_meta_by_filename
     File   run_info_json         = get_illumina_run_metadata.runinfo_json
+
+    # Run info as Map (simple Map is supported)
+    Map[String,String] run_info  = get_illumina_run_metadata.run_info
 
     String viralngs_version = get_illumina_run_metadata.viralngs_version
   }

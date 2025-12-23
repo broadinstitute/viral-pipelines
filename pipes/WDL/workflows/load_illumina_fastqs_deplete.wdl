@@ -241,11 +241,9 @@ workflow load_illumina_fastqs_deplete {
     Array[File] raw_reads_unaligned_bams = raw_bams
     Array[Int]  read_counts_raw          = raw_read_counts
 
-    # Metadata outputs (with defaults applied)
-    Map[String,Map[String,String]] meta_by_sample   = read_json(meta_default_sample.out_json)
-    Map[String,Map[String,String]] meta_by_filename = read_json(meta_default_filename.out_json)
-    File                           meta_by_sample_json   = meta_default_sample.out_json
-    File                           meta_by_filename_json = meta_default_filename.out_json
+    # Metadata outputs (File only - Map types not supported by womtool)
+    File meta_by_sample_json   = meta_default_sample.out_json
+    File meta_by_filename_json = meta_default_filename.out_json
 
     # Cleaned BAM outputs
     Array[File] cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing)

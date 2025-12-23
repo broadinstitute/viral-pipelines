@@ -987,6 +987,15 @@ task demux_fastqs {
       --out_meta_by_filename ~{fastq_basename}-meta_by_filename.json \
       --loglevel=DEBUG
 
+    # Workaround: create empty JSON files if Python code didn't produce them (zero-read FASTQs)
+    # This ensures WDL output declarations always have valid files to reference
+    if [ ! -f "~{fastq_basename}-meta_by_sample.json" ]; then
+      echo "{}" > "~{fastq_basename}-meta_by_sample.json"
+    fi
+    if [ ! -f "~{fastq_basename}-meta_by_filename.json" ]; then
+      echo "{}" > "~{fastq_basename}-meta_by_filename.json"
+    fi
+
     # Log performance metrics after splitcode demux
     echo "=== Performance metrics after splitcode_demux_fastqs ===" >&2
     echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%S)" >&2
