@@ -351,7 +351,7 @@ task index_ref {
     File?  novocraft_license
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.5.14"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.15"
   }
 
   Int disk_size = 100
