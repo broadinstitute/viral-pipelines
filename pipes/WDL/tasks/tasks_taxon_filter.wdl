@@ -1,10 +1,11 @@
 version 1.0
 
 task deplete_taxa {
-  meta { description: "Runs a full human read depletion pipeline and removes PCR duplicates. Input database files (bmtaggerDbs, blastDbs, bwaDbs) may be any combination of: .fasta, .fasta.gz, or tarred up indexed fastas (using the software's indexing method) as .tar.gz, .tar.bz2, .tar.lz4, or .tar.zst." }
+  meta { description: "Runs a full human read depletion pipeline and removes PCR duplicates. Input database files (minimapDbs, bmtaggerDbs, blastDbs, bwaDbs) may be any combination of: .fasta, .fasta.gz, or tarred up indexed fastas (using the software's indexing method) as .tar.gz, .tar.bz2, .tar.lz4, or .tar.zst." }
 
   input {
     File         raw_reads_unmapped_bam
+    Array[File]? minimapDbs
     Array[File]? bmtaggerDbs
     Array[File]? blastDbs
     Array[File]? bwaDbs
@@ -14,7 +15,7 @@ task deplete_taxa {
 
     Int?         cpu
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.5.14.1"
   }
 
   # Autoscale CPU based on input size: 8 CPUs for ~1M reads (0.15 GB), 96 CPUs for ~100M reads (15 GB)
@@ -26,6 +27,10 @@ task deplete_taxa {
 
   parameter_meta {
     raw_reads_unmapped_bam: { description: "unaligned reads in BAM format", patterns: ["*.bam"] }
+    minimapDbs: {
+       description: "Optional list of databases to use for minimap2-based depletion. Sequences in fasta format will be indexed on the fly, pre-indexed databases may be provided as tarballs.",
+       patterns: ["*.fasta", "*.fasta.gz", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+    }
     bmtaggerDbs: {
        description: "Optional list of databases to use for bmtagger-based depletion. Sequences in fasta format will be indexed on the fly, pre-bmtagger-indexed databases may be provided as tarballs.",
        patterns: ["*.fasta", "*.fasta.gz", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
@@ -41,10 +46,11 @@ task deplete_taxa {
   }
 
   String       bam_basename = basename(raw_reads_unmapped_bam, ".bam")
+  Float        minimap_db_size = if defined(minimapDbs) then size(select_first([minimapDbs, []]), "GB") else 0
   Float        bmtagger_db_size = if defined(bmtaggerDbs) then size(select_first([bmtaggerDbs, []]), "GB") else 0
   Float        blast_db_size = if defined(blastDbs) then size(select_first([blastDbs, []]), "GB") else 0
   Float        bwa_db_size = if defined(bwaDbs) then size(select_first([bwaDbs, []]), "GB") else 0
-  Float        total_db_size = bmtagger_db_size + blast_db_size + bwa_db_size
+  Float        total_db_size = minimap_db_size + bmtagger_db_size + blast_db_size + bwa_db_size
   Int          disk_size = ceil((10 * size(raw_reads_unmapped_bam, "GB") + 2 * total_db_size + 100) / 375.0) * 375
 
   command <<<
@@ -59,10 +65,12 @@ task deplete_taxa {
     mem_in_mb_50=$(/opt/viral-ngs/source/docker/calc_mem.py mb 50)
     mem_in_mb_75=$(/opt/viral-ngs/source/docker/calc_mem.py mb 75)
 
-    # bmtagger and blast db args
+    # depletion db args
+    DBS_MINIMAP="~{sep=' ' minimapDbs}"
     DBS_BMTAGGER="~{sep=' ' bmtaggerDbs}"
     DBS_BLAST="~{sep=' ' blastDbs}"
     DBS_BWA="~{sep=' ' bwaDbs}"
+    if [ -n "$DBS_MINIMAP" ]; then DBS_MINIMAP="--minimapDbs $DBS_MINIMAP"; fi
     if [ -n "$DBS_BMTAGGER" ]; then DBS_BMTAGGER="--bmtaggerDbs $DBS_BMTAGGER"; fi
     if [ -n "$DBS_BLAST" ]; then DBS_BLAST="--blastDbs $DBS_BLAST"; fi
     if [ -n "$DBS_BWA" ]; then DBS_BWA="--bwaDbs $DBS_BWA"; fi
@@ -78,15 +86,17 @@ task deplete_taxa {
     taxon_filter.py deplete \
       "~{raw_reads_unmapped_bam}" \
       tmpfile.raw.bam \
+      tmpfile.minimap.bam \
       tmpfile.bwa.bam \
       tmpfile.bmtagger_depleted.bam \
       "~{bam_basename}.cleaned.bam" \
-      $DBS_BMTAGGER $DBS_BLAST $DBS_BWA \
+      $DBS_MINIMAP $DBS_BMTAGGER $DBS_BLAST $DBS_BWA \
       ~{'--chunkSize=' + query_chunk_size} \
       $TAGS_TO_CLEAR \
       --JVMmemory="$mem_in_mb_75"m \
       --srprismMemory=$mem_in_mb_75 \
       --loglevel=DEBUG
+    rm -f tmpfile.raw.bam tmpfile.minimap.bam tmpfile.bwa.bam tmpfile.bmtagger_depleted.bam
 
     samtools view -c "~{raw_reads_unmapped_bam}" | tee depletion_read_count_pre
     samtools view -c "~{bam_basename}.cleaned.bam" | tee depletion_read_count_post
@@ -129,7 +139,7 @@ task filter_to_taxon {
     String   neg_control_prefixes_space_separated = "neg water NTC"
 
     Int      machine_mem_gb = 15
-    String   docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+    String   docker = "quay.io/broadinstitute/viral-classify:2.5.14.1"
   }
 
   # do this in two steps in case the input doesn't actually have "cleaned" in the name
@@ -185,7 +195,7 @@ task build_lastal_db {
     File   sequences_fasta
 
     Int    machine_mem_gb = 7
-    String docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+    String docker = "quay.io/broadinstitute/viral-classify:2.5.14.1"
   }
 
   String db_name = basename(sequences_fasta, ".fasta")
@@ -224,7 +234,7 @@ task merge_one_per_sample {
     Boolean      rmdup = false
 
     Int          machine_mem_gb = 7
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.12"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.14"
   }
 
   Int disk_size = 750

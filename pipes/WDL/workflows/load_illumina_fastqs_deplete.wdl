@@ -28,6 +28,7 @@ workflow load_illumina_fastqs_deplete {
     Array[String] default_filename_keys = ["spike_in", "batch_lib"]
 
     File?        spikein_db
+    Array[File]? minimapDbs
     Array[File]? bmtaggerDbs
     Array[File]? blastDbs
     Array[File]? bwaDbs
@@ -119,10 +120,11 @@ workflow load_illumina_fastqs_deplete {
     }
 
     # Depletion (if any depletion db provided)
-    if (length(flatten(select_all([bmtaggerDbs, blastDbs, bwaDbs]))) > 0) {
+    if (length(flatten(select_all([minimapDbs, bmtaggerDbs, blastDbs, bwaDbs]))) > 0) {
       call taxon_filter.deplete_taxa as deplete {
         input:
           raw_reads_unmapped_bam = raw_reads,
+          minimapDbs = minimapDbs,
           bmtaggerDbs = bmtaggerDbs,
           blastDbs = blastDbs,
           bwaDbs = bwaDbs
@@ -212,7 +214,7 @@ workflow load_illumina_fastqs_deplete {
       out_basename = "multiqc-raw"
   }
 
-  if (length(flatten(select_all([bmtaggerDbs, blastDbs, bwaDbs]))) > 0) {
+  if (length(flatten(select_all([minimapDbs, bmtaggerDbs, blastDbs, bwaDbs]))) > 0) {
     call reports.multiqc_from_bams as multiqc_cleaned {
       input:
         input_bams   = select_all(cleaned_bam_passing),
