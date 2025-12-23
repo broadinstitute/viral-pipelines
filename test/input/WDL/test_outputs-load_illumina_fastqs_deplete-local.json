@@ -27,7 +27,7 @@
       "library": "RenamedSample1.lL1",
       "library_id_per_sample": "L1",
       "row_num": "1",
-      "run": "RenamedSample1.lL1",
+      "run": "RenamedSample1.lL1.TESTFC01.0",
       "sample": "RenamedSample1",
       "sample_original": "RenamedSample1",
       "viral_ct": ""
@@ -43,7 +43,7 @@
       "library": "RenamedSample2.lL1",
       "library_id_per_sample": "L1",
       "row_num": "2",
-      "run": "RenamedSample2.lL1",
+      "run": "RenamedSample2.lL1.TESTFC01.0",
       "sample": "RenamedSample2",
       "sample_original": "RenamedSample2",
       "viral_ct": ""
@@ -59,7 +59,7 @@
       "library": "RenamedSample3.lL1",
       "library_id_per_sample": "L1",
       "row_num": "3",
-      "run": "RenamedSample3.lL1",
+      "run": "RenamedSample3.lL1.TESTFC01.0",
       "sample": "RenamedSample3",
       "sample_original": "RenamedSample3",
       "viral_ct": ""
@@ -75,7 +75,7 @@
       "library": "TestSample5.lL2",
       "library_id_per_sample": "L2",
       "row_num": "5",
-      "run": "TestSample5.lL2",
+      "run": "TestSample5.lL2.TESTFC01.0",
       "sample": "TestSample5",
       "sample_original": "TestSample5",
       "viral_ct": ""
@@ -91,7 +91,7 @@
       "library": "TestSample6.lL2",
       "library_id_per_sample": "L2",
       "row_num": "6",
-      "run": "TestSample6.lL2",
+      "run": "TestSample6.lL2.TESTFC01.0",
       "sample": "TestSample6",
       "sample_original": "TestSample6",
       "viral_ct": ""
@@ -107,7 +107,7 @@
       "library": "TestSampleEmpty.lL1",
       "library_id_per_sample": "L1",
       "row_num": "4",
-      "run": "TestSampleEmpty.lL1",
+      "run": "TestSampleEmpty.lL1.TESTFC01.0",
       "sample": "TestSampleEmpty",
       "sample_original": "TestSampleEmpty",
       "viral_ct": ""
@@ -122,7 +122,7 @@
       "library": "TestSampleNoSplitcode.lL3",
       "library_id_per_sample": "L3",
       "row_num": "7",
-      "run": "TestSampleNoSplitcode.lL3",
+      "run": "TestSampleNoSplitcode.lL3.TESTFC01.0",
       "sample": "TestSampleNoSplitcode",
       "sample_original": "TestSampleNoSplitcode",
       "viral_ct": ""
