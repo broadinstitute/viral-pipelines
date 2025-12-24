@@ -15,7 +15,7 @@ task trim_rmdup_subsamp {
         Int cpu            = 16
         Int disk_size_gb   = 100 
 
-        String docker      = "quay.io/broadinstitute/viral-assemble:2.5.1.0"
+        String docker      = "quay.io/broadinstitute/viral-assemble:2.5.16.0"
     }
 
     parameter_meta {
@@ -36,7 +36,7 @@ task trim_rmdup_subsamp {
     command <<<
         set -ex o pipefail
         assembly.py --version | tee VERSION
-        #BAM ->FASTQ-> OutBam? https://github.com/broadinstitute/viral-assemble:2.5.1.0
+        #BAM ->FASTQ-> OutBam? https://github.com/broadinstitute/viral-assemble:2.5.16.0
         assembly.py trim_rmdup_subsamp \
         "~{inBam}" \
         "~{clipDb}" \
@@ -79,7 +79,7 @@ task lca_megablast {
         Int     cpu            = 16
         Int     disk_size_gb   = 300
 
-        String  docker         = "quay.io/broadinstitute/viral-classify:2.5.14.1"
+        String  docker         = "quay.io/broadinstitute/viral-classify:2.5.16.0"
     }
     parameter_meta {
         trimmed_fasta: {

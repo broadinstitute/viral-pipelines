@@ -84,7 +84,7 @@ task group_bams_by_sample {
 task get_bam_samplename {
   input {
     File    bam
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.14"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.16"
   }
   Int   disk_size = round(size(bam, "GB")) + 50
   command <<<
@@ -111,7 +111,7 @@ task get_sample_meta {
   input {
     Array[File] samplesheets_extended
 
-    String      docker = "quay.io/broadinstitute/viral-core:2.5.14"
+    String      docker = "quay.io/broadinstitute/viral-core:2.5.16"
   }
   Int disk_size = 50
   command <<<
@@ -172,7 +172,7 @@ task merge_and_reheader_bams {
       File?        reheader_table
       String       out_basename = basename(in_bams[0], ".bam")
 
-      String       docker = "quay.io/broadinstitute/viral-core:2.5.14"
+      String       docker = "quay.io/broadinstitute/viral-core:2.5.16"
       Int          disk_size = 750
       Int          machine_mem_gb = 4
     }
@@ -241,11 +241,18 @@ task rmdup_ubam {
     File    reads_unmapped_bam
     String  method = "mvicuna"
 
-    Int     machine_mem_gb = 7
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.14"
+    Int?    machine_mem_gb
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.16"
   }
 
-  Int disk_size = 375 + 2 * ceil(size(reads_unmapped_bam, "GB"))
+  # Memory autoscaling: M-Vicuna loads reads into memory for deduplication.
+  # For files <= 2GB, use 8GB RAM (covers typical samples).
+  # For larger files, scale linearly: 8 + (file_size - 2) GB, capped at 48GB.
+  Float input_size_gb = size(reads_unmapped_bam, "GB")
+  Int mem_auto_scaled = if input_size_gb <= 2.0 then 8 else (if (8 + ceil(input_size_gb - 2.0)) > 48 then 48 else (8 + ceil(input_size_gb - 2.0)))
+  Int mem_gb = select_first([machine_mem_gb, mem_auto_scaled])
+
+  Int disk_size = 375 + 2 * ceil(input_size_gb)
 
   parameter_meta {
     reads_unmapped_bam: { description: "unaligned reads in BAM format", patterns: ["*.bam"] }
@@ -276,7 +283,7 @@ task rmdup_ubam {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: mem_gb + " GB"
     cpu:    2
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
@@ -298,7 +305,7 @@ task downsample_bams {
     Boolean      deduplicateAfter = false
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.14"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.16"
   }
 
   Int disk_size = 750
@@ -365,7 +372,7 @@ task FastqToUBAM {
     Int     cpus = 2
     Int     mem_gb = 4
     Int     disk_size = 750
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.14"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.16"
   }
   parameter_meta {
     fastq_1: { description: "Unaligned read1 file in fastq format", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }
@@ -419,7 +426,7 @@ task read_depths {
     File      aligned_bam
 
     String    out_basename = basename(aligned_bam, '.bam')
-    String    docker = "quay.io/broadinstitute/viral-core:2.5.14"
+    String    docker = "quay.io/broadinstitute/viral-core:2.5.16"
   }
   Int disk_size = 200
   command <<<

@@ -15,15 +15,18 @@ task deplete_taxa {
 
     Int?         cpu
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-classify:2.5.14.1"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.5.16.0"
   }
 
   # Autoscale CPU based on input size: 8 CPUs for ~1M reads (0.15 GB), 96 CPUs for ~100M reads (15 GB)
   # Linear scaling: 8 + (input_GB / 15) * 88, capped at 96, rounded to nearest multiple of 4
-  Float        cpu_unclamped = 8.0 + (size(raw_reads_unmapped_bam, "GB") / 15.0) * 88.0
+  Float        input_bam_size_gb = size(raw_reads_unmapped_bam, "GB")
+  Float        cpu_unclamped = 8.0 + (input_bam_size_gb / 15.0) * 88.0
   Int          cpu_actual = select_first([cpu, floor(((if cpu_unclamped > 96.0 then 96.0 else cpu_unclamped) + 2.0) / 4.0) * 4])
   # Memory scales with CPU at 2x ratio (default), or use override
   Int          machine_mem_gb_actual = select_first([machine_mem_gb, cpu_actual * 2])
+  # Disable preemptible for large inputs (>6GB) to avoid restart delays on long-running jobs
+  Int          preemptible_tries = if input_bam_size_gb > 6.0 then 0 else 1
 
   parameter_meta {
     raw_reads_unmapped_bam: { description: "unaligned reads in BAM format", patterns: ["*.bam"] }
@@ -123,7 +126,7 @@ task deplete_taxa {
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
-    preemptible: 1
+    preemptible: preemptible_tries
     maxRetries: 1
   }
 }
@@ -139,7 +142,7 @@ task filter_to_taxon {
     String   neg_control_prefixes_space_separated = "neg water NTC"
 
     Int      machine_mem_gb = 15
-    String   docker = "quay.io/broadinstitute/viral-classify:2.5.14.1"
+    String   docker = "quay.io/broadinstitute/viral-classify:2.5.16.0"
   }
 
   # do this in two steps in case the input doesn't actually have "cleaned" in the name
@@ -195,7 +198,7 @@ task build_lastal_db {
     File   sequences_fasta
 
     Int    machine_mem_gb = 7
-    String docker = "quay.io/broadinstitute/viral-classify:2.5.14.1"
+    String docker = "quay.io/broadinstitute/viral-classify:2.5.16.0"
   }
 
   String db_name = basename(sequences_fasta, ".fasta")
@@ -234,7 +237,7 @@ task merge_one_per_sample {
     Boolean      rmdup = false
 
     Int          machine_mem_gb = 7
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.14"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.16"
   }
 
   Int disk_size = 750
