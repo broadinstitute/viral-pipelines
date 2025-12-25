@@ -612,6 +612,7 @@ task find_illumina_files_in_directory {
   input {
     String  illumina_dir
     String? fastq_dir
+    Int?    lane
     String  docker = "quay.io/broadinstitute/viral-baseimage:0.3.0"
   }
   parameter_meta {
@@ -621,6 +622,10 @@ task find_illumina_files_in_directory {
     }
     fastq_dir: {
       description: "Override path to fastq files (defaults to {illumina_dir}/fastq)",
+      category: "advanced"
+    }
+    lane: {
+      description: "If specified, filter outputs to only include FASTQs from this sequencing lane number",
       category: "advanced"
     }
     runinfo_xml: {
@@ -684,22 +689,21 @@ task find_illumina_files_in_directory {
     import re
     import json
 
+    # Lane filter (None if not specified)
+    lane_filter = ~{if defined(lane) then lane else "None"}
+
     # Read all fastq paths
     with open('all_fastqs.txt', 'rt') as f:
         fastqs = [line.strip() for line in f if line.strip()]
 
-    # Write all fastqs to output
-    with open('all_fastqs_output.txt', 'wt') as f:
-        for fq in fastqs:
-            f.write(fq + '\n')
-
-    # Pattern: anything ending with _R1_###.fastq.gz or _R2_###.fastq.gz
+    # Pattern: anything ending with _L###_R1_###.fastq.gz or _L###_R2_###.fastq.gz
     # Where ### is one or more digits
     # Example: Sample1_S1_L001_R1_001.fastq.gz
-    pattern = re.compile(r'^(.+)_R([12])_(\d+)\.fastq\.gz$')
+    pattern = re.compile(r'^(.+)_L(\d+)_R([12])_(\d+)\.fastq\.gz$')
 
     groups = {}
     unmatched = []
+    filtered_fastqs = []
 
     for fq_path in fastqs:
         # Get basename from full GCS path
@@ -708,7 +712,14 @@ task find_illumina_files_in_directory {
         match = pattern.search(basename)
         if match:
             sample_basename = match.group(1)
-            read_num = match.group(2)
+            lane_num = int(match.group(2))
+            read_num = match.group(3)
+
+            # Apply lane filter if specified
+            if lane_filter is not None and lane_num != lane_filter:
+                continue
+
+            filtered_fastqs.append(fq_path)
 
             if sample_basename not in groups:
                 groups[sample_basename] = {}
@@ -716,6 +727,11 @@ task find_illumina_files_in_directory {
             groups[sample_basename][f'R{read_num}'] = fq_path
         else:
             unmatched.append(fq_path)
+
+    # Write filtered fastqs to output
+    with open('all_fastqs_output.txt', 'wt') as f:
+        for fq in filtered_fastqs:
+            f.write(fq + '\n')
 
     # Create output array of arrays
     # Each inner array is either [R1, R2] for PE or [R1] for SE
@@ -740,12 +756,14 @@ task find_illumina_files_in_directory {
 
     # Report unmatched files
     if unmatched:
-        print(f"WARNING: {len(unmatched)} fastq files did not match expected pattern *_R[12]_\d+.fastq.gz:")
+        print(f"WARNING: {len(unmatched)} fastq files did not match expected pattern *_L###_R[12]_###.fastq.gz:")
         for u in unmatched[:10]:  # Show first 10
             print(f"  {u}")
         if len(unmatched) > 10:
             print(f"  ... and {len(unmatched) - 10} more")
 
+    if lane_filter is not None:
+        print(f"Filtered to lane {lane_filter}: {len(filtered_fastqs)} fastq files")
     print(f"Found {len(groups)} samples with {len(pairs)} read groups")
     CODE
   >>>
