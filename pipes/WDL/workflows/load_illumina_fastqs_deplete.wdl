@@ -42,6 +42,8 @@ workflow load_illumina_fastqs_deplete {
 
     Int          demux_max_cpu_splitcode    = 64   # CPU cap for 3-barcode samples (splitcode)
     Int          demux_max_cpu_no_splitcode = 16   # CPU cap for 2-barcode samples (samtools import)
+
+    Boolean      run_fastqc = true   # Run FastQC/MultiQC reports (can be disabled for speed)
   }
 
   # Step 1: Rename samples in samplesheet (if sample_rename_map provided)
@@ -214,17 +216,19 @@ workflow load_illumina_fastqs_deplete {
   }
 
   # Step 9: MultiQC reports (FastQC + MultiQC in one step)
-  call reports.multiqc_from_bams as multiqc_raw {
-    input:
-      input_bams   = raw_bams,
-      out_basename = "multiqc-raw"
-  }
-
-  if (length(flatten(select_all([minimapDbs, bmtaggerDbs, blastDbs, bwaDbs]))) > 0) {
-    call reports.multiqc_from_bams as multiqc_cleaned {
+  if (run_fastqc) {
+    call reports.multiqc_from_bams as multiqc_raw {
       input:
-        input_bams   = select_all(cleaned_bam_passing),
-        out_basename = "multiqc-cleaned"
+        input_bams   = raw_bams,
+        out_basename = "multiqc-raw"
+    }
+
+    if (length(flatten(select_all([minimapDbs, bmtaggerDbs, blastDbs, bwaDbs]))) > 0) {
+      call reports.multiqc_from_bams as multiqc_cleaned {
+        input:
+          input_bams   = select_all(cleaned_bam_passing),
+          out_basename = "multiqc-cleaned"
+      }
     }
   }
 
@@ -255,15 +259,15 @@ workflow load_illumina_fastqs_deplete {
     File? cleaned_bam_uris = sra_meta_prep.cleaned_bam_uris
 
     # QC outputs (FastQC HTML files from multiqc_from_bams)
-    Array[File] fastqcs_raw     = multiqc_raw.fastqc_html
+    Array[File] fastqcs_raw     = select_first([multiqc_raw.fastqc_html, []])
     Array[File] fastqcs_cleaned = select_first([multiqc_cleaned.fastqc_html, []])
 
     # Demux metrics
     File demux_metrics = merge_demux_metrics.merged_metrics
 
     # MultiQC reports
-    File  multiqc_report_raw     = multiqc_raw.multiqc_report
-    File  multiqc_report_cleaned = select_first([multiqc_cleaned.multiqc_report, multiqc_raw.multiqc_report])
+    File? multiqc_report_raw     = multiqc_raw.multiqc_report
+    File? multiqc_report_cleaned = multiqc_cleaned.multiqc_report
 
     # Spike-in outputs
     File? spikein_counts = spike_summary.count_summary
