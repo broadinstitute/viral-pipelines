@@ -7,6 +7,7 @@ workflow bams_multiqc {
         description: "Run FastQC on a set of BAM files, and then MultiQC to summarize all outputs."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     input {
