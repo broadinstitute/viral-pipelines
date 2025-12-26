@@ -735,6 +735,10 @@ task multiqc_from_bams {
     String?        config_yaml
 
     String         docker = "ghcr.io/broadinstitute/read-qc-tools:1.0.1"
+
+    Int?           cpu              # Override auto-scaled CPU (default: 2*num_bams, capped 4-32)
+    Int?           machine_mem_gb   # Override auto-scaled memory (default: 2*cpu GB)
+    Int?           disk_size_gb     # Override auto-scaled disk (default: 3*input_size + 50, rounded to 375 GB)
   }
 
   parameter_meta {
@@ -749,12 +753,15 @@ task multiqc_from_bams {
     }
   }
 
-  # Resource scaling based on number of BAMs
+  # Resource scaling based on number of BAMs (can be overridden by inputs)
   Int num_bams = length(input_bams)
   Int cpu_raw = num_bams * 2
-  Int cpu = if cpu_raw > 32 then 32 else (if cpu_raw < 4 then 4 else cpu_raw)
-  Int machine_mem_gb = cpu * 2
-  Int disk_size = ceil((3 * size(input_bams, "GB") + 50) / 375.0) * 375
+  Int cpu_computed = if cpu_raw > 32 then 32 else (if cpu_raw < 4 then 4 else cpu_raw)
+  Int cpu_final = select_first([cpu, cpu_computed])
+  Int mem_computed = cpu_final * 2
+  Int mem_final = select_first([machine_mem_gb, mem_computed])
+  Int disk_computed = ceil((3 * size(input_bams, "GB") + 50) / 375.0) * 375
+  Int disk_size = select_first([disk_size_gb, disk_computed])
 
   # Strip .html extension if present in out_basename
   String report_filename = basename(out_basename, ".html")
@@ -891,8 +898,8 @@ task multiqc_from_bams {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
-    cpu: cpu
+    memory: mem_final + " GB"
+    cpu: cpu_final
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
