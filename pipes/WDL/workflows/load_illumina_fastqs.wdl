@@ -18,6 +18,8 @@ workflow load_illumina_fastqs {
 
     Int         demux_max_cpu_splitcode    = 64   # CPU cap for 3-barcode samples (splitcode)
     Int         demux_max_cpu_no_splitcode = 16   # CPU cap for 2-barcode samples (samtools import)
+
+    Boolean     run_fastqc = true   # Run FastQC/MultiQC reports (can be disabled for speed)
   }
 
   # Step 1: Group FASTQs into R1/R2 pairs (convert Files to Strings to avoid localization)
@@ -72,9 +74,11 @@ workflow load_illumina_fastqs {
   Array[File] raw_bams = flatten(demux_fastqs.output_bams)
 
   # Step 5: Aggregate QC reports with MultiQC (FastQC + MultiQC in one step)
-  call reports.multiqc_from_bams as multiqc {
-    input:
-      input_bams = raw_bams
+  if (run_fastqc) {
+    call reports.multiqc_from_bams as multiqc {
+      input:
+        input_bams = raw_bams
+    }
   }
 
   output {
@@ -83,11 +87,11 @@ workflow load_illumina_fastqs {
     Array[Int]  read_counts_raw          = flatten(demux_fastqs.read_counts)
 
     # QC outputs (FastQC HTML files from multiqc_from_bams)
-    Array[File] fastqcs = multiqc.fastqc_html
+    Array[File] fastqcs = select_first([multiqc.fastqc_html, []])
 
     # MultiQC aggregated report
-    File multiqc_report      = multiqc.multiqc_report
-    File multiqc_data_tar_gz = multiqc.multiqc_data_dir_tarball
+    File? multiqc_report      = multiqc.multiqc_report
+    File? multiqc_data_tar_gz = multiqc.multiqc_data_dir_tarball
 
     # Demux metrics
     File demux_metrics = merge_demux_metrics.merged_metrics
