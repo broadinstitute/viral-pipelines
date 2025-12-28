@@ -38,6 +38,8 @@ workflow assemble_denovo_metagenomic {
         Array[String] taxa_to_dehost         = ["Vertebrata"]
         Array[String] taxa_to_avoid_assembly = ["Vertebrata", "other sequences", "Bacteria"]
 
+        Boolean       run_rmdup  = true
+
         String        table_name = "sample"
     }
 
@@ -136,13 +138,15 @@ workflow assemble_denovo_metagenomic {
             taxonomic_names         = taxa_to_avoid_assembly,
             out_filename_suffix     = "acellular"
     }
-    call read_utils.rmdup_ubam {
-       input:
-            reads_unmapped_bam = filter_acellular.bam_filtered_to_taxa
+    if (run_rmdup) {
+        call read_utils.rmdup_ubam {
+           input:
+                reads_unmapped_bam = filter_acellular.bam_filtered_to_taxa
+        }
     }
     call assembly.assemble as spades {
         input:
-            reads_unmapped_bam = rmdup_ubam.dedup_bam,
+            reads_unmapped_bam = select_first([rmdup_ubam.dedup_bam, filter_acellular.bam_filtered_to_taxa]),
             trim_clip_db       = trim_clip_db,
             always_succeed     = true
     }
@@ -287,12 +291,12 @@ workflow assemble_denovo_metagenomic {
 
     output {
         File   cleaned_reads_unaligned_bam     = deplete.bam_filtered_to_taxa
-        File   deduplicated_reads_unaligned    = rmdup_ubam.dedup_bam
+        File?  deduplicated_reads_unaligned    = rmdup_ubam.dedup_bam
         File   contigs_fasta                   = spades.contigs_fasta
-        
+
         Int    read_counts_raw                 = deplete.classified_taxonomic_filter_read_count_pre
         Int    read_counts_depleted            = deplete.classified_taxonomic_filter_read_count_post
-        Int    read_counts_dedup               = rmdup_ubam.dedup_read_count_post
+        Int?   read_counts_dedup               = rmdup_ubam.dedup_read_count_post
         Int    read_counts_prespades_subsample = spades.subsample_read_count
         
         File   kraken2_summary_report          = kraken2.kraken2_summary_report
