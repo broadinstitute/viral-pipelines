@@ -151,8 +151,9 @@ workflow assemble_denovo_metagenomic {
                 reads_bam = [pre_downsample_bam],
                 readCount = max_reads_for_assembly
         }
+        File downsampled_bam = downsample_bams.downsampled_bam[0]
     }
-    File  spades_input_bam = select_first([downsample_bams.downsampled_bam[0], pre_downsample_bam])
+    File  spades_input_bam = select_first([downsampled_bam, pre_downsample_bam])
 
     call assembly.assemble as spades {
         input:
