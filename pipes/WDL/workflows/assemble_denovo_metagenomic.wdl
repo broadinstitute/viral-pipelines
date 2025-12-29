@@ -40,6 +40,8 @@ workflow assemble_denovo_metagenomic {
 
         Boolean       run_rmdup  = true
 
+        Int           max_reads_for_assembly = 20000000
+
         String        table_name = "sample"
     }
 
@@ -73,10 +75,6 @@ workflow assemble_denovo_metagenomic {
         }
         cleaned_fastqc: { 
           description: "Output cleaned fastqc reports in HTML.",
-          category: "other"
-        }
-        deduplicated_reads_unaligned: {
-          description: "Deduplication on unaligned reads in BAM format using mvicuna or cdhit.",
           category: "other"
         }
         kraken2_krona_plot: {
@@ -144,9 +142,21 @@ workflow assemble_denovo_metagenomic {
                 reads_unmapped_bam = filter_acellular.bam_filtered_to_taxa
         }
     }
+    File  pre_downsample_bam        = select_first([rmdup_ubam.dedup_bam, filter_acellular.bam_filtered_to_taxa])
+    Int   pre_downsample_read_count = select_first([rmdup_ubam.dedup_read_count_post, filter_acellular.classified_taxonomic_filter_read_count_post])
+
+    if (pre_downsample_read_count > max_reads_for_assembly) {
+        call read_utils.downsample_bams {
+            input:
+                reads_bam = [pre_downsample_bam],
+                readCount = max_reads_for_assembly
+        }
+    }
+    File  spades_input_bam = select_first([downsample_bams.downsampled_bam[0], pre_downsample_bam])
+
     call assembly.assemble as spades {
         input:
-            reads_unmapped_bam = select_first([rmdup_ubam.dedup_bam, filter_acellular.bam_filtered_to_taxa]),
+            reads_unmapped_bam = spades_input_bam,
             trim_clip_db       = trim_clip_db,
             always_succeed     = true
     }
@@ -290,13 +300,15 @@ workflow assemble_denovo_metagenomic {
     }
 
     output {
-        File   cleaned_reads_unaligned_bam     = deplete.bam_filtered_to_taxa
-        File?  deduplicated_reads_unaligned    = rmdup_ubam.dedup_bam
+        File   reads_dehosted_ubam             = deplete.bam_filtered_to_taxa
+        File   reads_acellular_ubam            = filter_acellular.bam_filtered_to_taxa
+        File   reads_assembly_input_ubam       = spades_input_bam
         File   contigs_fasta                   = spades.contigs_fasta
 
         Int    read_counts_raw                 = deplete.classified_taxonomic_filter_read_count_pre
-        Int    read_counts_depleted            = deplete.classified_taxonomic_filter_read_count_post
-        Int?   read_counts_dedup               = rmdup_ubam.dedup_read_count_post
+        Int    read_counts_dehosted            = deplete.classified_taxonomic_filter_read_count_post
+        Int    read_counts_acellular           = filter_acellular.classified_taxonomic_filter_read_count_post
+        Int    read_counts_assembly_input      = pre_downsample_read_count
         Int    read_counts_prespades_subsample = spades.subsample_read_count
         
         File   kraken2_summary_report          = kraken2.kraken2_summary_report
