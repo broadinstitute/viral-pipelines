@@ -200,8 +200,7 @@ workflow classify_single {
         String? spikein_pct_of_total_reads      = spikein.pct_total_reads_mapped
         String? spikein_pct_lesser_hits         = spikein.pct_lesser_hits_of_mapped
         
-        String kraken2_viral_classify_version  = kraken2.viralngs_version
-        String deplete_viral_classify_version  = deplete.viralngs_version
-        String spades_viral_assemble_version   = spades.viralngs_version
+        String viral_classify_version           = kraken2.viralngs_version
+        String viral_assemble_version           = spades.viralngs_version
     }
 }
