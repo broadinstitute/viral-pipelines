@@ -29,6 +29,10 @@ workflow classify_single {
         Array[String] taxa_to_dehost         = ["Vertebrata"]
         Array[String] taxa_to_avoid_assembly = ["Vertebrata", "other sequences", "Bacteria"]
 
+        Boolean       run_rmdup  = true
+
+        Int           max_reads_for_assembly = 20000000
+
         File?         taxid_to_ref_accessions_tsv
     }
 
@@ -57,10 +61,6 @@ workflow classify_single {
           description: "An NCBI taxdump.tar.gz file that contains, at the minimum, a nodes.dmp and names.dmp file.",
           patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
         }
-        deduplicated_reads_unaligned: {
-          description: "Deduplication on unaligned reads in BAM format using mvicuna or cdhit.",
-          category: "other"
-        }
         kraken2_krona_plot: {
           description:"Visualize the results of the Kraken2 analysis with Krona, which disaplys taxonmic hierarchiral data in multi-layerd pie.",
           category:"other"
@@ -72,11 +72,13 @@ workflow classify_single {
 
     }
 
-    call read_utils.merge_and_reheader_bams as merge_raw_reads {
+    if(length(reads_bams) > 1) {
+      call read_utils.merge_and_reheader_bams as merge_raw_reads {
         input:
             in_bams      = reads_bams
+      }
     }
-    File reads_bam = merge_raw_reads.out_bam
+    File reads_bam = select_first([merge_raw_reads.out_bam, reads_bams[0]])
 
     if(defined(spikein_db)) {
       call reports.align_and_count as spikein {
@@ -109,13 +111,28 @@ workflow classify_single {
             taxonomic_names         = taxa_to_avoid_assembly,
             out_filename_suffix     = "acellular"
     }
-    call read_utils.rmdup_ubam {
-       input:
-            reads_unmapped_bam = filter_acellular.bam_filtered_to_taxa
+    if (run_rmdup) {
+        call read_utils.rmdup_ubam {
+           input:
+                reads_unmapped_bam = filter_acellular.bam_filtered_to_taxa
+        }
     }
+    File  pre_downsample_bam        = select_first([rmdup_ubam.dedup_bam, filter_acellular.bam_filtered_to_taxa])
+    Int   pre_downsample_read_count = select_first([rmdup_ubam.dedup_read_count_post, filter_acellular.classified_taxonomic_filter_read_count_post])
+
+    if (pre_downsample_read_count > max_reads_for_assembly) {
+        call read_utils.downsample_bams {
+            input:
+                reads_bam = [pre_downsample_bam],
+                readCount = max_reads_for_assembly
+        }
+        File downsampled_bam = downsample_bams.downsampled_bam[0]
+    }
+    File  spades_input_bam = select_first([downsampled_bam, pre_downsample_bam])
+
     call assembly.assemble as spades {
         input:
-            reads_unmapped_bam = rmdup_ubam.dedup_bam,
+            reads_unmapped_bam = spades_input_bam,
             trim_clip_db       = trim_clip_db,
             always_succeed     = true
     }
@@ -163,13 +180,15 @@ workflow classify_single {
 
 
     output {
-        File   cleaned_reads_unaligned_bam     = deplete.bam_filtered_to_taxa
-        File   deduplicated_reads_unaligned    = rmdup_ubam.dedup_bam
+        File   reads_dehosted_ubam             = deplete.bam_filtered_to_taxa
+        File   reads_acellular_ubam            = filter_acellular.bam_filtered_to_taxa
+        File   reads_assembly_input_ubam       = spades_input_bam
         File   contigs_fasta                   = spades.contigs_fasta
-        
+
         Int    read_counts_raw                 = deplete.classified_taxonomic_filter_read_count_pre
-        Int    read_counts_depleted            = deplete.classified_taxonomic_filter_read_count_post
-        Int    read_counts_dedup               = rmdup_ubam.dedup_read_count_post
+        Int    read_counts_dehosted            = deplete.classified_taxonomic_filter_read_count_post
+        Int    read_counts_acellular           = filter_acellular.classified_taxonomic_filter_read_count_post
+        Int    read_counts_assembly_input      = pre_downsample_read_count
         Int    read_counts_prespades_subsample = spades.subsample_read_count
         
         File   kraken2_summary_report          = kraken2.kraken2_summary_report
@@ -194,8 +213,7 @@ workflow classify_single {
         String? spikein_pct_of_total_reads      = spikein.pct_total_reads_mapped
         String? spikein_pct_lesser_hits         = spikein.pct_lesser_hits_of_mapped
         
-        String kraken2_viral_classify_version  = kraken2.viralngs_version
-        String deplete_viral_classify_version  = deplete.viralngs_version
-        String spades_viral_assemble_version   = spades.viralngs_version
+        String viral_classify_version           = kraken2.viralngs_version
+        String viral_assemble_version           = spades.viralngs_version
     }
 }
