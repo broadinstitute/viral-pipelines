@@ -344,7 +344,7 @@ task downsample_bams {
 
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 3]) + " GB"
+    memory: select_first([machine_mem_gb, 8]) + " GB"
     cpu:    4
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
