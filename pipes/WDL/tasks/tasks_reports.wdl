@@ -782,11 +782,14 @@ task multiqc_from_bams {
     num_bams=$(wc -l < "$BAM_LIST")
     num_cpus=$(nproc)
 
-    # Over-allocate threads to maximize tail utilization
-    # Run all BAMs as separate parallel jobs
-    num_fastqc_jobs=$num_bams
+    # Limit concurrent jobs to CPU count (each FastQC is a Java process with its own heap)
+    # Cap at num_bams if we have more CPUs than files
+    num_fastqc_jobs=$num_cpus
+    if [[ $num_fastqc_jobs -gt $num_bams ]]; then
+      num_fastqc_jobs=$num_bams
+    fi
 
-    # Over-allocate: 2x the "fair share" threads per job, minimum 4
+    # Over-allocate threads: 2x the "fair share" threads per job, minimum 4
     # Initially each job gets ~(cpus/samples) actual CPU time
     # As jobs finish, remaining jobs opportunistically get more CPU time
     fair_share_threads=$(( num_cpus / num_bams ))
