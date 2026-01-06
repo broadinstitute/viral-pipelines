@@ -281,7 +281,7 @@ task scaffold {
 
     Int disk_size = 375
 
-    command {
+    command <<<
         set -ex -o pipefail
 
         # find 90% memory
@@ -304,7 +304,7 @@ task scaffold {
         # sometimes skani fails; if so, just fall-back to sending all refs downstream
         if [[ $(wc -l <"~{sample_name}.refs_skani_dist.full.tsv") -ge 2 ]]; then
           # skani reference selection worked: just try one reference
-          CHOSEN_REF_FASTA=$(cut -f 1 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1)
+          CHOSEN_REF_FASTA=$(awk -F'\t' 'NR==2 {print $1; exit}' "~{sample_name}.refs_skani_dist.full.tsv")
           basename "$CHOSEN_REF_FASTA" .fasta > CHOSEN_REF_BASENAME
 
           assembly.py order_and_orient \
@@ -322,9 +322,9 @@ task scaffold {
             ~{true='--allow_incomplete_output' false="" allow_incomplete_output} \
             --loglevel=DEBUG
 
-          cut -f 3 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1 > SKANI_ANI
-          cut -f 4 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1 > SKANI_REF_AF
-          cut -f 5 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1 > SKANI_CONTIGS_AF
+          awk -F'\t' 'NR==2 {print $3; exit}' "~{sample_name}.refs_skani_dist.full.tsv" > SKANI_ANI
+          awk -F'\t' 'NR==2 {print $4; exit}' "~{sample_name}.refs_skani_dist.full.tsv" > SKANI_REF_AF
+          awk -F'\t' 'NR==2 {print $5; exit}' "~{sample_name}.refs_skani_dist.full.tsv" > SKANI_CONTIGS_AF
 
         else
           # skani reference selection failed: try all references
@@ -387,7 +387,7 @@ task scaffold {
             ~{'--aligner=' + aligner} \
             --loglevel=DEBUG
         fi
-    }
+    >>>
 
     output {
         File   scaffold_fasta                        = "~{sample_name}.scaffolded_imputed.fasta"
