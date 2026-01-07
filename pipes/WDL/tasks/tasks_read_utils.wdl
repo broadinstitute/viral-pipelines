@@ -255,7 +255,7 @@ task rmdup_ubam {
   Int mem_auto_scaled = if input_size_gb <= 2.0 then 8 else (if (8 + 2*ceil(input_size_gb - 2.0)) > 128 then 128 else (8 + 2*ceil(input_size_gb - 2.0)))
   Int mem_gb = select_first([machine_mem_gb, mem_auto_scaled])
 
-  Int disk_size = 375 + 3 * ceil(input_size_gb)
+  Int disk_size = ceil((3 * input_size_gb + 50) / 375.0) * 375
 
   parameter_meta {
     reads_unmapped_bam: { description: "unaligned reads in BAM format", patterns: ["*.bam"] }
