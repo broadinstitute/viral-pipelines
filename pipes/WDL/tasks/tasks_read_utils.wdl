@@ -247,9 +247,11 @@ task rmdup_ubam {
 
   # Memory autoscaling: M-Vicuna loads reads into memory for deduplication.
   # For files <= 2GB, use 8GB RAM (covers typical samples).
-  # For larger files, scale linearly: 8 + (file_size - 2) GB, capped at 48GB.
+  # For larger files, scale at 2x file size: 8 + 2*(file_size - 2) GB, capped at 128GB.
+  # The 2x multiplier accounts for mvicuna's in-memory data structures which can
+  # exceed the compressed BAM size, especially for deeply sequenced samples.
   Float input_size_gb = size(reads_unmapped_bam, "GB")
-  Int mem_auto_scaled = if input_size_gb <= 2.0 then 8 else (if (8 + ceil(input_size_gb - 2.0)) > 48 then 48 else (8 + ceil(input_size_gb - 2.0)))
+  Int mem_auto_scaled = if input_size_gb <= 2.0 then 8 else (if (8 + 2*ceil(input_size_gb - 2.0)) > 128 then 128 else (8 + 2*ceil(input_size_gb - 2.0)))
   Int mem_gb = select_first([machine_mem_gb, mem_auto_scaled])
 
   Int disk_size = 375 + 2 * ceil(input_size_gb)
