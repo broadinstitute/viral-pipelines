@@ -270,21 +270,22 @@ task rmdup_ubam {
     mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
     read_utils.py --version | tee VERSION
 
-    # Count input reads and downsample if exceeds max_reads threshold
+    # Count input reads
     INPUT_BAM="~{reads_unmapped_bam}"
-    if [ ~{max_reads} -gt 0 ]; then
-      READ_COUNT=$(samtools view -c "$INPUT_BAM")
-      echo "Input read count: $READ_COUNT (max_reads threshold: ~{max_reads})"
-      if [ "$READ_COUNT" -gt ~{max_reads} ]; then
-        echo "Downsampling from $READ_COUNT to ~{max_reads} reads before deduplication"
-        read_utils.py downsample_bams \
-          "$INPUT_BAM" \
-          --outPath ./downsample_out \
-          --readCount=~{max_reads} \
-          --JVMmemory "$mem_in_mb"m
-        INPUT_BAM=$(ls downsample_out/*.bam)
-        echo "Downsampled BAM: $INPUT_BAM"
-      fi
+    READ_COUNT=$(samtools view -c "$INPUT_BAM")
+    echo "$READ_COUNT" > dedup_read_count_pre
+    echo "Input read count: $READ_COUNT"
+
+    # Downsample if exceeds max_reads threshold
+    if [ ~{max_reads} -gt 0 ] && [ "$READ_COUNT" -gt ~{max_reads} ]; then
+      echo "Downsampling from $READ_COUNT to ~{max_reads} reads before deduplication"
+      read_utils.py downsample_bams \
+        "$INPUT_BAM" \
+        --outPath ./downsample_out \
+        --readCount=~{max_reads} \
+        --JVMmemory "$mem_in_mb"m
+      INPUT_BAM=$(ls downsample_out/*.bam)
+      echo "Downsampled BAM: $INPUT_BAM"
     fi
 
     read_utils.py rmdup_"~{method}"_bam \
@@ -298,6 +299,7 @@ task rmdup_ubam {
 
   output {
     File   dedup_bam             = "~{reads_basename}.dedup.bam"
+    Int    dedup_read_count_pre  = read_int("dedup_read_count_pre")
     Int    dedup_read_count_post = read_int("dedup_read_count_post")
     String viralngs_version      = read_string("VERSION")
   }
