@@ -241,6 +241,7 @@ task rmdup_ubam {
     File    reads_unmapped_bam
     String  method = "mvicuna"
 
+    Int     max_reads = 100000000
     Int?    machine_mem_gb
     String  docker = "quay.io/broadinstitute/viral-core:2.5.18"
   }
@@ -254,22 +255,40 @@ task rmdup_ubam {
   Int mem_auto_scaled = if input_size_gb <= 2.0 then 8 else (if (8 + 2*ceil(input_size_gb - 2.0)) > 128 then 128 else (8 + 2*ceil(input_size_gb - 2.0)))
   Int mem_gb = select_first([machine_mem_gb, mem_auto_scaled])
 
-  Int disk_size = 375 + 2 * ceil(input_size_gb)
+  Int disk_size = 375 + 3 * ceil(input_size_gb)
 
   parameter_meta {
     reads_unmapped_bam: { description: "unaligned reads in BAM format", patterns: ["*.bam"] }
     method:             { description: "mvicuna or cdhit" }
+    max_reads:          { description: "If the input has more than this many reads, downsample before deduplication to avoid memory issues. Set to 0 to disable." }
   }
 
   String reads_basename = basename(reads_unmapped_bam, ".bam")
-  
+
   command <<<
     set -ex -o pipefail
     mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
     read_utils.py --version | tee VERSION
 
+    # Count input reads and downsample if exceeds max_reads threshold
+    INPUT_BAM="~{reads_unmapped_bam}"
+    if [ ~{max_reads} -gt 0 ]; then
+      READ_COUNT=$(samtools view -c "$INPUT_BAM")
+      echo "Input read count: $READ_COUNT (max_reads threshold: ~{max_reads})"
+      if [ "$READ_COUNT" -gt ~{max_reads} ]; then
+        echo "Downsampling from $READ_COUNT to ~{max_reads} reads before deduplication"
+        read_utils.py downsample_bams \
+          "$INPUT_BAM" \
+          --outPath ./downsample_out \
+          --readCount=~{max_reads} \
+          --JVMmemory "$mem_in_mb"m
+        INPUT_BAM=$(ls downsample_out/*.bam)
+        echo "Downsampled BAM: $INPUT_BAM"
+      fi
+    fi
+
     read_utils.py rmdup_"~{method}"_bam \
-      "~{reads_unmapped_bam}" \
+      "$INPUT_BAM" \
       "~{reads_basename}".dedup.bam \
       --JVMmemory "$mem_in_mb"m \
       --loglevel=DEBUG
