@@ -183,7 +183,7 @@ task sequencing_platform_from_bam {
   input {
     File    bam
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.19"
   }
 
   command <<<
@@ -293,7 +293,7 @@ task structured_comments {
 
     File?  filter_to_ids
 
-    String docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.19"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -346,7 +346,7 @@ task structured_comments_from_aligned_bam {
     String  out_basename = basename(aligned_bam, '.bam')
     Boolean is_genome_assembly = true
     Boolean sanitize_ids = true
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.19"
   }
   # see https://www.ncbi.nlm.nih.gov/genbank/structuredcomment/
   command <<<
@@ -465,7 +465,7 @@ task rename_fasta_header {
 
     String out_basename = basename(genome_fasta, ".fasta")
 
-    String docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.19"
   }
   command {
     set -e
@@ -630,7 +630,7 @@ task sra_meta_prep {
     Boolean     paired
 
     String      out_name = "sra_metadata.tsv"
-    String      docker="quay.io/broadinstitute/viral-core:2.5.18"
+    String      docker="quay.io/broadinstitute/viral-core:2.5.19"
   }
   Int disk_size = 100
   parameter_meta {
@@ -1403,7 +1403,7 @@ task genbank_special_taxa {
     Int     taxid
     File    taxdump_tgz
     File    vadr_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/annotation/vadr/vadr-by-taxid.tsv"
-    String  docker = "quay.io/broadinstitute/viral-classify:2.5.16.0"
+    String  docker = "quay.io/broadinstitute/viral-classify:2.5.19.0"
   }
 
   command <<<

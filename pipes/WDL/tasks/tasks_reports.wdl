@@ -15,7 +15,7 @@ task alignment_metrics {
     Int    max_amplicons=500
 
     Int    machine_mem_gb=16
-    String docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.19"
   }
 
   String out_basename = basename(aligned_bam, ".bam")
@@ -143,7 +143,7 @@ task plot_coverage {
     String? plotXLimits # of the form "min max" (ints, space between)
     String? plotYLimits # of the form "min max" (ints, space between)
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.19"
   }
 
   Int disk_size = 375
@@ -290,7 +290,7 @@ task coverage_report {
     Array[File]  mapped_bam_idx = []  # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name = "coverage_report.txt"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.19"
   }
 
   Int disk_size = 375
@@ -365,7 +365,7 @@ task fastqc {
   input {
     File   reads_bam
 
-    String docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.19"
   }
   parameter_meta {
     reads_bam:{ 
@@ -409,7 +409,7 @@ task align_and_count {
 
     Int?   cpu
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.19"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
@@ -528,7 +528,7 @@ task align_and_count_summary {
 
     String       output_prefix = "count_summary"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.19"
   }
 
   Int disk_size = 100
@@ -563,7 +563,7 @@ task aggregate_metagenomics_reports {
     String       aggregate_taxlevel_focus                 = "species"
     Int          aggregate_top_N_hits                     = 5
 
-    String       docker = "quay.io/broadinstitute/viral-classify:2.5.16.0"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.5.19.0"
   }
 
   parameter_meta {

@@ -5,7 +5,7 @@ task taxid_to_nextclade_dataset_name {
         Int     taxid
         File    taxdump_tgz
         File    nextclade_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/typing/nextclade-by-taxid.tsv"
-        String  docker = "quay.io/broadinstitute/viral-classify:2.5.16.0"
+        String  docker = "quay.io/broadinstitute/viral-classify:2.5.19.0"
     }
     command <<<
         set -e
@@ -332,7 +332,7 @@ task derived_cols {
         String?       lab_highlight_loc
         Array[File]   table_map = []
 
-        String        docker = "quay.io/broadinstitute/viral-core:2.5.18"
+        String        docker = "quay.io/broadinstitute/viral-core:2.5.19"
         Int           disk_size = 50
     }
     parameter_meta {
@@ -900,7 +900,7 @@ task filter_sequences_to_list {
 
         String       out_fname = sub(sub(basename(sequences, ".zst"), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
         # Prior docker image: "nextstrain/base:build-20240318T173028Z"
-        String       docker = "quay.io/broadinstitute/viral-core:2.5.18"
+        String       docker = "quay.io/broadinstitute/viral-core:2.5.19"
         Int          disk_size = 750
     }
     parameter_meta {
