@@ -839,7 +839,6 @@ task filter_bam_to_taxa {
       ~{true='--without-children' false='' withoutChildren} \
       ~{'--minimum_hit_groups=' + minimum_hit_groups} \
       --out_count COUNT \
-      --JVMmemory "$mem_in_mb"m \
       --loglevel=DEBUG
 
     samtools view -c "~{out_basename}.bam" | tee classified_taxonomic_filter_read_count_post

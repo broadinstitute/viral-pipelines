@@ -171,7 +171,6 @@ task filter_to_taxon {
       "~{lastal_db_fasta}" \
       "~{bam_basename}.taxfilt.bam" \
       $ERROR_ON_NEG_CONTROL_ARGS \
-      --JVMmemory="$mem_in_mb"m \
       --loglevel=DEBUG
 
     samtools view -c "~{bam_basename}.taxfilt.bam" | tee filter_read_count_post
@@ -261,7 +260,6 @@ task merge_one_per_sample {
       read_utils.py rmdup_mvicuna_bam \
         tmp.bam \
         "~{out_bam_basename}.bam" \
-        --JVMmemory "$mem_in_mb"m \
         --loglevel=DEBUG
     fi
   >>>
