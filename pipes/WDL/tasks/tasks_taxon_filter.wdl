@@ -123,7 +123,7 @@ task deplete_taxa {
     docker: docker
     memory: machine_mem_gb_actual + " GB"
     cpu: cpu_actual
-    disks:  "local-disk " + disk_size + " LOCAL"
+    disks:  "local-disk " + disk_size + " SSD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: preemptible_tries

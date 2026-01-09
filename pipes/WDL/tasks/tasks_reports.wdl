@@ -214,7 +214,7 @@ task plot_coverage {
     docker: "${docker}"
     memory: "7 GB"
     cpu: 2
-    disks:  "local-disk " + disk_size + " LOCAL"
+    disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     preemptible: 1
@@ -277,7 +277,7 @@ task merge_coverage_per_position {
     docker: "${docker}"
     memory: "2 GB"
     cpu: 2
-    disks:  "local-disk " + disk_size + " LOCAL"
+    disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x4"
     maxRetries: 2
@@ -320,7 +320,7 @@ task coverage_report {
     docker: docker
     memory: "2 GB"
     cpu: 2
-    disks:  "local-disk " + disk_size + " LOCAL"
+    disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x4"
     maxRetries: 2
@@ -513,9 +513,9 @@ task align_and_count {
 
   runtime {
     memory: machine_mem_gb_actual + " GB"
-    cpu: cpu_actual
-    docker: "${docker}"
-    disks:  "local-disk " + disk_size + " LOCAL"
+    cpu:    cpu_actual
+    docker: docker
+    disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
@@ -710,8 +710,8 @@ task MultiQC {
   runtime {
     memory: "8 GB"
     cpu: 16
-    docker: "${docker}"
-    disks:  "local-disk " + disk_size + " LOCAL"
+    docker: docker
+    disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x2"
     maxRetries: 2
@@ -902,8 +902,8 @@ task multiqc_from_bams {
   runtime {
     docker: docker
     memory: mem_final + " GB"
-    cpu: cpu_final
-    disks:  "local-disk " + disk_size + " LOCAL"
+    cpu:    cpu_final
+    disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     maxRetries: 2

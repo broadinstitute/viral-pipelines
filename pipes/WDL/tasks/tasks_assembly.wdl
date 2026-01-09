@@ -82,12 +82,20 @@ task assemble {
           --loglevel=DEBUG
 
         samtools view -c ~{sample_name}.subsamp.bam | tee subsample_read_count >&2
+
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        set +o pipefail
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
     }
 
     output {
         File   contigs_fasta        = "~{sample_name}.assembly1-spades.fasta"
         File   subsampBam           = "~{sample_name}.subsamp.bam"
         Int    subsample_read_count = read_int("subsample_read_count")
+        Int    max_ram_gb           = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec          = ceil(read_float("UPTIME_SEC"))
+        Int    cpu_load_15min       = ceil(read_float("LOAD_15M"))
         String viralngs_version     = read_string("VERSION")
     }
 
@@ -95,7 +103,7 @@ task assemble {
         docker: docker
         memory: select_first([machine_mem_gb, 63]) + " GB"
         cpu: 4
-        disks:  "local-disk " + disk_size + " LOCAL"
+        disks:  "local-disk " + disk_size + " HDD"
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
         maxRetries: 2
@@ -162,6 +170,11 @@ task select_references {
     # create top-hits output files
     cut -f 1 "~{contigs_basename}.refs_skani_dist.top.tsv" | tail +2 > TOP_FASTAS
     for f in $(cat TOP_FASTAS); do basename "$f" .fasta; done > TOP_FASTAS_BASENAMES
+
+    cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+    cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+    set +o pipefail
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
   >>>
 
   output {
@@ -171,13 +184,16 @@ task select_references {
     Array[File]          top_matches_per_cluster_fastas = read_lines("TOP_FASTAS")
     File                 skani_dist_full_tsv = "~{contigs_basename}.refs_skani_dist.full.tsv"
     File                 skani_dist_top_tsv  = "~{contigs_basename}.refs_skani_dist.top.tsv"
+    Int                  max_ram_gb     = ceil(read_float("MEM_BYTES")/1000000000)
+    Int                  runtime_sec    = ceil(read_float("UPTIME_SEC"))
+    Int                  cpu_load_15min = ceil(read_float("LOAD_15M"))
   }
 
   runtime {
     docker: docker
     memory: machine_mem_gb + " GB"
     cpu:    cpu
-    disks:  "local-disk " + disk_size + " LOCAL"
+    disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
@@ -197,9 +213,9 @@ task scaffold {
       Int          replace_length=55
       Boolean      allow_incomplete_output = false
 
-      Int?          skani_m
-      Int?          skani_s
-      Int?          skani_c
+      Int?         skani_m
+      Int?         skani_s
+      Int?         skani_c
 
       Int?         nucmer_max_gap
       Int?         nucmer_min_match
@@ -387,6 +403,11 @@ task scaffold {
             ~{'--aligner=' + aligner} \
             --loglevel=DEBUG
         fi
+
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        set +o pipefail
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
     >>>
 
     output {
@@ -406,6 +427,9 @@ task scaffold {
         Float  skani_ani                             = read_float("SKANI_ANI")
         Float  skani_ref_aligned_frac                = read_float("SKANI_REF_AF")
         Float  skani_contigs_aligned_frac            = read_float("SKANI_CONTIGS_AF")
+        Int    max_ram_gb                            = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec                           = ceil(read_float("UPTIME_SEC"))
+        Int    cpu_load_15min                        = ceil(read_float("LOAD_15M"))
         String viralngs_version                      = read_string("VERSION")
     }
 
@@ -413,7 +437,7 @@ task scaffold {
         docker: docker
         memory: select_first([machine_mem_gb, 63]) + " GB"
         cpu: 4
-        disks:  "local-disk " + disk_size + " LOCAL"
+        disks:  "local-disk " + disk_size + " HDD"
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
         maxRetries: 2
@@ -498,7 +522,7 @@ task skani_triangle {
     docker: docker
     memory: machine_mem_gb + " GB"
     cpu:    cpu
-    disks:  "local-disk " + disk_size + " LOCAL"
+    disks:  "local-disk " + disk_size + " SSD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     preemptible: 2
@@ -582,7 +606,7 @@ task ivar_trim {
         docker: docker
         memory: select_first([machine_mem_gb, 7]) + " GB"
         cpu: 4
-        disks:  "local-disk " + disk_size + " LOCAL"
+        disks:  "local-disk " + disk_size + " HDD"
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x4"
         maxRetries: 2
@@ -787,7 +811,7 @@ task align_reads {
     docker: docker
     memory: machine_mem_gb_actual + " GB"
     cpu: cpu_actual
-    disks:  "local-disk " + disk_size + " LOCAL"
+    disks:  "local-disk " + disk_size + " SSD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: 1
@@ -905,6 +929,11 @@ task refine_assembly_with_aligned_reads {
         set +o pipefail # grep will exit 1 if it fails to find the pattern
         grep -v '^>' trimmed.fasta | tr -d '\n' | wc -c | tee assembly_length
         grep -v '^>' trimmed.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
+
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        set +o pipefail
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
     >>>
 
     output {
@@ -914,6 +943,9 @@ task refine_assembly_with_aligned_reads {
         Int    assembly_length_unambiguous = read_int("assembly_length_unambiguous")
         Int    dist_to_ref_snps            = read_int("num_snps")
         Int    dist_to_ref_indels          = read_int("num_indels")
+        Int    max_ram_gb                  = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec                 = ceil(read_float("UPTIME_SEC"))
+        Int    cpu_load_15min              = ceil(read_float("LOAD_15M"))
         String viralngs_version            = read_string("VERSION")
     }
 
@@ -921,7 +953,7 @@ task refine_assembly_with_aligned_reads {
         docker: docker
         memory: machine_mem_gb + " GB"
         cpu: 8
-        disks:  "local-disk " + disk_size + " LOCAL"
+        disks:  "local-disk " + disk_size + " SSD"
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
         maxRetries: 2
