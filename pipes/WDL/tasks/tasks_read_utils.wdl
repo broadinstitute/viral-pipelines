@@ -322,7 +322,7 @@ task bbnorm_bam {
   input {
     File    reads_bam
 
-    Int?    target
+    Int     target = 10000
     Int?    kmer_length
     Int?    passes
     Int?    min_input_reads
@@ -351,7 +351,7 @@ task bbnorm_bam {
       patterns: ["*.bam"]
     }
     target: {
-      description: "BBNorm target normalization depth. Reads are downsampled to achieve approximately this coverage depth. (default: bbnorm default of 100)"
+      description: "BBNorm target normalization depth. Reads are downsampled to achieve approximately this coverage depth. (default: 10000)"
     }
     kmer_length: {
       description: "Kmer length for BBNorm analysis. Longer kmers are more specific but require more memory. (default: bbnorm default of 31)"
