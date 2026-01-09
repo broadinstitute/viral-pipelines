@@ -426,32 +426,32 @@ task downsample_bams {
 
   Int disk_size = 750
 
-  command {
+  command <<<
     set -ex -o pipefail
 
     # find 90% memory
     mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
 
-    if [[ "${deduplicateBefore}" == "true" ]]; then
+    if [[ "~{deduplicateBefore}" == "true" ]]; then
       DEDUP_OPTION="--deduplicateBefore"
-    elif [[ "${deduplicateAfter}" == "true" ]]; then
+    elif [[ "~{deduplicateAfter}" == "true" ]]; then
       DEDUP_OPTION="--deduplicateAfter"
     fi
 
-    if [[ "${deduplicateBefore}" == "true" && "${deduplicateAfter}" == "true" ]]; then
+    if [[ "~{deduplicateBefore}" == "true" && "~{deduplicateAfter}" == "true" ]]; then
       echo "deduplicateBefore and deduplicateAfter are mutually exclusive. Only one can be used."
       exit 1
     fi
-    
+
     read_utils.py --version | tee VERSION
 
     read_utils.py downsample_bams \
-        ${sep=' ' reads_bam} \
+        ~{sep=' ' reads_bam} \
         --outPath ./output \
-        ${'--readCount=' + readCount} \
+        ~{'--readCount=' + readCount} \
         $DEDUP_OPTION \
         --JVMmemory "$mem_in_mb"m
-  }
+  >>>
 
   output {
     Array[File] downsampled_bam  = glob("output/*.downsampled-*.bam")

@@ -11,7 +11,7 @@ task merge_tarballs {
 
   Int disk_size = 2625
 
-  command {
+  command <<<
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
@@ -23,7 +23,7 @@ task merge_tarballs {
     file_utils.py merge_tarballs \
       ~{out_filename} ~{sep=' ' tar_chunks} \
       --loglevel=DEBUG
-  }
+  >>>
 
   output {
     File   combined_tar     = "~{out_filename}"

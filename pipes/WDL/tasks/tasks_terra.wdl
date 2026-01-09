@@ -16,10 +16,10 @@ task gcs_copy {
       stream: true
     }
   }
-  command {
+  command <<<
     set -e
     gcloud storage cp "~{sep='" "' infiles}" ~{gcs_uri_prefix}
-  }
+  >>>
   output {
     File logs = stdout()
   }
@@ -299,7 +299,7 @@ task upload_reads_assemblies_entities_tsv {
 
     String        docker = "schaluvadi/pathogen-genomic-surveillance:api-wdl"
   }
-  command {
+  command <<<
     set -e
 
     echo ~{sep="," cleaned_reads_unaligned_bams_string} > cleaned_bam_strings.txt
@@ -312,7 +312,7 @@ task upload_reads_assemblies_entities_tsv {
         -j "~{meta_by_filename_json}" \
         | perl -lape 's/^.*Check your workspace for new (\S+) table.*/$1/' \
         > TABLES_MODIFIED
-  }
+  >>>
   runtime {
     docker: docker
     memory: "2 GB"
@@ -335,7 +335,7 @@ task upload_entities_tsv {
   meta {
     volatile: true
   }
-  command {
+  command <<<
     set -e
     python3<<CODE
     import sys
@@ -349,7 +349,7 @@ task upload_entities_tsv {
     else:
         print("Upload complete. Check your workspace for new table!")
     CODE
-  }
+  >>>
   runtime {
     docker: docker
     memory: "2 GB"
@@ -376,7 +376,7 @@ task download_entities_tsv {
     volatile: true
   }
 
-  command {
+  command <<<
     python3<<CODE
     import csv
     import json
@@ -411,7 +411,7 @@ task download_entities_tsv {
       writer.writeheader()
       writer.writerows(rows)
     CODE
-  }
+  >>>
   runtime {
     docker: docker
     memory: "2 GB"

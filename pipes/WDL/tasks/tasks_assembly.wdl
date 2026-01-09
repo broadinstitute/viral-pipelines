@@ -60,7 +60,7 @@ task assemble {
 
     Int disk_size = 375
 
-    command {
+    command <<<
         set -ex -o pipefail
 
         # find 90% memory
@@ -87,7 +87,7 @@ task assemble {
         cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
         set +o pipefail
         { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
-    }
+    >>>
 
     output {
         File   contigs_fasta        = "~{sample_name}.assembly1-spades.fasta"
@@ -574,7 +574,7 @@ task ivar_trim {
       }
     }
 
-    command {
+    command <<<
         ivar version | head -1 | tee VERSION
         if [ -f "~{trim_coords_bed}" ]; then
           ivar trim -e \
@@ -593,7 +593,7 @@ task ivar_trim {
         PCT=$(grep "Trimmed primers from" IVAR_OUT | perl -lape 's/Trimmed primers from (\S+)%.*/$1/')
         if [[ $PCT = -* ]]; then echo 0; else echo $PCT; fi > IVAR_TRIM_PCT
         grep "Trimmed primers from" IVAR_OUT | perl -lape 's/Trimmed primers from \S+% \((\d+)\).*/$1/' > IVAR_TRIM_COUNT
-    }
+    >>>
 
     output {
         File   aligned_trimmed_bam         = "~{bam_basename}.trimmed.bam"
@@ -992,7 +992,7 @@ task run_discordance {
 
     Int disk_size = 100
 
-    command {
+    command <<<
         set -ex -o pipefail
 
         read_utils.py --version | tee VERSION
@@ -1058,7 +1058,7 @@ task run_discordance {
           echo 0 > num_discordant_snps
           echo 0 > num_discordant_indels
         fi
-    }
+    >>>
 
     output {
         File   discordant_sites_vcf = "~{out_basename}.discordant.vcf"

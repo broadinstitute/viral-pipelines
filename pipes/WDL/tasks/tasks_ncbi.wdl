@@ -9,17 +9,17 @@ task download_fasta {
     String         docker = "quay.io/broadinstitute/viral-phylo:2.5.16.0"
   }
 
-  command {
+  command <<<
     ncbi.py --version | tee VERSION
     ncbi.py fetch_fastas \
-        ${emailAddress} \
+        ~{emailAddress} \
         . \
-        ${sep=' ' accessions} \
-        --combinedFilePrefix ${out_prefix} \
-  }
+        ~{sep=' ' accessions} \
+        --combinedFilePrefix ~{out_prefix} \
+  >>>
 
   output {
-    File   sequences_fasta  = "${out_prefix}.fasta"
+    File   sequences_fasta  = "~{out_prefix}.fasta"
     String viralngs_version = read_string("VERSION")
   }
 
@@ -467,11 +467,11 @@ task rename_fasta_header {
 
     String docker = "quay.io/broadinstitute/viral-core:2.5.20"
   }
-  command {
+  command <<<
     set -e
     file_utils.py rename_fasta_sequences \
       "~{genome_fasta}" "~{out_basename}.fasta" "~{new_name}"
-  }
+  >>>
   output {
     File renamed_fasta = "~{out_basename}.fasta"
   }
@@ -600,10 +600,10 @@ task lookup_table_by_filename {
 
     String docker = "ubuntu"
   }
-  command {
+  command <<<
     set -e -o pipefail
     grep ^"~{id}" ~{mapping_tsv} | cut -f ~{return_col} > OUTVAL
-  }
+  >>>
   output {
     String value = read_string("OUTVAL")
   }

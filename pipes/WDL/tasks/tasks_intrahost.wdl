@@ -202,24 +202,24 @@ task isnvs_per_sample {
   }
   
 
-  command {
+  command <<<
     intrahost.py --version | tee VERSION
     intrahost.py vphaser_one_sample \
-        ${mapped_bam} \
-        ${assembly_fasta} \
-        vphaser2.${sample_name}.txt.gz \
-        ${'--vphaserNumThreads=' + threads} \
-        ${true="--removeDoublyMappedReads" false="" removeDoublyMappedReads} \
-        ${'--minReadsEach=' + minReadsPerStrand} \
-        ${'--maxBias=' + maxBias}
-  }
+        ~{mapped_bam} \
+        ~{assembly_fasta} \
+        vphaser2.~{sample_name}.txt.gz \
+        ~{'--vphaserNumThreads=' + threads} \
+        ~{true="--removeDoublyMappedReads" false="" removeDoublyMappedReads} \
+        ~{'--minReadsEach=' + minReadsPerStrand} \
+        ~{'--maxBias=' + maxBias}
+  >>>
 
   output {
-    File   isnvsFile        = "vphaser2.${sample_name}.txt.gz"
+    File   isnvsFile        = "vphaser2.~{sample_name}.txt.gz"
     String viralngs_version = read_string("VERSION")
   }
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: select_first([machine_mem_gb, 7]) + " GB"
     dx_instance_type: "mem1_ssd1_v2_x8"
     maxRetries: 2
@@ -250,43 +250,43 @@ task isnvs_vcf {
     emailAddress:              { description: "email address passed to NCBI if we need to download reference sequences" }
   }
 
-  command {
+  command <<<
     set -ex -o pipefail
 
     intrahost.py --version | tee VERSION
 
-    SAMPLES="${sep=' ' sampleNames}"
+    SAMPLES="~{sep=' ' sampleNames}"
     if [ -n "$SAMPLES" ]; then SAMPLES="--samples $SAMPLES"; fi
 
-    providedSnpRefAccessions="${sep=' ' snpEffRef}"
-    if [ -n "$providedSnpRefAccessions" ]; then 
+    providedSnpRefAccessions="~{sep=' ' snpEffRef}"
+    if [ -n "$providedSnpRefAccessions" ]; then
       snpRefAccessions="$providedSnpRefAccessions";
     else
-      snpRefAccessions="$(python -c "from Bio import SeqIO; print(' '.join(list(s.id for s in SeqIO.parse('${reference_fasta}', 'fasta'))))")"
+      snpRefAccessions="$(python -c "from Bio import SeqIO; print(' '.join(list(s.id for s in SeqIO.parse('~{reference_fasta}', 'fasta'))))")"
     fi
 
     echo "snpRefAccessions: $snpRefAccessions"
 
     intrahost.py merge_to_vcf \
-        ${reference_fasta} \
+        ~{reference_fasta} \
         isnvs.vcf.gz \
         $SAMPLES \
-        --isnvs ${sep=' ' vphaser2Calls} \
-        --alignments ${sep=' ' perSegmentMultiAlignments} \
+        --isnvs ~{sep=' ' vphaser2Calls} \
+        --alignments ~{sep=' ' perSegmentMultiAlignments} \
         --strip_chr_version \
-        ${true="--naive_filter" false="" naiveFilter} \
+        ~{true="--naive_filter" false="" naiveFilter} \
         --parse_accession
-        
+
     interhost.py snpEff \
         isnvs.vcf.gz \
         $snpRefAccessions \
         isnvs.annot.vcf.gz \
-        ${'--emailAddress=' + emailAddress}
+        ~{'--emailAddress=' + emailAddress}
 
     intrahost.py iSNV_table \
         isnvs.annot.vcf.gz \
         isnvs.annot.txt.gz
-  }
+  >>>
 
   output {
     File   isnvs_vcf           = "isnvs.vcf.gz"
@@ -297,7 +297,7 @@ task isnvs_vcf {
     String viralngs_version    = read_string("VERSION")
   }
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: select_first([machine_mem_gb, 4]) + " GB"
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
@@ -328,27 +328,27 @@ task annotate_vcf_snpeff {
     emailAddress:       { description: "email address passed to NCBI if we need to download reference sequences" }
   }
 
-  command {
+  command <<<
     set -ex -o pipefail
 
     intrahost.py --version | tee VERSION
 
-    providedSnpRefAccessions="${sep=' ' snpEffRef}"
-    if [ -n "$providedSnpRefAccessions" ]; then 
+    providedSnpRefAccessions="~{sep=' ' snpEffRef}"
+    if [ -n "$providedSnpRefAccessions" ]; then
       snpRefAccessions="$providedSnpRefAccessions";
     else
-      snpRefAccessions="$(python -c "from Bio import SeqIO; print(' '.join(list(s.id for s in SeqIO.parse('${ref_fasta}', 'fasta'))))")"
+      snpRefAccessions="$(python -c "from Bio import SeqIO; print(' '.join(list(s.id for s in SeqIO.parse('~{ref_fasta}', 'fasta'))))")"
     fi
     echo "snpRefAccessions: $snpRefAccessions"
 
     vcf_to_use=""
-    if (file "${in_vcf}" | grep -q "gzip" ) ; then
-      echo "${in_vcf} is already compressed"
-      vcf_to_use="${in_vcf}"
+    if (file "~{in_vcf}" | grep -q "gzip" ) ; then
+      echo "~{in_vcf} is already compressed"
+      vcf_to_use="~{in_vcf}"
     else
-      echo "${in_vcf} is not compressed; gzipping..."
-      bgzip "${in_vcf}"
-      vcf_to_use="${in_vcf}.gz"
+      echo "~{in_vcf} is not compressed; gzipping..."
+      bgzip "~{in_vcf}"
+      vcf_to_use="~{in_vcf}.gz"
     fi
 
     # renames the seq id using the first sequence in the alignment
@@ -360,7 +360,7 @@ task annotate_vcf_snpeff {
     bgzip -d "temp.vcf.gz"
     # rename chr field (first col) in vcf
     cat "temp.vcf" | sed "s/^1/$ref_name_no_version/" > "temp2.vcf"
-    
+
     # output the vcf, removing the reference sequence if present as a sample name
     bgzip "temp2.vcf"
     tabix -p vcf "temp2.vcf.gz"
@@ -377,13 +377,13 @@ task annotate_vcf_snpeff {
     echo "Creating vcf index"
     bcftools index "$vcf_to_use"
     tabix -p vcf "$vcf_to_use"
-    
+
     interhost.py snpEff \
         "$vcf_to_use" \
         $snpRefAccessions \
-        "${output_basename}.annot.vcf.gz" \
-        ${'--emailAddress=' + emailAddress}
-  }
+        "~{output_basename}.annot.vcf.gz" \
+        ~{'--emailAddress=' + emailAddress}
+  >>>
 
   output {
     File   annot_vcf_gz     = "~{output_basename}.annot.vcf.gz"
