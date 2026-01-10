@@ -334,10 +334,17 @@ task bbnorm_bam {
   }
 
   # Memory autoscaling: BBNorm uses Java and loads kmer data structures into memory.
-  # For files <= 2GB, use 8GB RAM. For larger files, scale at 4x file size, capped at 64GB.
+  # Scale from 8GB to 32GB based on input size. The 8-32GB range is cost-optimal on GCP
+  # (1-4 GB/core with 8 CPUs). Observed peak usage was ~24GB for 36GB input files.
   Float input_size_gb = size(reads_bam, "GB")
-  Int mem_auto_scaled = if input_size_gb <= 2.0 then 8 else (if (8 + 4*ceil(input_size_gb - 2.0)) > 64 then 64 else (8 + 4*ceil(input_size_gb - 2.0)))
+  Int mem_auto_scaled = if input_size_gb <= 2.0 then 8 else (if (8 + ceil(input_size_gb - 2.0)) > 32 then 32 else (8 + ceil(input_size_gb - 2.0)))
   Int mem_gb = select_first([machine_mem_gb, mem_auto_scaled])
+
+  # Passes autoscaling: For large inputs (>= 15GB), use 1 pass to optimize runtime over accuracy
+  # For smaller inputs, use 2 passes for more accurate normalization.
+  # Caller can override by specifying passes explicitly.
+  Int passes_auto = if input_size_gb >= 15.0 then 1 else 2
+  Int passes_to_use = select_first([passes, passes_auto])
 
   # Minimum 8 CPUs to maximize Google Cloud network bandwidth for file localization
   Int cpu_count = select_first([cpu, 8])
@@ -357,13 +364,13 @@ task bbnorm_bam {
       description: "Kmer length for BBNorm analysis. Longer kmers are more specific but require more memory. (default: bbnorm default of 31)"
     }
     passes: {
-      description: "Number of normalization passes. More passes give more accurate normalization but take longer. (default: bbnorm default of 2)"
+      description: "Number of normalization passes. More passes give more accurate normalization but take longer. (default: 2 for inputs < 15GB, 1 for inputs >= 15GB to optimize runtime)"
     }
     min_input_reads: {
       description: "If input has fewer than this many reads, skip normalization and copy input to output unchanged."
     }
     max_output_reads: {
-      description: "If the normalized output would have more than this many reads, randomly downsample to this count."
+      description: "If the normalized output would have more than this many read pairs, randomly downsample to this count. For paired-end data, the actual output read count will be 2x this value."
     }
   }
 
@@ -376,13 +383,16 @@ task bbnorm_bam {
     # Count input reads first
     samtools view -c "~{reads_bam}" | tee bbnorm_read_count_pre
 
-    # BBNorm auto-detects available memory and threads
+    # Calculate memory for BBNorm (85% of available, more accurate than bbnorm's auto-detect)
+    mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 85)
+
     read_utils.py rmdup_bbnorm_bam \
       "~{reads_bam}" \
       "~{reads_basename}.bbnorm.bam" \
-      ~{'--target=' + target} \
+      --target=~{target} \
+      --passes=~{passes_to_use} \
+      --memory="$mem_in_mb"m \
       ~{'--kmerLength=' + kmer_length} \
-      ~{'--passes=' + passes} \
       ~{'--minInputReads=' + min_input_reads} \
       ~{'--maxOutputReads=' + max_output_reads} \
       --loglevel=DEBUG
