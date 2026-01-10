@@ -9,17 +9,17 @@ task download_fasta {
     String         docker = "quay.io/broadinstitute/viral-phylo:2.5.16.0"
   }
 
-  command {
+  command <<<
     ncbi.py --version | tee VERSION
     ncbi.py fetch_fastas \
-        ${emailAddress} \
+        ~{emailAddress} \
         . \
-        ${sep=' ' accessions} \
-        --combinedFilePrefix ${out_prefix} \
-  }
+        ~{sep=' ' accessions} \
+        --combinedFilePrefix ~{out_prefix} \
+  >>>
 
   output {
-    File   sequences_fasta  = "${out_prefix}.fasta"
+    File   sequences_fasta  = "~{out_prefix}.fasta"
     String viralngs_version = read_string("VERSION")
   }
 
@@ -183,7 +183,7 @@ task sequencing_platform_from_bam {
   input {
     File    bam
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.20"
   }
 
   command <<<
@@ -293,7 +293,7 @@ task structured_comments {
 
     File?  filter_to_ids
 
-    String docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.20"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -346,7 +346,7 @@ task structured_comments_from_aligned_bam {
     String  out_basename = basename(aligned_bam, '.bam')
     Boolean is_genome_assembly = true
     Boolean sanitize_ids = true
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.20"
   }
   # see https://www.ncbi.nlm.nih.gov/genbank/structuredcomment/
   command <<<
@@ -465,13 +465,13 @@ task rename_fasta_header {
 
     String out_basename = basename(genome_fasta, ".fasta")
 
-    String docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.20"
   }
-  command {
+  command <<<
     set -e
     file_utils.py rename_fasta_sequences \
       "~{genome_fasta}" "~{out_basename}.fasta" "~{new_name}"
-  }
+  >>>
   output {
     File renamed_fasta = "~{out_basename}.fasta"
   }
@@ -600,10 +600,10 @@ task lookup_table_by_filename {
 
     String docker = "ubuntu"
   }
-  command {
+  command <<<
     set -e -o pipefail
     grep ^"~{id}" ~{mapping_tsv} | cut -f ~{return_col} > OUTVAL
-  }
+  >>>
   output {
     String value = read_string("OUTVAL")
   }
@@ -630,7 +630,7 @@ task sra_meta_prep {
     Boolean     paired
 
     String      out_name = "sra_metadata.tsv"
-    String      docker="quay.io/broadinstitute/viral-core:2.5.18"
+    String      docker="quay.io/broadinstitute/viral-core:2.5.20"
   }
   Int disk_size = 100
   parameter_meta {
@@ -1403,7 +1403,7 @@ task genbank_special_taxa {
     Int     taxid
     File    taxdump_tgz
     File    vadr_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/annotation/vadr/vadr-by-taxid.tsv"
-    String  docker = "quay.io/broadinstitute/viral-classify:2.5.16.0"
+    String  docker = "quay.io/broadinstitute/viral-classify:2.5.20.0"
   }
 
   command <<<

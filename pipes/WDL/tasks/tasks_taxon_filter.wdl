@@ -15,7 +15,7 @@ task deplete_taxa {
 
     Int?         cpu
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-classify:2.5.16.0"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.5.20.0"
   }
 
   # Autoscale CPU based on input size: 8 CPUs for ~1M reads (0.15 GB), 96 CPUs for ~100M reads (15 GB)
@@ -123,7 +123,7 @@ task deplete_taxa {
     docker: docker
     memory: machine_mem_gb_actual + " GB"
     cpu: cpu_actual
-    disks:  "local-disk " + disk_size + " LOCAL"
+    disks:  "local-disk " + disk_size + " SSD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: preemptible_tries
@@ -142,7 +142,7 @@ task filter_to_taxon {
     String   neg_control_prefixes_space_separated = "neg water NTC"
 
     Int      machine_mem_gb = 15
-    String   docker = "quay.io/broadinstitute/viral-classify:2.5.16.0"
+    String   docker = "quay.io/broadinstitute/viral-classify:2.5.20.0"
   }
 
   # do this in two steps in case the input doesn't actually have "cleaned" in the name
@@ -171,7 +171,6 @@ task filter_to_taxon {
       "~{lastal_db_fasta}" \
       "~{bam_basename}.taxfilt.bam" \
       $ERROR_ON_NEG_CONTROL_ARGS \
-      --JVMmemory="$mem_in_mb"m \
       --loglevel=DEBUG
 
     samtools view -c "~{bam_basename}.taxfilt.bam" | tee filter_read_count_post
@@ -198,7 +197,7 @@ task build_lastal_db {
     File   sequences_fasta
 
     Int    machine_mem_gb = 7
-    String docker = "quay.io/broadinstitute/viral-classify:2.5.16.0"
+    String docker = "quay.io/broadinstitute/viral-classify:2.5.20.0"
   }
 
   String db_name = basename(sequences_fasta, ".fasta")
@@ -237,7 +236,7 @@ task merge_one_per_sample {
     Boolean      rmdup = false
 
     Int          machine_mem_gb = 7
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.20"
   }
 
   Int disk_size = 750
@@ -261,7 +260,6 @@ task merge_one_per_sample {
       read_utils.py rmdup_mvicuna_bam \
         tmp.bam \
         "~{out_bam_basename}.bam" \
-        --JVMmemory "$mem_in_mb"m \
         --loglevel=DEBUG
     fi
   >>>

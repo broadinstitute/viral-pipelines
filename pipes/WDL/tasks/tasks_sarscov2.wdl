@@ -200,7 +200,7 @@ task sequencing_report {
         String  docker = "quay.io/broadinstitute/sc2-rmd:0.1.25"
     }
     Int disk_size = 250
-    command {
+    command <<<
         set -e
         /docker/reports.py \
             "~{assembly_stats_tsv}" \
@@ -213,7 +213,7 @@ task sequencing_report {
             ~{'--voc_list=' + voc_list} \
             ~{'--voi_list=' + voi_list}
         zip all_reports.zip *.pdf *.xlsx *.tsv
-    }
+    >>>
     runtime {
         docker: docker
         memory: "~{machine_mem_gb} GB"
@@ -570,7 +570,7 @@ task gisaid_uploader {
     String  frameshift="catch_novel"
   }
   Int disk_size = 100
-  command {
+  command <<<
     set -e
     cli3 upload \
         --database "~{database}" \
@@ -582,7 +582,7 @@ task gisaid_uploader {
         --log logs.txt
     # the following grep statement will exit 1 if anything failed
     grep "submissions failed: 0" logs.txt > /dev/null
-  }
+  >>>
   output {
     File  failed_metadata = "failed_metadata.csv"
   }

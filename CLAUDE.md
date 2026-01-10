@@ -188,3 +188,50 @@ Image versions are pinned in `requirements-modules.txt` and must be kept in sync
 ## Dockstore Integration
 
 Workflows are registered on Dockstore for easy import to Terra, DNAnexus, and other platforms. The `.dockstore.yml` file defines all published workflows and their test parameter files.
+
+## Terra Performance Analysis
+
+When analyzing workflow performance from Terra submissions, use the Terra MCP tools for structure/status queries and direct GCS access for log analysis.
+
+### Timing Methodology for WDL Tasks
+
+When measuring task execution time from Terra logs:
+
+1. **Start time**: Use first Python log timestamp in stderr
+   - Pattern: `^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),\d+`
+
+2. **End time**: Use GCS file modification timestamp of stderr
+   - Get via: `gcloud storage ls -l <path>/stderr`
+   - This captures ALL execution including post-Python BAM I/O
+
+3. **Why not use Python log end time?**
+   - Many tasks run external tools (Java, pysam) after Python logging ends
+   - Python logs don't capture full execution time
+
+### Efficient GCS Queries with Wildcards
+
+Use wildcards to batch GCS queries instead of iterating:
+```bash
+# Get all stderr files from a submission with timestamps in one query
+gcloud storage ls -l "gs://bucket/submissions/<sub_id>/classify_single/*/call-deplete/stderr"
+gcloud storage ls -l "gs://bucket/submissions/<sub_id>/classify_single/*/call-deplete/attempt-*/stderr"
+```
+
+### Handling Preemption Retries
+
+When a task is preempted, Cromwell creates `attempt-*` directories:
+```
+call-deplete/
+  stderr           # First attempt (may be incomplete)
+  attempt-2/       # Second attempt
+    stderr         # Final successful run
+```
+
+**Always use the final (highest-numbered) attempt** for performance analysis - preemption time shouldn't count against code performance.
+
+### Sample Identification
+
+To identify which workflow corresponds to which sample:
+1. Read first few KB of stderr from each workflow
+2. Look for sample name in BAM file paths (e.g., `/S20.l1.xxxx.bam`)
+3. Cache the sample-to-workflow mapping for reuse

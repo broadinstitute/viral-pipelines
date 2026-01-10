@@ -10,9 +10,9 @@ task concatenate {
         Int         cpus = 4
     }
     Int disk_size = 375
-    command {
+    command <<<
         cat ~{sep=" " infiles} > "~{output_name}"
-    }
+    >>>
     runtime {
         docker: "ubuntu"
         memory: "1 GB"
@@ -23,7 +23,7 @@ task concatenate {
         maxRetries: 2
     }
     output {
-        File combined = "${output_name}"
+        File combined = "~{output_name}"
     }
 }
 
@@ -52,7 +52,7 @@ task unpack_archive_to_bucket_path {
         # execution and resource requirements
         Int    disk_size      = ceil(3.0 * size(input_archive_files[0], "GB")) + 50
         Int    machine_mem_gb = 8
-        String docker         = "quay.io/broadinstitute/viral-core:2.5.18"
+        String docker         = "quay.io/broadinstitute/viral-core:2.5.20"
     }
 
     parameter_meta {
@@ -295,7 +295,7 @@ task zcat {
         { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
-        docker: "quay.io/broadinstitute/viral-core:2.5.18"
+        docker: "quay.io/broadinstitute/viral-core:2.5.20"
         memory: "1 GB"
         cpu:    cpus
         disks:  "local-disk " + disk_size + " LOCAL"
@@ -322,9 +322,9 @@ task sed {
         String outfilename = "~{basename(infile)}-rename.txt"
     }
     Int disk_size = 375
-    command {
+    command <<<
         sed 's/~{search}/~{replace}/g' "~{infile}" > "~{outfilename}"
-    }
+    >>>
     runtime {
         docker: "ubuntu"
         memory: "1 GB"
@@ -584,9 +584,9 @@ task fasta_to_ids {
     }
     Int disk_size = 375
     String basename = basename(sequences_fasta, ".fasta")
-    command {
+    command <<<
         cat "~{sequences_fasta}" | grep \> | cut -c 2- > "~{basename}.txt"
-    }
+    >>>
     runtime {
         docker: "ubuntu"
         memory: "1 GB"
@@ -606,9 +606,9 @@ task md5sum {
     File in_file
   }
   Int disk_size = 100
-  command {
+  command <<<
     md5sum ~{in_file} | cut -f 1 -d ' ' | tee MD5
-  }
+  >>>
   output {
     String md5 = read_string("MD5")
   }
@@ -859,7 +859,7 @@ task tsv_join {
   runtime {
     memory: "~{machine_mem_gb} GB"
     cpu: 4
-    docker: "quay.io/broadinstitute/viral-core:2.5.18"
+    docker: "quay.io/broadinstitute/viral-core:2.5.20"
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
@@ -946,26 +946,26 @@ task tsv_stack {
   input {
     Array[File]+ input_tsvs
     String       out_basename
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.20"
   }
 
   Int disk_size = 50
 
-  command {
+  command <<<
     csvstack -t --filenames \
-      ${sep=' ' input_tsvs} \
+      ~{sep=' ' input_tsvs} \
       | tr , '\t' \
-      > ${out_basename}.txt
-  }
+      > ~{out_basename}.txt
+  >>>
 
   output {
-    File out_tsv = "${out_basename}.txt"
+    File out_tsv = "~{out_basename}.txt"
   }
 
   runtime {
     memory: "1 GB"
     cpu: 1
-    docker: "${docker}"
+    docker: docker
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -1006,9 +1006,9 @@ task make_empty_file {
     String out_filename
   }
   Int disk_size = 10
-  command {
+  command <<<
     touch "~{out_filename}"
-  }
+  >>>
   output {
     File out = "~{out_filename}"
   }
@@ -1029,9 +1029,9 @@ task rename_file {
     String out_filename
   }
   Int disk_size = 375
-  command {
+  command <<<
     cp "~{infile}" "~{out_filename}"
-  }
+  >>>
   output {
     File out = "~{out_filename}"
   }
@@ -1050,11 +1050,11 @@ task raise {
   input {
     String message = "error!"
   }
-  command {
+  command <<<
     set -e
-    echo "$message"
+    echo "~{message}"
     exit 1
-  }
+  >>>
   runtime {
     memory: "1 GB"
     cpu: 1
@@ -1072,7 +1072,7 @@ task unique_strings {
     String         separator=","
   }
   Int disk_size = 50
-  command {
+  command <<<
     cat ~{write_lines(strings)} | sort | uniq > UNIQUE_OUT
     python3<<CODE
     with open('UNIQUE_OUT', 'rt') as inf:
@@ -1080,7 +1080,7 @@ task unique_strings {
     with open('UNIQUE_OUT_JOIN', 'wt') as outf:
       outf.write('~{separator}'.join(rows) + '\n')
     CODE
-  }
+  >>>
   output {
     Array[String]  sorted_unique = read_lines("UNIQUE_OUT")
     String         sorted_unique_joined = read_string("UNIQUE_OUT_JOIN")
@@ -1101,9 +1101,9 @@ task unique_arrays {
     Array[Array[String]]  string_arrays
   }
   Int disk_size = 50
-  command {
+  command <<<
     cat ~{write_tsv(string_arrays)} | sort | uniq > UNIQUE_OUT
-  }
+  >>>
   output {
     Array[Array[String]]  sorted_unique = read_tsv("UNIQUE_OUT")
   }
@@ -1126,10 +1126,10 @@ task today {
   meta {
     volatile: true
   }
-  command {
+  command <<<
     ~{default='' 'export TZ=' + timezone}
     date +"%Y-%m-%d" > TODAY
-  }
+  >>>
   output {
     String date = read_string("TODAY")
   }
@@ -1156,7 +1156,7 @@ task s3_copy {
   meta {
     description: "aws s3 cp"
   }
-  command {
+  command <<<
     set -e
     S3_PREFIX=$(echo "~{s3_uri_prefix}" | sed 's|/*$||')
     mkdir -p ~/.aws
@@ -1166,7 +1166,7 @@ task s3_copy {
       aws s3 cp $f $S3_PREFIX/
       echo "$S3_PREFIX/$(basename $f)" >> OUT_URIS
     done
-  }
+  >>>
   output {
     Array[String] out_uris = read_lines("OUT_URIS")
   }
@@ -1217,7 +1217,7 @@ task filter_sequences_by_length {
         File   sequences_fasta
         Int    min_non_N = 1
 
-        String docker = "quay.io/broadinstitute/viral-core:2.5.18"
+        String docker = "quay.io/broadinstitute/viral-core:2.5.20"
         Int    disk_size = 750
     }
     parameter_meta {
@@ -1278,10 +1278,10 @@ task pair_files_by_basename {
     String      right_ext
   }
   Int disk_gb = 100
-  command {
+  command <<<
     set -e
     cp ~{sep=' ' files} .
-  }
+  >>>
   output {
     Array[File] left_files  = glob("*.~{left_ext}")
     Array[File] right_files = glob("*.~{right_ext}")

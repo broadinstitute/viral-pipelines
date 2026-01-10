@@ -84,7 +84,7 @@ task group_bams_by_sample {
 task get_bam_samplename {
   input {
     File    bam
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.20"
   }
   Int   disk_size = round(size(bam, "GB")) + 50
   command <<<
@@ -111,7 +111,7 @@ task get_sample_meta {
   input {
     Array[File] samplesheets_extended
 
-    String      docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String      docker = "quay.io/broadinstitute/viral-core:2.5.20"
   }
   Int disk_size = 50
   command <<<
@@ -172,7 +172,7 @@ task merge_and_reheader_bams {
       File?        reheader_table
       String       out_basename = basename(in_bams[0], ".bam")
 
-      String       docker = "quay.io/broadinstitute/viral-core:2.5.18"
+      String       docker = "quay.io/broadinstitute/viral-core:2.5.20"
       Int          disk_size = 750
       Int          machine_mem_gb = 4
     }
@@ -243,7 +243,7 @@ task rmdup_ubam {
 
     Int     max_reads = 100000000
     Int?    machine_mem_gb
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.20"
   }
 
   # Memory autoscaling: M-Vicuna loads reads into memory for deduplication.
@@ -291,7 +291,6 @@ task rmdup_ubam {
     read_utils.py rmdup_"~{method}"_bam \
       "$INPUT_BAM" \
       "~{reads_basename}".dedup.bam \
-      --JVMmemory "$mem_in_mb"m \
       --loglevel=DEBUG
 
     samtools view -c "~{reads_basename}.dedup.bam" | tee dedup_read_count_post
@@ -315,6 +314,100 @@ task rmdup_ubam {
   }
 }
 
+task bbnorm_bam {
+  meta {
+    description: "Normalize read depth in a BAM file using BBNorm (kmer-based normalization). This uses BBMap's bbnorm tool to normalize coverage depth by downsampling over-represented kmers."
+  }
+
+  input {
+    File    reads_bam
+
+    Int?    target
+    Int?    kmer_length
+    Int?    passes
+    Int?    min_input_reads
+    Int?    max_output_reads
+
+    Int?    machine_mem_gb
+    Int?    cpu
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.20"
+  }
+
+  # Memory autoscaling: BBNorm uses Java and loads kmer data structures into memory.
+  # For files <= 2GB, use 8GB RAM. For larger files, scale at 4x file size, capped at 64GB.
+  Float input_size_gb = size(reads_bam, "GB")
+  Int mem_auto_scaled = if input_size_gb <= 2.0 then 8 else (if (8 + 4*ceil(input_size_gb - 2.0)) > 64 then 64 else (8 + 4*ceil(input_size_gb - 2.0)))
+  Int mem_gb = select_first([machine_mem_gb, mem_auto_scaled])
+
+  # Minimum 8 CPUs to maximize Google Cloud network bandwidth for file localization
+  Int cpu_count = select_first([cpu, 8])
+
+  # Disk: BAM->FASTQ expansion (~5-10x), BBNorm output + temp files (~10-15x more)
+  Int disk_size = ceil((25 * input_size_gb + 50) / 375.0) * 375
+
+  parameter_meta {
+    reads_bam: {
+      description: "Input reads in BAM format (may be aligned or unaligned, paired or unpaired).",
+      patterns: ["*.bam"]
+    }
+    target: {
+      description: "BBNorm target normalization depth. Reads are downsampled to achieve approximately this coverage depth. (default: bbnorm default of 100)"
+    }
+    kmer_length: {
+      description: "Kmer length for BBNorm analysis. Longer kmers are more specific but require more memory. (default: bbnorm default of 31)"
+    }
+    passes: {
+      description: "Number of normalization passes. More passes give more accurate normalization but take longer. (default: bbnorm default of 2)"
+    }
+    min_input_reads: {
+      description: "If input has fewer than this many reads, skip normalization and copy input to output unchanged."
+    }
+    max_output_reads: {
+      description: "If the normalized output would have more than this many reads, randomly downsample to this count."
+    }
+  }
+
+  String reads_basename = basename(reads_bam, ".bam")
+
+  command <<<
+    set -ex -o pipefail
+    read_utils.py --version | tee VERSION
+
+    # Count input reads first
+    samtools view -c "~{reads_bam}" | tee bbnorm_read_count_pre
+
+    # BBNorm auto-detects available memory and threads
+    read_utils.py rmdup_bbnorm_bam \
+      "~{reads_bam}" \
+      "~{reads_basename}.bbnorm.bam" \
+      ~{'--target=' + target} \
+      ~{'--kmerLength=' + kmer_length} \
+      ~{'--passes=' + passes} \
+      ~{'--minInputReads=' + min_input_reads} \
+      ~{'--maxOutputReads=' + max_output_reads} \
+      --loglevel=DEBUG
+
+    samtools view -c "~{reads_basename}.bbnorm.bam" | tee bbnorm_read_count_post
+  >>>
+
+  output {
+    File   bbnorm_bam             = "~{reads_basename}.bbnorm.bam"
+    Int    bbnorm_read_count_pre  = read_int("bbnorm_read_count_pre")
+    Int    bbnorm_read_count_post = read_int("bbnorm_read_count_post")
+    String viralngs_version       = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: mem_gb + " GB"
+    cpu:    cpu_count
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TES
+    dx_instance_type: "mem2_ssd1_v2_x8"
+    maxRetries: 2
+  }
+}
+
 task downsample_bams {
   meta {
     description: "Downsample reads in a BAM file randomly subsampling to a target read count. Read deduplication can occur either before or after random subsampling, or not at all (default: not at all)."
@@ -328,37 +421,37 @@ task downsample_bams {
     Boolean      deduplicateAfter = false
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.20"
   }
 
   Int disk_size = 750
 
-  command {
+  command <<<
     set -ex -o pipefail
 
     # find 90% memory
     mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
 
-    if [[ "${deduplicateBefore}" == "true" ]]; then
+    if [[ "~{deduplicateBefore}" == "true" ]]; then
       DEDUP_OPTION="--deduplicateBefore"
-    elif [[ "${deduplicateAfter}" == "true" ]]; then
+    elif [[ "~{deduplicateAfter}" == "true" ]]; then
       DEDUP_OPTION="--deduplicateAfter"
     fi
 
-    if [[ "${deduplicateBefore}" == "true" && "${deduplicateAfter}" == "true" ]]; then
+    if [[ "~{deduplicateBefore}" == "true" && "~{deduplicateAfter}" == "true" ]]; then
       echo "deduplicateBefore and deduplicateAfter are mutually exclusive. Only one can be used."
       exit 1
     fi
-    
+
     read_utils.py --version | tee VERSION
 
     read_utils.py downsample_bams \
-        ${sep=' ' reads_bam} \
+        ~{sep=' ' reads_bam} \
         --outPath ./output \
-        ${'--readCount=' + readCount} \
+        ~{'--readCount=' + readCount} \
         $DEDUP_OPTION \
         --JVMmemory "$mem_in_mb"m
-  }
+  >>>
 
   output {
     Array[File] downsampled_bam  = glob("output/*.downsampled-*.bam")
@@ -395,7 +488,7 @@ task FastqToUBAM {
     Int     cpus = 2
     Int     mem_gb = 4
     Int     disk_size = 750
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.20"
   }
   parameter_meta {
     fastq_1: { description: "Unaligned read1 file in fastq format", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }
@@ -449,7 +542,7 @@ task read_depths {
     File      aligned_bam
 
     String    out_basename = basename(aligned_bam, '.bam')
-    String    docker = "quay.io/broadinstitute/viral-core:2.5.18"
+    String    docker = "quay.io/broadinstitute/viral-core:2.5.20"
   }
   Int disk_size = 200
   command <<<
