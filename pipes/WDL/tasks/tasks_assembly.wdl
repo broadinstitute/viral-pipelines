@@ -15,6 +15,7 @@ task assemble {
       String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
       
       Int?     machine_mem_gb
+      Int?     cpu
       String   docker = "quay.io/broadinstitute/viral-assemble:2.5.18.0"
     }
     parameter_meta{
@@ -102,7 +103,7 @@ task assemble {
     runtime {
         docker: docker
         memory: select_first([machine_mem_gb, 63]) + " GB"
-        cpu: 4
+        cpu:    select_first([cpu, 4])
         disks:  "local-disk " + disk_size + " HDD"
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
