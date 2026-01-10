@@ -202,7 +202,7 @@ workflow assemble_denovo_metagenomic {
         if (scaffold.assembly_preimpute_length_unambiguous > min_scaffold_unambig) {
             call assemble_refbased.assemble_refbased as refine {
                 input:
-                    reads_unmapped_bams  = [deplete.bam_filtered_to_taxa],
+                    reads_unmapped_bams  = [filter_acellular.bam_filtered_to_taxa],
                     reference_fasta      = scaffold.scaffold_fasta,
                     sample_name          = sample_id + "-" + taxid
             }
