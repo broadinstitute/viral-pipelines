@@ -230,6 +230,12 @@ task scaffold {
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
     }
+
+    # Determine whether to run Gap2Seq based on reads_bam size
+    # Gap2Seq can take 100+ min for large BAMs (>1GB), providing diminishing returns
+    Float reads_bam_size_gb = if defined(reads_bam) then size(select_first([reads_bam]), "GB") else 0.0
+    Boolean run_gap2seq = defined(reads_bam) && reads_bam_size_gb < 1.0
+
     parameter_meta {
       reads_bam: {
         description: "Reads in BAM format. If provided, Gap2Seq will attempt to fill gaps using reads. Skipping this for large BAMs (>1GB) can save significant runtime.",
@@ -369,23 +375,16 @@ task scaffold {
         grep '^>' "~{sample_name}".scaffolding_chosen_ref.fasta | cut -c 2- | cut -f 1 -d ' ' > "~{sample_name}".scaffolding_chosen_refs.txt
 
         # Run Gap2Seq only if reads_bam is provided and smaller than 1GB
-        # (Gap2Seq can take 100+ min for large BAMs, providing diminishing returns)
-        if [ -n "~{reads_bam}" ]; then
-            BAM_SIZE_BYTES=$(stat -c%s "~{reads_bam}" 2>/dev/null || stat -f%z "~{reads_bam}")
-            if [ "$BAM_SIZE_BYTES" -lt 1073741824 ]; then
-                assembly.py gapfill_gap2seq \
-                  "~{sample_name}".intermediate_scaffold.fasta \
-                  "~{reads_bam}" \
-                  "~{sample_name}".intermediate_gapfill.fasta \
-                  --memLimitGb $mem_in_gb \
-                  --maskErrors \
-                  --loglevel=DEBUG
-            else
-                echo "Skipping Gap2Seq: BAM file is ${BAM_SIZE_BYTES} bytes (>= 1GB threshold)" >&2
-                cp "~{sample_name}".intermediate_scaffold.fasta "~{sample_name}".intermediate_gapfill.fasta
-            fi
+        if ~{true='true' false='false' run_gap2seq}; then
+            assembly.py gapfill_gap2seq \
+              "~{sample_name}".intermediate_scaffold.fasta \
+              "~{reads_bam}" \
+              "~{sample_name}".intermediate_gapfill.fasta \
+              --memLimitGb $mem_in_gb \
+              --maskErrors \
+              --loglevel=DEBUG
         else
-            # Skip gap2seq, just copy the intermediate scaffold
+            echo "Skipping Gap2Seq: reads_bam not provided or >= 1GB (~{reads_bam_size_gb} GB)" >&2
             cp "~{sample_name}".intermediate_scaffold.fasta "~{sample_name}".intermediate_gapfill.fasta
         fi
 
