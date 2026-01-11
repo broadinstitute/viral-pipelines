@@ -38,9 +38,8 @@ workflow assemble_denovo_metagenomic {
         Array[String] taxa_to_dehost         = ["Vertebrata"]
         Array[String] taxa_to_avoid_assembly = ["Vertebrata", "other sequences", "Bacteria"]
 
-        Boolean       run_rmdup  = true
-
-        Int           max_reads_for_assembly = 20000000
+        Int           min_reads_for_rmdup    =  5000000
+        Int           max_reads_for_assembly = 10000000
 
         String        table_name = "sample"
     }
@@ -136,28 +135,16 @@ workflow assemble_denovo_metagenomic {
             taxonomic_names         = taxa_to_avoid_assembly,
             out_filename_suffix     = "acellular"
     }
-    if (run_rmdup) {
-        call read_utils.rmdup_ubam {
-           input:
-                reads_unmapped_bam = filter_acellular.bam_filtered_to_taxa
-        }
+    call read_utils.bbnorm_bam {
+        input:
+            reads_bam        = filter_acellular.bam_filtered_to_taxa,
+            min_input_reads  = min_reads_for_rmdup,
+            max_output_reads = max_reads_for_assembly
     }
-    File  pre_downsample_bam        = select_first([rmdup_ubam.dedup_bam, filter_acellular.bam_filtered_to_taxa])
-    Int   pre_downsample_read_count = select_first([rmdup_ubam.dedup_read_count_post, filter_acellular.classified_taxonomic_filter_read_count_post])
-
-    if (pre_downsample_read_count > max_reads_for_assembly) {
-        call read_utils.downsample_bams {
-            input:
-                reads_bam = [pre_downsample_bam],
-                readCount = max_reads_for_assembly
-        }
-        File downsampled_bam = downsample_bams.downsampled_bam[0]
-    }
-    File  spades_input_bam = select_first([downsampled_bam, pre_downsample_bam])
 
     call assembly.assemble as spades {
         input:
-            reads_unmapped_bam = spades_input_bam,
+            reads_unmapped_bam = bbnorm_bam.bbnorm_bam,
             trim_clip_db       = trim_clip_db,
             always_succeed     = true
     }
@@ -191,7 +178,7 @@ workflow assemble_denovo_metagenomic {
         # assemble (scaffold-and-refine) genome against this reference cluster
         call assembly.scaffold {
             input:
-                reads_bam = deplete.bam_filtered_to_taxa,
+                reads_bam = bbnorm_bam.bbnorm_bam,
                 contigs_fasta = spades.contigs_fasta,
                 reference_genome_fasta = tar_extract.files,
                 min_length_fraction = 0,
@@ -215,7 +202,7 @@ workflow assemble_denovo_metagenomic {
         if (scaffold.assembly_preimpute_length_unambiguous > min_scaffold_unambig) {
             call assemble_refbased.assemble_refbased as refine {
                 input:
-                    reads_unmapped_bams  = [deplete.bam_filtered_to_taxa],
+                    reads_unmapped_bams  = [filter_acellular.bam_filtered_to_taxa],
                     reference_fasta      = scaffold.scaffold_fasta,
                     sample_name          = sample_id + "-" + taxid
             }
@@ -303,13 +290,13 @@ workflow assemble_denovo_metagenomic {
     output {
         File   reads_dehosted_ubam             = deplete.bam_filtered_to_taxa
         File   reads_acellular_ubam            = filter_acellular.bam_filtered_to_taxa
-        File   reads_assembly_input_ubam       = spades_input_bam
+        File   reads_assembly_input_ubam       = bbnorm_bam.bbnorm_bam
         File   contigs_fasta                   = spades.contigs_fasta
 
         Int    read_counts_raw                 = deplete.classified_taxonomic_filter_read_count_pre
         Int    read_counts_dehosted            = deplete.classified_taxonomic_filter_read_count_post
         Int    read_counts_acellular           = filter_acellular.classified_taxonomic_filter_read_count_post
-        Int    read_counts_assembly_input      = pre_downsample_read_count
+        Int    read_counts_assembly_input      = bbnorm_bam.bbnorm_read_count_post
         Int    read_counts_prespades_subsample = spades.subsample_read_count
         
         File   kraken2_summary_report          = kraken2.kraken2_summary_report

@@ -15,6 +15,7 @@ task assemble {
       String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
       
       Int?     machine_mem_gb
+      Int?     cpu
       String   docker = "quay.io/broadinstitute/viral-assemble:2.5.18.0"
     }
     parameter_meta{
@@ -101,8 +102,8 @@ task assemble {
 
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 63]) + " GB"
-        cpu: 4
+        memory: select_first([machine_mem_gb, 32]) + " GB"
+        cpu:    select_first([cpu, 8])
         disks:  "local-disk " + disk_size + " HDD"
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
@@ -204,7 +205,7 @@ task select_references {
 task scaffold {
     input {
       File         contigs_fasta
-      File         reads_bam
+      File?        reads_bam
       Array[File]+ reference_genome_fasta
 
       String       aligner="muscle"
@@ -229,11 +230,17 @@ task scaffold {
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
     }
+
+    # Determine whether to run Gap2Seq based on reads_bam size
+    # Gap2Seq can take 100+ min for large BAMs (>1GB), providing diminishing returns
+    Float reads_bam_size_gb = if defined(reads_bam) then size(select_first([reads_bam]), "GB") else 0.0
+    Boolean run_gap2seq = defined(reads_bam) && reads_bam_size_gb < 1.0
+
     parameter_meta {
       reads_bam: {
-        description: "Reads in BAM format.",
+        description: "Reads in BAM format. If provided, Gap2Seq will attempt to fill gaps using reads. Skipping this for large BAMs (>1GB) can save significant runtime.",
         patterns: ["*.bam"],
-        category: "required"
+        category: "optional"
       }
 
       contigs_fasta: {
@@ -367,13 +374,19 @@ task scaffold {
         fi
         grep '^>' "~{sample_name}".scaffolding_chosen_ref.fasta | cut -c 2- | cut -f 1 -d ' ' > "~{sample_name}".scaffolding_chosen_refs.txt
 
-        assembly.py gapfill_gap2seq \
-          "~{sample_name}".intermediate_scaffold.fasta \
-          "~{reads_bam}" \
-          "~{sample_name}".intermediate_gapfill.fasta \
-          --memLimitGb $mem_in_gb \
-          --maskErrors \
-          --loglevel=DEBUG
+        # Run Gap2Seq only if reads_bam is provided and smaller than 1GB
+        if ~{true='true' false='false' run_gap2seq}; then
+            assembly.py gapfill_gap2seq \
+              "~{sample_name}".intermediate_scaffold.fasta \
+              "~{reads_bam}" \
+              "~{sample_name}".intermediate_gapfill.fasta \
+              --memLimitGb $mem_in_gb \
+              --maskErrors \
+              --loglevel=DEBUG
+        else
+            echo "Skipping Gap2Seq: reads_bam not provided or >= 1GB (~{reads_bam_size_gb} GB)" >&2
+            cp "~{sample_name}".intermediate_scaffold.fasta "~{sample_name}".intermediate_gapfill.fasta
+        fi
 
         set +e +o pipefail
         grep -v '^>' "~{sample_name}".intermediate_gapfill.fasta | tr -d '\n' | wc -c | tee assembly_preimpute_length
@@ -435,7 +448,7 @@ task scaffold {
 
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 63]) + " GB"
+        memory: select_first([machine_mem_gb, 20]) + " GB"
         cpu: 4
         disks:  "local-disk " + disk_size + " HDD"
         disk: disk_size + " GB" # TES
@@ -707,8 +720,8 @@ task align_reads {
   # Linear scaling: 8 + (input_GB / 15) * 56, capped at 64, rounded to nearest multiple of 4
   Float        cpu_unclamped = 8.0 + (size(reads_unmapped_bam, "GB") / 15.0) * 56.0
   Int          cpu_actual = select_first([cpu, floor(((if cpu_unclamped > 64.0 then 64.0 else cpu_unclamped) + 2.0) / 4.0) * 4])
-  # Memory scales with CPU at 2x ratio (default), or use override
-  Int          machine_mem_gb_actual = select_first([machine_mem_gb, cpu_actual * 2])
+  # Memory scales with CPU at 3x ratio (default), or use override
+  Int          machine_mem_gb_actual = select_first([machine_mem_gb, cpu_actual * 3])
 
   parameter_meta {
     reference_fasta: {
@@ -834,7 +847,7 @@ task refine_assembly_with_aligned_reads {
       Float    major_cutoff = 0.5
       Int      min_coverage = 3
 
-      Int      machine_mem_gb = 15
+      Int      machine_mem_gb = 8
       String   docker = "quay.io/broadinstitute/viral-assemble:2.5.18.0"
     }
 
