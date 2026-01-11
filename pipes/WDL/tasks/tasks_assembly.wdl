@@ -102,8 +102,8 @@ task assemble {
 
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 63]) + " GB"
-        cpu:    select_first([cpu, 4])
+        memory: select_first([machine_mem_gb, 32]) + " GB"
+        cpu:    select_first([cpu, 8])
         disks:  "local-disk " + disk_size + " HDD"
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
