@@ -11,7 +11,7 @@ task krakenuniq {
     File        krona_taxonomy_db_tgz  # taxonomy.tab
 
     Int         machine_mem_gb = 320
-    String      docker = "quay.io/broadinstitute/viral-classify:2.2.4.0" #skip-global-version-pin
+    String      docker = "quay.io/broadinstitute/viral-classify:2.1.33.0" #skip-global-version-pin
   }
 
   Int disk_size = 750
@@ -148,7 +148,7 @@ task build_krakenuniq_db {
     Int?     zstd_compression_level
 
     Int      machine_mem_gb = 240
-    String   docker = "quay.io/broadinstitute/viral-classify:2.2.4.0" #skip-global-version-pin
+    String   docker = "quay.io/broadinstitute/viral-classify:2.1.33.0" #skip-global-version-pin
   }
 
   Int disk_size = 750

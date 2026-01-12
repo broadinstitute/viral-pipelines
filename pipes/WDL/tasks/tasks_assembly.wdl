@@ -16,7 +16,7 @@ task assemble {
       
       Int?     machine_mem_gb
       Int?     cpu
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.5.18.0"
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.5.21.0"
     }
     parameter_meta{
       reads_unmapped_bam: {
@@ -125,7 +125,7 @@ task select_references {
     Int?          skani_c
     Int?          skani_n
 
-    String        docker = "quay.io/broadinstitute/viral-assemble:2.5.18.0"
+    String        docker = "quay.io/broadinstitute/viral-assemble:2.5.21.0"
     Int           machine_mem_gb = 4
     Int           cpu = 2
     Int           disk_size = 100
@@ -225,7 +225,7 @@ task scaffold {
       Float?       scaffold_min_pct_contig_aligned
 
       Int?         machine_mem_gb
-      String       docker="quay.io/broadinstitute/viral-assemble:2.5.18.0"
+      String       docker="quay.io/broadinstitute/viral-assemble:2.5.21.0"
 
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
@@ -470,7 +470,7 @@ task skani_triangle {
     Int     compression_factor = 10
     Int     min_aligned_frac = 15
 
-    String  docker = "quay.io/broadinstitute/viral-assemble:2.5.18.0"
+    String  docker = "quay.io/broadinstitute/viral-assemble:2.5.21.0"
     Int     machine_mem_gb = 8
     Int     cpu = 4
     Int     disk_size = 100
@@ -709,7 +709,7 @@ task align_reads {
 
     Int?     cpu
     Int?     machine_mem_gb
-    String   docker = "quay.io/broadinstitute/viral-core:2.5.20"
+    String   docker = "quay.io/broadinstitute/viral-core:2.5.21"
 
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
   }
@@ -848,7 +848,7 @@ task refine_assembly_with_aligned_reads {
       Int      min_coverage = 3
 
       Int      machine_mem_gb = 8
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.5.18.0"
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.5.21.0"
     }
 
     Int disk_size = 375
@@ -985,7 +985,7 @@ task run_discordance {
       String out_basename = "run"
       Int    min_coverage = 4
 
-      String docker = "quay.io/broadinstitute/viral-core:2.5.20"
+      String docker = "quay.io/broadinstitute/viral-core:2.5.21"
     }
     parameter_meta {
       reads_aligned_bam: {
@@ -1234,7 +1234,7 @@ task wgsim {
         Int?   random_seed
 
         Int    machine_mem_gb = 7
-        String docker = "quay.io/broadinstitute/viral-assemble:2.5.18.0"
+        String docker = "quay.io/broadinstitute/viral-assemble:2.5.21.0"
     }
 
     parameter_meta {
