@@ -15,7 +15,7 @@ task trim_rmdup_subsamp {
         Int cpu            = 16
         Int disk_size_gb   = 100 
 
-        String docker      = "quay.io/broadinstitute/viral-assemble:2.5.21.0"
+        String docker      = "quay.io/broadinstitute/viral-core:2.5.21"
     }
 
     parameter_meta {
@@ -36,17 +36,14 @@ task trim_rmdup_subsamp {
     command <<<
         set -ex o pipefail
         assembly.py --version | tee VERSION
-        #BAM ->FASTQ-> OutBam? https://github.com/broadinstitute/viral-assemble:2.5.21.0
         assembly.py trim_rmdup_subsamp \
-        "~{inBam}" \
-        "~{clipDb}" \
-        "$(pwd)/outbam.bam" \
-        ~{'--n_reads=' + n_reads}
+            "~{inBam}" \
+            "~{clipDb}" \
+            outbam.bam \
+            ~{'--n_reads=' + n_reads}
 
-
-        #samtools [OutBam -> FASTA]
         #-f 4 (f = include only) (4 = unmapped reads) https://broadinstitute.github.io/picard/explain-flags.html
-        samtools fasta "$(pwd)/outbam.bam" > "~{bam_basename}.fasta"
+        samtools fasta outbam.bam > "~{bam_basename}.fasta"
     >>>
 
     output {
@@ -58,7 +55,6 @@ task trim_rmdup_subsamp {
         memory: machine_mem_gb + "GB"
         cpu:    cpu
         disks:  "local-disk " + disk_size_gb + " LOCAL"
-
         dx_instance_type: "n2-highmem-4"
     }
 }
