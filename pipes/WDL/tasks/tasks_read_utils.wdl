@@ -322,7 +322,7 @@ task bbnorm_bam {
   input {
     File    reads_bam
 
-    Int     target = 10000
+    Int     target = 1000
     Int?    kmer_length
     Int?    passes
     Int?    min_input_reads
