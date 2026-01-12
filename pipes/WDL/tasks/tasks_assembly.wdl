@@ -104,7 +104,7 @@ task assemble {
         docker: docker
         memory: select_first([machine_mem_gb, 32]) + " GB"
         cpu:    select_first([cpu, 8])
-        disks:  "local-disk " + disk_size + " HDD"
+        disks:  "local-disk " + disk_size + " SSD"
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
         maxRetries: 2
@@ -194,7 +194,7 @@ task select_references {
     docker: docker
     memory: machine_mem_gb + " GB"
     cpu:    cpu
-    disks:  "local-disk " + disk_size + " HDD"
+    disks:  "local-disk " + disk_size + " SSD"
     disk: disk_size + " GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
@@ -450,7 +450,7 @@ task scaffold {
         docker: docker
         memory: select_first([machine_mem_gb, 20]) + " GB"
         cpu: 4
-        disks:  "local-disk " + disk_size + " HDD"
+        disks:  "local-disk " + disk_size + " SSD"
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
         maxRetries: 2

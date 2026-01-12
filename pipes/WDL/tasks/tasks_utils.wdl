@@ -17,7 +17,7 @@ task concatenate {
         docker: "ubuntu"
         memory: "1 GB"
         cpu:    cpus
-        disks:  "local-disk " + disk_size + " LOCAL"
+        disks:  "local-disk " + disk_size + " HDD"
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2

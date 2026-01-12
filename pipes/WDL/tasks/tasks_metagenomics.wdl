@@ -383,7 +383,7 @@ task report_primary_kraken_taxa {
     docker: docker
     memory: machine_mem_gb + " GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " LOCAL"
+    disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2

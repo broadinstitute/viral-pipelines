@@ -394,7 +394,7 @@ task fastqc {
     memory: "2 GB"
     cpu: 1
     docker: "${docker}"
-    disks:  "local-disk " + disk_size + " LOCAL"
+    disks:  "local-disk " + disk_size + " SSD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
