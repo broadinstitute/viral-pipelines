@@ -334,7 +334,7 @@ task kraken2 {
     memory: machine_mem_gb + " GB"
     cpu: 16
     cpuPlatform: "Intel Ice Lake"
-    disks:  "local-disk " + disk_size + " HDD"
+    disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TESs
     dx_instance_type: "mem3_ssd1_v2_x8"
     preemptible: 2
