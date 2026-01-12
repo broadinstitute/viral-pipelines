@@ -11,7 +11,7 @@ task krakenuniq {
     File        krona_taxonomy_db_tgz  # taxonomy.tab
 
     Int         machine_mem_gb = 320
-    String      docker = "quay.io/broadinstitute/viral-classify:2.2.4.0" #skip-global-version-pin
+    String      docker = "quay.io/broadinstitute/viral-classify:2.1.33.0" #skip-global-version-pin
   }
 
   Int disk_size = 750
@@ -148,7 +148,7 @@ task build_krakenuniq_db {
     Int?     zstd_compression_level
 
     Int      machine_mem_gb = 240
-    String   docker = "quay.io/broadinstitute/viral-classify:2.2.4.0" #skip-global-version-pin
+    String   docker = "quay.io/broadinstitute/viral-classify:2.1.33.0" #skip-global-version-pin
   }
 
   Int disk_size = 750
@@ -243,7 +243,12 @@ task kraken2 {
   }
 
   String out_basename = basename(basename(reads_bam, '.bam'), '.fasta')
-  Int disk_size = 750
+
+  # Disk autoscaling: BAM->FASTQ expansion is ~7-8x, plus kraken2 reads output (~1x input),
+  # plus kraken2 database (1x localized tarball + 2x decompressed = 3x), plus overhead for krona and temp files.
+  # Minimum 375GB to accommodate typical database sizes.
+  Int disk_size_auto = ceil((8 * size(reads_bam, "GB") + 3 * size(kraken2_db_tgz, "GB") + 50) / 375.0) * 375
+  Int disk_size = if disk_size_auto < 375 then 375 else disk_size_auto
 
   command <<<
     set -ex -o pipefail
@@ -329,7 +334,7 @@ task kraken2 {
     memory: machine_mem_gb + " GB"
     cpu: 16
     cpuPlatform: "Intel Ice Lake"
-    disks:  "local-disk " + disk_size + " HDD"
+    disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TESs
     dx_instance_type: "mem3_ssd1_v2_x8"
     preemptible: 2
@@ -378,7 +383,7 @@ task report_primary_kraken_taxa {
     docker: docker
     memory: machine_mem_gb + " GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " LOCAL"
+    disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
