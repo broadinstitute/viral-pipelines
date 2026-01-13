@@ -246,9 +246,10 @@ task kraken2 {
 
   # Disk autoscaling: BAM->FASTQ expansion is ~7-8x, plus kraken2 reads output (~1x input),
   # plus kraken2 database (1x localized tarball + 2x decompressed = 3x), plus overhead for krona and temp files.
-  # Minimum 375GB to accommodate typical database sizes.
-  Int disk_size_auto = ceil((8 * size(reads_bam, "GB") + 3 * size(kraken2_db_tgz, "GB") + 50) / 375.0) * 375
-  Int disk_size = if disk_size_auto < 375 then 375 else disk_size_auto
+  # Minimum 750GB to accommodate typical database sizes.
+  # Note: GCP local SSDs must be allocated in pairs (2, 4, 8, 16, 24 × 375GB), so we round to 750GB multiples.
+  Int disk_size_auto = ceil((8 * size(reads_bam, "GB") + 3 * size(kraken2_db_tgz, "GB") + 50) / 750.0) * 750
+  Int disk_size = if disk_size_auto < 750 then 750 else disk_size_auto
 
   command <<<
     set -ex -o pipefail

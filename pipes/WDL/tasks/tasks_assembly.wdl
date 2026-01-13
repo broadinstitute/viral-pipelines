@@ -714,7 +714,8 @@ task align_reads {
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
   }
 
-  Int disk_size = ceil((6 * size(reads_unmapped_bam, "GB") + 2 * size(reference_fasta, "GB") + 100) / 375.0) * 375
+  # Note: GCP local SSDs must be allocated in pairs (2, 4, 8, 16, 24 × 375GB), so we round to 750GB multiples.
+  Int disk_size = ceil((6 * size(reads_unmapped_bam, "GB") + 2 * size(reference_fasta, "GB") + 100) / 750.0) * 750
 
   # Skip indel realignment for large BAMs (>1GB) to save runtime
   Float   reads_bam_size_gb = size(reads_unmapped_bam, "GB")

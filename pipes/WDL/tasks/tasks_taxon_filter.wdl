@@ -54,7 +54,8 @@ task deplete_taxa {
   Float        blast_db_size = if defined(blastDbs) then size(select_first([blastDbs, []]), "GB") else 0
   Float        bwa_db_size = if defined(bwaDbs) then size(select_first([bwaDbs, []]), "GB") else 0
   Float        total_db_size = minimap_db_size + bmtagger_db_size + blast_db_size + bwa_db_size
-  Int          disk_size = ceil((10 * size(raw_reads_unmapped_bam, "GB") + 2 * total_db_size + 100) / 375.0) * 375
+  # Note: GCP local SSDs must be allocated in pairs (2, 4, 8, 16, 24 × 375GB), so we round to 750GB multiples.
+  Int          disk_size = ceil((10 * size(raw_reads_unmapped_bam, "GB") + 2 * total_db_size + 100) / 750.0) * 750
 
   command <<<
     set -ex -o pipefail

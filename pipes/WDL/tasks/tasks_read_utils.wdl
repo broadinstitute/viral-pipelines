@@ -350,7 +350,8 @@ task bbnorm_bam {
   Int cpu_count = select_first([cpu, 8])
 
   # Disk: BAM->FASTQ expansion (~5-10x), BBNorm output + temp files (~10-15x more)
-  Int disk_size = ceil((25 * input_size_gb + 50) / 375.0) * 375
+  # Note: GCP local SSDs must be allocated in pairs (2, 4, 8, 16, 24 × 375GB), so we round to 750GB multiples.
+  Int disk_size = ceil((25 * input_size_gb + 50) / 750.0) * 750
 
   parameter_meta {
     reads_bam: {
