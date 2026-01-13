@@ -229,7 +229,7 @@ task merge_and_reheader_bams {
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd2_v2_x4"
         preemptible: 0
-        maxRetries: 2
+        maxRetries: 1
     }
 }
 
