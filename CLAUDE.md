@@ -164,11 +164,13 @@ GitHub Actions (`.github/workflows/build.yml`) runs on all PRs and pushes:
   - Supports novoalign, bwa, or minimap2 aligners
   - Primary workflow for viral genome assembly
 
-- **assemble_denovo.wdl**: De novo assembly with SPAdes
+- **assemble_denovo_metagenomic.wdl**: De novo metagenomic assembly with SPAdes
 
-- **classify_kraken2.wdl**: Taxonomic classification of reads
+- **classify_single.wdl**: Taxonomic classification and depletion pipeline
 
-- **sarscov2_illumina_full.wdl**: Complete SARS-CoV-2 analysis pipeline
+- **nextclade_single.wdl**: Nextclade analysis for single samples
+
+- **genbank_single.wdl**: GenBank submission preparation for single samples
 
 - **augur_from_assemblies.wdl**: Nextstrain phylogenetic analysis from assemblies
 
@@ -195,7 +197,31 @@ When analyzing workflow performance from Terra submissions, use the Terra MCP to
 
 ### Timing Methodology for WDL Tasks
 
-When measuring task execution time from Terra logs:
+**Preferred method - use `get_batch_job_status`:**
+
+The Terra MCP's `get_batch_job_status` tool returns timing data directly from the Google Batch API:
+
+```
+get_batch_job_status(
+  workspace_namespace="<namespace>",
+  workspace_name="<workspace>",
+  submission_id="<submission-uuid>",
+  workflow_id="<workflow-uuid>",
+  task_name="<task_name>",
+  shard_index=<optional>,
+  attempt=<optional>
+)
+```
+
+Returns timing in the `batch_job.timing` field:
+- **run_duration**: Actual task execution time (what you usually want for performance analysis)
+- **pre_run_duration**: Queue and setup time (VM provisioning, Docker pull, etc.)
+
+This is more accurate than log-based methods because it captures the complete execution including post-script I/O operations.
+
+**Alternative method - log-based timing (for detailed analysis):**
+
+When you need finer-grained timing within a task (e.g., timing individual steps):
 
 1. **Start time**: Use first Python log timestamp in stderr
    - Pattern: `^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),\d+`
@@ -209,6 +235,8 @@ When measuring task execution time from Terra logs:
    - Python logs don't capture full execution time
 
 ### Efficient GCS Queries with Wildcards
+
+**Always use `gcloud storage` instead of `gsutil`** - it's faster, more reliable, and the preferred CLI for GCS operations.
 
 Use wildcards to batch GCS queries instead of iterating:
 ```bash
@@ -252,80 +280,41 @@ Some workflow failures have errors that aren't visible in standard stderr logs. 
 - Task failed instantly (0 seconds runtime)
 - `get_job_metadata` summary shows failure but no useful error message
 
-**Step 1: Get the Batch Job ID from Cromwell Metadata**
+**Use `get_batch_job_status` to diagnose infrastructure failures:**
 
-Use `get_job_metadata` in extract mode to find the backend job identifier:
+The Terra MCP provides `get_batch_job_status` which queries the Google Batch API directly:
 
 ```
-get_job_metadata(
-  mode="extract",
-  field_path="calls.<task_name>[0].jobId"
+get_batch_job_status(
+  workspace_namespace="<namespace>",
+  workspace_name="<workspace>",
+  submission_id="<submission-uuid>",
+  workflow_id="<workflow-uuid>",
+  task_name="<task_name>",
+  shard_index=<optional>,  # For scattered tasks
+  attempt=<optional>       # For retried tasks
 )
 ```
 
-The `jobId` field contains the full Batch job path like:
-`projects/<project>/locations/<region>/jobs/<job-name>`
+The tool returns:
+- **Batch job status**: QUEUED, SCHEDULED, RUNNING, SUCCEEDED, or FAILED
+- **Timing**: run_duration and pre_run_duration (queue/setup time)
+- **Resources**: machine_type, CPU, memory, disk sizes
+- **Status events**: State transitions with timestamps
+- **Detected issues**: Auto-detected problems with severity and suggestions
+- **Cloud Logging query**: Ready-to-use gcloud command for deeper debugging
 
-**Step 2: Describe the Batch Job (Recommended)**
+**Recommended debugging workflow:**
+1. `get_submission_status` → identify failed workflows
+2. `get_job_metadata` (summary mode) → identify failed tasks and error messages
+3. `get_workflow_logs` → check stderr for application errors
+4. `get_batch_job_status` → check infrastructure issues if logs don't explain failure
 
-The `gcloud batch jobs describe` command is the most reliable way to get job status and failure details - it works even when Cloud Logging logs have expired:
-
-```bash
-# Get full job status including error events
-gcloud batch jobs describe \
-  "projects/<project>/locations/<region>/jobs/<job-name>" 2>&1
-```
-
-Look for `status.statusEvents` in the output - these show exactly what happened:
-- Job state transitions (QUEUED → SCHEDULED → RUNNING → FAILED)
-- Error descriptions including exit codes
-- Preemption events
-
-**Step 3: Query Google Batch Agent Logs (Optional)**
-
-If you need more detail than the job description provides, query Cloud Logging. Note that the **job UID in logging labels** is different from the job name - get it from the `uid` field in the job description:
-
-```bash
-# First get the job UID from the job description
-gcloud batch jobs describe "<job-path>" --format="value(uid)"
-
-# Then query logs using that UID
-gcloud logging read \
-  'labels.job_uid="<JOB_UID>" AND logName:"batch_agent_logs"' \
-  --project=<GCP_PROJECT> \
-  --limit=50 \
-  --format="json" | jq '.[].textPayload'
-```
-
-Alternatively, search by cromwell-workflow-id label:
-```bash
-gcloud logging read \
-  'labels."cromwell-workflow-id"="cromwell-<workflow-uuid>"' \
-  --project=<WORKSPACE_PROJECT> \
-  --limit=50
-```
-
-**Common failure patterns:**
+**Common failure patterns detected:**
 - `"Failed to pull image"` - Check image name, tag, and registry auth
 - `"429 Too Many Requests"` - Registry rate limit, retry later
 - `"manifest unknown"` - Image tag doesn't exist
 - `"unauthorized"` - Service account lacks permission to pull from registry
 - `"PREEMPTED"` - VM was preempted, usually retried automatically
-- `"exit code 137"` - OOM killed (Kubernetes-style termination)
+- `"exit code 137"` - OOM killed (out of memory)
 - `"exit code 1"` - Application error in the task script
-
-**Getting the workspace GCP project:**
-
-The Batch jobs run in the workspace's GCP project, not the billing project. Get it from workspace metadata:
-```python
-from firecloud import api as fapi
-response = fapi.get_workspace('<namespace>', '<workspace>')
-workspace = response.json()['workspace']
-project = workspace['googleProject']  # e.g., "terra-636a9a57"
-```
-
-**Context management tip**: The `gcloud batch jobs describe` output can be verbose. Pipe to `grep` or `jq` to extract specific fields:
-```bash
-# Just get status events
-gcloud batch jobs describe "<job-path>" --format="yaml(status.statusEvents)"
-```
