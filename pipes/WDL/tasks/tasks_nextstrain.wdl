@@ -5,7 +5,7 @@ task taxid_to_nextclade_dataset_name {
         Int     taxid
         File    taxdump_tgz
         File    nextclade_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/typing/nextclade-by-taxid.tsv"
-        String  docker = "quay.io/broadinstitute/viral-classify:2.5.20.0"
+        String  docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
     }
     command <<<
         set -e
@@ -1001,7 +1001,7 @@ task mafft_one_chr {
         Boolean  large = false
         Boolean  memsavetree = false
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.5.16.0"
+        String   docker = "quay.io/broadinstitute/viral-phylo:2.5.21.0"
         Int      mem_size = 500
         Int      cpus = 64
         Int      disk_size = 750
@@ -1091,7 +1091,7 @@ task mafft_one_chr_chunked {
         Int      batch_chunk_size = 2000
         Int      threads_per_job = 2
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.5.16.0"
+        String   docker = "quay.io/broadinstitute/viral-phylo:2.5.21.0"
         Int      mem_size = 32
         Int      cpus = 64
         Int      disk_size = 750

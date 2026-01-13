@@ -6,7 +6,7 @@ task download_fasta {
     Array[String]+ accessions
     String         emailAddress
 
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.5.16.0"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.5.21.0"
   }
 
   command <<<
@@ -42,7 +42,7 @@ task download_fasta_from_accession_string {
     String out_prefix
     String emailAddress
 
-    String docker = "quay.io/broadinstitute/viral-phylo:2.5.16.0"
+    String docker = "quay.io/broadinstitute/viral-phylo:2.5.21.0"
   }
 
   command <<<
@@ -94,7 +94,7 @@ task download_annotations {
     String         emailAddress
     String         combined_out_prefix
 
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.5.16.0"
+    String         docker = "quay.io/broadinstitute/viral-phylo:2.5.21.0"
   }
 
   command <<<
@@ -136,7 +136,7 @@ task download_ref_genomes_from_tsv {
     File      ref_genomes_tsv    # [tax_id, isolate_prefix, taxname, colon_delim_accession_list]
     String    emailAddress
 
-    String    docker = "quay.io/broadinstitute/viral-phylo:2.5.16.0"
+    String    docker = "quay.io/broadinstitute/viral-phylo:2.5.21.0"
   }
 
   command <<<
@@ -238,7 +238,7 @@ task align_and_annot_transfer_single {
 
     String       out_basename = basename(genome_fasta, '.fasta')
     Int          machine_mem_gb = 30
-    String       docker = "quay.io/broadinstitute/viral-phylo:2.5.16.0"
+    String       docker = "quay.io/broadinstitute/viral-phylo:2.5.21.0"
   }
 
   parameter_meta {
@@ -1246,7 +1246,7 @@ task table2asn {
 
     String       out_basename = basename(assembly_fasta, ".fasta")
     Int          machine_mem_gb = 8
-    String       docker = "quay.io/broadinstitute/viral-phylo:2.5.16.0"  # this could be a simpler docker image, we don't use anything beyond table2asn itself
+    String       docker = "quay.io/broadinstitute/viral-phylo:2.5.21.0"  # this could be a simpler docker image, we don't use anything beyond table2asn itself
   }
   Int disk_size = 50
 
@@ -1403,7 +1403,7 @@ task genbank_special_taxa {
     Int     taxid
     File    taxdump_tgz
     File    vadr_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/annotation/vadr/vadr-by-taxid.tsv"
-    String  docker = "quay.io/broadinstitute/viral-classify:2.5.20.0"
+    String  docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   command <<<
