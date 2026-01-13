@@ -235,3 +235,97 @@ To identify which workflow corresponds to which sample:
 1. Read first few KB of stderr from each workflow
 2. Look for sample name in BAM file paths (e.g., `/S20.l1.xxxx.bam`)
 3. Cache the sample-to-workflow mapping for reuse
+
+### Debugging Infrastructure-Level Failures
+
+Some workflow failures have errors that aren't visible in standard stderr logs. These include:
+- Docker pull failures (rate limits, image not found, auth errors)
+- VM provisioning failures
+- Preemption before task execution started
+- Network connectivity issues during container setup
+
+**Signs you need Batch logs instead of stderr:**
+- Batch reports exit code 0 (success) but task is marked as failed ("GCP Batch task exited with Success(0)")
+- Error message says "The job was stopped before the command finished"
+- stderr is empty or very short
+- Error message says "Executor error" without details
+- Task failed instantly (0 seconds runtime)
+- `get_job_metadata` summary shows failure but no useful error message
+
+**Step 1: Get the Batch Job ID from Cromwell Metadata**
+
+Use `get_job_metadata` in extract mode to find the backend job identifier:
+
+```
+get_job_metadata(
+  mode="extract",
+  field_path="calls.<task_name>[0].jobId"
+)
+```
+
+The `jobId` field contains the full Batch job path like:
+`projects/<project>/locations/<region>/jobs/<job-name>`
+
+**Step 2: Describe the Batch Job (Recommended)**
+
+The `gcloud batch jobs describe` command is the most reliable way to get job status and failure details - it works even when Cloud Logging logs have expired:
+
+```bash
+# Get full job status including error events
+gcloud batch jobs describe \
+  "projects/<project>/locations/<region>/jobs/<job-name>" 2>&1
+```
+
+Look for `status.statusEvents` in the output - these show exactly what happened:
+- Job state transitions (QUEUED → SCHEDULED → RUNNING → FAILED)
+- Error descriptions including exit codes
+- Preemption events
+
+**Step 3: Query Google Batch Agent Logs (Optional)**
+
+If you need more detail than the job description provides, query Cloud Logging. Note that the **job UID in logging labels** is different from the job name - get it from the `uid` field in the job description:
+
+```bash
+# First get the job UID from the job description
+gcloud batch jobs describe "<job-path>" --format="value(uid)"
+
+# Then query logs using that UID
+gcloud logging read \
+  'labels.job_uid="<JOB_UID>" AND logName:"batch_agent_logs"' \
+  --project=<GCP_PROJECT> \
+  --limit=50 \
+  --format="json" | jq '.[].textPayload'
+```
+
+Alternatively, search by cromwell-workflow-id label:
+```bash
+gcloud logging read \
+  'labels."cromwell-workflow-id"="cromwell-<workflow-uuid>"' \
+  --project=<WORKSPACE_PROJECT> \
+  --limit=50
+```
+
+**Common failure patterns:**
+- `"Failed to pull image"` - Check image name, tag, and registry auth
+- `"429 Too Many Requests"` - Registry rate limit, retry later
+- `"manifest unknown"` - Image tag doesn't exist
+- `"unauthorized"` - Service account lacks permission to pull from registry
+- `"PREEMPTED"` - VM was preempted, usually retried automatically
+- `"exit code 137"` - OOM killed (Kubernetes-style termination)
+- `"exit code 1"` - Application error in the task script
+
+**Getting the workspace GCP project:**
+
+The Batch jobs run in the workspace's GCP project, not the billing project. Get it from workspace metadata:
+```python
+from firecloud import api as fapi
+response = fapi.get_workspace('<namespace>', '<workspace>')
+workspace = response.json()['workspace']
+project = workspace['googleProject']  # e.g., "terra-636a9a57"
+```
+
+**Context management tip**: The `gcloud batch jobs describe` output can be verbose. Pipe to `grep` or `jq` to extract specific fields:
+```bash
+# Just get status events
+gcloud batch jobs describe "<job-path>" --format="yaml(status.statusEvents)"
+```
