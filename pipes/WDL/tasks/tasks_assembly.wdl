@@ -714,7 +714,12 @@ task align_reads {
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
   }
 
-  Int disk_size = ceil((6 * size(reads_unmapped_bam, "GB") + 2 * size(reference_fasta, "GB") + 100) / 375.0) * 375
+  # Note: GCP local SSDs must be allocated in pairs (2, 4, 8, 16, 24 × 375GB), so we round to 750GB multiples.
+  Int disk_size = ceil((6 * size(reads_unmapped_bam, "GB") + 2 * size(reference_fasta, "GB") + 100) / 750.0) * 750
+
+  # Skip indel realignment for large BAMs (>1GB) to save runtime
+  Float   reads_bam_size_gb = size(reads_unmapped_bam, "GB")
+  Boolean skip_realign = reads_bam_size_gb >= 1.0
 
   # Autoscale CPU based on input size: 8 CPUs for small inputs, up to 64 CPUs for ~15 GB inputs
   # Linear scaling: 8 + (input_GB / 15) * 56, capped at 64, rounded to nearest multiple of 4
@@ -773,6 +778,7 @@ task align_reads {
         --aligner ~{aligner} \
         ~{'--aligner_options "' + aligner_options + '"'} \
         ~{true='--skipMarkDupes' false="" skip_mark_dupes} \
+        ~{true='--skipRealign' false="" skip_realign} \
         --JVMmemory "$mem_in_mb"m \
         ~{"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
         --loglevel=DEBUG

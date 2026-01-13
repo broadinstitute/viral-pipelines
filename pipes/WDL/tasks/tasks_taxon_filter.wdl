@@ -15,7 +15,7 @@ task deplete_taxa {
 
     Int?         cpu
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-classify:2.5.20.0"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   # Autoscale CPU based on input size: 8 CPUs for ~1M reads (0.15 GB), 96 CPUs for ~100M reads (15 GB)
@@ -54,7 +54,8 @@ task deplete_taxa {
   Float        blast_db_size = if defined(blastDbs) then size(select_first([blastDbs, []]), "GB") else 0
   Float        bwa_db_size = if defined(bwaDbs) then size(select_first([bwaDbs, []]), "GB") else 0
   Float        total_db_size = minimap_db_size + bmtagger_db_size + blast_db_size + bwa_db_size
-  Int          disk_size = ceil((10 * size(raw_reads_unmapped_bam, "GB") + 2 * total_db_size + 100) / 375.0) * 375
+  # Note: GCP local SSDs must be allocated in pairs (2, 4, 8, 16, 24 × 375GB), so we round to 750GB multiples.
+  Int          disk_size = ceil((10 * size(raw_reads_unmapped_bam, "GB") + 2 * total_db_size + 100) / 750.0) * 750
 
   command <<<
     set -ex -o pipefail
@@ -142,7 +143,7 @@ task filter_to_taxon {
     String   neg_control_prefixes_space_separated = "neg water NTC"
 
     Int      machine_mem_gb = 15
-    String   docker = "quay.io/broadinstitute/viral-classify:2.5.20.0"
+    String   docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   # do this in two steps in case the input doesn't actually have "cleaned" in the name
@@ -197,7 +198,7 @@ task build_lastal_db {
     File   sequences_fasta
 
     Int    machine_mem_gb = 7
-    String docker = "quay.io/broadinstitute/viral-classify:2.5.20.0"
+    String docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   String db_name = basename(sequences_fasta, ".fasta")

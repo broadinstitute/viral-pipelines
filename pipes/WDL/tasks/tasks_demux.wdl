@@ -180,7 +180,8 @@ task illumina_demux {
 
     # --- options for VM shape ----------------------
     Int?    machine_mem_gb
-    Int     disk_size = 2625
+    # Note: GCP local SSDs must be allocated in pairs (2, 4, 8, 16, 24 × 375GB), so use 3000 (8 SSDs) instead of 2625 (7 SSDs)
+    Int     disk_size = 3000
     String  docker    = "quay.io/broadinstitute/viral-core:2.5.21"
   }
 

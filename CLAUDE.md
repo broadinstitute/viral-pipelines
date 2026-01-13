@@ -164,11 +164,13 @@ GitHub Actions (`.github/workflows/build.yml`) runs on all PRs and pushes:
   - Supports novoalign, bwa, or minimap2 aligners
   - Primary workflow for viral genome assembly
 
-- **assemble_denovo.wdl**: De novo assembly with SPAdes
+- **assemble_denovo_metagenomic.wdl**: De novo metagenomic assembly with SPAdes
 
-- **classify_kraken2.wdl**: Taxonomic classification of reads
+- **classify_single.wdl**: Taxonomic classification and depletion pipeline
 
-- **sarscov2_illumina_full.wdl**: Complete SARS-CoV-2 analysis pipeline
+- **nextclade_single.wdl**: Nextclade analysis for single samples
+
+- **genbank_single.wdl**: GenBank submission preparation for single samples
 
 - **augur_from_assemblies.wdl**: Nextstrain phylogenetic analysis from assemblies
 
@@ -195,7 +197,31 @@ When analyzing workflow performance from Terra submissions, use the Terra MCP to
 
 ### Timing Methodology for WDL Tasks
 
-When measuring task execution time from Terra logs:
+**Preferred method - use `get_batch_job_status`:**
+
+The Terra MCP's `get_batch_job_status` tool returns timing data directly from the Google Batch API:
+
+```
+get_batch_job_status(
+  workspace_namespace="<namespace>",
+  workspace_name="<workspace>",
+  submission_id="<submission-uuid>",
+  workflow_id="<workflow-uuid>",
+  task_name="<task_name>",
+  shard_index=<optional>,
+  attempt=<optional>
+)
+```
+
+Returns timing in the `batch_job.timing` field:
+- **run_duration**: Actual task execution time (what you usually want for performance analysis)
+- **pre_run_duration**: Queue and setup time (VM provisioning, Docker pull, etc.)
+
+This is more accurate than log-based methods because it captures the complete execution including post-script I/O operations.
+
+**Alternative method - log-based timing (for detailed analysis):**
+
+When you need finer-grained timing within a task (e.g., timing individual steps):
 
 1. **Start time**: Use first Python log timestamp in stderr
    - Pattern: `^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),\d+`
@@ -209,6 +235,8 @@ When measuring task execution time from Terra logs:
    - Python logs don't capture full execution time
 
 ### Efficient GCS Queries with Wildcards
+
+**Always use `gcloud storage` instead of `gsutil`** - it's faster, more reliable, and the preferred CLI for GCS operations.
 
 Use wildcards to batch GCS queries instead of iterating:
 ```bash
@@ -235,3 +263,58 @@ To identify which workflow corresponds to which sample:
 1. Read first few KB of stderr from each workflow
 2. Look for sample name in BAM file paths (e.g., `/S20.l1.xxxx.bam`)
 3. Cache the sample-to-workflow mapping for reuse
+
+### Debugging Infrastructure-Level Failures
+
+Some workflow failures have errors that aren't visible in standard stderr logs. These include:
+- Docker pull failures (rate limits, image not found, auth errors)
+- VM provisioning failures
+- Preemption before task execution started
+- Network connectivity issues during container setup
+
+**Signs you need Batch logs instead of stderr:**
+- Batch reports exit code 0 (success) but task is marked as failed ("GCP Batch task exited with Success(0)")
+- Error message says "The job was stopped before the command finished"
+- stderr is empty or very short
+- Error message says "Executor error" without details
+- Task failed instantly (0 seconds runtime)
+- `get_job_metadata` summary shows failure but no useful error message
+
+**Use `get_batch_job_status` to diagnose infrastructure failures:**
+
+The Terra MCP provides `get_batch_job_status` which queries the Google Batch API directly:
+
+```
+get_batch_job_status(
+  workspace_namespace="<namespace>",
+  workspace_name="<workspace>",
+  submission_id="<submission-uuid>",
+  workflow_id="<workflow-uuid>",
+  task_name="<task_name>",
+  shard_index=<optional>,  # For scattered tasks
+  attempt=<optional>       # For retried tasks
+)
+```
+
+The tool returns:
+- **Batch job status**: QUEUED, SCHEDULED, RUNNING, SUCCEEDED, or FAILED
+- **Timing**: run_duration and pre_run_duration (queue/setup time)
+- **Resources**: machine_type, CPU, memory, disk sizes
+- **Status events**: State transitions with timestamps
+- **Detected issues**: Auto-detected problems with severity and suggestions
+- **Cloud Logging query**: Ready-to-use gcloud command for deeper debugging
+
+**Recommended debugging workflow:**
+1. `get_submission_status` → identify failed workflows
+2. `get_job_metadata` (summary mode) → identify failed tasks and error messages
+3. `get_workflow_logs` → check stderr for application errors
+4. `get_batch_job_status` → check infrastructure issues if logs don't explain failure
+
+**Common failure patterns detected:**
+- `"Failed to pull image"` - Check image name, tag, and registry auth
+- `"429 Too Many Requests"` - Registry rate limit, retry later
+- `"manifest unknown"` - Image tag doesn't exist
+- `"unauthorized"` - Service account lacks permission to pull from registry
+- `"PREEMPTED"` - VM was preempted, usually retried automatically
+- `"exit code 137"` - OOM killed (out of memory)
+- `"exit code 1"` - Application error in the task script

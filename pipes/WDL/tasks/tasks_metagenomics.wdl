@@ -218,7 +218,7 @@ task kraken2 {
     Int?   min_base_qual
 
     Int    machine_mem_gb = 90
-    String docker = "quay.io/broadinstitute/viral-classify:2.5.20.0"
+    String docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   parameter_meta {
@@ -246,9 +246,10 @@ task kraken2 {
 
   # Disk autoscaling: BAM->FASTQ expansion is ~7-8x, plus kraken2 reads output (~1x input),
   # plus kraken2 database (1x localized tarball + 2x decompressed = 3x), plus overhead for krona and temp files.
-  # Minimum 375GB to accommodate typical database sizes.
-  Int disk_size_auto = ceil((8 * size(reads_bam, "GB") + 3 * size(kraken2_db_tgz, "GB") + 50) / 375.0) * 375
-  Int disk_size = if disk_size_auto < 375 then 375 else disk_size_auto
+  # Minimum 750GB to accommodate typical database sizes.
+  # Note: GCP local SSDs must be allocated in pairs (2, 4, 8, 16, 24 × 375GB), so we round to 750GB multiples.
+  Int disk_size_auto = ceil((8 * size(reads_bam, "GB") + 3 * size(kraken2_db_tgz, "GB") + 50) / 750.0) * 750
+  Int disk_size = if disk_size_auto < 750 then 750 else disk_size_auto
 
   command <<<
     set -ex -o pipefail
@@ -350,7 +351,7 @@ task report_primary_kraken_taxa {
     File          kraken_summary_report
     String        focal_taxon = "Viruses"
 
-    String        docker = "quay.io/broadinstitute/viral-classify:2.5.20.0"
+    String        docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
   String out_basename = basename(kraken_summary_report, '.txt')
   Int disk_size = 50
@@ -401,7 +402,7 @@ task filter_refs_to_found_taxa {
     File          taxdump_tgz
     Int           min_read_count = 100
 
-    String        docker = "quay.io/broadinstitute/viral-classify:2.5.20.0"
+    String        docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
   String ref_basename = basename(taxid_to_ref_accessions_tsv, '.tsv')
   String hits_basename = basename(focal_report_tsv, '.tsv')
@@ -452,7 +453,7 @@ task build_kraken2_db {
     Int?          zstd_compression_level
 
     Int           machine_mem_gb = 100
-    String        docker = "quay.io/broadinstitute/viral-classify:2.5.20.0"
+    String        docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   Int disk_size = 750
@@ -594,7 +595,7 @@ task blastx {
     File   krona_taxonomy_db_tgz
 
     Int    machine_mem_gb = 8
-    String docker = "quay.io/broadinstitute/viral-classify:2.5.20.0"
+    String docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   parameter_meta {
@@ -684,7 +685,7 @@ task krona {
     Int?         magnitude_column
 
     Int          machine_mem_gb = 3
-    String       docker = "quay.io/broadinstitute/viral-classify:2.5.20.0"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   Int disk_size = 50
@@ -791,7 +792,7 @@ task filter_bam_to_taxa {
     String         out_filename_suffix = "filtered"
 
     Int            machine_mem_gb = 8
-    String         docker = "quay.io/broadinstitute/viral-classify:2.5.20.0"
+    String         docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   String out_basename = basename(classified_bam, ".bam") + "." + out_filename_suffix
@@ -884,7 +885,7 @@ task kaiju {
     File   krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
 
     Int    machine_mem_gb = 100
-    String docker = "quay.io/broadinstitute/viral-classify:2.5.20.0"
+    String docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   String   input_basename = basename(reads_unmapped_bam, ".bam")

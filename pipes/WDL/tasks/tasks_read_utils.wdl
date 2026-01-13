@@ -174,7 +174,7 @@ task merge_and_reheader_bams {
 
       String       docker = "quay.io/broadinstitute/viral-core:2.5.21"
       Int          disk_size = 750
-      Int          machine_mem_gb = 4
+      Int          machine_mem_gb = 8
     }
     
     command <<<
@@ -184,7 +184,8 @@ task merge_and_reheader_bams {
         mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
 
         if [ ~{length(in_bams)} -gt 1 ]; then
-            read_utils.py merge_bams ~{sep=' ' in_bams} merged.bam --JVMmemory="$mem_in_mb"m --loglevel DEBUG
+            read_utils.py merge_bams ~{sep=' ' in_bams} merged.bam --JVMmemory="$mem_in_mb"m --loglevel DEBUG \
+                --picardOptions COMPRESSION_LEVEL=3 MAX_RECORDS_IN_RAM=200000 VALIDATION_STRINGENCY=SILENT
         else
             echo "Skipping merge, only one input file"
             cp ~{sep=' ' in_bams} merged.bam
@@ -223,12 +224,12 @@ task merge_and_reheader_bams {
     runtime {
         docker: docker
         memory: machine_mem_gb + " GB"
-        cpu: 2
+        cpu: 4
         disks:  "local-disk " + disk_size + " LOCAL"
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd2_v2_x4"
         preemptible: 0
-        maxRetries: 2
+        maxRetries: 1
     }
 }
 
@@ -322,7 +323,7 @@ task bbnorm_bam {
   input {
     File    reads_bam
 
-    Int     target = 10000
+    Int     target = 1000
     Int?    kmer_length
     Int?    passes
     Int?    min_input_reads
@@ -350,7 +351,8 @@ task bbnorm_bam {
   Int cpu_count = select_first([cpu, 8])
 
   # Disk: BAM->FASTQ expansion (~5-10x), BBNorm output + temp files (~10-15x more)
-  Int disk_size = ceil((25 * input_size_gb + 50) / 375.0) * 375
+  # Note: GCP local SSDs must be allocated in pairs (2, 4, 8, 16, 24 × 375GB), so we round to 750GB multiples.
+  Int disk_size = ceil((25 * input_size_gb + 50) / 750.0) * 750
 
   parameter_meta {
     reads_bam: {

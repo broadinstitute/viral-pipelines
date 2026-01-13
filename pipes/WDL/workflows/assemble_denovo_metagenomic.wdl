@@ -99,7 +99,8 @@ workflow assemble_denovo_metagenomic {
     if(length(reads_bams) > 1) {
       call read_utils.merge_and_reheader_bams as merge_raw_reads {
         input:
-            in_bams      = reads_bams
+            in_bams      = reads_bams,
+            out_basename = sample_id
       }
     }
     File reads_bam = select_first([merge_raw_reads.out_bam, reads_bams[0]])
