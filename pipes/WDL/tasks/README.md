@@ -98,4 +98,32 @@ Output: Array[TSV] (1:1 correspondence with input BAMs)
 
 **Fail-fast vs Graceful degradation**: No CPU fallback means workflow fails if GPU unavailable. Alternative would be automatic retry with --no-gpu flag. Decision: explicit failure provides clear feedback and prevents silent performance degradation (CPU can be 10-100x slower). Users expecting GPU resources should know immediately if unavailable.
 
-**Test coverage vs CI speed**: Tiny test BAM (<100 reads) enables fast CI (<2 min) but doesn't exercise VirNucPro model fully. Larger test would validate model behavior but slow CI to 5-10 min. Decision: workflow logic validation in CI, model validation deferred to manual testing on actual GPU infrastructure.
+**Test coverage vs CI speed**: GitHub Actions CI lacks GPU hardware, so VirNucPro workflows are excluded from automated execution tests. WDL syntax validation runs in CI via `miniwdl check`, but functional testing requires manual execution on GPU-enabled infrastructure (Terra, GCP, DNAnexus, or Azure). Test with small BAM files first to validate workflow structure before production runs.
+
+## Testing
+
+**CI Validation**: WDL syntax is validated automatically via `miniwdl check` in GitHub Actions.
+
+**Manual Testing Required**: Functional testing must be performed on GPU-enabled platforms:
+
+```bash
+# Terra/Cromwell: Upload workflow and use Terra UI
+# GCP with Cromwell:
+java -jar cromwell.jar run pipes/WDL/workflows/classify_virnucpro_single.wdl \
+  -i test_inputs.json
+
+# DNAnexus:
+dx run classify_virnucpro_single -i reads_bam=project-xxx:file-yyy
+
+# Local with GPU (requires nvidia-docker):
+miniwdl run --runtime.gpu=true pipes/WDL/workflows/classify_virnucpro_single.wdl \
+  reads_bam=test.bam expected_length=300
+```
+
+**Test Input Example**:
+```json
+{
+  "classify_virnucpro_single.reads_bam": "gs://bucket/sample.bam",
+  "classify_virnucpro_single.expected_length": 300
+}
+```
