@@ -1383,7 +1383,7 @@ task classify_virnucpro {
     Int?    gpu_count
     String? vm_size
 
-    String  docker = "ghcr.io/broadinstitute/virnucpro-cuda:1.0.0"
+    String  docker = "ghcr.io/broadinstitute/virnucpro-cuda:1.0.1"
   }
 
   parameter_meta {
@@ -1408,21 +1408,16 @@ task classify_virnucpro {
     }
   }
 
-  String out_basename = basename(reads_bam, ".bam")
+  String basename = basename(reads_bam, ".bam")
 
   command <<<
     set -ex -o pipefail
 
-    if [[ ~{expected_length} != 300 && ~{expected_length} != 500 ]]; then
-      echo "ERROR: expected_length must be 300 or 500 to match bundled models. Got: ~{expected_length}" >&2
-      exit 1
-    fi
-
-    /opt/virnucpro_cli.py ~{reads_bam} ~{out_basename}.virnucpro.tsv --expected-length ~{expected_length}
+    /opt/virnucpro_cli.py ~{reads_bam} ~{basename}.virnucpro.tsv --expected-length ~{expected_length}
   >>>
 
   output {
-    File report_tsv = "~{out_basename}.virnucpro.tsv"
+    File report_tsv = "~{basename}.virnucpro.tsv"
   }
 
   # GPU multi-platform support: ALL platform attributes required (GCP: acceleratorType/acceleratorCount, Terra: gpuType/gpuCount, DNAnexus: gpu/dx_instance_type, Azure: vm_size). Missing attributes cause silent CPU fallback.
