@@ -307,3 +307,9 @@ workflows:
   - name: classify_kallisto_single
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/classify_kallisto_single.wdl
+  - name: classify_virnucpro_single
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/classify_virnucpro_single.wdl
+  - name: classify_virnucpro_multi
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/classify_virnucpro_multi.wdl
