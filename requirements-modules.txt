@@ -3,6 +3,7 @@ broadinstitute/viral-core=2.5.10
 broadinstitute/viral-assemble=2.5.1.0
 broadinstitute/viral-classify=2.5.1.0
 broadinstitute/viral-phylo=2.5.1.0
+ghcr.io/broadinstitute/virnucpro-cuda=1.0.0  # VirNucPro: GPU-accelerated viral sequence classifier (DNABERT_S + ESM2-3B)
 broadinstitute/py3-bio=0.1.2
 broadinstitute/beast-beagle-cuda=1.10.5pre
 broadinstitute/ncbi-tools=2.11.1

@@ -1,0 +1,7 @@
+{
+  "classify_virnucpro_multi.reads_bams": [
+    "test/input/G5012.3.testreads.bam",
+    "test/input/G5012.3.testreads.bam"
+  ],
+  "classify_virnucpro_multi.expected_length": 300
+}

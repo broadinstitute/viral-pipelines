@@ -1367,3 +1367,80 @@ task kb_merge_h5ads {
     preemptible: 2
   }
 }
+
+task classify_virnucpro {
+  meta {
+    description: "Runs VirNucPro deep learning viral classification on unaligned BAM files using GPU acceleration."
+  }
+
+  input {
+    File    reads_bam
+    Int     expected_length = 300
+
+    String? accelerator_type
+    Int?    accelerator_count
+    String? gpu_type
+    Int?    gpu_count
+    String? vm_size
+
+    String  docker = "ghcr.io/broadinstitute/virnucpro-cuda:1.0.0"
+  }
+
+  parameter_meta {
+    reads_bam: {
+      description: "Reads to classify. Must be unmapped reads, paired-end or single-end.",
+      patterns: ["*.bam"]
+    }
+    expected_length: {
+      description: "Expected sequence length in bp. Must be 300 or 500 to match bundled models (300_model.pth, 500_model.pth). VirNucPro silently accepts other values but produces invalid predictions."
+    }
+    accelerator_type: {
+      description: "[GCP] The model of GPU to use. For availability and pricing on GCP, see https://cloud.google.com/compute/gpus-pricing#gpus"
+    }
+    accelerator_count: {
+      description: "[GCP] The number of GPUs of the specified type to use."
+    }
+    gpu_type: {
+      description: "[Terra] The model of GPU to use. For availability and pricing on GCP, see https://support.terra.bio/hc/en-us/articles/4403006001947-Getting-started-with-GPUs-in-a-Cloud-Environment"
+    }
+    gpu_count: {
+      description: "[Terra] The number of GPUs of the specified type to use."
+    }
+  }
+
+  String out_basename = basename(reads_bam, ".bam")
+
+  command <<<
+    set -ex -o pipefail
+
+    if [[ ~{expected_length} != 300 && ~{expected_length} != 500 ]]; then
+      echo "ERROR: expected_length must be 300 or 500 to match bundled models. Got: ~{expected_length}" >&2
+      exit 1
+    fi
+
+    /opt/virnucpro_cli.py ~{reads_bam} ~{out_basename}.virnucpro.tsv --expected-length ~{expected_length}
+  >>>
+
+  output {
+    File report_tsv = "~{out_basename}.virnucpro.tsv"
+  }
+
+  # GPU multi-platform support: ALL platform attributes required (GCP: acceleratorType/acceleratorCount, Terra: gpuType/gpuCount, DNAnexus: gpu/dx_instance_type, Azure: vm_size). Missing attributes cause silent CPU fallback.
+  runtime {
+    docker: docker
+    memory: "16 GB"
+    cpu: 4
+    disks: "local-disk 100 HDD"
+    disk: "100 GB"
+    gpu: true
+    dx_instance_type: "mem1_ssd1_gpu2_x8"
+    dx_timeout: "6H"
+    acceleratorType: select_first([accelerator_type, "nvidia-tesla-p4"])
+    acceleratorCount: select_first([accelerator_count, 1])
+    gpuType: select_first([gpu_type, "nvidia-tesla-p4"])
+    gpuCount: select_first([gpu_count, 1])
+    vm_size: select_first([vm_size, "Standard_NC6"])
+    nvidiaDriverVersion: "410.79"
+    maxRetries: 1
+  }
+}
