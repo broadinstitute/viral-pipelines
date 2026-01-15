@@ -709,7 +709,7 @@ task align_reads {
 
     # bbnorm preprocessing for extremely oversequenced samples
     # Only activates if input has more than this many reads; max output reads is half this value
-    Int      read_count_downsample_threshold = 50000000  # 50M reads
+    Int      read_count_downsample_threshold = 150000000  # 150M reads
 
     Int?     cpu
     Int?     machine_mem_gb
@@ -772,7 +772,7 @@ task align_reads {
         read_utils.py rmdup_bbnorm_bam \
             "$INPUT_BAM" \
             preprocessed.bam \
-            --target=10000 \
+            --target=20000 \
             --passes=1 \
             --memory="$mem_in_mb"m \
             --minInputReads=~{read_count_downsample_threshold} \
