@@ -707,6 +707,10 @@ task align_reads {
     String?  aligner_options
     Boolean  skip_mark_dupes = false
 
+    # bbnorm preprocessing for extremely oversequenced samples
+    # Only activates if input has more than this many reads; max output reads is half this value
+    Int      read_count_downsample_threshold = 50000000  # 50M reads
+
     Int?     cpu
     Int?     machine_mem_gb
     String   docker = "quay.io/broadinstitute/viral-core:2.5.21"
@@ -715,11 +719,15 @@ task align_reads {
   }
 
   # Note: GCP local SSDs must be allocated in pairs (2, 4, 8, 16, 24 × 375GB), so we round to 750GB multiples.
-  Int disk_size = ceil((6 * size(reads_unmapped_bam, "GB") + 2 * size(reference_fasta, "GB") + 100) / 750.0) * 750
+  # 7x input BAM to account for bbnorm preprocessing temp file
+  Int disk_size = ceil((7 * size(reads_unmapped_bam, "GB") + 2 * size(reference_fasta, "GB") + 100) / 750.0) * 750
 
   # Skip indel realignment for large BAMs (>1GB) to save runtime
   Float   reads_bam_size_gb = size(reads_unmapped_bam, "GB")
   Boolean skip_realign = reads_bam_size_gb >= 1.0
+
+  # bbnorm preprocessing: max output reads is half the downsample threshold
+  Int bbnorm_max_output_reads = read_count_downsample_threshold / 2
 
   # Autoscale CPU based on input size: 8 CPUs for small inputs, up to 64 CPUs for ~15 GB inputs
   # Linear scaling: 8 + (input_GB / 15) * 56, capped at 64, rounded to nearest multiple of 4
@@ -754,6 +762,26 @@ task align_reads {
 
     mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
 
+    # Preprocess extremely large inputs with bbnorm to prevent OOM in downstream markdup
+    INPUT_BAM="~{reads_unmapped_bam}"
+    input_read_count=$(samtools view -c "$INPUT_BAM")
+    echo "Input read count: $input_read_count" >&2
+
+    if [ "$input_read_count" -ge ~{read_count_downsample_threshold} ]; then
+        echo "Input exceeds ~{read_count_downsample_threshold} reads, running bbnorm preprocessing..." >&2
+        read_utils.py rmdup_bbnorm_bam \
+            "$INPUT_BAM" \
+            preprocessed.bam \
+            --target=10000 \
+            --passes=1 \
+            --memory="$mem_in_mb"m \
+            --minInputReads=~{read_count_downsample_threshold} \
+            --maxOutputReads=~{bbnorm_max_output_reads} \
+            --loglevel=DEBUG
+        INPUT_BAM="preprocessed.bam"
+        echo "Post-bbnorm read count: $(samtools view -c $INPUT_BAM)" >&2
+    fi
+
     cp "~{reference_fasta}" assembly.fasta
     grep -v '^>' assembly.fasta | tr -d '\n' | wc -c | tee assembly_length
 
@@ -771,7 +799,7 @@ task align_reads {
       read_utils.py index_fasta_samtools assembly.fasta --loglevel=DEBUG
 
       read_utils.py align_and_fix \
-        "~{reads_unmapped_bam}" \
+        "$INPUT_BAM" \
         assembly.fasta \
         --outBamAll "~{sample_name}.all.bam" \
         --outBamFiltered "~{sample_name}.mapped.bam" \
