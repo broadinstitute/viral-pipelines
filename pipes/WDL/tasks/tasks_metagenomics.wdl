@@ -971,7 +971,7 @@ task kb {
     Boolean  loom=false
     Boolean  protein=false
 
-    String   docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+    String   docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   parameter_meta {
@@ -1087,7 +1087,7 @@ task build_kb_db {
     Int?        kmer_size=31
     String?     workflow_type
 
-    String      docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+    String      docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   parameter_meta {
@@ -1169,7 +1169,7 @@ task kb_extract {
     Int             threshold=1
     Boolean         protein=false
 
-     String          docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+     String          docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   parameter_meta {
@@ -1265,7 +1265,7 @@ task report_primary_kb_taxa {
     File          id_to_taxon_map
     String        focal_taxon = "Viruses"
 
-    String        docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+    String        docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
   String out_basename = sub(basename(kb_count_tar, ".tar.zst"), "_kb_count", "")
   Int disk_size = 200
@@ -1326,7 +1326,7 @@ task kb_merge_h5ads {
     Array[File]     in_count_tars
     String          out_basename
 
-    String          docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+    String          docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   parameter_meta {
