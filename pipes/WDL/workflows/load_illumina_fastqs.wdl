@@ -16,10 +16,10 @@ workflow load_illumina_fastqs {
     File        samplesheet   # TSV samplesheet with barcodes
     File        runinfo_xml   # Illumina RunInfo.xml
 
-    Int         demux_cpu_splitcode       = 32
-    Int         demux_memory_splitcode    = 120
-    Int         demux_cpu_no_splitcode    = 4
-    Int         demux_memory_no_splitcode = 15
+    Int         demux_max_cpu_splitcode    = 64   # CPU cap for 3-barcode samples (splitcode)
+    Int         demux_max_cpu_no_splitcode = 16   # CPU cap for 2-barcode samples (samtools import)
+
+    Boolean     run_fastqc = true   # Run FastQC/MultiQC reports (can be disabled for speed)
   }
 
   # Step 1: Group FASTQs into R1/R2 pairs (convert Files to Strings to avoid localization)
@@ -28,14 +28,13 @@ workflow load_illumina_fastqs {
       fastq_uris = fastq_files
   }
 
-  # Step 2: Extract run metadata (once for entire run)
+  # Step 2: Extract run-level metadata (flowcell info, tile counts, etc.)
   call demux.get_illumina_run_metadata {
     input:
-      samplesheet = samplesheet,
       runinfo_xml = runinfo_xml
   }
 
-  # Step 2b: Check if samplesheet has barcode_3 (determines demux resource allocation)
+  # Step 2b: Check if samplesheet has barcode_3 (determines demux CPU allocation)
   call demux.check_for_barcode3 {
     input:
       samplesheet = samplesheet
@@ -54,8 +53,7 @@ workflow load_illumina_fastqs {
         fastq_r2    = if length(fastq_pair) > 1 then fastq_pair[1] else null_file,
         samplesheet = samplesheet,
         runinfo_xml = runinfo_xml,
-        cpu         = if check_for_barcode3.has_barcode3 then demux_cpu_splitcode else demux_cpu_no_splitcode,
-        memory_gb   = if check_for_barcode3.has_barcode3 then demux_memory_splitcode else demux_memory_no_splitcode
+        max_cpu     = if check_for_barcode3.has_barcode3 then demux_max_cpu_splitcode else demux_max_cpu_no_splitcode
     }
   }
 
@@ -65,36 +63,46 @@ workflow load_illumina_fastqs {
       metrics_files = demux_fastqs.demux_metrics
   }
 
-  # Step 5: Aggregate QC reports with MultiQC
-  call reports.MultiQC {
+  # Step 4b: Merge sample metadata from all FASTQ pairs
+  call demux.merge_sample_metadata {
     input:
-      input_files = flatten(demux_fastqs.fastqc_zip)
+      meta_by_sample_jsons   = demux_fastqs.meta_by_sample_json,
+      meta_by_filename_jsons = demux_fastqs.meta_by_filename_json
+  }
+
+  # Flatten BAMs for convenience
+  Array[File] raw_bams = flatten(demux_fastqs.output_bams)
+
+  # Step 5: Aggregate QC reports with MultiQC (FastQC + MultiQC in one step)
+  if (run_fastqc) {
+    call reports.multiqc_from_bams as multiqc {
+      input:
+        input_bams = raw_bams
+    }
   }
 
   output {
     # BAM outputs (flattened)
-    Array[File] raw_reads_unaligned_bams = flatten(demux_fastqs.output_bams)
+    Array[File] raw_reads_unaligned_bams = raw_bams
     Array[Int]  read_counts_raw          = flatten(demux_fastqs.read_counts)
 
-    # QC outputs (flattened)
-    Array[File] fastqc_html = flatten(demux_fastqs.fastqc_html)
-    Array[File] fastqc_zip  = flatten(demux_fastqs.fastqc_zip)
+    # QC outputs (FastQC HTML files from multiqc_from_bams)
+    Array[File] fastqcs = select_first([multiqc.fastqc_html, []])
 
     # MultiQC aggregated report
-    File multiqc_report      = MultiQC.multiqc_report
-    File multiqc_data_tar_gz = MultiQC.multiqc_data_dir_tarball
+    File? multiqc_report      = multiqc.multiqc_report
+    File? multiqc_data_tar_gz = multiqc.multiqc_data_dir_tarball
 
     # Demux metrics
     File demux_metrics = merge_demux_metrics.merged_metrics
 
-    # Metadata outputs
-    Map[String,Map[String,String]] meta_by_sample   = get_illumina_run_metadata.meta_by_sample
-    Map[String,Map[String,String]] meta_by_filename = get_illumina_run_metadata.meta_by_filename
-    Map[String,String]             run_info         = get_illumina_run_metadata.run_info
-
-    File   meta_by_sample_json   = get_illumina_run_metadata.meta_by_sample_json
-    File   meta_by_filename_json = get_illumina_run_metadata.meta_by_filename_json
+    # Metadata outputs (File only - Map types not supported by womtool)
+    File   meta_by_sample_json   = merge_sample_metadata.merged_meta_by_sample
+    File   meta_by_filename_json = merge_sample_metadata.merged_meta_by_filename
     File   run_info_json         = get_illumina_run_metadata.runinfo_json
+
+    # Run info as Map (simple Map is supported)
+    Map[String,String] run_info  = get_illumina_run_metadata.run_info
 
     String viralngs_version = get_illumina_run_metadata.viralngs_version
   }

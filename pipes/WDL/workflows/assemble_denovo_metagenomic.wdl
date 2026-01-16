@@ -38,6 +38,9 @@ workflow assemble_denovo_metagenomic {
         Array[String] taxa_to_dehost         = ["Vertebrata"]
         Array[String] taxa_to_avoid_assembly = ["Vertebrata", "other sequences", "Bacteria"]
 
+        Int           min_reads_for_rmdup    =  5000000
+        Int           max_reads_for_assembly = 10000000
+
         String        table_name = "sample"
     }
 
@@ -73,10 +76,6 @@ workflow assemble_denovo_metagenomic {
           description: "Output cleaned fastqc reports in HTML.",
           category: "other"
         }
-        deduplicated_reads_unaligned: {
-          description: "Deduplication on unaligned reads in BAM format using mvicuna or cdhit.",
-          category: "other"
-        }
         kraken2_krona_plot: {
           description:"Visualize the results of the Kraken2 analysis with Krona, which disaplys taxonmic hierarchiral data in multi-layerd pie.",
           category:"other"
@@ -97,11 +96,14 @@ workflow assemble_denovo_metagenomic {
             strings = batch_id_list
     }
 
-    call read_utils.merge_and_reheader_bams as merge_raw_reads {
+    if(length(reads_bams) > 1) {
+      call read_utils.merge_and_reheader_bams as merge_raw_reads {
         input:
-            in_bams      = reads_bams
+            in_bams      = reads_bams,
+            out_basename = sample_id
+      }
     }
-    File reads_bam = merge_raw_reads.out_bam
+    File reads_bam = select_first([merge_raw_reads.out_bam, reads_bams[0]])
 
     if(defined(spikein_db)) {
         call reports.align_and_count as spikein {
@@ -134,13 +136,16 @@ workflow assemble_denovo_metagenomic {
             taxonomic_names         = taxa_to_avoid_assembly,
             out_filename_suffix     = "acellular"
     }
-    call read_utils.rmdup_ubam {
-       input:
-            reads_unmapped_bam = filter_acellular.bam_filtered_to_taxa
+    call read_utils.bbnorm_bam {
+        input:
+            reads_bam        = filter_acellular.bam_filtered_to_taxa,
+            min_input_reads  = min_reads_for_rmdup,
+            max_output_reads = max_reads_for_assembly
     }
+
     call assembly.assemble as spades {
         input:
-            reads_unmapped_bam = rmdup_ubam.dedup_bam,
+            reads_unmapped_bam = bbnorm_bam.bbnorm_bam,
             trim_clip_db       = trim_clip_db,
             always_succeed     = true
     }
@@ -174,7 +179,7 @@ workflow assemble_denovo_metagenomic {
         # assemble (scaffold-and-refine) genome against this reference cluster
         call assembly.scaffold {
             input:
-                reads_bam = deplete.bam_filtered_to_taxa,
+                reads_bam = bbnorm_bam.bbnorm_bam,
                 contigs_fasta = spades.contigs_fasta,
                 reference_genome_fasta = tar_extract.files,
                 min_length_fraction = 0,
@@ -198,7 +203,7 @@ workflow assemble_denovo_metagenomic {
         if (scaffold.assembly_preimpute_length_unambiguous > min_scaffold_unambig) {
             call assemble_refbased.assemble_refbased as refine {
                 input:
-                    reads_unmapped_bams  = [deplete.bam_filtered_to_taxa],
+                    reads_unmapped_bams  = [filter_acellular.bam_filtered_to_taxa],
                     reference_fasta      = scaffold.scaffold_fasta,
                     sample_name          = sample_id + "-" + taxid
             }
@@ -284,13 +289,15 @@ workflow assemble_denovo_metagenomic {
     }
 
     output {
-        File   cleaned_reads_unaligned_bam     = deplete.bam_filtered_to_taxa
-        File   deduplicated_reads_unaligned    = rmdup_ubam.dedup_bam
+        File   reads_dehosted_ubam             = deplete.bam_filtered_to_taxa
+        File   reads_acellular_ubam            = filter_acellular.bam_filtered_to_taxa
+        File   reads_assembly_input_ubam       = bbnorm_bam.bbnorm_bam
         File   contigs_fasta                   = spades.contigs_fasta
-        
+
         Int    read_counts_raw                 = deplete.classified_taxonomic_filter_read_count_pre
-        Int    read_counts_depleted            = deplete.classified_taxonomic_filter_read_count_post
-        Int    read_counts_dedup               = rmdup_ubam.dedup_read_count_post
+        Int    read_counts_dehosted            = deplete.classified_taxonomic_filter_read_count_post
+        Int    read_counts_acellular           = filter_acellular.classified_taxonomic_filter_read_count_post
+        Int    read_counts_assembly_input      = bbnorm_bam.bbnorm_read_count_post
         Int    read_counts_prespades_subsample = spades.subsample_read_count
         
         File   kraken2_summary_report          = kraken2.kraken2_summary_report
@@ -305,8 +312,6 @@ workflow assemble_denovo_metagenomic {
         Int    kraken2_top_taxon_num_reads     = report_primary_kraken_taxa.num_reads
         Float  kraken2_top_taxon_pct_of_focal  = report_primary_kraken_taxa.percent_of_focal
 
-        File?   raw_fastqc                     = merge_raw_reads.fastqc
-        File?   cleaned_fastqc                 = deplete.fastqc_html_report
         File?   spikein_report                 = spikein.report
         String? spikein_tophit                 = spikein.top_hit_id
         String? spikein_pct_of_total_reads     = spikein.pct_total_reads_mapped

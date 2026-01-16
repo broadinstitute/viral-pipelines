@@ -1,4 +1,3 @@
 {
-  "get_illumina_run_metadata.samplesheet": "test/input/TestSplitcodeDemuxFastqs/samples_3bc.tsv",
   "get_illumina_run_metadata.runinfo_xml": "test/input/TestSplitcodeDemuxFastqs/RunInfo.xml"
 }

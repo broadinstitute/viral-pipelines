@@ -54,7 +54,6 @@ workflow scaffold_and_refine {
     File   isnvsFile                             = refine.align_to_self_isnvs_vcf
     
     File   aligned_bam                           = refine.align_to_self_merged_aligned_only_bam
-    File   aligned_only_reads_fastqc             = refine.align_to_ref_fastqc
     File   coverage_tsv                          = refine.align_to_self_merged_coverage_tsv
     Int    read_pairs_aligned                    = refine.align_to_self_merged_read_pairs_aligned
     Float  bases_aligned                         = refine.align_to_self_merged_bases_aligned

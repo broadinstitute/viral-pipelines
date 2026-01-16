@@ -28,6 +28,7 @@ workflow load_illumina_fastqs_deplete {
     Array[String] default_filename_keys = ["spike_in", "batch_lib"]
 
     File?        spikein_db
+    Array[File]? minimapDbs
     Array[File]? bmtaggerDbs
     Array[File]? blastDbs
     Array[File]? bwaDbs
@@ -39,10 +40,10 @@ workflow load_illumina_fastqs_deplete {
     String?      instrument_model_user_specified
     String?      sra_title
 
-    Int          demux_cpu_splitcode       = 32
-    Int          demux_memory_splitcode    = 120
-    Int          demux_cpu_no_splitcode    = 4
-    Int          demux_memory_no_splitcode = 15
+    Int          demux_max_cpu_splitcode    = 64   # CPU cap for 3-barcode samples (splitcode)
+    Int          demux_max_cpu_no_splitcode = 16   # CPU cap for 2-barcode samples (samtools import)
+
+    Boolean      run_fastqc = true   # Run FastQC/MultiQC reports (can be disabled for speed)
   }
 
   # Step 1: Rename samples in samplesheet (if sample_rename_map provided)
@@ -58,26 +59,13 @@ workflow load_illumina_fastqs_deplete {
       fastq_uris = fastq_files
   }
 
-  # Step 3: Extract run metadata
+  # Step 3: Extract run-level metadata (flowcell info, tile counts, etc.)
   call demux.get_illumina_run_metadata {
     input:
-      samplesheet = samplesheet_rename_ids.new_sheet,
       runinfo_xml = runinfo_xml
   }
 
-  # Step 4: Set default metadata keys
-  call demux.map_map_setdefault as meta_default_sample {
-    input:
-      map_map_json = get_illumina_run_metadata.meta_by_sample_json,
-      sub_keys     = default_sample_keys
-  }
-  call demux.map_map_setdefault as meta_default_filename {
-    input:
-      map_map_json = get_illumina_run_metadata.meta_by_filename_json,
-      sub_keys     = default_filename_keys
-  }
-
-  # Step 4b: Check if samplesheet has barcode_3 (determines demux resource allocation)
+  # Step 3b: Check if samplesheet has barcode_3 (determines demux CPU allocation)
   call demux.check_for_barcode3 {
     input:
       samplesheet = samplesheet_rename_ids.new_sheet
@@ -93,8 +81,7 @@ workflow load_illumina_fastqs_deplete {
         fastq_r2    = if length(fastq_pair) > 1 then fastq_pair[1] else null_file,
         samplesheet = samplesheet_rename_ids.new_sheet,
         runinfo_xml = runinfo_xml,
-        cpu         = if check_for_barcode3.has_barcode3 then demux_cpu_splitcode else demux_cpu_no_splitcode,
-        memory_gb   = if check_for_barcode3.has_barcode3 then demux_memory_splitcode else demux_memory_no_splitcode
+        max_cpu     = if check_for_barcode3.has_barcode3 then demux_max_cpu_splitcode else demux_max_cpu_no_splitcode
     }
   }
 
@@ -105,6 +92,25 @@ workflow load_illumina_fastqs_deplete {
   call demux.merge_demux_metrics {
     input:
       metrics_files = demux_fastqs.demux_metrics
+  }
+
+  # Step 5.6: Merge sample metadata from all FASTQ pairs
+  call demux.merge_sample_metadata {
+    input:
+      meta_by_sample_jsons   = demux_fastqs.meta_by_sample_json,
+      meta_by_filename_jsons = demux_fastqs.meta_by_filename_json
+  }
+
+  # Step 5.7: Set default metadata keys
+  call demux.map_map_setdefault as meta_default_sample {
+    input:
+      map_map_json = merge_sample_metadata.merged_meta_by_sample,
+      sub_keys     = default_sample_keys
+  }
+  call demux.map_map_setdefault as meta_default_filename {
+    input:
+      map_map_json = merge_sample_metadata.merged_meta_by_filename,
+      sub_keys     = default_filename_keys
   }
 
   # Step 6: Spike-in counting and depletion for all BAMs
@@ -122,10 +128,11 @@ workflow load_illumina_fastqs_deplete {
     }
 
     # Depletion (if any depletion db provided)
-    if (length(flatten(select_all([bmtaggerDbs, blastDbs, bwaDbs]))) > 0) {
+    if (length(flatten(select_all([minimapDbs, bmtaggerDbs, blastDbs, bwaDbs]))) > 0) {
       call taxon_filter.deplete_taxa as deplete {
         input:
           raw_reads_unmapped_bam = raw_reads,
+          minimapDbs = minimapDbs,
           bmtaggerDbs = bmtaggerDbs,
           blastDbs = blastDbs,
           bwaDbs = bwaDbs
@@ -208,18 +215,20 @@ workflow load_illumina_fastqs_deplete {
     }
   }
 
-  # Step 9: MultiQC reports
-  call reports.MultiQC as multiqc_raw {
-    input:
-      input_files = flatten(demux_fastqs.fastqc_zip),
-      file_name   = "multiqc-raw.html"
-  }
-
-  if (length(flatten(select_all([bmtaggerDbs, blastDbs, bwaDbs]))) > 0) {
-    call reports.MultiQC as multiqc_cleaned {
+  # Step 9: MultiQC reports (FastQC + MultiQC in one step)
+  if (run_fastqc) {
+    call reports.multiqc_from_bams as multiqc_raw {
       input:
-        input_files = select_all(deplete.cleaned_fastqc_zip),
-        file_name   = "multiqc-cleaned.html"
+        input_bams   = raw_bams,
+        out_basename = "multiqc-raw"
+    }
+
+    if (length(flatten(select_all([minimapDbs, bmtaggerDbs, blastDbs, bwaDbs]))) > 0) {
+      call reports.multiqc_from_bams as multiqc_cleaned {
+        input:
+          input_bams   = select_all(cleaned_bam_passing),
+          out_basename = "multiqc-cleaned"
+      }
     }
   }
 
@@ -236,11 +245,9 @@ workflow load_illumina_fastqs_deplete {
     Array[File] raw_reads_unaligned_bams = raw_bams
     Array[Int]  read_counts_raw          = raw_read_counts
 
-    # Metadata outputs (with defaults applied)
-    Map[String,Map[String,String]] meta_by_sample   = read_json(meta_default_sample.out_json)
-    Map[String,Map[String,String]] meta_by_filename = read_json(meta_default_filename.out_json)
-    File                           meta_by_sample_json   = meta_default_sample.out_json
-    File                           meta_by_filename_json = meta_default_filename.out_json
+    # Metadata outputs (File only - Map types not supported by womtool)
+    File meta_by_sample_json   = meta_default_sample.out_json
+    File meta_by_filename_json = meta_default_filename.out_json
 
     # Cleaned BAM outputs
     Array[File] cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing)
@@ -251,16 +258,16 @@ workflow load_illumina_fastqs_deplete {
     File? sra_metadata     = sra_meta_prep.sra_metadata
     File? cleaned_bam_uris = sra_meta_prep.cleaned_bam_uris
 
-    # QC outputs
-    Array[File] fastqc_html = flatten(demux_fastqs.fastqc_html)
-    Array[File] fastqc_zip  = flatten(demux_fastqs.fastqc_zip)
+    # QC outputs (FastQC HTML files from multiqc_from_bams)
+    Array[File] fastqcs_raw     = select_first([multiqc_raw.fastqc_html, []])
+    Array[File] fastqcs_cleaned = select_first([multiqc_cleaned.fastqc_html, []])
 
     # Demux metrics
     File demux_metrics = merge_demux_metrics.merged_metrics
 
     # MultiQC reports
-    File  multiqc_report_raw     = multiqc_raw.multiqc_report
-    File  multiqc_report_cleaned = select_first([multiqc_cleaned.multiqc_report, multiqc_raw.multiqc_report])
+    File? multiqc_report_raw     = multiqc_raw.multiqc_report
+    File? multiqc_report_cleaned = multiqc_cleaned.multiqc_report
 
     # Spike-in outputs
     File? spikein_counts = spike_summary.count_summary

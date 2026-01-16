@@ -7,27 +7,20 @@ workflow bams_multiqc {
         description: "Run FastQC on a set of BAM files, and then MultiQC to summarize all outputs."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
+        allowNestedInputs: true
     }
 
     input {
         Array[File]+ read_bams
     }
 
-    scatter(reads_bam in read_bams) {
-        call reports.fastqc as fastqc {
-            input:
-                reads_bam = reads_bam
-        }
-    }
-
-    call reports.MultiQC {
+    call reports.multiqc_from_bams {
         input:
-            input_files = fastqc.fastqc_zip
+            input_bams = read_bams
     }
 
     output {
-        File        multiqc            = MultiQC.multiqc_report
-        Array[File] fastqcs            = fastqc.fastqc_html
-        String      viral_core_version = fastqc.viralngs_version[0]
+        File        multiqc  = multiqc_from_bams.multiqc_report
+        Array[File] fastqcs  = multiqc_from_bams.fastqc_html
     }
 }

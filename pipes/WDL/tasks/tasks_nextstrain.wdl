@@ -5,7 +5,7 @@ task taxid_to_nextclade_dataset_name {
         Int     taxid
         File    taxdump_tgz
         File    nextclade_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/typing/nextclade-by-taxid.tsv"
-        String  docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+        String  docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
     }
     command <<<
         set -e
@@ -62,7 +62,7 @@ task nextclade_one_sample {
         File? gene_annotations_json
         String? dataset_name
         Int    disk_size = 50
-        String docker = "nextstrain/nextclade:3.18.0"
+        String docker = "nextstrain/nextclade:3.18.1"
     }
     String basename = basename(genome_fasta, ".fasta")
     command <<<
@@ -155,7 +155,7 @@ task nextclade_many_samples {
         String       basename
         File?        genome_ids_setdefault_blank
         Int          disk_size = 150
-        String       docker = "nextstrain/nextclade:3.18.0"
+        String       docker = "nextstrain/nextclade:3.18.1"
     }
     command <<<
         set -e
@@ -332,7 +332,7 @@ task derived_cols {
         String?       lab_highlight_loc
         Array[File]   table_map = []
 
-        String        docker = "quay.io/broadinstitute/viral-core:2.5.10"
+        String        docker = "quay.io/broadinstitute/viral-core:2.5.21"
         Int           disk_size = 50
     }
     parameter_meta {
@@ -649,11 +649,11 @@ task nextstrain_ncov_defaults {
         String docker                      = "docker.io/nextstrain/base:build-20240318T173028Z"
         Int    disk_size = 50
     }
-    command {
+    command <<<
         set -e
         wget -q "https://github.com/nextstrain/ncov/archive/~{nextstrain_ncov_repo_commit}.tar.gz"
         tar -xf "~{nextstrain_ncov_repo_commit}.tar.gz" --strip-components=1
-    }
+    >>>
     runtime {
         docker: docker
         memory: "1 GB"
@@ -700,7 +700,7 @@ task nextstrain_deduplicate_sequences {
 
     String out_basename = basename(basename(basename(basename(sequences_fasta, '.xz'), '.gz'), '.tar'), '.fasta')
     String out_filename = "~{out_basename}_sequences_deduplicated.fasta"
-    command {
+    command <<<
         set -e
         ncov_path_prefix="/nextstrain/ncov"
         wget -q "https://github.com/nextstrain/ncov/archive/~{nextstrain_ncov_repo_commit}.tar.gz"
@@ -709,9 +709,9 @@ task nextstrain_deduplicate_sequences {
 
         python3 "$ncov_path_prefix/scripts/sanitize_sequences.py" \
         --sequences "~{sequences_fasta}" \
-        ${true="--error-on-duplicate-strains" false="" error_on_seq_diff} \
+        ~{true="--error-on-duplicate-strains" false="" error_on_seq_diff} \
         --output "~{out_filename}"
-    }
+    >>>
     runtime {
         docker: docker
         memory: "7 GB"
@@ -757,7 +757,7 @@ task nextstrain_ncov_sanitize_gisaid_data {
     }
 
     String out_basename = basename(basename(basename(basename(sequences_gisaid_fasta, '.xz'), '.gz'), '.tar'), '.fasta')
-    command {
+    command <<<
         set -e
         ncov_path_prefix="/nextstrain/ncov"
         wget -q "https://github.com/nextstrain/ncov/archive/~{nextstrain_ncov_repo_commit}.tar.gz"
@@ -775,7 +775,7 @@ task nextstrain_ncov_sanitize_gisaid_data {
         --rename-fields 'Virus name=strain' 'Accession ID=gisaid_epi_isl' 'Collection date=date' 'Clade=GISAID_clade' 'Pango lineage=pango_lineage' 'Host=host' 'Type=virus' 'Patient age=age' \
         ~{"--strip-prefixes=" + prefix_to_strip} \
         --output "~{out_basename}_metadata_sanitized_for_nextstrain.tsv.gz"
-    }
+    >>>
     runtime {
         docker: docker
         memory: "7 GB"
@@ -900,7 +900,7 @@ task filter_sequences_to_list {
 
         String       out_fname = sub(sub(basename(sequences, ".zst"), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
         # Prior docker image: "nextstrain/base:build-20240318T173028Z"
-        String       docker = "quay.io/broadinstitute/viral-core:2.5.10"
+        String       docker = "quay.io/broadinstitute/viral-core:2.5.21"
         Int          disk_size = 750
     }
     parameter_meta {
@@ -1001,7 +1001,7 @@ task mafft_one_chr {
         Boolean  large = false
         Boolean  memsavetree = false
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.5.1.0"
+        String   docker = "quay.io/broadinstitute/viral-phylo:2.5.21.0"
         Int      mem_size = 500
         Int      cpus = 64
         Int      disk_size = 750
@@ -1091,7 +1091,7 @@ task mafft_one_chr_chunked {
         Int      batch_chunk_size = 2000
         Int      threads_per_job = 2
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.5.1.0"
+        String   docker = "quay.io/broadinstitute/viral-phylo:2.5.21.0"
         Int      mem_size = 32
         Int      cpus = 64
         Int      disk_size = 750
@@ -1246,10 +1246,10 @@ task snp_sites {
         Int     disk_size = 750
     }
     String out_basename = basename(msa_fasta, ".fasta")
-    command {
+    command <<<
         snp-sites -V > VERSION
         snp-sites -v ~{true="" false="-c" allow_wildcard_bases} -o "~{out_basename}.vcf" "~{msa_fasta}"
-    }
+    >>>
     runtime {
         docker: docker
         memory: "31 GB"

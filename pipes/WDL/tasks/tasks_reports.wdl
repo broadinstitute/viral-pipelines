@@ -15,7 +15,7 @@ task alignment_metrics {
     Int    max_amplicons=500
 
     Int    machine_mem_gb=16
-    String docker = "quay.io/broadinstitute/viral-core:2.5.10"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.21"
   }
 
   String out_basename = basename(aligned_bam, ".bam")
@@ -143,65 +143,65 @@ task plot_coverage {
     String? plotXLimits # of the form "min max" (ints, space between)
     String? plotYLimits # of the form "min max" (ints, space between)
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.10"
+    String  docker = "quay.io/broadinstitute/viral-core:2.5.21"
   }
 
   Int disk_size = 375
   
-  command {
+  command <<<
     set -ex -o pipefail
 
     read_utils.py --version | tee VERSION
 
-    samtools view -c ${aligned_reads_bam} | tee reads_aligned
+    samtools view -c ~{aligned_reads_bam} | tee reads_aligned
     if [ "$(cat reads_aligned)" != "0" ]; then
-      samtools index -@ "$(nproc)" "${aligned_reads_bam}"
+      samtools index -@ "$(nproc)" "~{aligned_reads_bam}"
 
       PLOT_DUPE_OPTION=""
-      if [[ "${skip_mark_dupes}" != "true" ]]; then
-        PLOT_DUPE_OPTION="${true='--plotOnlyNonDuplicates' false="" plot_only_non_duplicates}"
+      if [[ "~{skip_mark_dupes}" != "true" ]]; then
+        PLOT_DUPE_OPTION="~{true='--plotOnlyNonDuplicates' false="" plot_only_non_duplicates}"
       fi
-      
-      BINNING_OPTION="${true='--binLargePlots' false="" bin_large_plots}"
+
+      BINNING_OPTION="~{true='--binLargePlots' false="" bin_large_plots}"
 
       # plot coverage
       reports.py plot_coverage \
-        "${aligned_reads_bam}" \
-        "${sample_name}.coverage_plot.pdf" \
-        --outSummary "${sample_name}.coverage_plot.txt" \
+        "~{aligned_reads_bam}" \
+        "~{sample_name}.coverage_plot.pdf" \
+        --outSummary "~{sample_name}.coverage_plot.txt" \
         --plotFormat pdf \
         --plotWidth 1100 \
         --plotHeight 850 \
         --plotDPI 100 \
-        ${"-m " + max_coverage_depth} \
-        ${"-q " + base_q_threshold} \
-        ${"-Q " + mapping_q_threshold} \
-        ${"-l " + read_length_threshold} \
-        ${"--plotXLimits " + plotXLimits} \
-        ${"--plotYLimits " + plotYLimits} \
+        ~{"-m " + max_coverage_depth} \
+        ~{"-q " + base_q_threshold} \
+        ~{"-Q " + mapping_q_threshold} \
+        ~{"-l " + read_length_threshold} \
+        ~{"--plotXLimits " + plotXLimits} \
+        ~{"--plotYLimits " + plotYLimits} \
         $PLOT_DUPE_OPTION \
         $BINNING_OPTION \
-        --binningSummaryStatistic ${binning_summary_statistic} \
-        --plotTitle "${sample_name} coverage plot" \
+        --binningSummaryStatistic ~{binning_summary_statistic} \
+        --plotTitle "~{sample_name} coverage plot" \
         --loglevel=DEBUG
 
     else
-      touch ${sample_name}.coverage_plot.pdf ${sample_name}.coverage_plot.txt
+      touch ~{sample_name}.coverage_plot.pdf ~{sample_name}.coverage_plot.txt
     fi
 
     # collect figures of merit
     set +o pipefail # grep will exit 1 if it fails to find the pattern
-    samtools view -H ${aligned_reads_bam} | perl -n -e'/^@SQ.*LN:(\d+)/ && print "$1\n"' |  python -c "import sys; print(sum(int(x) for x in sys.stdin))" | tee assembly_length
+    samtools view -H ~{aligned_reads_bam} | perl -n -e'/^@SQ.*LN:(\d+)/ && print "$1\n"' |  python -c "import sys; print(sum(int(x) for x in sys.stdin))" | tee assembly_length
     # report only primary alignments 260=exclude unaligned reads and secondary mappings
-    samtools view -h -F 260 ${aligned_reads_bam} | samtools flagstat - | tee ${sample_name}.flagstat.txt
-    grep properly ${sample_name}.flagstat.txt | cut -f 1 -d ' ' | tee read_pairs_aligned
-    samtools view ${aligned_reads_bam} | cut -f10 | tr -d '\n' | wc -c | tee bases_aligned
+    samtools view -h -F 260 ~{aligned_reads_bam} | samtools flagstat - | tee ~{sample_name}.flagstat.txt
+    grep properly ~{sample_name}.flagstat.txt | cut -f 1 -d ' ' | tee read_pairs_aligned
+    samtools view ~{aligned_reads_bam} | cut -f10 | tr -d '\n' | wc -c | tee bases_aligned
     python -c "print (float("$(cat bases_aligned)")/"$(cat assembly_length)") if "$(cat assembly_length)">0 else print(0)" > mean_coverage
-  }
+  >>>
 
   output {
-    File   coverage_plot      = "${sample_name}.coverage_plot.pdf"
-    File   coverage_tsv       = "${sample_name}.coverage_plot.txt"
+    File   coverage_plot      = "~{sample_name}.coverage_plot.pdf"
+    File   coverage_tsv       = "~{sample_name}.coverage_plot.txt"
     Int    assembly_length    = read_int("assembly_length")
     Int    reads_aligned      = read_int("reads_aligned")
     Int    read_pairs_aligned = read_int("read_pairs_aligned")
@@ -214,7 +214,7 @@ task plot_coverage {
     docker: "${docker}"
     memory: "7 GB"
     cpu: 2
-    disks:  "local-disk " + disk_size + " LOCAL"
+    disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     preemptible: 1
@@ -277,7 +277,7 @@ task merge_coverage_per_position {
     docker: "${docker}"
     memory: "2 GB"
     cpu: 2
-    disks:  "local-disk " + disk_size + " LOCAL"
+    disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x4"
     maxRetries: 2
@@ -290,7 +290,7 @@ task coverage_report {
     Array[File]  mapped_bam_idx = []  # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name = "coverage_report.txt"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.10"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.21"
   }
 
   Int disk_size = 375
@@ -320,7 +320,7 @@ task coverage_report {
     docker: docker
     memory: "2 GB"
     cpu: 2
-    disks:  "local-disk " + disk_size + " LOCAL"
+    disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x4"
     maxRetries: 2
@@ -339,11 +339,11 @@ task assembly_bases {
 
     Int disk_size = 50
 
-    command {
+    command <<<
         set -e
         grep -v '^>' "~{fasta}" | tr -d '\n' | wc -c | tee assembly_length
         grep -v '^>' "~{fasta}" | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
-    }
+    >>>
 
     output {
         Int assembly_length             = read_int("assembly_length")
@@ -351,7 +351,7 @@ task assembly_bases {
     }
 
     runtime {
-        docker: "${docker}"
+        docker: docker
         memory: "1 GB"
         cpu: 1
         disks:  "local-disk " + disk_size + " HDD"
@@ -365,7 +365,7 @@ task fastqc {
   input {
     File   reads_bam
 
-    String docker = "quay.io/broadinstitute/viral-core:2.5.10"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.21"
   }
   parameter_meta {
     reads_bam:{ 
@@ -378,15 +378,15 @@ task fastqc {
   String   reads_basename=basename(reads_bam, ".bam")
   Int disk_size = 375
 
-  command {
+  command <<<
     set -ex -o pipefail
     reports.py --version | tee VERSION
-    reports.py fastqc ${reads_bam} ${reads_basename}_fastqc.html --out_zip ${reads_basename}_fastqc.zip
-  }
+    reports.py fastqc ~{reads_bam} ~{reads_basename}_fastqc.html --out_zip ~{reads_basename}_fastqc.zip
+  >>>
 
   output {
-    File   fastqc_html      = "${reads_basename}_fastqc.html"
-    File   fastqc_zip       = "${reads_basename}_fastqc.zip"
+    File   fastqc_html      = "~{reads_basename}_fastqc.html"
+    File   fastqc_zip       = "~{reads_basename}_fastqc.zip"
     String viralngs_version = read_string("VERSION")
   }
 
@@ -394,7 +394,7 @@ task fastqc {
     memory: "2 GB"
     cpu: 1
     docker: "${docker}"
-    disks:  "local-disk " + disk_size + " LOCAL"
+    disks:  "local-disk " + disk_size + " SSD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
@@ -407,18 +407,22 @@ task align_and_count {
     File   ref_db
     Int    topNHits = 3
 
-    Boolean filter_bam_to_proper_primary_mapped_reads         = true
-    Boolean do_not_require_proper_mapped_pairs_when_filtering = false
-    Boolean keep_singletons_when_filtering                    = false
-    Boolean keep_duplicates_when_filtering                    = false
-
+    Int?   cpu
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.5.10"
+    String docker = "quay.io/broadinstitute/viral-core:2.5.21"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
   String  ref_basename=basename(ref_db, ".fasta")
-  Int disk_size = 375
+  Int disk_size = ceil((3 * size(reads_bam, "GB") + 2 * size(ref_db, "GB") + 150) / 375.0) * 375
+
+  # Autoscale CPU based on input size: 4 CPUs for small inputs, up to 96 CPUs for larger inputs
+  # Linear scaling: 4 + (input_GB / 15) * 60, capped at 96, rounded to nearest multiple of 4
+  # NOTE: Previously capped at 16 due to minimap2_idxstats bottleneck (broadinstitute/viral-core#145), fixed in viral-core 2.5.12
+  Float        cpu_unclamped = 4.0 + (size(reads_bam, "GB") / 15.0) * 60.0
+  Int          cpu_actual = select_first([cpu, floor(((if cpu_unclamped > 96.0 then 96.0 else cpu_unclamped) + 2.0) / 4.0) * 4])
+  # Memory scales with CPU at 2x ratio (default), or use override
+  Int          machine_mem_gb_actual = select_first([machine_mem_gb, cpu_actual * 2])
 
   parameter_meta {
     reads_bam: {
@@ -431,22 +435,6 @@ task align_and_count {
       pattern: ["*.FASTA"],
       category: "required"
     }
-    filter_bam_to_proper_primary_mapped_reads: {
-      description: "If specified, reads till be filtered after alignment to include only those flagged as properly paired.",
-      category: "optional"
-    }
-    do_not_require_proper_mapped_pairs_when_filtering: {
-      description: "Do not require reads to be properly paired when filtering",
-      category: "optional"
-    }
-    keep_singletons_when_filtering: {
-      description: "Keep singletons when filtering",
-      category: "optional"
-    }
-    keep_duplicates_when_filtering: {
-      description: "Do not exclude reads marked as duplicates when filtering",
-      category: "optional"
-    }
   }
   command <<<
     set -ex -o pipefail
@@ -457,11 +445,7 @@ task align_and_count {
     read_utils.py minimap2_idxstats \
       "~{reads_basename}.bam" \
       "~{ref_db}" \
-      --outStats "~{reads_basename}.count.~{ref_basename}.txt.unsorted" \
-      ~{true="--filterReadsAfterAlignment"   false="" filter_bam_to_proper_primary_mapped_reads} \
-      ~{true="--doNotRequirePairsToBeProper" false="" do_not_require_proper_mapped_pairs_when_filtering} \
-      ~{true="--keepSingletons"              false="" keep_singletons_when_filtering} \
-      ~{true="--keepDuplicates"              false="" keep_duplicates_when_filtering} \
+      "~{reads_basename}.count.~{ref_basename}.txt.unsorted" \
       --loglevel=DEBUG
 
     sort -b -r -n -k3 "~{reads_basename}.count.~{ref_basename}.txt.unsorted" > "~{reads_basename}.count.~{ref_basename}.txt"
@@ -500,6 +484,11 @@ task align_and_count {
         PCT_TOP_HIT_OF_TOTAL_READS=$( echo "null" | tee '~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt')
       fi
     fi
+
+    cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+    cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+    set +o pipefail
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
   >>>
 
   output {
@@ -515,15 +504,18 @@ task align_and_count {
     String pct_total_reads_mapped     = read_string('~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt')
     String pct_top_hit_of_total_reads = read_string('~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt')
     String pct_lesser_hits_of_mapped  = read_string('~{reads_basename}.count.~{ref_basename}.pct_lesser_hits_of_mapped.txt')
-    
+
+    Int    max_ram_gb       = ceil(read_float("MEM_BYTES")/1000000000)
+    Int    runtime_sec      = ceil(read_float("UPTIME_SEC"))
+    Int    cpu_load_15min   = ceil(read_float("LOAD_15M"))
     String viralngs_version = read_string("VERSION")
   }
 
   runtime {
-    memory: select_first([machine_mem_gb, 15]) + " GB"
-    cpu: 4
-    docker: "${docker}"
-    disks:  "local-disk " + disk_size + " LOCAL"
+    memory: machine_mem_gb_actual + " GB"
+    cpu:    cpu_actual
+    docker: docker
+    disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
@@ -536,27 +528,27 @@ task align_and_count_summary {
 
     String       output_prefix = "count_summary"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.10"
+    String       docker = "quay.io/broadinstitute/viral-core:2.5.21"
   }
 
   Int disk_size = 100
 
-  command {
+  command <<<
     set -ex -o pipefail
 
     reports.py --version | tee VERSION
-    reports.py aggregate_alignment_counts ${sep=' ' counts_txt} "${output_prefix}".tsv --loglevel=DEBUG
-  }
+    reports.py aggregate_alignment_counts ~{sep=' ' counts_txt} "~{output_prefix}".tsv --loglevel=DEBUG
+  >>>
 
   output {
-    File   count_summary    = "${output_prefix}.tsv"
+    File   count_summary    = "~{output_prefix}.tsv"
     String viralngs_version = read_string("VERSION")
   }
 
   runtime {
     memory: "7 GB"
     cpu: 8
-    docker: "${docker}"
+    docker: docker
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -571,7 +563,7 @@ task aggregate_metagenomics_reports {
     String       aggregate_taxlevel_focus                 = "species"
     Int          aggregate_top_N_hits                     = 5
 
-    String       docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   parameter_meta {
@@ -583,27 +575,27 @@ task aggregate_metagenomics_reports {
   String       aggregate_taxon_heading = sub(aggregate_taxon_heading_space_separated, " ", "_") # replace spaces with underscores for use in filename
   Int disk_size = 50
 
-  command {
+  command <<<
     set -ex -o pipefail
 
     metagenomics.py --version | tee VERSION
     metagenomics.py taxlevel_summary \
-      ${sep=' ' kraken_summary_reports} \
-      --csvOut aggregate_taxa_summary_${aggregate_taxon_heading}_by_${aggregate_taxlevel_focus}_top_${aggregate_top_N_hits}_by_sample.csv \
+      ~{sep=' ' kraken_summary_reports} \
+      --csvOut aggregate_taxa_summary_~{aggregate_taxon_heading}_by_~{aggregate_taxlevel_focus}_top_~{aggregate_top_N_hits}_by_sample.csv \
       --noHist \
-      --taxHeading ${aggregate_taxon_heading_space_separated} \
-      --taxlevelFocus ${aggregate_taxlevel_focus} \
-      --zeroFill --includeRoot --topN ${aggregate_top_N_hits} \
+      --taxHeading ~{aggregate_taxon_heading_space_separated} \
+      --taxlevelFocus ~{aggregate_taxlevel_focus} \
+      --zeroFill --includeRoot --topN ~{aggregate_top_N_hits} \
       --loglevel=DEBUG
-  }
+  >>>
 
   output {
-    File   krakenuniq_aggregate_taxlevel_summary = "aggregate_taxa_summary_${aggregate_taxon_heading}_by_${aggregate_taxlevel_focus}_top_${aggregate_top_N_hits}_by_sample.csv"
+    File   krakenuniq_aggregate_taxlevel_summary = "aggregate_taxa_summary_~{aggregate_taxon_heading}_by_~{aggregate_taxlevel_focus}_top_~{aggregate_top_N_hits}_by_sample.csv"
     String viralngs_version                      = read_string("VERSION")
   }
 
   runtime {
-    docker: "${docker}"
+    docker: docker
     memory: "3 GB"
     cpu: 1
     disks:  "local-disk " + disk_size + " HDD"
@@ -655,73 +647,265 @@ task MultiQC {
   String report_filename = if (defined(file_name)) then basename(select_first([file_name]), ".html") else "multiqc"
   Int disk_size = 375
 
-  command {
+  command <<<
       set -ex -o pipefail
 
-      echo "${sep='\n' input_files}" > input-filenames.txt
+      echo "~{sep='\n' input_files}" > input-filenames.txt
       echo "" >> input-filenames.txt
 
       # Run MultiQC but allow it to fail (it crashes with exit 1 on empty/invalid zip files)
       set +e
       multiqc \
       --file-list input-filenames.txt \
-      --outdir "${out_dir}" \
-      ${true="--force" false="" force} \
-      ${true="--fullnames" false="" full_names} \
-      ${"--title " + title} \
-      ${"--comment " + comment} \
-      ${"--filename " + file_name} \
-      ${"--template " + template} \
-      ${"--tag " + tag} \
-      ${"--ignore " + ignore_analysis_files} \
-      ${"--ignore-samples" + ignore_sample_names} \
-      ${"--sample-names " + sample_names} \
-      ${true="--exclude " false="" defined(exclude_modules)}${sep=' --exclude ' select_first([exclude_modules,[]])} \
-      ${true="--module " false="" defined(module_to_use)}${sep=' --module ' select_first([module_to_use,[]])} \
-      ${true="--data-dir" false="" data_dir} \
-      ${true="--no-data-dir" false="" no_data_dir} \
-      ${"--data-format " + output_data_format} \
-      ${true="--zip-data-dir" false="" zip_data_dir} \
-      ${true="--export" false="" export} \
-      ${true="--flat" false="" flat} \
-      ${true="--interactive" false="" interactive} \
-      ${true="--lint" false="" lint} \
-      ${true="--pdf" false="" pdf} \
-      ${false="--no-megaqc-upload" true="" megaQC_upload} \
-      ${"--config " + config} \
-      ${"--cl-config " + config_yaml }
+      --outdir "~{out_dir}" \
+      ~{true="--force" false="" force} \
+      ~{true="--fullnames" false="" full_names} \
+      ~{"--title " + title} \
+      ~{"--comment " + comment} \
+      ~{"--filename " + file_name} \
+      ~{"--template " + template} \
+      ~{"--tag " + tag} \
+      ~{"--ignore " + ignore_analysis_files} \
+      ~{"--ignore-samples" + ignore_sample_names} \
+      ~{"--sample-names " + sample_names} \
+      ~{true="--exclude " false="" defined(exclude_modules)}~{sep=' --exclude ' select_first([exclude_modules,[]])} \
+      ~{true="--module " false="" defined(module_to_use)}~{sep=' --module ' select_first([module_to_use,[]])} \
+      ~{true="--data-dir" false="" data_dir} \
+      ~{true="--no-data-dir" false="" no_data_dir} \
+      ~{"--data-format " + output_data_format} \
+      ~{true="--zip-data-dir" false="" zip_data_dir} \
+      ~{true="--export" false="" export} \
+      ~{true="--flat" false="" flat} \
+      ~{true="--interactive" false="" interactive} \
+      ~{true="--lint" false="" lint} \
+      ~{true="--pdf" false="" pdf} \
+      ~{false="--no-megaqc-upload" true="" megaQC_upload} \
+      ~{"--config " + config} \
+      ~{"--cl-config " + config_yaml }
       MULTIQC_EXIT_CODE=$?
       set -e
 
       # Ensure output directory exists (MultiQC may remove it if no results found or if it crashed)
-      mkdir -p "${out_dir}"
+      mkdir -p "~{out_dir}"
 
-      if [ -z "${file_name}" ]; then
-        mv "${out_dir}/${report_filename}_report.html" "${out_dir}/${report_filename}.html" 2>/dev/null || true
+      if [ -z "~{file_name}" ]; then
+        mv "~{out_dir}/~{report_filename}_report.html" "~{out_dir}/~{report_filename}.html" 2>/dev/null || true
       fi
 
       # Create placeholder HTML report if MultiQC didn't create one (happens when no valid results found or on crash)
-      if [ ! -f "${out_dir}/${report_filename}.html" ]; then
-        echo "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>MultiQC Report</title></head><body><h1>MultiQC Report</h1><p>No analysis results found in input files.</p></body></html>" > "${out_dir}/${report_filename}.html"
+      if [ ! -f "~{out_dir}/~{report_filename}.html" ]; then
+        echo "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>MultiQC Report</title></head><body><h1>MultiQC Report</h1><p>No analysis results found in input files.</p></body></html>" > "~{out_dir}/~{report_filename}.html"
       fi
 
       # Ensure data directory exists before tarring (MultiQC only creates it when results are found)
-      mkdir -p "${out_dir}/${report_filename}_data"
-      tar -c "${out_dir}/${report_filename}_data" | gzip -c > "${report_filename}_data.tar.gz"
-  }
+      mkdir -p "~{out_dir}/~{report_filename}_data"
+      tar -c "~{out_dir}/~{report_filename}_data" | gzip -c > "~{report_filename}_data.tar.gz"
+  >>>
 
   output {
-      File multiqc_report           = "${out_dir}/${report_filename}.html"
-      File multiqc_data_dir_tarball = "${report_filename}_data.tar.gz"
+      File multiqc_report           = "~{out_dir}/~{report_filename}.html"
+      File multiqc_data_dir_tarball = "~{report_filename}_data.tar.gz"
   }
 
   runtime {
     memory: "8 GB"
     cpu: 16
-    docker: "${docker}"
-    disks:  "local-disk " + disk_size + " LOCAL"
+    docker: docker
+    disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
+task multiqc_from_bams {
+  meta {
+    description: "Run FastQC on a set of BAM files in parallel, then aggregate results with MultiQC. This task consolidates what was previously done by separate FastQC calls in individual tasks."
+  }
+
+  input {
+    Array[File]+   input_bams
+
+    String?        title
+    String?        comment
+    String         out_basename      = "multiqc"
+    Boolean        full_names        = false
+    Boolean        interactive       = true
+    File?          config
+    String?        config_yaml
+
+    String         docker = "ghcr.io/broadinstitute/read-qc-tools:1.0.1"
+
+    Int?           cpu              # Override auto-scaled CPU (default: 2*num_bams, capped 4-32)
+    Int?           machine_mem_gb   # Override auto-scaled memory (default: 2*cpu GB)
+    Int?           disk_size_gb     # Override auto-scaled disk (default: 3*input_size + 50, rounded to 375 GB)
+  }
+
+  parameter_meta {
+    input_bams: {
+      description: "Array of BAM files to run FastQC on. FastQC is run in parallel, then MultiQC aggregates all results.",
+      patterns: ["*.bam"],
+      category: "required"
+    }
+    out_basename: {
+      description: "Base name for the MultiQC output file (without .html extension). Default: 'multiqc'",
+      category: "optional"
+    }
+  }
+
+  # Resource scaling based on number of BAMs (can be overridden by inputs)
+  Int num_bams = length(input_bams)
+  Int cpu_raw = num_bams * 2
+  Int cpu_computed = if cpu_raw > 32 then 32 else (if cpu_raw < 4 then 4 else cpu_raw)
+  Int cpu_final = select_first([cpu, cpu_computed])
+  Int mem_computed = cpu_final * 2
+  Int mem_final = select_first([machine_mem_gb, mem_computed])
+  Int disk_computed = ceil((3 * size(input_bams, "GB") + 50) / 375.0) * 375
+  Int disk_size = select_first([disk_size_gb, disk_computed])
+
+  # Strip .html extension if present in out_basename
+  String report_filename = basename(out_basename, ".html")
+
+  command <<<
+    set -ex -o pipefail
+
+    echo "=== multiqc_from_bams START ==="
+    date -u +"%Y-%m-%dT%H:%M:%SZ"
+    uptime
+
+    # Write BAM paths to file for parallel processing
+    BAM_LIST="bam_files.txt"
+    for bam in ~{sep=' ' input_bams}; do
+      echo "$bam" >> "$BAM_LIST"
+    done
+
+    num_bams=$(wc -l < "$BAM_LIST")
+    num_cpus=$(nproc)
+
+    # Limit concurrent jobs to CPU count (each FastQC is a Java process with its own heap)
+    # Cap at num_bams if we have more CPUs than files
+    num_fastqc_jobs=$num_cpus
+    if [[ $num_fastqc_jobs -gt $num_bams ]]; then
+      num_fastqc_jobs=$num_bams
+    fi
+
+    # Over-allocate threads: 2x the "fair share" threads per job, minimum 4
+    # Initially each job gets ~(cpus/samples) actual CPU time
+    # As jobs finish, remaining jobs opportunistically get more CPU time
+    fair_share_threads=$(( num_cpus / num_bams ))
+    if [[ $fair_share_threads -lt 1 ]]; then
+      fair_share_threads=1
+    fi
+    num_fastqc_threads=$(( fair_share_threads * 2 ))
+    if [[ $num_fastqc_threads -lt 4 ]]; then
+      num_fastqc_threads=4
+    fi
+    export FASTQC_THREADS=$num_fastqc_threads
+
+    echo "=== Running FastQC on $num_bams BAM files with $num_fastqc_jobs parallel jobs ($num_fastqc_threads threads each, nproc=$num_cpus) ==="
+    date -u +"%Y-%m-%dT%H:%M:%SZ"
+
+    # Create output directory for FastQC results
+    mkdir -p fastqc_output
+
+    # Define a wrapper function that handles empty BAM files gracefully
+    # FastQC fails on empty BAMs, so we create placeholder outputs for those
+    run_fastqc_safe() {
+      local bam_file="$1"
+      local out_dir="$2"
+      local bam_basename=$(basename "$bam_file" .bam)
+      local html_out="${out_dir}/${bam_basename}_fastqc.html"
+      local zip_out="${out_dir}/${bam_basename}_fastqc.zip"
+
+      # Check if BAM has any reads
+      read_count=$(samtools view -c "$bam_file" 2>/dev/null || echo "0")
+
+      if [[ "$read_count" -eq 0 ]]; then
+        # Empty BAM: create placeholder outputs
+        echo "<html><body>Input BAM has zero reads.</body></html>" > "$html_out"
+        # Create a minimal valid zip file with a placeholder
+        echo "Input BAM has zero reads." > "${out_dir}/${bam_basename}_fastqc_data.txt"
+        (cd "$out_dir" && zip -q "${bam_basename}_fastqc.zip" "${bam_basename}_fastqc_data.txt")
+        rm "${out_dir}/${bam_basename}_fastqc_data.txt"
+        echo "Created placeholder FastQC output for empty BAM: $bam_file"
+      else
+        # Non-empty BAM: run FastQC with threading
+        fastqc "$bam_file" --outdir "$out_dir" --quiet --threads $FASTQC_THREADS
+      fi
+    }
+    export -f run_fastqc_safe
+
+    # Run FastQC in parallel on all BAM files using the safe wrapper
+    cat "$BAM_LIST" | parallel --jobs $num_fastqc_jobs \
+      "run_fastqc_safe {} fastqc_output"
+
+    echo "=== FastQC complete ==="
+    date -u +"%Y-%m-%dT%H:%M:%SZ"
+    uptime
+    ls -la fastqc_output/
+
+    echo "=== Running MultiQC ==="
+    date -u +"%Y-%m-%dT%H:%M:%SZ"
+
+    # Run MultiQC on all FastQC outputs (it reads _fastqc.zip files)
+    mkdir -p multiqc_output
+    set +e
+    multiqc \
+      fastqc_output \
+      --outdir multiqc_output \
+      --filename "~{report_filename}" \
+      ~{true="--fullnames" false="" full_names} \
+      ~{"--title " + title} \
+      ~{"--comment " + comment} \
+      ~{true="--interactive" false="" interactive} \
+      ~{"--config " + config} \
+      ~{"--cl-config " + config_yaml}
+    MULTIQC_EXIT_CODE=$?
+    set -e
+    echo "MultiQC exit code: $MULTIQC_EXIT_CODE"
+
+    echo "=== MultiQC complete ==="
+    date -u +"%Y-%m-%dT%H:%M:%SZ"
+    ls -la multiqc_output/
+
+    # Create placeholder HTML report if MultiQC didn't create one
+    if [ ! -f "multiqc_output/~{report_filename}.html" ]; then
+      echo "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>MultiQC Report</title></head><body><h1>MultiQC Report</h1><p>No analysis results found in input files.</p></body></html>" > "multiqc_output/~{report_filename}.html"
+    fi
+
+    # Create data tarball
+    mkdir -p "multiqc_output/~{report_filename}_data"
+    tar -c "multiqc_output/~{report_filename}_data" | gzip -c > "~{report_filename}_data.tar.gz"
+
+    # Move FastQC HTML files to working directory for output
+    mv fastqc_output/*_fastqc.html . 2>/dev/null || true
+
+    echo "=== multiqc_from_bams END ==="
+    date -u +"%Y-%m-%dT%H:%M:%SZ"
+    uptime
+
+    cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+    cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+    set +o pipefail
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
+  >>>
+
+  output {
+    File        multiqc_report            = "multiqc_output/~{report_filename}.html"
+    File        multiqc_data_dir_tarball  = "~{report_filename}_data.tar.gz"
+    Array[File] fastqc_html               = glob("*_fastqc.html")
+    Int         max_ram_gb                = ceil(read_float("MEM_BYTES")/1000000000)
+    Int         runtime_sec               = ceil(read_float("UPTIME_SEC"))
+    Int         cpu_load_15min            = ceil(read_float("LOAD_15M"))
+  }
+
+  runtime {
+    docker: docker
+    memory: mem_final + " GB"
+    cpu:    cpu_final
+    disks:  "local-disk " + disk_size + " HDD"
+    disk: disk_size + " GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x8"
     maxRetries: 2
   }
 }
@@ -732,7 +916,7 @@ task compare_two_genomes {
     File   genome_two
     String out_basename
 
-    String docker = "quay.io/broadinstitute/viral-assemble:2.5.1.0"
+    String docker = "quay.io/broadinstitute/viral-assemble:2.5.21.0"
   }
 
   Int disk_size = 50

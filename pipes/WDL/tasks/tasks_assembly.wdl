@@ -15,7 +15,8 @@ task assemble {
       String   sample_name = basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt")
       
       Int?     machine_mem_gb
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.5.1.0"
+      Int?     cpu
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.5.21.0"
     }
     parameter_meta{
       reads_unmapped_bam: {
@@ -60,7 +61,7 @@ task assemble {
 
     Int disk_size = 375
 
-    command {
+    command <<<
         set -ex -o pipefail
 
         # find 90% memory
@@ -82,20 +83,28 @@ task assemble {
           --loglevel=DEBUG
 
         samtools view -c ~{sample_name}.subsamp.bam | tee subsample_read_count >&2
-    }
+
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        set +o pipefail
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
+    >>>
 
     output {
         File   contigs_fasta        = "~{sample_name}.assembly1-spades.fasta"
         File   subsampBam           = "~{sample_name}.subsamp.bam"
         Int    subsample_read_count = read_int("subsample_read_count")
+        Int    max_ram_gb           = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec          = ceil(read_float("UPTIME_SEC"))
+        Int    cpu_load_15min       = ceil(read_float("LOAD_15M"))
         String viralngs_version     = read_string("VERSION")
     }
 
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 63]) + " GB"
-        cpu: 4
-        disks:  "local-disk " + disk_size + " LOCAL"
+        memory: select_first([machine_mem_gb, 32]) + " GB"
+        cpu:    select_first([cpu, 8])
+        disks:  "local-disk " + disk_size + " SSD"
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
         maxRetries: 2
@@ -116,7 +125,7 @@ task select_references {
     Int?          skani_c
     Int?          skani_n
 
-    String        docker = "quay.io/broadinstitute/viral-assemble:2.5.1.0"
+    String        docker = "quay.io/broadinstitute/viral-assemble:2.5.21.0"
     Int           machine_mem_gb = 4
     Int           cpu = 2
     Int           disk_size = 100
@@ -162,6 +171,11 @@ task select_references {
     # create top-hits output files
     cut -f 1 "~{contigs_basename}.refs_skani_dist.top.tsv" | tail +2 > TOP_FASTAS
     for f in $(cat TOP_FASTAS); do basename "$f" .fasta; done > TOP_FASTAS_BASENAMES
+
+    cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+    cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+    set +o pipefail
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
   >>>
 
   output {
@@ -171,13 +185,16 @@ task select_references {
     Array[File]          top_matches_per_cluster_fastas = read_lines("TOP_FASTAS")
     File                 skani_dist_full_tsv = "~{contigs_basename}.refs_skani_dist.full.tsv"
     File                 skani_dist_top_tsv  = "~{contigs_basename}.refs_skani_dist.top.tsv"
+    Int                  max_ram_gb     = ceil(read_float("MEM_BYTES")/1000000000)
+    Int                  runtime_sec    = ceil(read_float("UPTIME_SEC"))
+    Int                  cpu_load_15min = ceil(read_float("LOAD_15M"))
   }
 
   runtime {
     docker: docker
     memory: machine_mem_gb + " GB"
     cpu:    cpu
-    disks:  "local-disk " + disk_size + " LOCAL"
+    disks:  "local-disk " + disk_size + " SSD"
     disk: disk_size + " GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
@@ -188,7 +205,7 @@ task select_references {
 task scaffold {
     input {
       File         contigs_fasta
-      File         reads_bam
+      File?        reads_bam
       Array[File]+ reference_genome_fasta
 
       String       aligner="muscle"
@@ -197,9 +214,9 @@ task scaffold {
       Int          replace_length=55
       Boolean      allow_incomplete_output = false
 
-      Int?          skani_m
-      Int?          skani_s
-      Int?          skani_c
+      Int?         skani_m
+      Int?         skani_s
+      Int?         skani_c
 
       Int?         nucmer_max_gap
       Int?         nucmer_min_match
@@ -208,16 +225,22 @@ task scaffold {
       Float?       scaffold_min_pct_contig_aligned
 
       Int?         machine_mem_gb
-      String       docker="quay.io/broadinstitute/viral-assemble:2.5.1.0"
+      String       docker="quay.io/broadinstitute/viral-assemble:2.5.21.0"
 
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
     }
+
+    # Determine whether to run Gap2Seq based on reads_bam size
+    # Gap2Seq can take 100+ min for large BAMs (>1GB), providing diminishing returns
+    Float reads_bam_size_gb = if defined(reads_bam) then size(select_first([reads_bam]), "GB") else 0.0
+    Boolean run_gap2seq = defined(reads_bam) && reads_bam_size_gb < 1.0
+
     parameter_meta {
       reads_bam: {
-        description: "Reads in BAM format.",
+        description: "Reads in BAM format. If provided, Gap2Seq will attempt to fill gaps using reads. Skipping this for large BAMs (>1GB) can save significant runtime.",
         patterns: ["*.bam"],
-        category: "required"
+        category: "optional"
       }
 
       contigs_fasta: {
@@ -281,7 +304,7 @@ task scaffold {
 
     Int disk_size = 375
 
-    command {
+    command <<<
         set -ex -o pipefail
 
         # find 90% memory
@@ -304,7 +327,7 @@ task scaffold {
         # sometimes skani fails; if so, just fall-back to sending all refs downstream
         if [[ $(wc -l <"~{sample_name}.refs_skani_dist.full.tsv") -ge 2 ]]; then
           # skani reference selection worked: just try one reference
-          CHOSEN_REF_FASTA=$(cut -f 1 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1)
+          CHOSEN_REF_FASTA=$(awk -F'\t' 'NR==2 {print $1; exit}' "~{sample_name}.refs_skani_dist.full.tsv")
           basename "$CHOSEN_REF_FASTA" .fasta > CHOSEN_REF_BASENAME
 
           assembly.py order_and_orient \
@@ -322,9 +345,9 @@ task scaffold {
             ~{true='--allow_incomplete_output' false="" allow_incomplete_output} \
             --loglevel=DEBUG
 
-          cut -f 3 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1 > SKANI_ANI
-          cut -f 4 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1 > SKANI_REF_AF
-          cut -f 5 "~{sample_name}.refs_skani_dist.full.tsv" | tail +2 | head -1 > SKANI_CONTIGS_AF
+          awk -F'\t' 'NR==2 {print $3; exit}' "~{sample_name}.refs_skani_dist.full.tsv" > SKANI_ANI
+          awk -F'\t' 'NR==2 {print $4; exit}' "~{sample_name}.refs_skani_dist.full.tsv" > SKANI_REF_AF
+          awk -F'\t' 'NR==2 {print $5; exit}' "~{sample_name}.refs_skani_dist.full.tsv" > SKANI_CONTIGS_AF
 
         else
           # skani reference selection failed: try all references
@@ -351,13 +374,19 @@ task scaffold {
         fi
         grep '^>' "~{sample_name}".scaffolding_chosen_ref.fasta | cut -c 2- | cut -f 1 -d ' ' > "~{sample_name}".scaffolding_chosen_refs.txt
 
-        assembly.py gapfill_gap2seq \
-          "~{sample_name}".intermediate_scaffold.fasta \
-          "~{reads_bam}" \
-          "~{sample_name}".intermediate_gapfill.fasta \
-          --memLimitGb $mem_in_gb \
-          --maskErrors \
-          --loglevel=DEBUG
+        # Run Gap2Seq only if reads_bam is provided and smaller than 1GB
+        if ~{true='true' false='false' run_gap2seq}; then
+            assembly.py gapfill_gap2seq \
+              "~{sample_name}".intermediate_scaffold.fasta \
+              "~{reads_bam}" \
+              "~{sample_name}".intermediate_gapfill.fasta \
+              --memLimitGb $mem_in_gb \
+              --maskErrors \
+              --loglevel=DEBUG
+        else
+            echo "Skipping Gap2Seq: reads_bam not provided or >= 1GB (~{reads_bam_size_gb} GB)" >&2
+            cp "~{sample_name}".intermediate_scaffold.fasta "~{sample_name}".intermediate_gapfill.fasta
+        fi
 
         set +e +o pipefail
         grep -v '^>' "~{sample_name}".intermediate_gapfill.fasta | tr -d '\n' | wc -c | tee assembly_preimpute_length
@@ -387,7 +416,12 @@ task scaffold {
             ~{'--aligner=' + aligner} \
             --loglevel=DEBUG
         fi
-    }
+
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        set +o pipefail
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
+    >>>
 
     output {
         File   scaffold_fasta                        = "~{sample_name}.scaffolded_imputed.fasta"
@@ -406,14 +440,17 @@ task scaffold {
         Float  skani_ani                             = read_float("SKANI_ANI")
         Float  skani_ref_aligned_frac                = read_float("SKANI_REF_AF")
         Float  skani_contigs_aligned_frac            = read_float("SKANI_CONTIGS_AF")
+        Int    max_ram_gb                            = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec                           = ceil(read_float("UPTIME_SEC"))
+        Int    cpu_load_15min                        = ceil(read_float("LOAD_15M"))
         String viralngs_version                      = read_string("VERSION")
     }
 
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 63]) + " GB"
+        memory: select_first([machine_mem_gb, 20]) + " GB"
         cpu: 4
-        disks:  "local-disk " + disk_size + " LOCAL"
+        disks:  "local-disk " + disk_size + " SSD"
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
         maxRetries: 2
@@ -433,7 +470,7 @@ task skani_triangle {
     Int     compression_factor = 10
     Int     min_aligned_frac = 15
 
-    String  docker = "quay.io/broadinstitute/viral-assemble:2.5.1.0"
+    String  docker = "quay.io/broadinstitute/viral-assemble:2.5.21.0"
     Int     machine_mem_gb = 8
     Int     cpu = 4
     Int     disk_size = 100
@@ -498,7 +535,7 @@ task skani_triangle {
     docker: docker
     memory: machine_mem_gb + " GB"
     cpu:    cpu
-    disks:  "local-disk " + disk_size + " LOCAL"
+    disks:  "local-disk " + disk_size + " SSD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     preemptible: 2
@@ -550,7 +587,7 @@ task ivar_trim {
       }
     }
 
-    command {
+    command <<<
         ivar version | head -1 | tee VERSION
         if [ -f "~{trim_coords_bed}" ]; then
           ivar trim -e \
@@ -569,7 +606,7 @@ task ivar_trim {
         PCT=$(grep "Trimmed primers from" IVAR_OUT | perl -lape 's/Trimmed primers from (\S+)%.*/$1/')
         if [[ $PCT = -* ]]; then echo 0; else echo $PCT; fi > IVAR_TRIM_PCT
         grep "Trimmed primers from" IVAR_OUT | perl -lape 's/Trimmed primers from \S+% \((\d+)\).*/$1/' > IVAR_TRIM_COUNT
-    }
+    >>>
 
     output {
         File   aligned_trimmed_bam         = "~{bam_basename}.trimmed.bam"
@@ -582,7 +619,7 @@ task ivar_trim {
         docker: docker
         memory: select_first([machine_mem_gb, 7]) + " GB"
         cpu: 4
-        disks:  "local-disk " + disk_size + " LOCAL"
+        disks:  "local-disk " + disk_size + " HDD"
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x4"
         maxRetries: 2
@@ -670,13 +707,34 @@ task align_reads {
     String?  aligner_options
     Boolean  skip_mark_dupes = false
 
+    # bbnorm preprocessing for extremely oversequenced samples
+    # Only activates if input has more than this many reads; max output reads is half this value
+    Int      read_count_downsample_threshold = 150000000  # 150M reads
+
+    Int?     cpu
     Int?     machine_mem_gb
-    String   docker = "quay.io/broadinstitute/viral-core:2.5.10"
+    String   docker = "quay.io/broadinstitute/viral-core:2.5.21"
 
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
   }
 
-  Int disk_size = 375
+  # Note: GCP local SSDs must be allocated in pairs (2, 4, 8, 16, 24 × 375GB), so we round to 750GB multiples.
+  # 7x input BAM to account for bbnorm preprocessing temp file
+  Int disk_size = ceil((7 * size(reads_unmapped_bam, "GB") + 2 * size(reference_fasta, "GB") + 100) / 750.0) * 750
+
+  # Skip indel realignment for large BAMs (>1GB) to save runtime
+  Float   reads_bam_size_gb = size(reads_unmapped_bam, "GB")
+  Boolean skip_realign = reads_bam_size_gb >= 1.0
+
+  # bbnorm preprocessing: max output reads is half the downsample threshold
+  Int bbnorm_max_output_reads = read_count_downsample_threshold / 2
+
+  # Autoscale CPU based on input size: 8 CPUs for small inputs, up to 64 CPUs for ~15 GB inputs
+  # Linear scaling: 8 + (input_GB / 15) * 56, capped at 64, rounded to nearest multiple of 4
+  Float        cpu_unclamped = 8.0 + (size(reads_unmapped_bam, "GB") / 15.0) * 56.0
+  Int          cpu_actual = select_first([cpu, floor(((if cpu_unclamped > 64.0 then 64.0 else cpu_unclamped) + 2.0) / 4.0) * 4])
+  # Memory scales with CPU at 3x ratio (default), or use override
+  Int          machine_mem_gb_actual = select_first([machine_mem_gb, cpu_actual * 3])
 
   parameter_meta {
     reference_fasta: {
@@ -704,6 +762,26 @@ task align_reads {
 
     mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
 
+    # Preprocess extremely large inputs with bbnorm to prevent OOM in downstream markdup
+    INPUT_BAM="~{reads_unmapped_bam}"
+    input_read_count=$(samtools view -c "$INPUT_BAM")
+    echo "Input read count: $input_read_count" >&2
+
+    if [ "$input_read_count" -ge ~{read_count_downsample_threshold} ]; then
+        echo "Input exceeds ~{read_count_downsample_threshold} reads, running bbnorm preprocessing..." >&2
+        read_utils.py rmdup_bbnorm_bam \
+            "$INPUT_BAM" \
+            preprocessed.bam \
+            --target=20000 \
+            --passes=1 \
+            --memory="$mem_in_mb"m \
+            --minInputReads=~{read_count_downsample_threshold} \
+            --maxOutputReads=~{bbnorm_max_output_reads} \
+            --loglevel=DEBUG
+        INPUT_BAM="preprocessed.bam"
+        echo "Post-bbnorm read count: $(samtools view -c $INPUT_BAM)" >&2
+    fi
+
     cp "~{reference_fasta}" assembly.fasta
     grep -v '^>' assembly.fasta | tr -d '\n' | wc -c | tee assembly_length
 
@@ -721,13 +799,14 @@ task align_reads {
       read_utils.py index_fasta_samtools assembly.fasta --loglevel=DEBUG
 
       read_utils.py align_and_fix \
-        "~{reads_unmapped_bam}" \
+        "$INPUT_BAM" \
         assembly.fasta \
         --outBamAll "~{sample_name}.all.bam" \
         --outBamFiltered "~{sample_name}.mapped.bam" \
         --aligner ~{aligner} \
         ~{'--aligner_options "' + aligner_options + '"'} \
         ~{true='--skipMarkDupes' false="" skip_mark_dupes} \
+        ~{true='--skipRealign' false="" skip_realign} \
         --JVMmemory "$mem_in_mb"m \
         ~{"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
         --loglevel=DEBUG
@@ -753,9 +832,6 @@ task align_reads {
     samtools view "~{sample_name}.mapped.bam" | cut -f10 | tr -d '\n' | wc -c | tee bases_aligned
     python -c "print (float("$(cat bases_aligned)")/"$(cat assembly_length_unambiguous)") if "$(cat assembly_length_unambiguous)">0 else print(0)" > mean_coverage
 
-    # fastqc mapped bam
-    reports.py fastqc ~{sample_name}.mapped.bam ~{sample_name}.mapped_fastqc.html --out_zip ~{sample_name}.mapped_fastqc.zip
-
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
   >>>
@@ -766,8 +842,6 @@ task align_reads {
     File   aligned_bam_flagstat          = "~{sample_name}.all.bam.flagstat.txt"
     File   aligned_only_reads_bam        = "~{sample_name}.mapped.bam"
     File   aligned_only_reads_bam_idx    = "~{sample_name}.mapped.bai"
-    File   aligned_only_reads_fastqc     = "~{sample_name}.mapped_fastqc.html"
-    File   aligned_only_reads_fastqc_zip = "~{sample_name}.mapped_fastqc.zip"
     Int    reference_length              = read_int("assembly_length")
     Int    reads_provided                = read_int("reads_provided")
     Int    reads_aligned                 = read_int("reads_aligned")
@@ -782,8 +856,8 @@ task align_reads {
 
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 15]) + " GB"
-    cpu: 8
+    memory: machine_mem_gb_actual + " GB"
+    cpu: cpu_actual
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
@@ -807,8 +881,8 @@ task refine_assembly_with_aligned_reads {
       Float    major_cutoff = 0.5
       Int      min_coverage = 3
 
-      Int      machine_mem_gb = 15
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.5.1.0"
+      Int      machine_mem_gb = 8
+      String   docker = "quay.io/broadinstitute/viral-assemble:2.5.21.0"
     }
 
     Int disk_size = 375
@@ -902,6 +976,11 @@ task refine_assembly_with_aligned_reads {
         set +o pipefail # grep will exit 1 if it fails to find the pattern
         grep -v '^>' trimmed.fasta | tr -d '\n' | wc -c | tee assembly_length
         grep -v '^>' trimmed.fasta | tr -d '\nNn' | wc -c | tee assembly_length_unambiguous
+
+        cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+        cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+        set +o pipefail
+        { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
     >>>
 
     output {
@@ -911,6 +990,9 @@ task refine_assembly_with_aligned_reads {
         Int    assembly_length_unambiguous = read_int("assembly_length_unambiguous")
         Int    dist_to_ref_snps            = read_int("num_snps")
         Int    dist_to_ref_indels          = read_int("num_indels")
+        Int    max_ram_gb                  = ceil(read_float("MEM_BYTES")/1000000000)
+        Int    runtime_sec                 = ceil(read_float("UPTIME_SEC"))
+        Int    cpu_load_15min              = ceil(read_float("LOAD_15M"))
         String viralngs_version            = read_string("VERSION")
     }
 
@@ -918,7 +1000,7 @@ task refine_assembly_with_aligned_reads {
         docker: docker
         memory: machine_mem_gb + " GB"
         cpu: 8
-        disks:  "local-disk " + disk_size + " LOCAL"
+        disks:  "local-disk " + disk_size + " SSD"
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
         maxRetries: 2
@@ -937,7 +1019,7 @@ task run_discordance {
       String out_basename = "run"
       Int    min_coverage = 4
 
-      String docker = "quay.io/broadinstitute/viral-core:2.5.10"
+      String docker = "quay.io/broadinstitute/viral-core:2.5.21"
     }
     parameter_meta {
       reads_aligned_bam: {
@@ -957,7 +1039,7 @@ task run_discordance {
 
     Int disk_size = 100
 
-    command {
+    command <<<
         set -ex -o pipefail
 
         read_utils.py --version | tee VERSION
@@ -1023,7 +1105,7 @@ task run_discordance {
           echo 0 > num_discordant_snps
           echo 0 > num_discordant_indels
         fi
-    }
+    >>>
 
     output {
         File   discordant_sites_vcf = "~{out_basename}.discordant.vcf"
@@ -1186,7 +1268,7 @@ task wgsim {
         Int?   random_seed
 
         Int    machine_mem_gb = 7
-        String docker = "quay.io/broadinstitute/viral-assemble:2.5.1.0"
+        String docker = "quay.io/broadinstitute/viral-assemble:2.5.21.0"
     }
 
     parameter_meta {

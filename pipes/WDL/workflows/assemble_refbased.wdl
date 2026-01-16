@@ -217,7 +217,6 @@ workflow assemble_refbased {
         Array[Int]  align_to_ref_per_input_reads_aligned         = align_to_ref.reads_aligned
 
         File        align_to_ref_merged_aligned_trimmed_only_bam = aligned_trimmed_bam
-        File        align_to_ref_fastqc                          = select_first([merge_align_to_ref.fastqc, align_to_ref.aligned_only_reads_fastqc[0]])
         File        align_to_ref_merged_coverage_plot            = plot_ref_coverage.coverage_plot
         File        align_to_ref_merged_coverage_tsv             = plot_ref_coverage.coverage_tsv
         Int         align_to_ref_merged_reads_aligned            = plot_ref_coverage.reads_aligned

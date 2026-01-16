@@ -11,7 +11,7 @@ task krakenuniq {
     File        krona_taxonomy_db_tgz  # taxonomy.tab
 
     Int         machine_mem_gb = 320
-    String      docker = "quay.io/broadinstitute/viral-classify:2.2.4.0" #skip-global-version-pin
+    String      docker = "quay.io/broadinstitute/viral-classify:2.1.33.0" #skip-global-version-pin
   }
 
   Int disk_size = 750
@@ -148,7 +148,7 @@ task build_krakenuniq_db {
     Int?     zstd_compression_level
 
     Int      machine_mem_gb = 240
-    String   docker = "quay.io/broadinstitute/viral-classify:2.2.4.0" #skip-global-version-pin
+    String   docker = "quay.io/broadinstitute/viral-classify:2.1.33.0" #skip-global-version-pin
   }
 
   Int disk_size = 750
@@ -218,7 +218,7 @@ task kraken2 {
     Int?   min_base_qual
 
     Int    machine_mem_gb = 90
-    String docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+    String docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   parameter_meta {
@@ -243,7 +243,13 @@ task kraken2 {
   }
 
   String out_basename = basename(basename(reads_bam, '.bam'), '.fasta')
-  Int disk_size = 750
+
+  # Disk autoscaling: BAM->FASTQ expansion is ~7-8x, plus kraken2 reads output (~1x input),
+  # plus kraken2 database (1x localized tarball + 2x decompressed = 3x), plus overhead for krona and temp files.
+  # Minimum 750GB to accommodate typical database sizes.
+  # Note: GCP local SSDs must be allocated in pairs (2, 4, 8, 16, 24 × 375GB), so we round to 750GB multiples.
+  Int disk_size_auto = ceil((8 * size(reads_bam, "GB") + 3 * size(kraken2_db_tgz, "GB") + 50) / 750.0) * 750
+  Int disk_size = if disk_size_auto < 750 then 750 else disk_size_auto
 
   command <<<
     set -ex -o pipefail
@@ -345,7 +351,7 @@ task report_primary_kraken_taxa {
     File          kraken_summary_report
     String        focal_taxon = "Viruses"
 
-    String        docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+    String        docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
   String out_basename = basename(kraken_summary_report, '.txt')
   Int disk_size = 50
@@ -378,7 +384,7 @@ task report_primary_kraken_taxa {
     docker: docker
     memory: machine_mem_gb + " GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " LOCAL"
+    disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
@@ -396,7 +402,7 @@ task filter_refs_to_found_taxa {
     File          taxdump_tgz
     Int           min_read_count = 100
 
-    String        docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+    String        docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
   String ref_basename = basename(taxid_to_ref_accessions_tsv, '.tsv')
   String hits_basename = basename(focal_report_tsv, '.tsv')
@@ -447,7 +453,7 @@ task build_kraken2_db {
     Int?          zstd_compression_level
 
     Int           machine_mem_gb = 100
-    String        docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+    String        docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   Int disk_size = 750
@@ -589,7 +595,7 @@ task blastx {
     File   krona_taxonomy_db_tgz
 
     Int    machine_mem_gb = 8
-    String docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+    String docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   parameter_meta {
@@ -679,7 +685,7 @@ task krona {
     Int?         magnitude_column
 
     Int          machine_mem_gb = 3
-    String       docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   Int disk_size = 50
@@ -784,23 +790,19 @@ task filter_bam_to_taxa {
     Boolean        withoutChildren = false
     Boolean        exclude_taxa = false
     String         out_filename_suffix = "filtered"
-    Boolean        run_fastqc = false
 
-    Int            machine_mem_gb = 26 + 10 * ceil(size(classified_reads_txt_gz, "GB"))
-    String         docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+    Int            machine_mem_gb = 8
+    String         docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   String out_basename = basename(classified_bam, ".bam") + "." + out_filename_suffix
-  Int disk_size = 375 + 2 * ceil(size(classified_bam, "GB"))
+  Int disk_size = ceil((2 * size(classified_bam, "GB") + 100) / 375.0) * 375
 
   command <<<
     set -ex -o pipefail
     if [ -z "$TMPDIR" ]; then
       export TMPDIR=$(pwd)
     fi
-
-    # find 90% memory
-    mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
 
     # decompress taxonomy DB to CWD
     read_utils.py extract_tarball \
@@ -840,32 +842,36 @@ task filter_bam_to_taxa {
       ~{true='--without-children' false='' withoutChildren} \
       ~{'--minimum_hit_groups=' + minimum_hit_groups} \
       --out_count COUNT \
-      --JVMmemory "$mem_in_mb"m \
       --loglevel=DEBUG
 
     samtools view -c "~{out_basename}.bam" | tee classified_taxonomic_filter_read_count_post
-    if [ "~{run_fastqc}" = "true" ]; then
-      reports.py fastqc "~{out_basename}.bam" "~{out_basename}.fastqc.html"
-    fi
     wait
+
+    cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+    cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+    set +o pipefail
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
   >>>
 
   output {
     File    bam_filtered_to_taxa                        = "~{out_basename}.bam"
-    Int     classified_taxonomic_filter_read_count_pre  = read_int("classified_taxonomic_filter_read_count_pre")
     Int     reads_matching_taxa                         = read_int("COUNT")
+    Int     classified_taxonomic_filter_read_count_pre  = read_int("classified_taxonomic_filter_read_count_pre")
     Int     classified_taxonomic_filter_read_count_post = read_int("classified_taxonomic_filter_read_count_post")
+
+    Int     max_ram_gb                                  = ceil(read_float("MEM_BYTES")/1000000000)
+    Int     runtime_sec                                 = ceil(read_float("UPTIME_SEC"))
+    Int     cpu_load_15min                              = ceil(read_float("LOAD_15M"))
     String  viralngs_version                            = read_string("VERSION")
-    File?   fastqc_html_report                          = "~{out_basename}.fastqc.html"
   }
 
   runtime {
     docker: docker
     memory: machine_mem_gb + " GB"
-    disks:  "local-disk " + disk_size + " LOCAL"
+    disks:  "local-disk " + disk_size + " SSD"
     disk: disk_size + " GB" # TES
     cpu: 8
-    dx_instance_type: "mem3_ssd1_v2_x4"
+    dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: 1
     maxRetries: 2
   }
@@ -879,7 +885,7 @@ task kaiju {
     File   krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
 
     Int    machine_mem_gb = 100
-    String docker = "quay.io/broadinstitute/viral-classify:2.5.1.0"
+    String docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
   }
 
   String   input_basename = basename(reads_unmapped_bam, ".bam")
