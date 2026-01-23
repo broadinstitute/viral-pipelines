@@ -236,6 +236,14 @@ task scaffold {
     Float reads_bam_size_gb = if defined(reads_bam) then size(select_first([reads_bam]), "GB") else 0.0
     Boolean run_gap2seq = defined(reads_bam) && reads_bam_size_gb < 1.0
 
+    # Calculate memory based on largest reference genome size
+    # MUSCLE memory is linearly proportional to sequence length
+    # Formula: 20GB floor for ≤30kb, scales to ~40GB at 150kb, capped at 64GB
+    Float max_ref_size_kb = size(reference_genome_fasta[0], "KB")
+    Int scaled_mem_gb = if max_ref_size_kb <= 30.0 then 20
+                        else if max_ref_size_kb >= 294.0 then 64
+                        else 20 + ceil((max_ref_size_kb - 30.0) / 6.0)
+
     parameter_meta {
       reads_bam: {
         description: "Reads in BAM format. If provided, Gap2Seq will attempt to fill gaps using reads. Skipping this for large BAMs (>1GB) can save significant runtime.",
@@ -448,7 +456,7 @@ task scaffold {
 
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 20]) + " GB"
+        memory: select_first([machine_mem_gb, scaled_mem_gb]) + " GB"
         cpu: 4
         disks:  "local-disk " + disk_size + " SSD"
         disk: disk_size + " GB" # TES
