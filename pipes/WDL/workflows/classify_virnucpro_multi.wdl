@@ -35,6 +35,6 @@ workflow classify_virnucpro_multi {
     }
 
     output {
-        Array[File] virnucpro_reports = classify_virnucpro.report_tsv
+        Array[File] virnucpro_scores = classify_virnucpro.virnuc_pro_scores
     }
 }
