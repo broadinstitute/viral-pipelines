@@ -1441,6 +1441,10 @@ task classify_virnucpro {
 
   command <<<
     set -ex -o pipefail
+    
+    export TMPDIR=/tmp
+    export TEMP=/tmp
+    export TMP=/tmp
 
     /opt/virnucpro_cli.py ~{reads_bam} ~{basename}.virnucpro.tsv --expected-length ~{expected_length} \
       ~{true='--use-gpu' false='' use_gpu} \
