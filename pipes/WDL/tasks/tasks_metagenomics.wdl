@@ -1468,8 +1468,8 @@ task classify_virnucpro {
   runtime {
     docker: docker
     predefinedMachineType: "g4-standard-96"
-    #memory: "128 GB"
-    #cpu: 64
+    memory: "360 GB"
+    cpu: 96
     disks: "local-disk 120 SSD"
     disk: "120 GB"
     gpu: true
