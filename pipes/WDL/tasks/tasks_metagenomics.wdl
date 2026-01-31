@@ -1164,7 +1164,6 @@ task kb_extract {
     File            t2g
     Array[String]?  target_ids
     File?           h5ad_file
-
     Int             threads=8
     Int             threshold=1
     Boolean         protein=false
@@ -1380,16 +1379,22 @@ task classify_virnucpro {
   }
 
   input {
-    File    reads_bam
-    Int     expected_length = 300
+    File      reads_bam
+    Int       expected_length = 300
 
-    String? accelerator_type
-    Int?    accelerator_count
-    String? gpu_type
-    Int?    gpu_count
-    String? vm_size
+    Boolean   parallel=false
+    Boolean   persist_model=false
+    Boolean   use_gpu=false
+    Int       batch_size=256
+    Int?      esm_batch_size
+    Int?      dnabert_batch_size
 
-    String  docker = "ghcr.io/broadinstitute/virnucpro-cuda:1.0.1"
+    String?   accelerator_type
+    Int?      accelerator_count
+    String?   gpu_type
+    Int?      gpu_count
+    String?   vm_size
+    String    docker = "ghcr.io/broadinstitute/virnucpro-cuda:1.0.2"
   }
 
   parameter_meta {
@@ -1399,6 +1404,24 @@ task classify_virnucpro {
     }
     expected_length: {
       description: "Expected sequence length in bp. Must be 300 or 500 to match bundled models (300_model.pth, 500_model.pth). VirNucPro silently accepts other values but produces invalid predictions."
+    }
+    parallel: {
+      description: "If true, enables parallel data loading to improve throughput. May increase memory usage."
+    }
+    persist_model: {
+      description: "If true, keeps the model loaded in GPU memory between batches to improve throughput. May increase GPU memory usage."
+    }
+    use_gpu: {
+      description: "If true, uses GPU acceleration for inference. Requires a GPU-enabled runtime."
+    }
+    batch_size: {
+      description: "Number of sequences to process in each batch. Larger batch sizes may improve throughput but increase memory usage."
+    }
+    esm_batch_size: {
+      description: "Batch size specifically for the ESM2 model component. If not provided, defaults to the value of batch_size."
+    }
+    dnabert_batch_size: {
+      description: "Batch size specifically for the DNABERT model component. If not provided, defaults to the value of batch_size."
     }
     accelerator_type: {
       description: "[GCP] The model of GPU to use. For availability and pricing on GCP, see https://cloud.google.com/compute/gpus-pricing#gpus"
@@ -1419,29 +1442,40 @@ task classify_virnucpro {
   command <<<
     set -ex -o pipefail
 
-    /opt/virnucpro_cli.py ~{reads_bam} ~{basename}.virnucpro.tsv --expected-length ~{expected_length}
+    /opt/virnucpro_cli.py ~{reads_bam} ~{basename}.virnucpro.tsv --expected-length ~{expected_length} \
+      ~{true='--use-gpu' false='' use_gpu} \
+      ~{true='--parallel' false='' parallel} \
+      ~{true='--persistent-models' false='' persist_model} \
+      --batch-size ~{batch_size} \
+      ~{'--esm-batch-size=' + esm_batch_size} \
+      ~{'--dnabert-batch-size=' + dnabert_batch_size}
+
+    # Tarball both output files
+    tar -czf ~{basename}.virnucpro.tgz \
+      ~{basename}.virnucpro.tsv \
+      ~{basename}.virnucpro_highestscore.csv
   >>>
 
   output {
-    File report_tsv = "~{basename}.virnucpro.tsv"
+    File virnuc_pro_scores = "~{basename}.virnucpro.tgz"
   }
 
   # GPU multi-platform support: ALL platform attributes required (GCP: acceleratorType/acceleratorCount, Terra: gpuType/gpuCount, DNAnexus: gpu/dx_instance_type, Azure: vm_size). Missing attributes cause silent CPU fallback.
   runtime {
     docker: docker
-    memory: "16 GB"
-    cpu: 4
-    disks: "local-disk 100 HDD"
-    disk: "100 GB"
+    memory: "128 GB"
+    cpu: 64
+    disks: "local-disk 120 SSD"
+    disk: "120 GB"
     gpu: true
     dx_instance_type: "mem1_ssd1_gpu2_x8"
     dx_timeout: "6H"
-    acceleratorType: select_first([accelerator_type, "nvidia-tesla-p4"])
+    acceleratorType: select_first([accelerator_type, "nvidia-rtx-pro-6000"])
     acceleratorCount: select_first([accelerator_count, 1])
-    gpuType: select_first([gpu_type, "nvidia-tesla-p4"])
+    gpuType: select_first([gpu_type, "nvidia-rtx-pro-6000"])
     gpuCount: select_first([gpu_count, 1])
     vm_size: select_first([vm_size, "Standard_NC6"])
-    nvidiaDriverVersion: "410.79"
+    nvidiaDriverVersion: "580.126"
     maxRetries: 1
   }
 }
