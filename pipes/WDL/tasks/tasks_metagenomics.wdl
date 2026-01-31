@@ -1467,8 +1467,9 @@ task classify_virnucpro {
   # GPU multi-platform support: ALL platform attributes required (GCP: acceleratorType/acceleratorCount, Terra: gpuType/gpuCount, DNAnexus: gpu/dx_instance_type, Azure: vm_size). Missing attributes cause silent CPU fallback.
   runtime {
     docker: docker
-    memory: "128 GB"
-    cpu: 64
+    predefinedMachineType: "g4-standard-96"
+    #memory: "128 GB"
+    #cpu: 64
     disks: "local-disk 120 SSD"
     disk: "120 GB"
     gpu: true
@@ -1478,7 +1479,7 @@ task classify_virnucpro {
     acceleratorCount: select_first([accelerator_count, 1])
     gpuType: select_first([gpu_type, "nvidia-rtx-pro-6000"])
     gpuCount: select_first([gpu_count, 1])
-    vm_size: select_first([vm_size, "Standard_NC6"])
+    vm_size: select_first([vm_size, "Standard_G4"])
     nvidiaDriverVersion: "580.126"
     maxRetries: 1
   }
