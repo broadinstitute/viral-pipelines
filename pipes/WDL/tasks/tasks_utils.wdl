@@ -17,6 +17,7 @@ task concatenate {
         docker: "ubuntu"
         memory: "1 GB"
         cpu:    cpus
+        predefinedMachineType: "c4a-standard-4"
         disks:  "local-disk " + disk_size + " HDD"
         disk: disk_size + " GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
@@ -648,6 +649,7 @@ task json_dict_to_tsv {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
+    predefinedMachineType: "c4a-standard-1"
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -689,7 +691,8 @@ task fetch_row_from_tsv {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
-      disks:  "local-disk " + disk_size + " HDD"
+    predefinedMachineType: "c4a-standard-1"
+    disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -1089,6 +1092,7 @@ task unique_strings {
     memory: "1 GB"
     cpu: 1
     docker: "python:slim"
+    predefinedMachineType: "c4a-standard-1"
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -1203,6 +1207,7 @@ task string_split {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
+    predefinedMachineType: "c4a-standard-1"
     disks: "local-disk 50 SSD"
     disk: "50 GB" # TES
     maxRetries: 2

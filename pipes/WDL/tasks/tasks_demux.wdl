@@ -88,6 +88,7 @@ task samplesheet_rename_ids {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
+    predefinedMachineType: "c4a-standard-1"
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -686,6 +687,7 @@ task map_map_setdefault {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
+    predefinedMachineType: "c4a-standard-1"
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -718,6 +720,7 @@ task merge_maps {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
+    predefinedMachineType: "c4a-standard-1"
     disks:  "local-disk " + disk_size + " LOCAL"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -807,6 +810,7 @@ task group_fastq_pairs {
     docker: "python:slim"
     memory: "3 GB"
     cpu: 1
+    predefinedMachineType: "c4a-standard-1"
     disks:  "local-disk " + disk_size + " HDD"
     disk: disk_size + " GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -908,6 +912,7 @@ task check_for_barcode3 {
     docker: docker
     memory: "1 GB"
     cpu: 1
+    predefinedMachineType: "c4a-standard-1"
   }
 }
 
@@ -1157,6 +1162,7 @@ task merge_sample_metadata {
     docker: "python:3.10-slim"
     memory: "2 GB"
     cpu: 1
+    predefinedMachineType: "c4a-standard-1"
     disks: "local-disk 50 HDD"
     disk: "50 GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
