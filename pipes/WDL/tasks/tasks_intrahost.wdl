@@ -123,8 +123,8 @@ task polyphonia_detect_cross_contamination {
     docker: docker
     cpu:    4
     memory: "13 GB"
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
   }
@@ -178,8 +178,8 @@ task lofreq {
     docker: docker
     cpu:    2
     memory: "3 GB"
-    disks:  "local-disk " + disk_size + " SSD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} SSD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -220,7 +220,7 @@ task isnvs_per_sample {
   }
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 7]) + " GB"
+    memory: "~{select_first([machine_mem_gb, 7])} GB"
     dx_instance_type: "mem1_ssd1_v2_x8"
     maxRetries: 2
   }
@@ -298,7 +298,7 @@ task isnvs_vcf {
   }
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 4]) + " GB"
+    memory: "~{select_first([machine_mem_gb, 4])} GB"
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
   }
@@ -392,9 +392,9 @@ task annotate_vcf_snpeff {
   }
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 4]) + " GB"
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    memory: "~{select_first([machine_mem_gb, 4])} GB"
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
   }

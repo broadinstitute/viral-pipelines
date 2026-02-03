@@ -146,9 +146,9 @@ task Fetch_SRA_to_BAM {
 
     runtime {
         cpu:     2
-        memory:  select_first([machine_mem_gb, 6]) + " GB"
-        disks:   "local-disk " + disk_size + " LOCAL"
-        disk:    disk_size + " GB" # TES
+        memory:  "~{select_first([machine_mem_gb, 6])} GB"
+        disks: "local-disk ~{disk_size} LOCAL"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
         maxRetries: 2
@@ -177,8 +177,8 @@ task fetch_genbank_metadata {
     runtime {
         cpu:     1
         memory:  "1 GB"
-        disks:   "local-disk " + disk_size + " LOCAL"
-        disk:    disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} LOCAL"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         docker:  docker
         maxRetries: 2
@@ -239,8 +239,8 @@ task biosample_tsv_filter_preexisting {
     runtime {
         cpu:     2
         memory:  "3 GB"
-        disks:   "local-disk " + disk_size + " HDD"
-        disk:    disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
         maxRetries: 2
@@ -271,8 +271,8 @@ task fetch_biosamples {
     runtime {
         cpu:     2
         memory:  "3 GB"
-        disks:   "local-disk " + disk_size + " HDD"
-        disk:   disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
         maxRetries: 2
@@ -319,8 +319,8 @@ task ncbi_sftp_upload {
     runtime {
         cpu:     2
         memory:  "2 GB"
-        disks:   "local-disk " + disk_size + " HDD"
-        disk:    disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
         maxRetries: 0
@@ -358,8 +358,8 @@ task sra_tsv_to_xml {
     runtime {
         cpu:     1
         memory:  "2 GB"
-        disks:   "local-disk " + disk_size + " HDD"
-        disk:    disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
         maxRetries: 2
@@ -395,8 +395,8 @@ task biosample_submit_tsv_to_xml {
     runtime {
         cpu:     1
         memory:  "2 GB"
-        disks:   "local-disk " + disk_size + " HDD"
-        disk:    disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
         maxRetries: 2
@@ -436,8 +436,8 @@ task biosample_submit_tsv_ftp_upload {
     runtime {
         cpu:     2
         memory:  "2 GB"
-        disks:   "local-disk " + disk_size + " HDD"
-        disk:    disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
         maxRetries: 0
@@ -474,8 +474,8 @@ task biosample_xml_response_to_tsv {
     runtime {
         cpu:     2
         memory:  "2 GB"
-        disks:   "local-disk " + disk_size + " HDD"
-        disk:    disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
         maxRetries: 2
@@ -566,8 +566,8 @@ task group_sra_bams_by_biosample {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
-    disks:   "local-disk " + disk_size + " HDD"
-    disk:    disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }

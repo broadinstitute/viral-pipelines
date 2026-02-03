@@ -279,7 +279,7 @@ task align_and_annot_transfer_single {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 8
     dx_instance_type: "mem2_ssd1_v2_x4"
     preemptible: 1
@@ -743,8 +743,8 @@ task sra_meta_prep {
     docker: docker
     memory: "1 GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -1314,12 +1314,12 @@ task table2asn {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
   }
 }
 
@@ -1645,7 +1645,7 @@ task vadr {
   }
   runtime {
     docker: docker
-    memory: mem_size + " GB"
+    memory: "~{mem_size} GB"
     cpu: cpus
     dx_instance_type: "mem2_ssd1_v2_x4"
     maxRetries: 2
@@ -1828,7 +1828,7 @@ task package_genbank_submissions {
 
   runtime {
     docker: docker
-    memory: mem_size + " GB"
+    memory: "~{mem_size} GB"
     cpu: cpus
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 1

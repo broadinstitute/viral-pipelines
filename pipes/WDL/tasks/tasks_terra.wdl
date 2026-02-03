@@ -776,8 +776,8 @@ task find_illumina_files_in_directory {
     docker: docker
     memory: "3.75 GB"
     cpu: 1
-    disks: "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB"
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }

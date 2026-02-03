@@ -113,10 +113,10 @@ task alignment_metrics {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 4
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x4"
     maxRetries: 2
   }
@@ -214,8 +214,8 @@ task plot_coverage {
     docker: "${docker}"
     memory: "7 GB"
     cpu: 2
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     preemptible: 1
     maxRetries: 2
@@ -277,8 +277,8 @@ task merge_coverage_per_position {
     docker: "${docker}"
     memory: "2 GB"
     cpu: 2
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x4"
     maxRetries: 2
   }
@@ -320,8 +320,8 @@ task coverage_report {
     docker: docker
     memory: "2 GB"
     cpu: 2
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x4"
     maxRetries: 2
   }
@@ -354,8 +354,8 @@ task assembly_bases {
         docker: docker
         memory: "1 GB"
         cpu: 1
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -394,8 +394,8 @@ task fastqc {
     memory: "2 GB"
     cpu: 1
     docker: "${docker}"
-    disks:  "local-disk " + disk_size + " SSD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} SSD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -512,11 +512,11 @@ task align_and_count {
   }
 
   runtime {
-    memory: machine_mem_gb_actual + " GB"
+    memory: "~{machine_mem_gb_actual} GB"
     cpu:    cpu_actual
     docker: docker
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
   }
@@ -549,8 +549,8 @@ task align_and_count_summary {
     memory: "7 GB"
     cpu: 8
     docker: docker
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -598,8 +598,8 @@ task aggregate_metagenomics_reports {
     docker: docker
     memory: "3 GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
     preemptible: 0
     maxRetries: 2
@@ -711,8 +711,8 @@ task MultiQC {
     memory: "8 GB"
     cpu: 16
     docker: docker
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -901,10 +901,10 @@ task multiqc_from_bams {
 
   runtime {
     docker: docker
-    memory: mem_final + " GB"
+    memory: "~{mem_final} GB"
     cpu:    cpu_final
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     maxRetries: 2
   }
@@ -943,8 +943,8 @@ task compare_two_genomes {
     memory: "3 GB"
     cpu: 2
     docker: docker
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 1
     maxRetries: 2

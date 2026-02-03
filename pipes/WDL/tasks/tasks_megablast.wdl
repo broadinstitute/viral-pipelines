@@ -54,7 +54,7 @@ task trim_rmdup_subsamp {
         docker: docker
         memory: machine_mem_gb + "GB"
         cpu:    cpu
-        disks:  "local-disk " + disk_size_gb + " LOCAL"
+        disks: "local-disk ~{disk_size_gb} LOCAL"
         dx_instance_type: "n2-highmem-4"
     }
 }
@@ -229,8 +229,8 @@ task ChunkBlastHits {
     runtime {
         docker: docker
         cpu:    cpu
-        memory: machine_mem_gb + " GB"
-        disks:  "local-disk " + disk_size_gb + " LOCAL"
+        memory: "~{machine_mem_gb} GB"
+        disks: "local-disk ~{disk_size_gb} LOCAL"
 
         dx_instance_type: "n2-standard-16"
     }
@@ -403,7 +403,7 @@ task blastoff {
         docker: docker
         memory: machine_mem_gb + "GB"
         cpu:    cpu
-        disks:  "local-disk " + disk_size_gb + " HDD"
+        disks: "local-disk ~{disk_size_gb} HDD"
 
         dx_instance_type: "n2-highmem-8"
     }

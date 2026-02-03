@@ -62,8 +62,8 @@ task pangolin_one_sample {
         docker: docker
         memory: "3 GB"
         cpu:    2
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -157,8 +157,8 @@ task pangolin_many_samples {
         docker: docker
         memory: "14 GB"
         cpu:    16
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x16"
         maxRetries: 2
     }
@@ -218,8 +218,8 @@ task sequencing_report {
         docker: docker
         memory: "~{machine_mem_gb} GB"
         cpu:    2
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -376,8 +376,8 @@ task sc2_meta_final {
         docker: docker
         memory: "2 GB"
         cpu:    2
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -547,8 +547,8 @@ task crsp_meta_etl {
         docker: docker
         memory: "2 GB"
         cpu:    2
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -590,8 +590,8 @@ task gisaid_uploader {
     docker: "quay.io/broadinstitute/gisaid-cli:3.0"
     memory: "2 GB"
     cpu: 2
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     maxRetries: 1
   }
 }
