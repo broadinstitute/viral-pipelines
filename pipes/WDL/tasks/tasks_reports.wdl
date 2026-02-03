@@ -229,7 +229,7 @@ task merge_coverage_per_position {
 
     String       out_report_name = "coverage_report.csv"
     Int          disk_size = 100
-    String       docker = "quay.io/broadinstitute/py3-bio:0.1.2"
+    String       docker = "quay.io/broadinstitute/py3-bio:0.1.3"
   }
 
   command <<<
@@ -563,7 +563,7 @@ task aggregate_metagenomics_reports {
     String       aggregate_taxlevel_focus                 = "species"
     Int          aggregate_top_N_hits                     = 5
 
-    String       docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+    String       docker = "quay.io/broadinstitute/viral-classify:2.5.21.1"
   }
 
   parameter_meta {

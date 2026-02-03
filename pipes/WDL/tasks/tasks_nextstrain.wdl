@@ -5,7 +5,7 @@ task taxid_to_nextclade_dataset_name {
         Int     taxid
         File    taxdump_tgz
         File    nextclade_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/typing/nextclade-by-taxid.tsv"
-        String  docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+        String  docker = "quay.io/broadinstitute/viral-classify:2.5.21.1"
     }
     command <<<
         set -e

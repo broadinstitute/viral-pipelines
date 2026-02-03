@@ -99,7 +99,7 @@ task revcomp_i5 {
   input {
     File    old_sheet
     Boolean revcomp=true
-    String  docker = "quay.io/broadinstitute/py3-bio:0.1.2"
+    String  docker = "quay.io/broadinstitute/py3-bio:0.1.3"
   }
   String new_base = basename(basename(old_sheet, '.txt'), '.tsv')
   Int disk_size = 50
