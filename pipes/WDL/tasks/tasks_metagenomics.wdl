@@ -177,7 +177,7 @@ task build_krakenuniq_db {
     # build database
     metagenomics.py krakenuniq_build \
       $DB_DIR --library $FASTAS_DIR --taxonomy $TAXDB_DIR \
-      ~{true='--subsetTaxonomy=' false='' subsetTaxonomy} \
+      ~{if select_first([subsetTaxonomy, false]) then '--subsetTaxonomy=' else ''} \
       ~{'--minimizerLen=' + minimizerLen} \
       ~{'--kmerLen=' + kmerLen} \
       ~{'--maxDbSize=' + maxDbSize} \
