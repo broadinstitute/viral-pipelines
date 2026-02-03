@@ -1434,7 +1434,7 @@ task refine_augur_tree {
             ~{"--date-inference " + date_inference} \
             ~{"--branch-length-inference " + branch_length_inference} \
             ~{"--divergence-units " + divergence_units} \
-            ~{true="--covariance" false="--no-covariance" covariance} \
+            ~{if select_first([covariance, true]) then "--covariance" else "--no-covariance"} \
             ~{true="--keep-root" false="" keep_root} \
             ~{true="--keep-polytomies" false="" keep_polytomies} \
             ~{true="--date-confidence" false="" date_confidence} \
