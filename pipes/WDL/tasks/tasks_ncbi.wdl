@@ -1094,7 +1094,7 @@ task generate_author_sbt_file {
     File?   defaults_yaml
     String  out_base = "authors"
 
-    String  docker = "quay.io/broadinstitute/py3-bio:0.1.2"
+    String  docker = "quay.io/broadinstitute/py3-bio:0.1.3"
   }
 
   parameter_meta {
@@ -1403,7 +1403,7 @@ task genbank_special_taxa {
     Int     taxid
     File    taxdump_tgz
     File    vadr_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/annotation/vadr/vadr-by-taxid.tsv"
-    String  docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+    String  docker = "quay.io/broadinstitute/viral-classify:2.5.21.1"
   }
 
   command <<<
