@@ -70,10 +70,10 @@ task deplete_taxa {
     mem_in_mb_75=$(/opt/viral-ngs/source/docker/calc_mem.py mb 75)
 
     # depletion db args
-    DBS_MINIMAP="~{sep=' ' minimapDbs}"
-    DBS_BMTAGGER="~{sep=' ' bmtaggerDbs}"
-    DBS_BLAST="~{sep=' ' blastDbs}"
-    DBS_BWA="~{sep=' ' bwaDbs}"
+    DBS_MINIMAP="~{sep=' ' select_first([minimapDbs, []])}"
+    DBS_BMTAGGER="~{sep=' ' select_first([bmtaggerDbs, []])}"
+    DBS_BLAST="~{sep=' ' select_first([blastDbs, []])}"
+    DBS_BWA="~{sep=' ' select_first([bwaDbs, []])}"
     if [ -n "$DBS_MINIMAP" ]; then DBS_MINIMAP="--minimapDbs $DBS_MINIMAP"; fi
     if [ -n "$DBS_BMTAGGER" ]; then DBS_BMTAGGER="--bmtaggerDbs $DBS_BMTAGGER"; fi
     if [ -n "$DBS_BLAST" ]; then DBS_BLAST="--blastDbs $DBS_BLAST"; fi

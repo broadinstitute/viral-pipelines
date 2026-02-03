@@ -101,8 +101,8 @@ workflow assemble_refbased {
         }
         Map[String,String] ivar_stats = {
             'file': basename(reads_unmapped_bam, '.bam'),
-            'trim_percent': ivar_trim.primer_trimmed_read_percent,
-            'trim_count':   ivar_trim.primer_trimmed_read_count
+            'trim_percent': "~{ivar_trim.primer_trimmed_read_percent}",
+            'trim_count':   "~{ivar_trim.primer_trimmed_read_count}"
         }
         Array[String] ivar_stats_row = [ivar_stats['file'], ivar_stats['trim_percent'], ivar_stats['trim_count']]
     }
