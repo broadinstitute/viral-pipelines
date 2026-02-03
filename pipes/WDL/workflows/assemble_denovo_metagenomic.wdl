@@ -228,7 +228,7 @@ workflow assemble_denovo_metagenomic {
             "assembly_length" :             "~{select_first([refine.assembly_length, 0])}",
             "assembly_length_unambiguous" : "~{assembly_length_unambiguous}",
             "reads_aligned" :               "~{select_first([refine.align_to_self_merged_reads_aligned, 0])}",
-            "mean_coverage" :               "~{select_first([refine.align_to_self_merged_mean_coverage, 0.0])}",
+            "mean_coverage" :               "~{select_first([refine.align_to_self_merged_mean_coverage, 0])}",
             "percent_reference_covered" :   "~{percent_reference_covered}",
             "scaffolding_num_segments_recovered" : "~{scaffold.assembly_num_segments_recovered}",
             "reference_num_segments_required" : "~{scaffold.reference_num_segments_required}",
