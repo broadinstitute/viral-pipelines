@@ -43,7 +43,7 @@ workflow genbank_single {
         }
         assembly_id: {
             description: "Unique identifier for this assembly. Defaults to the basename of assembly_fasta. table2asn requires this value to be <=50 characters; see: https://www.ncbi.nlm.nih.gov/genbank/table2asn/#fsa",
-            patterns: ["^[A-Za-z0-9\-_\.:\*#]{1,50}$"]
+            patterns: ["^[A-Za-z0-9_.:*#-]{1,50}$"]
         }
         ref_accessions_colon_delim: {
           description: "Reference genome Genbank accessions, each segment/chromosome in the exact same count and order as the segments/chromosomes described in assemblies_fasta. List of accessions should be colon delimited.",
