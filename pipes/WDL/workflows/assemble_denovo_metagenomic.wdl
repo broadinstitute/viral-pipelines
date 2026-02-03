@@ -222,9 +222,9 @@ workflow assemble_denovo_metagenomic {
             "tax_name" :           tax_name,
             "tax_shortname" :      isolate_prefix,
 
-            "assembly_fasta" :              assembly_fasta,
-            "aligned_only_reads_bam" :      select_first([refine.align_to_self_merged_aligned_only_bam, ""]),
-            "coverage_plot" :               select_first([refine.align_to_self_merged_coverage_plot, ""]),
+            "assembly_fasta" :              "~{assembly_fasta}",
+            "aligned_only_reads_bam" :      "~{select_first([refine.align_to_self_merged_aligned_only_bam, ''])}",
+            "coverage_plot" :               "~{select_first([refine.align_to_self_merged_coverage_plot, ''])}",
             "assembly_length" :             "~{select_first([refine.assembly_length, 0])}",
             "assembly_length_unambiguous" : "~{assembly_length_unambiguous}",
             "reads_aligned" :               "~{select_first([refine.align_to_self_merged_reads_aligned, 0])}",
@@ -237,28 +237,28 @@ workflow assemble_denovo_metagenomic {
 
             "skani_num_ref_clusters" :      "~{length(select_references.matched_reference_clusters_fastas_tars)}",
             "skani_this_cluster_num_refs" : "~{length(tar_extract.files)}",
-            "skani_dist_tsv" :              scaffold.scaffolding_stats,
-            "scaffolding_ani" :             scaffold.skani_ani,
-            "scaffolding_pct_ref_cov" :     scaffold.skani_ref_aligned_frac,
+            "skani_dist_tsv" :              "~{scaffold.scaffolding_stats}",
+            "scaffolding_ani" :             "~{scaffold.skani_ani}",
+            "scaffolding_pct_ref_cov" :     "~{scaffold.skani_ref_aligned_frac}",
 
-            "intermediate_gapfill_fasta" :            scaffold.intermediate_gapfill_fasta,
-            "assembly_preimpute_length_unambiguous" : scaffold.assembly_preimpute_length_unambiguous,
+            "intermediate_gapfill_fasta" :            "~{scaffold.intermediate_gapfill_fasta}",
+            "assembly_preimpute_length_unambiguous" : "~{scaffold.assembly_preimpute_length_unambiguous}",
 
             "replicate_concordant_sites" :  "~{select_first([refine.replicate_concordant_sites, 0])}",
             "replicate_discordant_snps" :   "~{select_first([refine.replicate_discordant_snps, 0])}",
             "replicate_discordant_indels" : "~{select_first([refine.replicate_discordant_indels, 0])}",
-            "replicate_discordant_vcf" :    select_first([refine.replicate_discordant_vcf, ""]),
+            "replicate_discordant_vcf" :    "~{select_first([refine.replicate_discordant_vcf, ''])}",
 
-            "isnvsFile" :          select_first([refine.align_to_self_isnvs_vcf, ""]),
-            "aligned_bam" :        select_first([refine.align_to_self_merged_aligned_only_bam, ""]),
-            "coverage_tsv" :       select_first([refine.align_to_self_merged_coverage_tsv, ""]),
+            "isnvsFile" :          "~{select_first([refine.align_to_self_isnvs_vcf, ''])}",
+            "aligned_bam" :        "~{select_first([refine.align_to_self_merged_aligned_only_bam, ''])}",
+            "coverage_tsv" :       "~{select_first([refine.align_to_self_merged_coverage_tsv, ''])}",
             "read_pairs_aligned" : "~{select_first([refine.align_to_self_merged_read_pairs_aligned, 0])}",
             "bases_aligned" :      "~{select_first([refine.align_to_self_merged_bases_aligned, 0])}",
 
             "assembly_method" :         "viral-ngs/assemble_denovo",
             "assembly_method_version" : scaffold.viralngs_version,
 
-            "biosample_accession" :     select_first([biosample_accession, ""]),
+            "biosample_accession" :     "~{select_first([biosample_accession, ''])}",
 
             "batch_ids" :          unique_batch_ids.sorted_unique_joined,
 
