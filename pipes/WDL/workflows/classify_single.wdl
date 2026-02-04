@@ -160,7 +160,7 @@ workflow classify_single {
               idx_val = sub(top_match, "-", ":"),
               add_header = ["taxid", "isolate_prefix", "taxname", "accessions"]
         }
-        Int skani_hit_taxid = tax_lookup.map["taxid"]
+        String skani_hit_taxid = tax_lookup.map["taxid"]
         String skani_hit_taxname = tax_lookup.map["taxname"]
       }
     }
@@ -192,7 +192,7 @@ workflow classify_single {
 
         Int    skani_num_hits                  = length(select_first([select_references.top_matches_per_cluster_basenames, []]))
         File?  skani_contigs_to_refs_dist_tsv  = select_references.skani_dist_full_tsv
-        Array[Int]? skani_hits_taxids          = skani_hit_taxid
+        Array[String]? skani_hits_taxids          = skani_hit_taxid
         Array[String]? skani_hits_taxnames     = skani_hit_taxname
 
         File?   spikein_report                  = spikein.report
