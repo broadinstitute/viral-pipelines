@@ -1,4 +1,4 @@
-version 1.1
+version 1.0
 
 import "../tasks/tasks_utils.wdl" as tasks_utils
 import "../tasks/tasks_terra.wdl" as tasks_terra

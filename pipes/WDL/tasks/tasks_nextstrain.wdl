@@ -1,4 +1,4 @@
-version 1.1
+version 1.0
 
 task taxid_to_nextclade_dataset_name {
     input {

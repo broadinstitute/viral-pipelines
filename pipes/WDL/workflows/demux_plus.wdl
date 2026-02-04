@@ -1,4 +1,4 @@
-version 1.1
+version 1.0
 
 import "../tasks/tasks_demux.wdl" as demux
 import "../tasks/tasks_metagenomics.wdl" as metagenomics

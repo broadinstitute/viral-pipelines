@@ -1,4 +1,4 @@
-version 1.1
+version 1.0
 
 import "../tasks/tasks_read_utils.wdl" as tasks_read_utils
 

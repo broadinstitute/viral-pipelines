@@ -1,4 +1,4 @@
-version 1.1
+version 1.0
 
 import "../tasks/tasks_demux.wdl" as tasks_demux
 import "../tasks/tasks_reports.wdl" as reports

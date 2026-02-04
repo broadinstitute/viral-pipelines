@@ -1,4 +1,4 @@
-version 1.1
+version 1.0
 
 import "../tasks/tasks_interhost.wdl" as interhost
 import "../tasks/tasks_intrahost.wdl" as tasks_intrahost

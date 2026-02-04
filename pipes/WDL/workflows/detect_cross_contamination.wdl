@@ -1,4 +1,4 @@
-version 1.1
+version 1.0
 
 import "../tasks/tasks_intrahost.wdl" as intrahost
 import "../tasks/tasks_read_utils.wdl" as read_utils
