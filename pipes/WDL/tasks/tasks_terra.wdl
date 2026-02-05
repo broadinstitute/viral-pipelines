@@ -24,7 +24,7 @@ task gcs_copy {
     File logs = stdout()
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-ngs:3.0.4-baseimage"
+    docker: "ghcr.io/broadinstitute/viral-ngs:3.0.4-baseimage"
     memory: "1 GB"
     cpu: 1
     maxRetries: 1
@@ -33,7 +33,7 @@ task gcs_copy {
 
 task check_terra_env {
   input {
-    String docker = "quay.io/broadinstitute/viral-ngs:3.0.4-core"
+    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
   }
   meta {
     description: "task for inspection of backend to determine whether the task is running on Terra and/or GCP"
@@ -440,7 +440,7 @@ task create_or_update_sample_tables {
     String  sample_table_name  = "sample"
     String  library_table_name = "library"
 
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.4-core"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
   }
 
   meta {
@@ -613,7 +613,7 @@ task find_illumina_files_in_directory {
     String  illumina_dir
     String? fastq_dir
     Int?    lane
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.4-baseimage"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-baseimage"
   }
   parameter_meta {
     illumina_dir: {

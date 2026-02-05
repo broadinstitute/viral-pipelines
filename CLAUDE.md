@@ -176,14 +176,14 @@ GitHub Actions (`.github/workflows/build.yml`) runs on all PRs and pushes:
 
 ## Docker Images
 
-All compute tasks run in Docker containers. Images are accessed from `quay.io/broadinstitute/{image-name}` while their Dockerfiles and build definitions live in separate GitHub repositories at `github.com/broadinstitute/{image-name}`. The underlying Python scripts, binaries, and dependencies can be found in those source repositories.
+All compute tasks run in Docker containers. The primary runtime images are multiflavored builds of `viral-ngs` accessed from `ghcr.io/broadinstitute/viral-ngs:{version}-{flavor}` (also mirrored to `quay.io`). Dockerfiles and build definitions live in `github.com/broadinstitute/viral-ngs`. Other images (ncbi-tools, py3-bio, etc.) are accessed from `quay.io/broadinstitute/{image-name}`.
 
-Base images include:
-- `viral-core` - Core bioinformatics tools
-- `viral-assemble` - Assembly tools (SPAdes, etc.)
-- `viral-classify` - Classification tools (Kraken2, etc.)
-- `viral-phylo` - Phylogenetics tools (Augur, etc.)
-- `ncbi-tools` - NCBI submission tools
+Flavored images include:
+- `viral-ngs:{version}-core` - Core bioinformatics tools
+- `viral-ngs:{version}-assemble` - Assembly tools (SPAdes, etc.)
+- `viral-ngs:{version}-classify` - Classification tools (Kraken2, etc.)
+- `viral-ngs:{version}-phylo` - Phylogenetics tools (Augur, etc.)
+- `ncbi-tools` - NCBI submission tools (separate image on quay.io)
 
 Image versions are pinned in `requirements-modules.txt` and must be kept in sync with WDL files.
 
