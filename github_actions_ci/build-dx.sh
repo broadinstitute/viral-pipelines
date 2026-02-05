@@ -32,10 +32,13 @@ trap "kill $KEEPALIVE_PID 2>/dev/null; rm -f $LAST_OUTPUT_FILE" EXIT
 
 # Wrapper function to run commands while tracking output timestamps
 run_with_keepalive() {
+  # Run command, update timestamp on each line, suppress broken pipe errors
+  # The 2>/dev/null on echo suppresses "Broken pipe" when the command substitution closes
   "$@" 2>&1 | while IFS= read -r line; do
     date +%s > "$LAST_OUTPUT_FILE"
-    echo "$line"
+    echo "$line" 2>/dev/null || true
   done
+  # Return the exit status of the first command in the pipeline
   return ${PIPESTATUS[0]}
 }
 
