@@ -1,5 +1,7 @@
 version 1.1
 
+#DX_SKIP_WORKFLOW
+
 import "../tasks/tasks_demux.wdl" as demux
 import "../tasks/tasks_metagenomics.wdl" as metagenomics
 import "../tasks/tasks_read_utils.wdl" as read_utils
