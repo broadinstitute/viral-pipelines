@@ -167,8 +167,8 @@ task multi_align_mafft_ref {
   Int disk_size = 200
 
   command <<<
-    interhost.py --version | tee VERSION
-    interhost.py multichr_mafft \
+    interhost --version | tee VERSION
+    interhost multichr_mafft \
       "~{reference_fasta}" ~{sep=' ' assemblies_fasta} \
       . \
       ~{'--ep=' + mafft_ep} \
@@ -213,8 +213,8 @@ task multi_align_mafft {
   Int disk_size = 200
 
   command <<<
-    interhost.py --version | tee VERSION
-    interhost.py multichr_mafft \
+    interhost --version | tee VERSION
+    interhost multichr_mafft \
       ~{sep=' ' assemblies_fasta} \
       . \
       ~{'--ep=' + mafft_ep} \
@@ -357,13 +357,13 @@ task index_ref {
   Int disk_size = 100
 
   command <<<
-    read_utils.py --version | tee VERSION
-    read_utils.py novoindex \
+    read_utils --version | tee VERSION
+    read_utils novoindex \
     "~{referenceGenome}" \
     ~{"--NOVOALIGN_LICENSE_PATH=" + novocraft_license}
     
-    read_utils.py index_fasta_samtools "~{referenceGenome}"
-    read_utils.py index_fasta_picard "~{referenceGenome}"
+    read_utils index_fasta_samtools "~{referenceGenome}"
+    read_utils index_fasta_picard "~{referenceGenome}"
   >>>
 
   output {

@@ -12,17 +12,17 @@ task taxid_to_nextclade_dataset_name {
 
         # extract taxdump
         mkdir -p taxdump
-        read_utils.py extract_tarball "~{taxdump_tgz}" taxdump
+        read_utils extract_tarball "~{taxdump_tgz}" taxdump
 
         touch nextclade_dataset_name.str
 
         python3 << CODE
         import csv
-        import metagenomics
+        from viral_ngs.classify import taxonomy
         taxid = ~{taxid}
 
         # load taxdb and retrieve full hierarchy leading to this taxid
-        taxdb = metagenomics.TaxonomyDb(tax_dir="taxdump", load_nodes=True, load_names=True, load_gis=False)
+        taxdb = taxonomy.TaxonomyDb(tax_dir="taxdump", load_nodes=True, load_names=True, load_gis=False)
         ancestors = taxdb.get_ordered_ancestors(taxid)
         this_and_ancestors = [taxid] + ancestors
 
@@ -929,14 +929,14 @@ task filter_sequences_to_list {
                 echo filtering fasta file
     python3 <<CODE
     import Bio.SeqIO
-    import util.file
+    from viral_ngs.core import file as util_file
     keep_list = set()
     with open('keep_list.txt', 'rt') as inf:
         keep_list = set(line.strip() for line in inf)
     n_total = 0
     n_kept = 0
-    with util.file.open_or_gzopen('~{sequences}', 'rt') as inf:
-        with util.file.open_or_gzopen('~{out_fname}', 'wt') as outf:
+    with util_file.open_or_gzopen('~{sequences}', 'rt') as inf:
+        with util_file.open_or_gzopen('~{out_fname}', 'wt') as outf:
             for seq in Bio.SeqIO.parse(inf, 'fasta'):
                 n_total += 1
                 if seq.id in keep_list:

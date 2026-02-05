@@ -31,8 +31,8 @@ task alignment_metrics {
     # requisite Picard fasta indexing
     python3<<CODE
     import shutil
-    import util.file
-    with util.file.fastas_with_sanitized_ids("~{ref_fasta}", use_tmp=True) as sanitized_fastas:
+    from viral_ngs.core import file as util_file
+    with util_file.fastas_with_sanitized_ids("~{ref_fasta}", use_tmp=True) as sanitized_fastas:
         shutil.copyfile(sanitized_fastas[0], 'reference.fasta')
     CODE
     picard $XMX CreateSequenceDictionary -R reference.fasta
@@ -151,7 +151,7 @@ task plot_coverage {
   command <<<
     set -ex -o pipefail
 
-    read_utils.py --version | tee VERSION
+    read_utils --version | tee VERSION
 
     samtools view -c ~{aligned_reads_bam} | tee reads_aligned
     if [ "$(cat reads_aligned)" != "0" ]; then
@@ -165,7 +165,7 @@ task plot_coverage {
       BINNING_OPTION="~{true='--binLargePlots' false="" bin_large_plots}"
 
       # plot coverage
-      reports.py plot_coverage \
+      reports plot_coverage \
         "~{aligned_reads_bam}" \
         "~{sample_name}.coverage_plot.pdf" \
         --outSummary "~{sample_name}.coverage_plot.txt" \
@@ -297,11 +297,11 @@ task coverage_report {
 
   command <<<
     set -e
-    reports.py --version | tee VERSION
+    reports --version | tee VERSION
     python3 << CODE
-    import tools.samtools
-    import reports
-    samtools = tools.samtools.SamtoolsTool()
+    from viral_ngs.core import samtools as samtools_module
+    from viral_ngs import reports
+    samtools = samtools_module.SamtoolsTool()
     in_bams = list([bam for bam in ["~{sep='", "' mapped_bams}"] if bam and not samtools.isEmpty(bam)])
     if in_bams:
       reports.coverage_only(in_bams, "~{out_report_name}")
@@ -380,8 +380,8 @@ task fastqc {
 
   command <<<
     set -ex -o pipefail
-    reports.py --version | tee VERSION
-    reports.py fastqc ~{reads_bam} ~{reads_basename}_fastqc.html --out_zip ~{reads_basename}_fastqc.zip
+    reports --version | tee VERSION
+    reports fastqc ~{reads_bam} ~{reads_basename}_fastqc.html --out_zip ~{reads_basename}_fastqc.zip
   >>>
 
   output {
@@ -439,10 +439,10 @@ task align_and_count {
   command <<<
     set -ex -o pipefail
 
-    read_utils.py --version | tee VERSION
+    read_utils --version | tee VERSION
 
     ln -s "~{reads_bam}" "~{reads_basename}.bam"
-    read_utils.py minimap2_idxstats \
+    read_utils minimap2_idxstats \
       "~{reads_basename}.bam" \
       "~{ref_db}" \
       "~{reads_basename}.count.~{ref_basename}.txt.unsorted" \
@@ -536,8 +536,8 @@ task align_and_count_summary {
   command <<<
     set -ex -o pipefail
 
-    reports.py --version | tee VERSION
-    reports.py aggregate_alignment_counts ~{sep=' ' counts_txt} "~{output_prefix}".tsv --loglevel=DEBUG
+    reports --version | tee VERSION
+    reports aggregate_alignment_counts ~{sep=' ' counts_txt} "~{output_prefix}".tsv --loglevel=DEBUG
   >>>
 
   output {
@@ -578,8 +578,8 @@ task aggregate_metagenomics_reports {
   command <<<
     set -ex -o pipefail
 
-    metagenomics.py --version | tee VERSION
-    metagenomics.py taxlevel_summary \
+    metagenomics --version | tee VERSION
+    metagenomics taxlevel_summary \
       ~{sep=' ' kraken_summary_reports} \
       --csvOut aggregate_taxa_summary_~{aggregate_taxon_heading}_by_~{aggregate_taxlevel_focus}_top_~{aggregate_top_N_hits}_by_sample.csv \
       --noHist \
@@ -923,8 +923,8 @@ task compare_two_genomes {
 
   command <<<
     set -ex -o pipefail
-    assembly.py --version | tee VERSION
-    assembly.py alignment_summary "~{genome_one}" "~{genome_two}" --outfileName "~{out_basename}.txt" --printCounts --loglevel=DEBUG
+    assembly --version | tee VERSION
+    assembly alignment_summary "~{genome_one}" "~{genome_two}" --outfileName "~{out_basename}.txt" --printCounts --loglevel=DEBUG
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     cat /proc/loadavg > CPU_LOAD
     set +o pipefail

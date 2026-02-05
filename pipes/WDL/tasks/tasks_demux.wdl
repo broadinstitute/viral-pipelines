@@ -18,9 +18,9 @@ task merge_tarballs {
       export TMPDIR=$(pwd)
     fi
 
-    file_utils.py --version | tee VERSION
+    file_utils --version | tee VERSION
 
-    file_utils.py merge_tarballs \
+    file_utils merge_tarballs \
       ~{out_filename} ~{sep=' ' tar_chunks} \
       --loglevel=DEBUG
   >>>
@@ -218,7 +218,7 @@ task illumina_demux {
     set -ex -o pipefail
 
     # find N% memory
-    mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 85)
+    mem_in_mb=$(/opt/viral-ngs/scripts/calc_mem.py mb 85)
 
     if [ -z "$TMPDIR" ]; then
       export TMPDIR="$(pwd)/tmp"
@@ -227,9 +227,9 @@ task illumina_demux {
     mkdir -p "$TMPDIR"
     echo "TMPDIR: $TMPDIR"
     FLOWCELL_DIR=$(mktemp -d)
-    read_utils.py --version | tee VERSION
+    read_utils --version | tee VERSION
 
-    read_utils.py extract_tarball \
+    read_utils extract_tarball \
       "~{flowcell_tgz}" $FLOWCELL_DIR \
       --loglevel=DEBUG
 
@@ -293,7 +293,7 @@ task illumina_demux {
         echo "Detected $total_tile_count tiles, interpreting as NextSeq (mid-output) run."
     elif [ "$total_tile_count" -le 624 ]; then
         demux_threads=32 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
-        mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 80)
+        mem_in_mb=$(/opt/viral-ngs/scripts/calc_mem.py mb 80)
         # max_reads_in_ram_per_tile=600000 # deprecared in newer versions of picard, to be removed
         max_records_in_ram=2000000
         echo "Detected $total_tile_count tiles, interpreting as NovaSeq SP run."
@@ -310,7 +310,7 @@ task illumina_demux {
         echo "Detected $total_tile_count tiles, interpreting as HiSeq4k run."
     elif [ "$total_tile_count" -le 1408 ]; then
         demux_threads=32 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
-        mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 80)
+        mem_in_mb=$(/opt/viral-ngs/scripts/calc_mem.py mb 80)
         # max_reads_in_ram_per_tile=600000 # deprecared in newer versions of picard, to be removed
         max_records_in_ram=10000000
         echo "Detected $total_tile_count tiles, interpreting as NovaSeq S2 run."
@@ -318,14 +318,14 @@ task illumina_demux {
         echo "    See: https://www.illumina.com/content/dam/illumina-marketing/documents/products/appnotes/novaseq-hiseq-q30-app-note-770-2017-010.pdf"
     elif [ "$total_tile_count" -le 3744 ]; then
         demux_threads=32 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
-        mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 80)
+        mem_in_mb=$(/opt/viral-ngs/scripts/calc_mem.py mb 80)
         max_records_in_ram=2000000
         echo "Detected $total_tile_count tiles, interpreting as NovaSeq run."
         echo "  **Note: Q20 threshold used since NovaSeq with RTA3 writes only four Q-score values: 2, 12, 23, and 37.**"
         echo "    See: https://www.illumina.com/content/dam/illumina-marketing/documents/products/appnotes/novaseq-hiseq-q30-app-note-770-2017-010.pdf"
     elif [ "$total_tile_count" -gt 3744 ]; then
         demux_threads=30 # with NovaSeq-size output, OOM errors can sporadically occur with higher thread counts
-        mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 80)
+        mem_in_mb=$(/opt/viral-ngs/scripts/calc_mem.py mb 80)
         # max_reads_in_ram_per_tile=600000 # deprecared in newer versions of picard, to be removed
         max_records_in_ram=2000000
         echo "Tile count: $total_tile_count tiles (unknown instrument type)."
@@ -344,7 +344,7 @@ task illumina_demux {
 
     # Inspect ~{samplesheet} tsv file for the presence of duplicated (barcode_1,barcode_2) pairs, and/or 
     # the presence of a barcode_3 column with values in at least some of the rows.
-    # We can lean on a Python call out to the SampleSheet class in illumina.py for this.
+    # We can lean on a Python call out to the SampleSheet class in illumina for this.
     collapse_duplicated_barcodes="false"
     sample_sheet_barcode_collapse_potential=$(python -c 'import os; import illumina as il; ss=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=False); ssc=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=True); print("sheet_collapse_possible_true") if len(ss.get_rows())!=len(ssc.get_rows()) else print("sheet_collapse_possible_false")')
     if [[ "$sample_sheet_barcode_collapse_potential" == "sheet_collapse_possible_true" ]]; then
@@ -365,7 +365,7 @@ task illumina_demux {
 
     # note that we are intentionally setting --threads to about 2x the core
     # count. seems to still provide speed benefit (over 1x) when doing so.
-    illumina.py illumina_demux \
+    illumina illumina_demux \
       $FLOWCELL_DIR \
       ~{lane} \
       . \
@@ -411,14 +411,14 @@ task illumina_demux {
       exit 1
     fi
     
-    illumina.py guess_barcodes \
+    illumina guess_barcodes \
       ~{'--number_of_negative_controls ' + numberOfNegativeControls} \
       --expected_assigned_fraction=0 \
       barcodes.txt \
       metrics.txt \
       barcodes_outliers.txt
 
-    illumina.py flowcell_metadata --inDir $FLOWCELL_DIR flowcellMetadataFile.tsv
+    illumina flowcell_metadata --inDir $FLOWCELL_DIR flowcellMetadataFile.tsv
 
     mkdir -p picard_bams unmatched unmatched_picard picard_demux_metadata
 
@@ -431,7 +431,7 @@ task illumina_demux {
     if [ -f "barcodes_if_collapsed.tsv" ]; then
       mkdir -p ./~{splitcode_outdir}
 
-      illumina.py splitcode_demux \
+      illumina splitcode_demux \
       ./picard_bams \
       ~{lane} \
       ~{splitcode_outdir} \
@@ -600,7 +600,7 @@ task illumina_demux {
     if ~{true="true" false="false" emit_unmatched_reads_bam}; then
       if [ -f "barcodes_if_collapsed.tsv" ]; then
         # if we collapsed duplicated barcodes, we need to merge the unmatched bams
-        read_utils.py merge_bams unmatched/*.bam ./unmatched.bam
+        read_utils merge_bams unmatched/*.bam ./unmatched.bam
       else
         # otherwise we only have the single bam of unmatched reads from picard
         mv unmatched/Unmatched.picard.bam ./unmatched.bam
@@ -816,7 +816,7 @@ task group_fastq_pairs {
 
 task get_illumina_run_metadata {
   meta {
-    description: "Extracts run-level metadata from Illumina RunInfo.xml using illumina.py illumina_metadata. Generates JSON with flowcell info, tile counts, and other run configuration. Sample-specific metadata is now produced by demux_fastqs."
+    description: "Extracts run-level metadata from Illumina RunInfo.xml using illumina illumina_metadata. Generates JSON with flowcell info, tile counts, and other run configuration. Sample-specific metadata is now produced by demux_fastqs."
   }
 
   input {
@@ -847,9 +847,9 @@ task get_illumina_run_metadata {
       export TMPDIR=$(pwd)
     fi
 
-    illumina.py --version | tee VERSION
+    illumina --version | tee VERSION
 
-    illumina.py illumina_metadata \
+    illumina illumina_metadata \
       --runinfo ~{runinfo_xml} \
       ~{'--sequencing_center ' + sequencing_center} \
       --out_runinfo runinfo.json \
@@ -913,7 +913,7 @@ task check_for_barcode3 {
 
 task demux_fastqs {
   meta {
-    description: "Demultiplex DRAGEN FASTQ files to BAM files using illumina.py splitcode_demux_fastqs. Auto-detects whether to use splitcode (3-barcode) or direct FASTQ-to-BAM conversion (2-barcode)."
+    description: "Demultiplex DRAGEN FASTQ files to BAM files using illumina splitcode_demux_fastqs. Auto-detects whether to use splitcode (3-barcode) or direct FASTQ-to-BAM conversion (2-barcode)."
   }
 
   input {
@@ -974,9 +974,9 @@ task demux_fastqs {
       export TMPDIR=$(pwd)
     fi
 
-    illumina.py --version | tee VERSION
+    illumina --version | tee VERSION
 
-    illumina.py splitcode_demux_fastqs \
+    illumina splitcode_demux_fastqs \
       --fastq_r1 ~{fastq_r1} \
       ~{'--fastq_r2 ' + fastq_r2} \
       --samplesheet ~{samplesheet} \
@@ -1051,7 +1051,7 @@ task demux_fastqs {
 
 task merge_demux_metrics {
   meta {
-    description: "Merge multiple Picard-style demux metrics files into a single TSV using illumina.py merge_demux_metrics."
+    description: "Merge multiple Picard-style demux metrics files into a single TSV using illumina merge_demux_metrics."
   }
 
   input {
@@ -1073,8 +1073,8 @@ task merge_demux_metrics {
 
   command <<<
     set -ex -o pipefail
-    illumina.py --version | tee VERSION
-    illumina.py merge_demux_metrics \
+    illumina --version | tee VERSION
+    illumina merge_demux_metrics \
       ~{sep=' ' metrics_files} \
       ~{output_filename} \
       --loglevel=DEBUG
