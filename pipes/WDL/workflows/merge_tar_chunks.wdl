@@ -1,5 +1,7 @@
 version 1.0
 
+#DX_SKIP_WORKFLOW
+
 import "../tasks/tasks_demux.wdl" as demux
 
 workflow merge_tar_chunks {
