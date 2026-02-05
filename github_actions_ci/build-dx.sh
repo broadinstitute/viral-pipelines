@@ -2,7 +2,7 @@
 set -e -o pipefail
 
 if [ -z "$DX_API_TOKEN" ]; then
-  echo "ERROR: DX_API_TOKEN is not set, this is needed to build dxWDL workflows."
+  echo "ERROR: DX_API_TOKEN is not set, this is needed to build DNAnexus workflows."
   exit 1
 fi
 
@@ -14,8 +14,8 @@ source dx-toolkit/environment
 dx login --token "$DX_API_TOKEN" --noprojects
 dx select $DX_PROJECT
 
-# compile with dxWDL
-COMPILE_SUCCESS="dxWDL-compile_all-success.txt"
+# compile with dxCompiler
+COMPILE_SUCCESS="dxCompiler-compile_all-success.txt"
 touch $COMPILE_SUCCESS
 for workflow in pipes/WDL/workflows/*.wdl; do
   if [ -n "$(grep DX_SKIP_WORKFLOW $workflow)" ]; then
@@ -34,7 +34,7 @@ for workflow in pipes/WDL/workflows/*.wdl; do
     extras_json="pipes/dnax/dx-extras.json"
     CMD_DEFAULTS+=" -extras $extras_json"
 
-	  dx_id=$(java -jar dxWDL.jar compile \
+	  dx_id=$(java -jar dxCompiler.jar compile \
       $workflow $CMD_DEFAULTS -f -verbose \
       -leaveWorkflowsOpen \
       -imports pipes/WDL/tasks/ \
