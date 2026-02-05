@@ -6,6 +6,39 @@ if [ -z "$DX_API_TOKEN" ]; then
   exit 1
 fi
 
+# Keep-alive mechanism: print status every 60s, abort if no output for 20 mins
+# This prevents GitHub Actions from killing the job due to no output
+SILENCE_TIMEOUT=1200  # 20 minutes in seconds
+LAST_OUTPUT_FILE=$(mktemp)
+date +%s > "$LAST_OUTPUT_FILE"
+
+# Background keep-alive process
+(
+  while true; do
+    sleep 60
+    LAST_OUTPUT=$(cat "$LAST_OUTPUT_FILE" 2>/dev/null || echo 0)
+    NOW=$(date +%s)
+    SILENT_FOR=$((NOW - LAST_OUTPUT))
+    echo "$(date '+%Y-%m-%d %H:%M:%S'): dxCompiler running (${SILENT_FOR}s since last output)..."
+    if [ "$SILENT_FOR" -gt "$SILENCE_TIMEOUT" ]; then
+      echo "ERROR: No dxCompiler output for ${SILENCE_TIMEOUT}s, aborting"
+      kill -TERM $$ 2>/dev/null || true
+      exit 1
+    fi
+  done
+) &
+KEEPALIVE_PID=$!
+trap "kill $KEEPALIVE_PID 2>/dev/null; rm -f $LAST_OUTPUT_FILE" EXIT
+
+# Wrapper function to run commands while tracking output timestamps
+run_with_keepalive() {
+  "$@" 2>&1 | while IFS= read -r line; do
+    date +%s > "$LAST_OUTPUT_FILE"
+    echo "$line"
+  done
+  return ${PIPESTATUS[0]}
+}
+
 # obtain version tag
 VERSION=`github_actions_ci/list-docker-tags.sh | tail -1 | sed 's/:/\//'`
 
@@ -34,7 +67,7 @@ for workflow in pipes/WDL/workflows/*.wdl; do
     extras_json="pipes/dnax/dx-extras.json"
     CMD_DEFAULTS+=" -extras $extras_json"
 
-	  dx_id=$(java -jar dxCompiler.jar compile \
+	  dx_id=$(run_with_keepalive java -jar dxCompiler.jar compile \
       $workflow $CMD_DEFAULTS -f -verbose \
       -leaveWorkflowsOpen \
       -imports pipes/WDL/tasks/ \
