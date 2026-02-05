@@ -128,7 +128,7 @@ task subsample_by_cases {
     >>>
     runtime {
         docker: docker
-        memory: machine_mem_gb + " GB"
+        memory: "~{machine_mem_gb} GB"
         cpu:    2
         disks:  "local-disk 200 HDD"
         disk:   "200 GB"
@@ -189,10 +189,10 @@ task multi_align_mafft_ref {
 
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 60]) + " GB"
+    memory: "~{select_first([machine_mem_gb, 60])} GB"
     cpu: 8
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x8"
     maxRetries: 2
   }
@@ -235,10 +235,10 @@ task multi_align_mafft {
 
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 30]) + " GB"
+    memory: "~{select_first([machine_mem_gb, 30])} GB"
     cpu: 8
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x8"
     maxRetries: 2
   }
@@ -329,8 +329,8 @@ task beast {
     docker: docker
     memory: "7 GB"
     cpu:    4
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size_az + " GB"
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size_az} GB"
     vm_size: select_first([accelerator_type, "Standard_NC6"])  # TES Azure
     maxRetries: 1
     bootDiskSizeGb: boot_disk
@@ -375,9 +375,9 @@ task index_ref {
   runtime {
     docker: docker
     cpu: 2
-    memory: select_first([machine_mem_gb, 4]) + " GB"
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    memory: "~{select_first([machine_mem_gb, 4])} GB"
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
 
     maxRetries: 2
   }
@@ -404,10 +404,10 @@ task trimal_clean_msa {
   }
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 7]) + " GB"
+    memory: "~{select_first([machine_mem_gb, 7])} GB"
     cpu: 4
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     maxRetries: 2
   }
@@ -463,7 +463,7 @@ task merge_vcfs_bcftools {
 
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 3]) + " GB"
+    memory: "~{select_first([machine_mem_gb, 3])} GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
@@ -525,7 +525,7 @@ task merge_vcfs_gatk {
 
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 3]) + " GB"
+    memory: "~{select_first([machine_mem_gb, 3])} GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
@@ -592,10 +592,10 @@ task reconstructr {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: cpus
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     bootDiskSizeGb: 50
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 1

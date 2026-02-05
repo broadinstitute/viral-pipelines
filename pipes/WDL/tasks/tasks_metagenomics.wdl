@@ -125,10 +125,10 @@ task krakenuniq {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 32
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x48"
     preemptible: 0
     maxRetries: 2
@@ -177,7 +177,7 @@ task build_krakenuniq_db {
     # build database
     metagenomics.py krakenuniq_build \
       $DB_DIR --library $FASTAS_DIR --taxonomy $TAXDB_DIR \
-      ~{true='--subsetTaxonomy=' false='' subsetTaxonomy} \
+      ~{if select_first([subsetTaxonomy, false]) then '--subsetTaxonomy=' else ''} \
       ~{'--minimizerLen=' + minimizerLen} \
       ~{'--kmerLen=' + kmerLen} \
       ~{'--maxDbSize=' + maxDbSize} \
@@ -195,9 +195,9 @@ task build_krakenuniq_db {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    memory: "~{machine_mem_gb} GB"
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     cpu: 32
     dx_instance_type: "mem3_ssd1_v2_x32"
     preemptible: 0
@@ -332,11 +332,11 @@ task kraken2 {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 16
     cpuPlatform: "Intel Ice Lake"
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TESs
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem3_ssd1_v2_x8"
     preemptible: 2
     maxRetries: 2
@@ -382,10 +382,10 @@ task report_primary_kraken_taxa {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TESs
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
     maxRetries: 2
@@ -423,8 +423,8 @@ task filter_refs_to_found_taxa {
     docker: docker
     memory: "2 GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TESs
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
     maxRetries: 2
@@ -574,9 +574,9 @@ task build_kraken2_db {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    memory: "~{machine_mem_gb} GB"
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     cpu: 16
     dx_instance_type: "mem3_ssd1_v2_x16"
     preemptible: 0
@@ -662,10 +662,10 @@ task blastx {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 32
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x36"
     preemptible: 1
     maxRetries: 2
@@ -737,10 +737,10 @@ task krona {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
     maxRetries: 2
   }
@@ -770,10 +770,10 @@ task krona_merge {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
     maxRetries: 2
   }
@@ -867,9 +867,9 @@ task filter_bam_to_taxa {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
-    disks:  "local-disk " + disk_size + " SSD"
-    disk: disk_size + " GB" # TES
+    memory: "~{machine_mem_gb} GB"
+    disks: "local-disk ~{disk_size} SSD"
+    disk: "~{disk_size} GB" # TES
     cpu: 8
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: 1
@@ -944,10 +944,10 @@ task kaiju {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 16
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x16"
     maxRetries: 2
   }

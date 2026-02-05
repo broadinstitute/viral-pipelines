@@ -102,10 +102,10 @@ task assemble {
 
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 32]) + " GB"
+        memory: "~{select_first([machine_mem_gb, 32])} GB"
         cpu:    select_first([cpu, 8])
-        disks:  "local-disk " + disk_size + " SSD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} SSD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
         maxRetries: 2
     }
@@ -192,10 +192,10 @@ task select_references {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu:    cpu
-    disks:  "local-disk " + disk_size + " SSD"
-    disk: disk_size + " GB" # TESs
+    disks: "local-disk ~{disk_size} SSD"
+    disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
     maxRetries: 2
@@ -456,10 +456,10 @@ task scaffold {
 
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, scaled_mem_gb]) + " GB"
+        memory: "~{select_first([machine_mem_gb, scaled_mem_gb])} GB"
         cpu: 4
-        disks:  "local-disk " + disk_size + " SSD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} SSD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
         maxRetries: 2
     }
@@ -541,10 +541,10 @@ task skani_triangle {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu:    cpu
-    disks:  "local-disk " + disk_size + " SSD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} SSD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     preemptible: 2
     maxRetries: 2
@@ -625,10 +625,10 @@ task ivar_trim {
 
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 7]) + " GB"
+        memory: "~{select_first([machine_mem_gb, 7])} GB"
         cpu: 4
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x4"
         maxRetries: 2
     }
@@ -693,8 +693,8 @@ task ivar_trim_stats {
         docker: docker
         memory: "1 GB"
         cpu: 1
-        disks:   "local-disk " + disk_size + " HDD"
-        disk:    disk_size + " GB"
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB"
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -864,10 +864,10 @@ task align_reads {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb_actual + " GB"
+    memory: "~{machine_mem_gb_actual} GB"
     cpu: cpu_actual
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: 1
     maxRetries: 2
@@ -1006,10 +1006,10 @@ task refine_assembly_with_aligned_reads {
 
     runtime {
         docker: docker
-        memory: machine_mem_gb + " GB"
+        memory: "~{machine_mem_gb} GB"
         cpu: 8
-        disks:  "local-disk " + disk_size + " SSD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} SSD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
         maxRetries: 2
     }
@@ -1129,8 +1129,8 @@ task run_discordance {
         docker: docker
         memory: "3 GB"
         cpu: 2
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 1
         maxRetries: 2
@@ -1242,8 +1242,8 @@ task filter_bad_ntc_batches {
         docker: "python:slim"
         memory: "2 GB"
         cpu:    1
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -1351,10 +1351,10 @@ task wgsim {
 
     runtime {
         docker: docker
-        memory: machine_mem_gb + " GB"
+        memory: "~{machine_mem_gb} GB"
         cpu: 2
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }

@@ -32,10 +32,10 @@ task merge_tarballs {
 
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 7]) + " GB"
+    memory: "~{select_first([machine_mem_gb, 7])} GB"
     cpu: 16
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x16"
     maxRetries: 2
     preemptible: 0
@@ -88,8 +88,8 @@ task samplesheet_rename_ids {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -133,8 +133,8 @@ task revcomp_i5 {
     docker: docker
     memory: "1 GB"
     cpu:    1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB"
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -649,10 +649,10 @@ task illumina_demux {
 
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 200]) + " GB"
+    memory: "~{select_first([machine_mem_gb, 200])} GB"
     cpu: 32
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem3_ssd2_v2_x32"
     dx_timeout: "20H"
     maxRetries: 1
@@ -686,8 +686,8 @@ task map_map_setdefault {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB"
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -718,8 +718,8 @@ task merge_maps {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -807,8 +807,8 @@ task group_fastq_pairs {
     docker: "python:slim"
     memory: "3 GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -864,10 +864,10 @@ task get_illumina_run_metadata {
 
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 4]) + " GB"
+    memory: "~{select_first([machine_mem_gb, 4])} GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -1038,10 +1038,10 @@ task demux_fastqs {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb_actual + " GB"
+    memory: "~{machine_mem_gb_actual} GB"
     cpu: cpu_actual
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x16"
     maxRetries: 2
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
