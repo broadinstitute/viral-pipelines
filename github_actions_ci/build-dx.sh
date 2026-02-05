@@ -6,46 +6,6 @@ if [ -z "$DX_API_TOKEN" ]; then
   exit 1
 fi
 
-# Keep-alive mechanism: print status every 60s, abort if no output for 20 mins
-# This prevents GitHub Actions from killing the job due to no output
-SILENCE_TIMEOUT=1200  # 20 minutes in seconds
-LAST_OUTPUT_FILE=$(mktemp)
-date +%s > "$LAST_OUTPUT_FILE"
-
-# Background keep-alive process
-(
-  while true; do
-    sleep 60
-    NOW=$(date +%s)
-    LAST_OUTPUT=$(cat "$LAST_OUTPUT_FILE" 2>/dev/null)
-    # If file is empty or doesn't contain a valid number, assume output just happened
-    if [[ ! "$LAST_OUTPUT" =~ ^[0-9]+$ ]]; then
-      LAST_OUTPUT=$NOW
-    fi
-    SILENT_FOR=$((NOW - LAST_OUTPUT))
-    echo "$(date '+%Y-%m-%d %H:%M:%S'): dxCompiler running (${SILENT_FOR}s since last output)..."
-    if [ "$SILENT_FOR" -gt "$SILENCE_TIMEOUT" ]; then
-      echo "ERROR: No dxCompiler output for ${SILENCE_TIMEOUT}s, aborting"
-      kill -TERM $$ 2>/dev/null || true
-      exit 1
-    fi
-  done
-) &
-KEEPALIVE_PID=$!
-trap "kill $KEEPALIVE_PID 2>/dev/null; rm -f $LAST_OUTPUT_FILE" EXIT
-
-# Wrapper function to run commands while tracking output timestamps
-run_with_keepalive() {
-  # Run command, update timestamp on each line, suppress broken pipe errors
-  # The 2>/dev/null on echo suppresses "Broken pipe" when the command substitution closes
-  "$@" 2>&1 | while IFS= read -r line; do
-    date +%s > "$LAST_OUTPUT_FILE"
-    echo "$line" 2>/dev/null || true
-  done
-  # Return the exit status of the first command in the pipeline
-  return ${PIPESTATUS[0]}
-}
-
 # obtain version tag
 VERSION=`github_actions_ci/list-docker-tags.sh | tail -1 | sed 's/:/\//'`
 
@@ -74,19 +34,17 @@ for workflow in pipes/WDL/workflows/*.wdl; do
     extras_json="pipes/dnax/dx-extras.json"
     CMD_DEFAULTS+=" -extras $extras_json"
 
-	  dx_id=$(run_with_keepalive java -jar dxCompiler.jar compile \
+	  dx_id=$(java -jar dxCompiler.jar compile \
       $workflow $CMD_DEFAULTS -f -verbose \
       -leaveWorkflowsOpen \
       -imports pipes/WDL/tasks/ \
       -project $DX_PROJECT \
-      -destination /build/$VERSION/$workflow_name) && compile_exit=0 || compile_exit=$?
-    if [ $compile_exit -eq 0 ]; then
+      -destination /build/$VERSION/$workflow_name)
+    if [ $? -eq 0 ]; then
         echo "Succeeded: $workflow_name = $dx_id"
     else
         echo "Failed to build: $workflow_name"
-        echo "dxCompiler output:"
-        echo "$dx_id"
-        exit $compile_exit
+        exit $?
     fi
     echo -e "$workflow_name\t$dx_id" >> $COMPILE_SUCCESS
   fi
