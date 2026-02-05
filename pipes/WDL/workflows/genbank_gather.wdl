@@ -1,4 +1,4 @@
-version 1.1
+version 1.0
 
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_utils.wdl" as utils
