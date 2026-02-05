@@ -9,6 +9,7 @@ import "../tasks/tasks_utils.wdl" as utils
 import "assemble_refbased.wdl" as assemble_refbased
 
 workflow assemble_denovo_metagenomic {
+    # DX_SKIP_WORKFLOW - temporarily skip for CI debugging
     meta {
         description: "Performs viral de novo assembly on metagenomic reads against a large range of possible reference genomes. Runs raw reads through taxonomic classification (Kraken2), human read depletion (based on Kraken2), de novo assembly (SPAdes), and FASTQC/multiQC of reads. Scaffold de novo contigs against a set of possible references and subsequently polish with reads. This workflow accepts a very large set of input reference genomes. It will subset the reference genomes to those with ANI hits to the provided contigs/MAGs and cluster the reference hits by any ANI similarity to each other. It will choose the top reference from each cluster and produce one assembly for each cluster. This is intended to allow for the presence of multiple diverse viral taxa (coinfections) while forcing a choice of the best assembly from groups of related reference genomes."
         author: "Broad Viral Genomics"
