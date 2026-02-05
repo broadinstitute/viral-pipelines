@@ -16,8 +16,12 @@ date +%s > "$LAST_OUTPUT_FILE"
 (
   while true; do
     sleep 60
-    LAST_OUTPUT=$(cat "$LAST_OUTPUT_FILE" 2>/dev/null || echo 0)
     NOW=$(date +%s)
+    LAST_OUTPUT=$(cat "$LAST_OUTPUT_FILE" 2>/dev/null)
+    # If file is empty or doesn't contain a valid number, assume output just happened
+    if [[ ! "$LAST_OUTPUT" =~ ^[0-9]+$ ]]; then
+      LAST_OUTPUT=$NOW
+    fi
     SILENT_FOR=$((NOW - LAST_OUTPUT))
     echo "$(date '+%Y-%m-%d %H:%M:%S'): dxCompiler running (${SILENT_FOR}s since last output)..."
     if [ "$SILENT_FOR" -gt "$SILENCE_TIMEOUT" ]; then
