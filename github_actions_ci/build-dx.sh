@@ -75,12 +75,14 @@ for workflow in pipes/WDL/workflows/*.wdl; do
       -leaveWorkflowsOpen \
       -imports pipes/WDL/tasks/ \
       -project $DX_PROJECT \
-      -destination /build/$VERSION/$workflow_name)
-    if [ $? -eq 0 ]; then
+      -destination /build/$VERSION/$workflow_name) && compile_exit=0 || compile_exit=$?
+    if [ $compile_exit -eq 0 ]; then
         echo "Succeeded: $workflow_name = $dx_id"
     else
         echo "Failed to build: $workflow_name"
-        exit $?
+        echo "dxCompiler output:"
+        echo "$dx_id"
+        exit $compile_exit
     fi
     echo -e "$workflow_name\t$dx_id" >> $COMPILE_SUCCESS
   fi
