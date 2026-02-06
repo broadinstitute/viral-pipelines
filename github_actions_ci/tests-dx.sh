@@ -11,7 +11,7 @@ if [ -n "$DX_API_TOKEN" ]; then
   dx select $DX_PROJECT
 fi
 
-COMPILE_SUCCESS="dxWDL-compile_all-success.txt"
+COMPILE_SUCCESS="dxCompiler-compile_all-success.txt"
 if [ ! -f $COMPILE_SUCCESS ]; then
   dx download --no-progress /build/$VERSION/$COMPILE_SUCCESS
 fi
