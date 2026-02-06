@@ -1,5 +1,7 @@
 version 1.1
 
+#DX_SKIP_WORKFLOW
+
 import "../tasks/tasks_ncbi.wdl" as ncbi
 import "../tasks/tasks_ncbi_tools.wdl" as ncbi_tools
 import "../tasks/tasks_reports.wdl" as reports

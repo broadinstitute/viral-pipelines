@@ -1,5 +1,7 @@
 version 1.1
 
+#DX_SKIP_WORKFLOW
+
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_sarscov2.wdl" as sarscov2
 import "../tasks/tasks_utils.wdl" as utils
