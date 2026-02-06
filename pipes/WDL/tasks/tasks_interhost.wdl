@@ -160,15 +160,15 @@ task multi_align_mafft_ref {
     Float?       mafft_gapOpeningPenalty
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-phylo:2.5.21.5"
+    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-phylo"
   }
 
   String         fasta_basename = basename(reference_fasta, '.fasta')
   Int disk_size = 200
 
   command <<<
-    interhost.py --version | tee VERSION
-    interhost.py multichr_mafft \
+    interhost --version | tee VERSION
+    interhost multichr_mafft \
       "~{reference_fasta}" ~{sep=' ' assemblies_fasta} \
       . \
       ~{'--ep=' + mafft_ep} \
@@ -207,14 +207,14 @@ task multi_align_mafft {
     Float?       mafft_gapOpeningPenalty
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-phylo:2.5.21.5"
+    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-phylo"
   }
 
   Int disk_size = 200
 
   command <<<
-    interhost.py --version | tee VERSION
-    interhost.py multichr_mafft \
+    interhost --version | tee VERSION
+    interhost multichr_mafft \
       ~{sep=' ' assemblies_fasta} \
       . \
       ~{'--ep=' + mafft_ep} \
@@ -351,19 +351,19 @@ task index_ref {
     File?  novocraft_license
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
   }
 
   Int disk_size = 100
 
   command <<<
-    read_utils.py --version | tee VERSION
-    read_utils.py novoindex \
+    read_utils --version | tee VERSION
+    read_utils novoindex \
     "~{referenceGenome}" \
     ~{"--NOVOALIGN_LICENSE_PATH=" + novocraft_license}
     
-    read_utils.py index_fasta_samtools "~{referenceGenome}"
-    read_utils.py index_fasta_picard "~{referenceGenome}"
+    read_utils index_fasta_samtools "~{referenceGenome}"
+    read_utils index_fasta_picard "~{referenceGenome}"
   >>>
 
   output {
@@ -476,7 +476,7 @@ task merge_vcfs_gatk {
     File        ref_fasta
 
     Int?        machine_mem_gb
-    String      docker = "quay.io/broadinstitute/viral-phylo:2.5.21.5"
+    String      docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-phylo"
 
     String      output_prefix = "merged"
   }

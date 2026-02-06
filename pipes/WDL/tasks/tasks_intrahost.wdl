@@ -136,7 +136,7 @@ task lofreq {
     File      reference_fasta
 
     String    out_basename = basename(aligned_bam, '.bam')
-    String    docker = "quay.io/broadinstitute/viral-phylo:2.5.21.5"
+    String    docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-phylo"
   }
   Int disk_size = 200
   command <<<
@@ -148,8 +148,8 @@ task lofreq {
     cp "~{aligned_bam}" aligned.bam
     python3<<CODE
     import shutil
-    import util.file
-    with util.file.fastas_with_sanitized_ids("~{reference_fasta}", use_tmp=True) as sanitized_fastas:
+    from viral_ngs.core import file as util_file
+    with util_file.fastas_with_sanitized_ids("~{reference_fasta}", use_tmp=True) as sanitized_fastas:
         shutil.copyfile(sanitized_fastas[0], 'reference.fasta')
     CODE
 
@@ -196,15 +196,15 @@ task isnvs_per_sample {
     Boolean removeDoublyMappedReads = true
 
     Int?    machine_mem_gb
-    String  docker = "quay.io/broadinstitute/viral-phylo:2.5.21.5"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-phylo"
 
     String  sample_name = basename(basename(basename(mapped_bam, ".bam"), ".all"), ".mapped")
   }
   
 
   command <<<
-    intrahost.py --version | tee VERSION
-    intrahost.py vphaser_one_sample \
+    intrahost --version | tee VERSION
+    intrahost vphaser_one_sample \
         ~{mapped_bam} \
         ~{assembly_fasta} \
         vphaser2.~{sample_name}.txt.gz \
@@ -239,7 +239,7 @@ task isnvs_vcf {
     Boolean        naiveFilter = false
 
     Int?           machine_mem_gb
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.5.21.5"
+    String         docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-phylo"
   }
 
   parameter_meta {
@@ -253,7 +253,7 @@ task isnvs_vcf {
   command <<<
     set -ex -o pipefail
 
-    intrahost.py --version | tee VERSION
+    intrahost --version | tee VERSION
 
     SAMPLES="~{sep=' ' select_first([sampleNames, []])}"
     if [ -n "$SAMPLES" ]; then SAMPLES="--samples $SAMPLES"; fi
@@ -267,7 +267,7 @@ task isnvs_vcf {
 
     echo "snpRefAccessions: $snpRefAccessions"
 
-    intrahost.py merge_to_vcf \
+    intrahost merge_to_vcf \
         ~{reference_fasta} \
         isnvs.vcf.gz \
         $SAMPLES \
@@ -277,13 +277,13 @@ task isnvs_vcf {
         ~{true="--naive_filter" false="" naiveFilter} \
         --parse_accession
 
-    interhost.py snpEff \
+    interhost snpEff \
         isnvs.vcf.gz \
         $snpRefAccessions \
         isnvs.annot.vcf.gz \
         ~{'--emailAddress=' + emailAddress}
 
-    intrahost.py iSNV_table \
+    intrahost iSNV_table \
         isnvs.annot.vcf.gz \
         isnvs.annot.txt.gz
   >>>
@@ -313,7 +313,7 @@ task annotate_vcf_snpeff {
     String?        emailAddress
 
     Int?           machine_mem_gb
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.5.21.5"
+    String         docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-phylo"
 
     String         output_basename = basename(basename(in_vcf, ".gz"), ".vcf")
   }
@@ -331,7 +331,7 @@ task annotate_vcf_snpeff {
   command <<<
     set -ex -o pipefail
 
-    intrahost.py --version | tee VERSION
+    intrahost --version | tee VERSION
 
     providedSnpRefAccessions="~{sep=' ' select_first([snpEffRef, []])}"
     if [ -n "$providedSnpRefAccessions" ]; then
@@ -378,7 +378,7 @@ task annotate_vcf_snpeff {
     bcftools index "$vcf_to_use"
     tabix -p vcf "$vcf_to_use"
 
-    interhost.py snpEff \
+    interhost snpEff \
         "$vcf_to_use" \
         $snpRefAccessions \
         "~{output_basename}.annot.vcf.gz" \

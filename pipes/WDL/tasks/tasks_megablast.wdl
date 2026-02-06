@@ -15,7 +15,7 @@ task trim_rmdup_subsamp {
         Int cpu            = 16
         Int disk_size_gb   = 100 
 
-        String docker      = "quay.io/broadinstitute/viral-core:2.5.21"
+        String docker      = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
     }
 
     parameter_meta {
@@ -35,8 +35,8 @@ task trim_rmdup_subsamp {
 
     command <<<
         set -ex o pipefail
-        assembly.py --version | tee VERSION
-        assembly.py trim_rmdup_subsamp \
+        assembly --version | tee VERSION
+        assembly trim_rmdup_subsamp \
             "~{inBam}" \
             "~{clipDb}" \
             outbam.bam \
@@ -75,7 +75,7 @@ task lca_megablast {
         Int     cpu            = 16
         Int     disk_size_gb   = 300
 
-        String  docker         = "quay.io/broadinstitute/viral-classify:2.5.21.1"
+        String  docker         = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
     }
     parameter_meta {
         trimmed_fasta: {
@@ -97,18 +97,18 @@ task lca_megablast {
     }
     command <<<
         #Extract BLAST DB tarball
-        read_utils.py extract_tarball \
+        read_utils extract_tarball \
           ~{blast_db_tgz} . \
           --loglevel=DEBUG
         
         # Extract taxonomy DB tarball 
-        read_utils.py extract_tarball \
+        read_utils extract_tarball \
           ~{taxonomy_db_tgz} . \
           --loglevel=DEBUG
 
         '''
         #Extract taxid map file tarball
-        read_utils.py extract_tarball \
+        read_utils extract_tarball \
             ~{taxdb} . \
             --loglevel=DEBUG
         '''
@@ -188,7 +188,7 @@ task ChunkBlastHits {
 
     command <<<
         #Extract tarball contents
-        read_utils.py extract_tarball \
+        read_utils extract_tarball \
           ~{blast_db_tgz} . \
           --loglevel=DEBUG
         export LOG_DIR=~{log_dir_final}
@@ -200,7 +200,7 @@ task ChunkBlastHits {
             TAXIDLIST_OPTION="--taxidlist ~{taxidlist}"
         fi
         #COMMAND
-        time python /opt/viral-ngs/viral-classify/taxon_filter.py chunk_blast_hits "~{inFasta}" "~{db_name}" "~{blast_hits_output}" --outfmt '~{outfmt}' --chunkSize ~{chunkSize} --task '~{tasks}' --max_target_seqs "~{max_target_seqs}" --output_type "~{output_type}" $TAXIDLIST_OPTION
+        time python /opt/viral-ngs/viral-classify/taxon_filter chunk_blast_hits "~{inFasta}" "~{db_name}" "~{blast_hits_output}" --outfmt '~{outfmt}' --chunkSize ~{chunkSize} --task '~{tasks}' --max_target_seqs "~{max_target_seqs}" --output_type "~{output_type}" $TAXIDLIST_OPTION
         #add taxidlist to command only if user input
 
         # Extract runtime
@@ -273,12 +273,12 @@ task blastoff {
     
     command <<<
         #Extract BLAST DB tarball
-        read_utils.py extract_tarball \
+        read_utils extract_tarball \
           ~{blast_db_tgz} . \
           --loglevel=DEBUG
 
         # Extract taxonomy DB tarball (includes nodes.dmp)
-        read_utils.py extract_tarball \
+        read_utils extract_tarball \
           ~{taxonomy_db_tgz} . \
           --loglevel=DEBUG
         
@@ -303,7 +303,7 @@ task blastoff {
         #run megablast on random reads x nt
         #switched output from out to txt for readability issues
         #blastn -task megablast -query "~{fasta_basename}_subsampled.fasta"  -db "~{db_name}" -max_target_seqs 50 -num_threads `nproc` -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" -out "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv" 
-        python /opt/viral-ngs/viral-classify/taxon_filter.py chunk_blast_hits "~{fasta_basename}_subsampled.fasta" "~{db_name}" "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv"  --outfmt '~{outfmt}' --chunkSize ~{chunkSize} --task '~{tasks}' --max_target_seqs "~{max_target_seqs}" --output_type "~{output_type}" 
+        python /opt/viral-ngs/viral-classify/taxon_filter chunk_blast_hits "~{fasta_basename}_subsampled.fasta" "~{db_name}" "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv"  --outfmt '~{outfmt}' --chunkSize ~{chunkSize} --task '~{tasks}' --max_target_seqs "~{max_target_seqs}" --output_type "~{output_type}" 
         # Run LCA
         retrieve_top_blast_hits_LCA_for_each_sequence.pl "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv" nodes.dmp 1 1 > "~{fasta_basename}_subsampled.fasta_megablast_nt.tsv_LCA.txt"
         #Looks for most frequently matched taxon IDs and outputs a list
@@ -324,7 +324,7 @@ task blastoff {
         echo "megablast sample-specific database start"
         #Run blastn w/ taxidlist specific 
         #blastn -task megablast -query "~{fasta_basename}_subsampled.fasta" -db "~{db_name}" -max_target_seqs 50 -num_threads `nproc` -taxidlist "sample_specific_db_taxa.txt" -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" -out "~{fasta_basename}_megablast_sample_specific_db.tsv" 
-        python /opt/viral-ngs/viral-classify/taxon_filter.py chunk_blast_hits "~{trimmed_fasta}" "~{db_name}" "~{fasta_basename}_megablast_sample_specific_db.tsv"  --outfmt '~{outfmt}' --chunkSize ~{chunkSize} --task '~{tasks}' --max_target_seqs "~{max_target_seqs}" --output_type "~{output_type}" --taxidlist "sample_specific_db_taxa.txt"
+        python /opt/viral-ngs/viral-classify/taxon_filter chunk_blast_hits "~{trimmed_fasta}" "~{db_name}" "~{fasta_basename}_megablast_sample_specific_db.tsv"  --outfmt '~{outfmt}' --chunkSize ~{chunkSize} --task '~{tasks}' --max_target_seqs "~{max_target_seqs}" --output_type "~{output_type}" --taxidlist "sample_specific_db_taxa.txt"
         #Run LCA on last output
         retrieve_top_blast_hits_LCA_for_each_sequence.pl "~{fasta_basename}_megablast_sample_specific_db.tsv" nodes.dmp 2 >  "~{fasta_basename}_megablast_sample_specific_db_LCA.txt" 
         #filter
@@ -346,7 +346,7 @@ task blastoff {
         #Stage 3 
         #/blast/results/${sample_fasta}_megablast_sample_specific_db_megablast_nt.out = "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.tsv"
         #blastn -task megablast -query "~{fasta_basename}_megablast_sample_specific_db_unclassified.fasta" -db "~{db_name}" -max_target_seqs 50 -num_threads `nproc` -outfmt "6 qseqid sacc stitle staxids sscinames sskingdoms qlen slen length pident qcovs evalue" -out "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.tsv"
-        python /opt/viral-ngs/viral-classify/taxon_filter.py chunk_blast_hits "~{fasta_basename}_megablast_sample_specific_db_unclassified.fasta" "~{db_name}" "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.tsv" --outfmt '~{outfmt}' --chunkSize ~{chunkSize} --task '~{tasks}' --max_target_seqs "~{max_target_seqs}" --output_type "~{output_type}"
+        python /opt/viral-ngs/viral-classify/taxon_filter chunk_blast_hits "~{fasta_basename}_megablast_sample_specific_db_unclassified.fasta" "~{db_name}" "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.tsv" --outfmt '~{outfmt}' --chunkSize ~{chunkSize} --task '~{tasks}' --max_target_seqs "~{max_target_seqs}" --output_type "~{output_type}"
         retrieve_top_blast_hits_LCA_for_each_sequence.pl "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.tsv" nodes.dmp 10 > "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt"
         filter_LCA_matches.pl "~{fasta_basename}_megablast_sample_specific_db_megablast_nt.out_LCA.txt" 0 0 0 "~{stage3_min_id}" 999 "~{stage3_min_qcov}" 999 > "~{fasta_basename}_megablast_sample_specific_db_megablast_nt_LCA_classified.txt"
         #add one column: database, nt

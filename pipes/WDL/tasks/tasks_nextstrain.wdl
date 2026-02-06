@@ -5,24 +5,24 @@ task taxid_to_nextclade_dataset_name {
         Int     taxid
         File    taxdump_tgz
         File    nextclade_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/typing/nextclade-by-taxid.tsv"
-        String  docker = "quay.io/broadinstitute/viral-classify:2.5.21.1"
+        String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
     }
     command <<<
         set -e
 
         # extract taxdump
         mkdir -p taxdump
-        read_utils.py extract_tarball "~{taxdump_tgz}" taxdump
+        read_utils extract_tarball "~{taxdump_tgz}" taxdump
 
         touch nextclade_dataset_name.str
 
         python3 << CODE
         import csv
-        import metagenomics
+        from viral_ngs.classify import taxonomy
         taxid = ~{taxid}
 
         # load taxdb and retrieve full hierarchy leading to this taxid
-        taxdb = metagenomics.TaxonomyDb(tax_dir="taxdump", load_nodes=True, load_names=True, load_gis=False)
+        taxdb = taxonomy.TaxonomyDb(tax_dir="taxdump", load_nodes=True, load_names=True, load_gis=False)
         ancestors = taxdb.get_ordered_ancestors(taxid)
         this_and_ancestors = [taxid] + ancestors
 
@@ -332,7 +332,7 @@ task derived_cols {
         String?       lab_highlight_loc
         Array[File]   table_map = []
 
-        String        docker = "quay.io/broadinstitute/viral-core:2.5.21"
+        String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
         Int           disk_size = 50
     }
     parameter_meta {
@@ -900,7 +900,7 @@ task filter_sequences_to_list {
 
         String       out_fname = sub(sub(basename(sequences, ".zst"), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
         # Prior docker image: "nextstrain/base:build-20240318T173028Z"
-        String       docker = "quay.io/broadinstitute/viral-core:2.5.21"
+        String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
         Int          disk_size = 750
     }
     parameter_meta {
@@ -929,14 +929,14 @@ task filter_sequences_to_list {
                 echo filtering fasta file
     python3 <<CODE
     import Bio.SeqIO
-    import util.file
+    from viral_ngs.core import file as util_file
     keep_list = set()
     with open('keep_list.txt', 'rt') as inf:
         keep_list = set(line.strip() for line in inf)
     n_total = 0
     n_kept = 0
-    with util.file.open_or_gzopen('~{sequences}', 'rt') as inf:
-        with util.file.open_or_gzopen('~{out_fname}', 'wt') as outf:
+    with util_file.open_or_gzopen('~{sequences}', 'rt') as inf:
+        with util_file.open_or_gzopen('~{out_fname}', 'wt') as outf:
             for seq in Bio.SeqIO.parse(inf, 'fasta'):
                 n_total += 1
                 if seq.id in keep_list:
@@ -1001,7 +1001,7 @@ task mafft_one_chr {
         Boolean  large = false
         Boolean  memsavetree = false
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.5.21.5"
+        String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-phylo"
         Int      mem_size = 500
         Int      cpus = 64
         Int      disk_size = 750
@@ -1091,7 +1091,7 @@ task mafft_one_chr_chunked {
         Int      batch_chunk_size = 2000
         Int      threads_per_job = 2
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.5.21.5"
+        String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-phylo"
         Int      mem_size = 32
         Int      cpus = 64
         Int      disk_size = 750
