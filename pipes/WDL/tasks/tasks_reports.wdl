@@ -453,13 +453,12 @@ task align_and_count {
     TOP_HIT="$(head -1 '~{reads_basename}.count.~{ref_basename}.txt' | cut -f 1 | sed 's/\*/\\*/' | tee '~{reads_basename}.count.~{ref_basename}.top.txt')"
 
     TOTAL_COUNT_OF_TOP_HIT=$(grep -E "^($TOP_HIT)" "~{reads_basename}.count.~{ref_basename}.txt" | cut -f3 | tee TOTAL_COUNT_OF_TOP_HIT)
-    TOTAL_COUNT_OF_LESSER_HITS=$((grep -vE "^(\*|$TOP_HIT)" "~{reads_basename}.count.~{ref_basename}.txt" || echo "0" ) | cut -f3 | paste -sd+ - | bc -l | tee TOTAL_COUNT_OF_LESSER_HITS)
+    TOTAL_COUNT_OF_LESSER_HITS=$((grep -vE "^(\*|$TOP_HIT)" "~{reads_basename}.count.~{ref_basename}.txt" || echo "0" ) | cut -f3 | awk '{s+=$1} END {print s+0}' | tee TOTAL_COUNT_OF_LESSER_HITS)
     echo $TOTAL_COUNT_OF_TOP_HIT | tee TOTAL_COUNT_OF_TOP_HIT
     echo $TOTAL_COUNT_OF_LESSER_HITS | tee TOTAL_COUNT_OF_LESSER_HITS
 
     if [ $TOTAL_COUNT_OF_LESSER_HITS -ne 0 -o $TOTAL_COUNT_OF_TOP_HIT -ne 0 ]; then
-      PCT_MAPPING_TO_LESSER_HITS=$( echo "scale=3; 100 * $TOTAL_COUNT_OF_LESSER_HITS / ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT)" | \
-        bc -l | awk '{printf "%.3f\n", $0}' | tee '~{reads_basename}.count.~{ref_basename}.pct_lesser_hits_of_mapped.txt' )
+      PCT_MAPPING_TO_LESSER_HITS=$( awk "BEGIN {printf \"%.3f\n\", 100 * $TOTAL_COUNT_OF_LESSER_HITS / ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT)}" | tee '~{reads_basename}.count.~{ref_basename}.pct_lesser_hits_of_mapped.txt' )
     else
       echo "PCT_MAPPING_TO_LESSER_HITS cannot be calculated: there were no hits to any sequence"
       PCT_MAPPING_TO_LESSER_HITS=$( echo "null" | tee '~{reads_basename}.count.~{ref_basename}.pct_lesser_hits_of_mapped.txt')
@@ -473,12 +472,10 @@ task align_and_count {
       echo "PCT_TOP_HIT_OF_TOTAL_READS cannot be calculated: there were no mapping hits, or no reads"
       PCT_TOP_HIT_OF_TOTAL_READS=$( echo "null" | tee '~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt')
     else
-      PCT_OF_INPUT_READS_MAPPED=$( echo "scale=3; 100 * ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT) / $TOTAL_READS_IN_INPUT" | \
-      bc -l | awk '{printf "%.3f\n", $0}' | tee '~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt' )
+      PCT_OF_INPUT_READS_MAPPED=$( awk "BEGIN {printf \"%.3f\n\", 100 * ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT) / $TOTAL_READS_IN_INPUT}" | tee '~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt' )
 
       if [ $TOTAL_COUNT_OF_TOP_HIT -ne 0 ]; then
-        PCT_TOP_HIT_OF_TOTAL_READS=$( echo "scale=3; 100 * ($TOTAL_COUNT_OF_TOP_HIT / $TOTAL_READS_IN_INPUT)" | \
-          bc -l | awk '{printf "%.3f\n", $0}' | tee '~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt' )
+        PCT_TOP_HIT_OF_TOTAL_READS=$( awk "BEGIN {printf \"%.3f\n\", 100 * $TOTAL_COUNT_OF_TOP_HIT / $TOTAL_READS_IN_INPUT}" | tee '~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt' )
       else
         echo "PCT_TOP_HIT_OF_TOTAL_READS cannot be calculated: there were no mapping hits, or no reads"
         PCT_TOP_HIT_OF_TOTAL_READS=$( echo "null" | tee '~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt')
