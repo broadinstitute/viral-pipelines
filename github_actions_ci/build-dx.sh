@@ -61,8 +61,12 @@ echo -e "consolidate_run_tarballs\t$dx_id" >> $COMPILE_SUCCESS
 # demux workflow ID as a default input 
 demux_workflows_to_build="demux_plus demux_only"
 for wf_name in $(echo "${demux_workflows_to_build}"); do
-  echo "Building applet ${wf_name}..."
   demux_workflow_id=$(grep "^${wf_name}\s" $COMPILE_SUCCESS | cut -f 2)
+  if [ -z "$demux_workflow_id" ]; then
+    echo "Skipping applet ${wf_name}_launcher (${wf_name} was not compiled)"
+    continue
+  fi
+  echo "Building applet ${wf_name}..."
   pushd pipes/dnax/dx-launcher
   sed "s/DEFAULT_DEMUX_WORKFLOW_ID/$demux_workflow_id/" demux_launcher.yml \
     | sed "s/DEFAULT_DEMUX_WORKFLOW_NAME/${wf_name}_launcher/" \
