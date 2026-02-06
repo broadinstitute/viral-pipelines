@@ -10,6 +10,9 @@ on:
     types:
       - created
 
+permissions:
+  contents: read
+
 concurrency:
   # Group jobs by the branch or tag ref to ensure only one job runs for a ref at a time.
   # for pull requests, github.ref is the branch being merged into

@@ -6,12 +6,12 @@ task download_fasta {
     Array[String]+ accessions
     String         emailAddress
 
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.5.21.5"
+    String         docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-phylo"
   }
 
   command <<<
-    ncbi.py --version | tee VERSION
-    ncbi.py fetch_fastas \
+    ncbi --version | tee VERSION
+    ncbi fetch_fastas \
         ~{emailAddress} \
         . \
         ~{sep=' ' accessions} \
@@ -42,12 +42,12 @@ task download_fasta_from_accession_string {
     String out_prefix
     String emailAddress
 
-    String docker = "quay.io/broadinstitute/viral-phylo:2.5.21.5"
+    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-phylo"
   }
 
   command <<<
     set -e
-    ncbi.py --version | tee VERSION
+    ncbi --version | tee VERSION
 
     # Parse accession string to extract just the accession IDs (strip coverage values if present)
     python3 <<CODE
@@ -67,7 +67,7 @@ task download_fasta_from_accession_string {
     CODE
 
     # Download sequences using extracted accessions
-    ncbi.py fetch_fastas \
+    ncbi fetch_fastas \
         ~{emailAddress} \
         . \
         $(cat accessions.txt | tr '\n' ' ') \
@@ -94,19 +94,19 @@ task download_annotations {
     String         emailAddress
     String         combined_out_prefix
 
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.5.21.5"
+    String         docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-phylo"
   }
 
   command <<<
     set -ex -o pipefail
-    ncbi.py --version | tee VERSION
-    ncbi.py fetch_feature_tables \
+    ncbi --version | tee VERSION
+    ncbi fetch_feature_tables \
         ~{emailAddress} \
         ./ \
         ~{sep=' ' accessions} \
         --loglevel DEBUG
     mkdir -p combined
-    ncbi.py fetch_fastas \
+    ncbi fetch_fastas \
         ~{emailAddress} \
         ./ \
         ~{sep=' ' accessions} \
@@ -136,17 +136,17 @@ task download_ref_genomes_from_tsv {
     File      ref_genomes_tsv    # [tax_id, isolate_prefix, taxname, colon_delim_accession_list]
     String    emailAddress
 
-    String    docker = "quay.io/broadinstitute/viral-phylo:2.5.21.5"
+    String    docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-phylo"
   }
 
   command <<<
     set -ex -o pipefail
-    ncbi.py --version | tee VERSION
+    ncbi --version | tee VERSION
     mkdir -p combined
 
     python3<<CODE
     import csv
-    import phylo.genbank
+    from viral_ngs.phylo import genbank
     with open("~{ref_genomes_tsv}", 'rt') as inf:
       reader = csv.DictReader(inf, delimiter='\t',
         fieldnames=['tax_id', 'isolate_prefix', 'taxname', 'accessions']) # backwards support for headerless tsvs
@@ -154,7 +154,7 @@ task download_ref_genomes_from_tsv {
       for ref_genome in reader:
         if ref_genome['tax_id'] != 'tax_id': # skip header
           accessions = ref_genome['accessions'].split(':')
-          phylo.genbank.fetch_fastas_from_genbank(
+          genbank.fetch_fastas_from_genbank(
             accessionList=accessions,
             destinationDir=".",
             emailAddress="~{emailAddress}",
@@ -183,7 +183,7 @@ task sequencing_platform_from_bam {
   input {
     File    bam
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
   }
 
   command <<<
@@ -238,7 +238,7 @@ task align_and_annot_transfer_single {
 
     String       out_basename = basename(genome_fasta, '.fasta')
     Int          machine_mem_gb = 30
-    String       docker = "quay.io/broadinstitute/viral-phylo:2.5.21.5"
+    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-phylo"
   }
 
   parameter_meta {
@@ -258,9 +258,9 @@ task align_and_annot_transfer_single {
 
   command <<<
     set -e
-    ncbi.py --version | tee VERSION
+    ncbi --version | tee VERSION
     mkdir -p out
-    ncbi.py tbl_transfer_multichr \
+    ncbi tbl_transfer_multichr \
         "~{genome_fasta}" \
         out \
         --ref_fastas ~{sep=' ' reference_fastas} \
@@ -293,14 +293,14 @@ task structured_comments {
 
     File?  filter_to_ids
 
-    String docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
     set -e
 
     python3 << CODE
-    import util.file
+    from viral_ngs.core import file as util_file
 
     samples_to_filter_to = set()
     if "~{default='' filter_to_ids}":
@@ -311,7 +311,7 @@ task structured_comments {
     with open("~{out_base}.cmt", 'wt') as outf:
         outf.write('\t'.join(out_headers)+'\n')
 
-        for row in util.file.read_tabfile_dict("~{assembly_stats_tsv}"):
+        for row in util_file.read_tabfile_dict("~{assembly_stats_tsv}"):
             outrow = dict((h, row.get(h, '')) for h in out_headers)
 
             if samples_to_filter_to:
@@ -346,14 +346,14 @@ task structured_comments_from_aligned_bam {
     String  out_basename = basename(aligned_bam, '.bam')
     Boolean is_genome_assembly = true
     Boolean sanitize_ids = true
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
   }
   # see https://www.ncbi.nlm.nih.gov/genbank/structuredcomment/
   command <<<
     set -e -o pipefail
 
     cp "~{aligned_bam}" aligned.bam
-    reports.py coverage_only aligned.bam coverage.txt
+    reports coverage_only aligned.bam coverage.txt
     cat coverage.txt
 
     samtools view -H "~{aligned_bam}" | grep '^@SQ' | grep -o 'SN:[^[:space:]]*' | cut -d':' -f2 | tee SEQ_IDS
@@ -465,11 +465,11 @@ task rename_fasta_header {
 
     String out_basename = basename(genome_fasta, ".fasta")
 
-    String docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
   }
   command <<<
     set -e
-    file_utils.py rename_fasta_sequences \
+    file_utils rename_fasta_sequences \
       "~{genome_fasta}" "~{out_basename}.fasta" "~{new_name}"
   >>>
   output {
@@ -618,7 +618,7 @@ task lookup_table_by_filename {
 
 task sra_meta_prep {
   meta {
-    description: "Prepare tables for submission to NCBI's SRA database. This only works on bam files produced by illumina.py illumina_demux --append_run_id in viral-core."
+    description: "Prepare tables for submission to NCBI's SRA database. This only works on bam files produced by illumina illumina_demux --append_run_id in viral-core."
   }
   input {
     Array[File] cleaned_bam_filepaths
@@ -630,7 +630,7 @@ task sra_meta_prep {
     Boolean     paired
 
     String      out_name = "sra_metadata.tsv"
-    String      docker="quay.io/broadinstitute/viral-core:2.5.21"
+    String      docker="ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
   }
   Int disk_size = 100
   parameter_meta {
@@ -662,7 +662,7 @@ task sra_meta_prep {
     python3 << CODE
     import os.path
     import csv
-    import util.file
+    from viral_ngs.core import file as util_file
 
     # WDL arrays to python arrays
     bam_uris = list(x for x in '~{sep="*" cleaned_bam_filepaths}'.split('*') if x)
@@ -697,7 +697,7 @@ task sra_meta_prep {
     for libfile in library_metadata:
       with open(libfile, 'rt') as inf:
         for row in csv.DictReader(inf, delimiter='\t'):
-          lib = util.file.string_to_file_name("{}.l{}".format(row['sample'], row['library_id_per_sample']))
+          lib = util_file.string_to_file_name("{}.l{}".format(row['sample'], row['library_id_per_sample']))
           biosample = sample_to_biosample.get(row['sample'],'')
           bams = lib_to_bams.get(lib,[])
           print("debug: sample={} lib={} biosample={}, bams={}".format(row['sample'], lib, biosample, bams))
@@ -1246,7 +1246,7 @@ task table2asn {
 
     String       out_basename = basename(assembly_fasta, ".fasta")
     Int          machine_mem_gb = 8
-    String       docker = "quay.io/broadinstitute/viral-phylo:2.5.21.5"  # this could be a simpler docker image, we don't use anything beyond table2asn itself
+    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-phylo"  # this could be a simpler docker image, we don't use anything beyond table2asn itself
   }
   Int disk_size = 50
 
@@ -1338,7 +1338,7 @@ task package_special_genbank_ftp_submission {
     String account_name
     String wizard="BankIt_SARSCoV2_api"
 
-    String  docker = "quay.io/broadinstitute/viral-baseimage:0.3.0"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-baseimage"
   }
   command <<<
     set -e
@@ -1403,7 +1403,7 @@ task genbank_special_taxa {
     Int     taxid
     File    taxdump_tgz
     File    vadr_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/annotation/vadr/vadr-by-taxid.tsv"
-    String  docker = "quay.io/broadinstitute/viral-classify:2.5.21.1"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
   }
 
   command <<<
@@ -1411,11 +1411,11 @@ task genbank_special_taxa {
 
     # unpack the taxdump tarball
     mkdir -p taxdump
-    read_utils.py extract_tarball "~{taxdump_tgz}" taxdump
+    read_utils extract_tarball "~{taxdump_tgz}" taxdump
 
     python3 << CODE
     import csv
-    import metagenomics
+    from viral_ngs.classify import taxonomy
     import tarfile
     import urllib.request
     import json
@@ -1424,7 +1424,7 @@ task genbank_special_taxa {
     taxid = ~{taxid}
 
     # load taxdb and retrieve full hierarchy leading to this taxid
-    taxdb = metagenomics.TaxonomyDb(tax_dir="taxdump", load_nodes=True, load_names=True, load_gis=False)
+    taxdb = taxonomy.TaxonomyDb(tax_dir="taxdump", load_nodes=True, load_names=True, load_gis=False)
     ancestors = taxdb.get_ordered_ancestors(taxid)
     this_and_ancestors = [taxid] + ancestors
 

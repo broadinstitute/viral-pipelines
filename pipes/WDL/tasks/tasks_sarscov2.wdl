@@ -202,7 +202,7 @@ task sequencing_report {
     Int disk_size = 250
     command <<<
         set -e
-        /docker/reports.py \
+        /docker/reports \
             "~{assembly_stats_tsv}" \
             ~{'--collab_tsv="' + collab_ids_tsv + '"'} \
             ~{'--sequencing_lab="' + sequencing_lab + '"'} \
