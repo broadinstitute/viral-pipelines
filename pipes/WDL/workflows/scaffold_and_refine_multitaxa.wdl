@@ -1,4 +1,5 @@
 version 1.1
+#DX_SKIP_WORKFLOW
 
 import "../tasks/tasks_assembly.wdl" as assembly
 import "../tasks/tasks_ncbi.wdl" as ncbi
