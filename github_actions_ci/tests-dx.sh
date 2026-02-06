@@ -80,8 +80,8 @@ fi
 
 # Special case: run test for the demux_(plus|only)_launcher native applet (which invokes
 # the demux_(plus|only) WDL workflow). Skip if the launcher was not built.
-demux_launcher_id=$(grep "^${demux_name}_launcher\s" $COMPILE_SUCCESS | cut -f 2)
-demux_workflow_id=$(grep "^${demux_name}\s" $COMPILE_SUCCESS | cut -f 2)
+demux_launcher_id=$(grep "^${demux_name}_launcher\s" $COMPILE_SUCCESS | cut -f 2 || true)
+demux_workflow_id=$(grep "^${demux_name}\s" $COMPILE_SUCCESS | cut -f 2 || true)
 
 if [ -n "$demux_launcher_id" -a -n "$demux_workflow_id" ]; then
   timeout_args=$(dx_run_timeout_args $demux_workflow_id $demux_launcher_id)
