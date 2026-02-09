@@ -1394,7 +1394,7 @@ task classify_virnucpro {
     String?   gpu_type
     Int?      gpu_count
     String?   vm_size
-    String    docker = "ghcr.io/broadinstitute/virnucpro-cuda:1.0.2"
+    String    docker = "ghcr.io/broadinstitute/virnucpro-cuda:1.0.5"
   }
 
   parameter_meta {
@@ -1442,6 +1442,10 @@ task classify_virnucpro {
   command <<<
     set -ex -o pipefail
 
+    export TMPDIR=/tmp
+    export TEMP=/tmp
+    export TMP=/tmp    
+
     /opt/virnucpro_cli.py ~{reads_bam} ~{basename}.virnucpro.tsv --expected-length ~{expected_length} \
       ~{true='--use-gpu' false='' use_gpu} \
       ~{true='--parallel' false='' parallel} \
@@ -1463,6 +1467,7 @@ task classify_virnucpro {
   # GPU multi-platform support: ALL platform attributes required (GCP: acceleratorType/acceleratorCount, Terra: gpuType/gpuCount, DNAnexus: gpu/dx_instance_type, Azure: vm_size). Missing attributes cause silent CPU fallback.
   runtime {
     docker: docker
+    dockerRunOptions: "--tmpfs /dev/shm:rw,nosuid,nodev,size=16g"
     memory: "128 GB"
     cpu: 64
     disks: "local-disk 120 SSD"
