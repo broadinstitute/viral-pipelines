@@ -69,7 +69,7 @@ workflow kb_classify_reads {
         # Strip common read file extensions to get sample basename
         String bam_basename = basename(basename(basename(reads_bam, ".bam"), ".fastq.gz"), ".fastq")
         
-        call metagenomics.kallisto as classify_kb_single {
+        call metagenomics.kallisto as classify_kallisto_single {
             input: 
                 reads_bam = reads_bam,
                 kmer_size = kmer_size,
@@ -84,21 +84,21 @@ workflow kb_classify_reads {
     }
 
     ## Now let's merge back our h5ad files
-    call metagenomics.kb_merge_h5ads as merge_h5ads {
+    call metagenomics.kallisto_merge_h5ads as merge_h5ads {
         input:
-            in_count_tars = classify_kb_single.kb_count_tar,
+            in_count_tars = classify_kallisto_single.kb_count_tar,
             out_basename = "merged_kb_classify",
     }
 
     # Now we need to go ahead and extract the reads that were classified by kallisto
     # We'll need the individual h5ad files for this.
     # Dual scatter over reads_bams and count_tars in parallel
-    scatter(pair in zip(reads_bams, classify_kb_single.kb_count_tar)) {
+    scatter(pair in zip(reads_bams, classify_kallisto_single.kb_count_tar)) {
         File in_bam = pair.left
         File count_tar = pair.right
         
-        call metagenomics.kb_extract as kb_extract_single {
-            input: 
+        call metagenomics.kallisto_extract as kallisto_extract_single {
+            input:
                 reads_bam = in_bam,
                 h5ad_file = count_tar,
                 protein = protein,
@@ -113,8 +113,8 @@ workflow kb_classify_reads {
     ## TODO: Run kraken2 - kallisto read classifier script to create a classification table
     
     output {
-        Array[File] kb_classify_reads   = classify_kb_single.kb_count_tar
-        Array[File] kb_extracted_reads  = kb_extract_single.kb_extract_tar
+        Array[File] kb_classify_reads   = classify_kallisto_single.kb_count_tar
+        Array[File] kb_extracted_reads  = kallisto_extract_single.kb_extract_tar
         File        merged_h5ad         = merge_h5ads.kb_merged_h5ad
     }
 }

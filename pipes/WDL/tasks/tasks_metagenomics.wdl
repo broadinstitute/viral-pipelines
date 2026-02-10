@@ -1020,9 +1020,9 @@ task kallisto {
 
     if [[ ${reads_bam} == *.bam ]]; then
         metagenomics.py kb \
-          ${reads_bam} \
-          --index ${kb_index} \
-          --t2g ${t2g} \
+          "${reads_bam}" \
+          --index "${kb_index}" \
+          --t2g "${t2g}" \
           --kmer_len ${kmer_size} \
           --technology ${technology} \
           --parity ${parity} \
@@ -1037,23 +1037,23 @@ task kallisto {
           -t `nproc` \
           -k ${kmer_size} \
           --parity single \
-          -i ${kb_index} \
-          -g ${t2g} \
-          -o ${out_basename}_count \
+          -i "${kb_index}" \
+          -g "${t2g}" \
+          -o "${out_basename}_count" \
           -x ${technology} \
           ~{if h5ad then "--h5ad" else ""} \
           ~{if loom then "--loom" else ""} \
           ~{true='--aa' false='' protein} \
-          ${reads_bam}
+          "${reads_bam}"
     fi
 
     # Since we are running this file-by-file we need to add our sample name to the matrix.cells file
     bn=$(basename "${reads_bam}")
     sample_name=$(echo "$bn" | cut -d'.' -f1)
-    echo "$sample_name" > ${out_basename}_count/matrix.cells
+    echo "$sample_name" > "${out_basename}_count/matrix.cells"
 
-    tar -c -C ${out_basename}_count . | zstd > ${out_basename}_kb_count.tar.zst
-  }
+    tar -c -C "${out_basename}_count" . | zstd > "${out_basename}_kb_count.tar.zst"
+  >>>
 
   output {
     File    kb_count_tar  = "${out_basename}_kb_count.tar.zst"
@@ -1103,7 +1103,7 @@ task build_kallisto_db {
     }
   }
 
-  command {
+  command <<<
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
@@ -1115,10 +1115,10 @@ task build_kallisto_db {
     metagenomics.py --version | tee -a VERSION
 
     if [[ ${reference_sequences} == *.gz ]]; then
-      gunzip -c ${reference_sequences} > reference_sequences.fasta
+      gunzip -c "${reference_sequences}" > reference_sequences.fasta
       REF_FASTA=reference_sequences.fasta
     else
-      REF_FASTA=${reference_sequences}
+      REF_FASTA="${reference_sequences}"
     fi
 
     # build kb database
@@ -1126,13 +1126,13 @@ task build_kallisto_db {
       ${true='--protein' false='' protein} \
       --kmer_len=${kmer_size} \
       --workflow=${workflow_type} \
-      --index=${out_basename}.idx \
+      --index="${out_basename}.idx" \
       $REF_FASTA \
       --loglevel=DEBUG
 
 
-       tar -c ${out_basename}.idx | zstd > ${out_basename}.idx.tar.zst
-  }
+       tar -c "${out_basename}.idx" | zstd > "${out_basename}.idx.tar.zst"
+  >>>
 
   output {
     File        kb_index   = "${out_basename}.idx.tar.zst"
@@ -1149,7 +1149,7 @@ task build_kallisto_db {
   }
 }
 
-task kb_extract {
+task kallisto_extract {
   meta {
     description: "Extracts reads that pseudoalign to a kb index"
   }
@@ -1200,7 +1200,7 @@ task kb_extract {
 
   String out_basename = sub(sub(sub(sub(basename(reads_bam), "\\.bam$", ""), "\\.gz$", ""), "\\.fastq$", ""), "\\.fq$", "")
 
-  command {
+  command <<<
     set -ex -o pipefail
     TARGET_BOOL=false
 
@@ -1224,17 +1224,17 @@ task kb_extract {
     fi
 
     metagenomics.py kb_extract \
-      ${reads_bam} \
-      --index ${kb_index} \
-      --t2g ${t2g} \
-      --out_dir ${out_basename}_extract \
+      "${reads_bam}" \
+      --index "${kb_index}" \
+      --t2g "${t2g}" \
+      --out_dir "${out_basename}_extract" \
       ~{if protein then "--protein" else ""} \
       --threshold ${threshold} \
       $TARGET_SOURCE \
       --loglevel=DEBUG
 
-    tar -c -C ${out_basename}_extract . | zstd > ${out_basename}_kb_extract.tar.zst
-  }
+    tar -c -C "${out_basename}_extract" . | zstd > "${out_basename}_kb_extract.tar.zst"
+  >>>
 
   output {
     File    kb_extract_tar    = "${out_basename}_kb_extract.tar.zst"
@@ -1251,7 +1251,7 @@ task kb_extract {
   }
 }
 
-task report_primary_kb_taxa {
+task report_primary_kallisto_taxa {
   meta {
     description: "Interprets kb count output file and emits the primary contributing taxa under a focal taxon of interest."
   }
@@ -1312,7 +1312,7 @@ task report_primary_kb_taxa {
   }
 }
 
-task kb_merge_h5ads {
+task kallisto_merge_h5ads {
   meta {
     description: "Merges multiple kb count output tarballs into a single .h5ad file with sample metadata."
   }
@@ -1335,7 +1335,7 @@ task kb_merge_h5ads {
 
   }
 
-  command {
+  command <<<
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
@@ -1350,9 +1350,9 @@ task kb_merge_h5ads {
 
     metagenomics.py kb_merge_h5ads \
       "~{sep='" "' in_count_tars}" \
-      --out-h5ad ${out_basename}.h5ad \
+      --out-h5ad "${out_basename}.h5ad" \
       --loglevel=DEBUG
-   }
+   >>>
 
   output {
     File    kb_merged_h5ad        = "${out_basename}.h5ad"
@@ -1446,7 +1446,7 @@ task classify_virnucpro {
     export TEMP=/tmp
     export TMP=/tmp    
 
-    /opt/virnucpro_cli.py ~{reads_bam} ~{basename}.virnucpro.tsv --expected-length ~{expected_length} \
+    /opt/virnucpro_cli.py "~{reads_bam}" "~{basename}.virnucpro.tsv" --expected-length ~{expected_length} \
       ~{true='--use-gpu' false='' use_gpu} \
       ~{true='--parallel' false='' parallel} \
       ~{true='--persistent-models' false='' persist_model} \
@@ -1455,9 +1455,9 @@ task classify_virnucpro {
       ~{'--dnabert-batch-size=' + dnabert_batch_size}
 
     # Tarball both output files
-    tar -czf ~{basename}.virnucpro.tgz \
-      ~{basename}.virnucpro.tsv \
-      ~{basename}.virnucpro_highestscore.csv
+    tar -czf "~{basename}.virnucpro.tgz" \
+      "~{basename}.virnucpro.tsv" \
+      "~{basename}.virnucpro_highestscore.csv"
   >>>
 
   output {
