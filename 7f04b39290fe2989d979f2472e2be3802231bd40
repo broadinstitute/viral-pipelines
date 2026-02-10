@@ -1,0 +1,22 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.0.42",
+  "base_commit_sha": "7f04b39290fe2989d979f2472e2be3802231bd40",
+  "prompts": {
+    "7c64ff4851b8f7ca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c9aad39f-ca63-447d-9cfe-873b7e75aeb9",
+        "model": "claude-sonnet-4-5-20250929"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 8,
+      "accepted_lines": 0,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/45e836d202563816ad40c99cbc5f51399c4ad084192908554a8547f6af0ada62"
+    }
+  }
+}
