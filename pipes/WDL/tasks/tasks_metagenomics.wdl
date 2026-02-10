@@ -963,7 +963,6 @@ task kallisto {
     File     kb_index
     File     t2g
     Int      kmer_size=31
-    Int      threads=8
 
     String   technology
     String   parity
@@ -989,9 +988,6 @@ task kallisto {
     }
     kmer_size: {
       description: "K-mer size used in kb index. Must match the k-mer size used to build the index. Default is 31."
-    }
-    threads: {
-      description: "Number of threads to use. Default is 8."
     }
     technology: {
       description: "Single-cell technology used  {10xv2, 10xv3, dropseq, inDrops, seqwell, smartseq2, bulk}."
