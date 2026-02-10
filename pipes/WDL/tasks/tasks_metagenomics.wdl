@@ -1038,7 +1038,7 @@ task kallisto {
     else # we have a single-ended fastq file so just call it directly
         kb count \
           --kallisto kallisto \
-          -t ${threads} \
+          -t `nproc` \
           -k ${kmer_size} \
           --parity single \
           -i ${kb_index} \
