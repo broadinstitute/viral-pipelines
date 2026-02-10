@@ -1441,6 +1441,10 @@ task classify_virnucpro {
 
   command <<<
     set -ex -o pipefail
+    
+    export TMPDIR=/tmp
+    export TEMP=/tmp
+    export TMP=/tmp
 
     export TMPDIR=/tmp
     export TEMP=/tmp
@@ -1475,12 +1479,12 @@ task classify_virnucpro {
     gpu: true
     dx_instance_type: "mem1_ssd1_gpu2_x8"
     dx_timeout: "6H"
-    acceleratorType: select_first([accelerator_type, "nvidia-rtx-pro-6000"])
+    acceleratorType: select_first([accelerator_type, "nvidia-tesla-v100"])
     acceleratorCount: select_first([accelerator_count, 1])
-    gpuType: select_first([gpu_type, "nvidia-rtx-pro-6000"])
+    gpuType: select_first([gpu_type, "nvidia-tesla-v100"])
     gpuCount: select_first([gpu_count, 1])
     vm_size: select_first([vm_size, "Standard_NC6"])
-    nvidiaDriverVersion: "580.126"
+    nvidiaDriverVersion: "410.79"
     maxRetries: 1
   }
 }
