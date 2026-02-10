@@ -1074,7 +1074,7 @@ task kb {
   }
 }
 
-task build_kb_db {
+task build_kallisto_db {
   meta {
     description: "Builds a custom kb index from provided input FASTA file."
   }
