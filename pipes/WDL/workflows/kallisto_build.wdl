@@ -9,10 +9,10 @@ workflow kb_build {
         email:  "viral-ngs@broadinstitute.org"
     }
 
-    call metagenomics.build_kb_db
+    call metagenomics.build_kallisto_db
 
     output {
-        File    kb_reads_extracted      = build_kb_db.kb_index
-        String  viral_classify_version  = build_kb_db.viralngs_version
+        File    kb_reads_extracted      = build_kallisto_db.kb_index
+        String  viral_classify_version  = build_kallisto_db.viralngs_version
     }
 }
