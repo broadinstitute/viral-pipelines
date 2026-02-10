@@ -69,7 +69,7 @@ workflow kb_classify_reads {
         # Strip common read file extensions to get sample basename
         String bam_basename = basename(basename(basename(reads_bam, ".bam"), ".fastq.gz"), ".fastq")
         
-        call metagenomics.kb as classify_kb_single {
+        call metagenomics.kallisto as classify_kb_single {
             input: 
                 reads_bam = reads_bam,
                 kmer_size = kmer_size,

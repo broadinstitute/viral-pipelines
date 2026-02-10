@@ -953,7 +953,7 @@ task kaiju {
   }
 }
 
-task kb {
+task kallisto {
   meta {
     description: "Runs kb count classification tool"
   }

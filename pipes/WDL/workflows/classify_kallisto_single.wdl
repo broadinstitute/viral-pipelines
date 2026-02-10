@@ -70,7 +70,7 @@ workflow classify_kallisto_single {
     }
 
 
-    call metagenomics.kb as classify_kb_single {
+    call metagenomics.kallisto as classify_kb_single {
         input: 
             reads_bam = reads_bam,
             kmer_size = kmer_size,
