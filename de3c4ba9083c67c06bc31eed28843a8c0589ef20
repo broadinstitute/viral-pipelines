@@ -1,0 +1,28 @@
+pipes/WDL/tasks/tasks_metagenomics.wdl
+  7c64ff4851b8f7ca 956
+pipes/WDL/workflows/classify_kallisto_multi.wdl
+  7c64ff4851b8f7ca 72
+pipes/WDL/workflows/classify_kallisto_single.wdl
+  7c64ff4851b8f7ca 73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.0.42",
+  "base_commit_sha": "de3c4ba9083c67c06bc31eed28843a8c0589ef20",
+  "prompts": {
+    "7c64ff4851b8f7ca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c9aad39f-ca63-447d-9cfe-873b7e75aeb9",
+        "model": "claude-sonnet-4-5-20250929"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 4,
+      "accepted_lines": 4,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/5f2e9d78e1b9bfb6f589bfeadd91aeeca32f6159ed4ef1d017959186cd9164e2"
+    }
+  }
+}
