@@ -1005,7 +1005,7 @@ task kallisto {
 
   String out_basename=basename(basename(reads_bam, '.bam'), '.fasta')
 
-  command {
+  command <<<
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
