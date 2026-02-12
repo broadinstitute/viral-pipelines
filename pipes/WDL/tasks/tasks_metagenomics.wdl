@@ -1131,11 +1131,11 @@ task report_genomad_summary {
   >>>
 
   output {
-    Int?   total_viruses = if length(glob("TOTAL_VIRUSES")) > 0 then read_int(glob("TOTAL_VIRUSES")[0]) else 0
-    Int?   total_plasmids = if length(glob("TOTAL_PLASMIDS")) > 0 then read_int(glob("TOTAL_PLASMIDS")[0]) else 0
-    String top_virus_name = read_string("TOP_VIRUS_NAME")
-    Float? top_virus_score = if length(glob("TOP_VIRUS_SCORE")) > 0 then read_float(glob("TOP_VIRUS_SCORE")[0]) else 0.0
-    String top_virus_taxonomy = read_string("TOP_VIRUS_TAXONOMY")
+    Array[File] total_viruses_file    = glob("TOTAL_VIRUSES")
+    Array[File] total_plasmids_file   = glob("TOTAL_PLASMIDS")
+    String      top_virus_name        = read_string("TOP_VIRUS_NAME")
+    Array[File] top_virus_score_file  = glob("TOP_VIRUS_SCORE")
+    String      top_virus_taxonomy    = read_string("TOP_VIRUS_TAXONOMY")
   }
 
   runtime {

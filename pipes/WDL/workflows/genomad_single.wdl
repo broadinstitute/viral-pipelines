@@ -47,6 +47,17 @@ workflow genomad_single {
             plasmid_summary_tsv  = genomad_end_to_end.plasmid_summary
     }
 
+    # Extract optional counts/scores — truly undefined when zero
+    if (length(report_genomad_summary.total_viruses_file) > 0) {
+        Int extracted_total_viruses = read_int(report_genomad_summary.total_viruses_file[0])
+    }
+    if (length(report_genomad_summary.total_plasmids_file) > 0) {
+        Int extracted_total_plasmids = read_int(report_genomad_summary.total_plasmids_file[0])
+    }
+    if (length(report_genomad_summary.top_virus_score_file) > 0) {
+        Float extracted_top_virus_score = read_float(report_genomad_summary.top_virus_score_file[0])
+    }
+
     output {
         # Genomad result files (always present, may be empty/header-only)
         File   virus_summary_tsv    = genomad_end_to_end.virus_summary
@@ -55,10 +66,10 @@ workflow genomad_single {
         File   plasmid_fasta        = genomad_end_to_end.plasmid_fasta
 
         # Summary statistics for Terra data tables
-        Int?   total_viruses         = report_genomad_summary.total_viruses
-        Int?   total_plasmids        = report_genomad_summary.total_plasmids
+        Int?   total_viruses         = extracted_total_viruses
+        Int?   total_plasmids        = extracted_total_plasmids
         String top_virus_name        = report_genomad_summary.top_virus_name
-        Float? top_virus_score       = report_genomad_summary.top_virus_score
+        Float? top_virus_score       = extracted_top_virus_score
         String top_virus_taxonomy    = report_genomad_summary.top_virus_taxonomy
 
         # Runtime metadata
