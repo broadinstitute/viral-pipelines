@@ -964,7 +964,7 @@ task genomad_end_to_end {
     Boolean cleanup = true
     Int     machine_mem_gb = 32
     Int     cpu = 8
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:feature-genomad-integration"
   }
 
   String out_basename = basename(basename(basename(assembly_fasta, '.fasta'), '.fa'), '.fna')
@@ -1074,7 +1074,7 @@ task report_genomad_summary {
     File?  virus_summary_tsv
     File?  plasmid_summary_tsv
     File?  provirus_summary_tsv
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
+    String docker = "ghcr.io/broadinstitute/viral-ngs:feature-genomad-integration"
   }
 
   Int disk_size = 50
