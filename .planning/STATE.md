@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** Reliable viral discovery from metagenomic assemblies must work. If genomad can identify viruses in the input, the pipeline must capture and annotate them correctly.
-**Current focus:** Phase 1 - Core Tasks and Single-Sample Workflow
+**Current focus:** Phase 2 - Multi-Sample Workflow
 
 ## Current Position
 
-Phase: 1 of 3 (Core Tasks and Single-Sample Workflow)
-Plan: 3 of 3 (completed)
-Status: Complete
-Last activity: 2026-02-12 — Completed plan 01-03 (testing infrastructure and platform registration)
+Phase: 2 of 3 (Multi-Sample Workflow)
+Plan: None (ready to plan)
+Status: Ready to plan Phase 2
+Last activity: 2026-02-12 — Phase 1 complete, tested, and approved
 
-Progress: [██████████] 100%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -42,27 +42,47 @@ Progress: [██████████] 100%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- Fixed resource allocation (32GB RAM, 8 CPU, 50GB disk) for genomad_end_to_end instead of dynamic sizing (Plan 01-01)
-- Use --splits 8 for memory safety with large genomad databases (Plan 01-01)
-- Optional File? outputs with glob()[0] pattern to handle empty results gracefully (Plan 01-01)
-- Use default='' pattern for optional File? inputs in command blocks to handle WDL substitution (Plan 01-01)
-- [Phase 01-02]: Follow classify_single.wdl structure for consistency with existing workflows
-- [Phase 01-02]: Use parameter_meta with patterns and category fields for Terra UI integration
-- [Phase 01-02]: Expose both optional File? outputs and primitive statistics for flexible downstream usage
-- [Phase 01-03]: Use G5012.3.fasta as test assembly input (existing viral test data)
-- [Phase 01-03]: Reference genomad_db-tinytest.tar.zst for test database (to be created separately)
-- [Phase 01-03]: Follow existing pattern: JSON in parent WDL/ directory with symlink in miniwdl-local/
+**Phase 1 (Complete):**
+- Fixed resource allocation (32GB RAM, 8 CPU, 50GB disk) for genomad_end_to_end instead of dynamic sizing
+- Use --splits 8 for memory safety with large genomad databases
+- **REVISED:** Always-present File outputs instead of File? pattern (testing revealed glob()[0] complexity)
+- **REMOVED:** min_length parameter (genomad v1.11.2 doesn't support --min-length option)
+- **FIXED:** Database path needs /genomad_db suffix to match tarball structure
+- Follow classify_single.wdl structure for consistency
+- Use parameter_meta with patterns and category for Terra UI
+- Expose both File outputs and primitive statistics for Terra integration
+- Use G5012.3.fasta as test assembly (Filovirus test data)
+- Created 706MB test database fixture with zstd -19 compression
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
-None yet.
+None. Phase 1 tested and validated.
 
 ## Session Continuity
 
-Last session: 2026-02-12 (plan 01-03 execution)
-Stopped at: Completed 01-03-PLAN.md (testing infrastructure and platform registration) - Phase 1 complete
+Last session: 2026-02-12 (Phase 1 execution, testing, and approval)
+Stopped at: Phase 1 approved after successful testing - ready for Phase 2 planning
 Resume file: None
+
+## Phase 1 Completion Summary
+
+**Implementation:** 3 plans executed (01-01, 01-02, 01-03)
+**Testing:** Runtime validation with miniwdl + local Docker image
+**Bugs Fixed:** 3 critical bugs discovered and fixed during testing
+- Removed invalid --min-length parameter
+- Fixed database path (/genomad_db suffix required)
+- Simplified output handling (always-present files vs File? pattern)
+
+**Test Results:**
+- ✓ Classified G5012.3 as Filovirus (Filoviridae family)
+- ✓ Memory efficient: 4GB used vs 32GB allocated
+- ✓ Empty result handling verified (0 plasmids, 0 proviruses)
+- ✓ Summary statistics correct (1 virus, taxonomy populated)
+
+**Commits:** 8 total (implementation + bug fixes)
+- Plans 01-01 through 01-03: Core implementation
+- Commit 15173df6: Bug fixes from testing
