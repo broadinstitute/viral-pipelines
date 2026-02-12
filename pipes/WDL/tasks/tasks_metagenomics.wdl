@@ -1073,7 +1073,6 @@ task report_genomad_summary {
   input {
     File?  virus_summary_tsv
     File?  plasmid_summary_tsv
-    File?  provirus_summary_tsv
     String docker = "ghcr.io/broadinstitute/viral-ngs:feature-genomad-integration"
   }
 
@@ -1087,9 +1086,6 @@ task report_genomad_summary {
     plasmid_summary_tsv: {
       description: "Optional plasmid summary TSV from genomad (may be absent if no plasmids found)"
     }
-    provirus_summary_tsv: {
-      description: "Optional provirus summary TSV from genomad (may be absent if no proviruses found)"
-    }
     docker: {
       description: "Docker image with genomad tools"
     }
@@ -1098,48 +1094,47 @@ task report_genomad_summary {
   command <<<
     set -e
 
-    # Count viruses (rows in virus_summary minus header, or 0 if file absent)
+    # Initialize string output files (always present, may be empty)
+    echo "" > TOP_VIRUS_NAME
+    echo "" > TOP_VIRUS_TAXONOMY
+
+    # Process virus summary
     if [ -f "~{default='' virus_summary_tsv}" ] && [ -n "~{default='' virus_summary_tsv}" ]; then
       VIRUS_COUNT=$(tail -n +2 "~{virus_summary_tsv}" | wc -l | tr -d ' ')
-      # Get top virus (first data row, highest score typically sorted by genomad)
-      TOP_VIRUS_NAME=$(tail -n +2 "~{virus_summary_tsv}" | head -1 | cut -f1)
-      TOP_VIRUS_SCORE=$(tail -n +2 "~{virus_summary_tsv}" | head -1 | cut -f2)
-      TOP_VIRUS_TAXONOMY=$(tail -n +2 "~{virus_summary_tsv}" | head -1 | cut -f11)
-    else
-      VIRUS_COUNT=0
-      TOP_VIRUS_NAME="none"
-      TOP_VIRUS_SCORE="0.0"
-      TOP_VIRUS_TAXONOMY="none"
+
+      if [ "$VIRUS_COUNT" -gt 0 ]; then
+        # Write count to file (only when > 0)
+        echo "$VIRUS_COUNT" > TOTAL_VIRUSES
+
+        # Sort by virus_score (column 7) descending, then length (column 2) descending for tie-breaking
+        tail -n +2 "~{virus_summary_tsv}" | sort -t$'\t' -k7nr,7 -k2nr,2 | head -1 > TOP_VIRUS_ROW
+
+        # Extract seq_name (column 1)
+        cut -f1 TOP_VIRUS_ROW > TOP_VIRUS_NAME
+
+        # Extract and round score (column 7) to 2 decimal places
+        printf "%.2f" "$(cut -f7 TOP_VIRUS_ROW)" > TOP_VIRUS_SCORE
+
+        # Extract family taxonomy (column 11) - rightmost semicolon-delimited element, Title Case normalized
+        cut -f11 TOP_VIRUS_ROW | rev | cut -d';' -f1 | rev | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}' > TOP_VIRUS_TAXONOMY
+      fi
     fi
 
-    # Count plasmids
+    # Process plasmid summary
     if [ -f "~{default='' plasmid_summary_tsv}" ] && [ -n "~{default='' plasmid_summary_tsv}" ]; then
       PLASMID_COUNT=$(tail -n +2 "~{plasmid_summary_tsv}" | wc -l | tr -d ' ')
-    else
-      PLASMID_COUNT=0
-    fi
 
-    # Count proviruses
-    if [ -f "~{default='' provirus_summary_tsv}" ] && [ -n "~{default='' provirus_summary_tsv}" ]; then
-      PROVIRUS_COUNT=$(tail -n +2 "~{provirus_summary_tsv}" | wc -l | tr -d ' ')
-    else
-      PROVIRUS_COUNT=0
+      if [ "$PLASMID_COUNT" -gt 0 ]; then
+        echo "$PLASMID_COUNT" > TOTAL_PLASMIDS
+      fi
     fi
-
-    echo "$VIRUS_COUNT" > TOTAL_VIRUSES
-    echo "$PLASMID_COUNT" > TOTAL_PLASMIDS
-    echo "$PROVIRUS_COUNT" > TOTAL_PROVIRUSES
-    echo "$TOP_VIRUS_NAME" > TOP_VIRUS_NAME
-    echo "$TOP_VIRUS_SCORE" > TOP_VIRUS_SCORE
-    echo "$TOP_VIRUS_TAXONOMY" > TOP_VIRUS_TAXONOMY
   >>>
 
   output {
-    Int    total_viruses = read_int("TOTAL_VIRUSES")
-    Int    total_plasmids = read_int("TOTAL_PLASMIDS")
-    Int    total_proviruses = read_int("TOTAL_PROVIRUSES")
+    Int?   total_viruses = if length(glob("TOTAL_VIRUSES")) > 0 then read_int(glob("TOTAL_VIRUSES")[0]) else 0
+    Int?   total_plasmids = if length(glob("TOTAL_PLASMIDS")) > 0 then read_int(glob("TOTAL_PLASMIDS")[0]) else 0
     String top_virus_name = read_string("TOP_VIRUS_NAME")
-    Float  top_virus_score = read_float("TOP_VIRUS_SCORE")
+    Float? top_virus_score = if length(glob("TOP_VIRUS_SCORE")) > 0 then read_float(glob("TOP_VIRUS_SCORE")[0]) else 0.0
     String top_virus_taxonomy = read_string("TOP_VIRUS_TAXONOMY")
   }
 
