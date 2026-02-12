@@ -1102,3 +1102,93 @@ task genomad_end_to_end {
     maxRetries: 2
   }
 }
+
+task report_genomad_summary {
+  meta {
+    description: "Parses genomad summary output files and emits counts and top hit details as primitive values for Terra data table integration."
+  }
+
+  input {
+    File?  virus_summary_tsv
+    File?  plasmid_summary_tsv
+    File?  provirus_summary_tsv
+    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
+  }
+
+  Int disk_size = 50
+  Int machine_mem_gb = 2
+
+  parameter_meta {
+    virus_summary_tsv: {
+      description: "Optional virus summary TSV from genomad (may be absent if no viruses found)"
+    }
+    plasmid_summary_tsv: {
+      description: "Optional plasmid summary TSV from genomad (may be absent if no plasmids found)"
+    }
+    provirus_summary_tsv: {
+      description: "Optional provirus summary TSV from genomad (may be absent if no proviruses found)"
+    }
+    docker: {
+      description: "Docker image with genomad tools"
+    }
+  }
+
+  command <<<
+    set -e
+
+    # Count viruses (rows in virus_summary minus header, or 0 if file absent)
+    if [ -f "~{default='' virus_summary_tsv}" ] && [ -n "~{default='' virus_summary_tsv}" ]; then
+      VIRUS_COUNT=$(tail -n +2 "~{virus_summary_tsv}" | wc -l | tr -d ' ')
+      # Get top virus (first data row, highest score typically sorted by genomad)
+      TOP_VIRUS_NAME=$(tail -n +2 "~{virus_summary_tsv}" | head -1 | cut -f1)
+      TOP_VIRUS_SCORE=$(tail -n +2 "~{virus_summary_tsv}" | head -1 | cut -f2)
+      TOP_VIRUS_TAXONOMY=$(tail -n +2 "~{virus_summary_tsv}" | head -1 | cut -f11)
+    else
+      VIRUS_COUNT=0
+      TOP_VIRUS_NAME="none"
+      TOP_VIRUS_SCORE="0.0"
+      TOP_VIRUS_TAXONOMY="none"
+    fi
+
+    # Count plasmids
+    if [ -f "~{default='' plasmid_summary_tsv}" ] && [ -n "~{default='' plasmid_summary_tsv}" ]; then
+      PLASMID_COUNT=$(tail -n +2 "~{plasmid_summary_tsv}" | wc -l | tr -d ' ')
+    else
+      PLASMID_COUNT=0
+    fi
+
+    # Count proviruses
+    if [ -f "~{default='' provirus_summary_tsv}" ] && [ -n "~{default='' provirus_summary_tsv}" ]; then
+      PROVIRUS_COUNT=$(tail -n +2 "~{provirus_summary_tsv}" | wc -l | tr -d ' ')
+    else
+      PROVIRUS_COUNT=0
+    fi
+
+    echo "$VIRUS_COUNT" > TOTAL_VIRUSES
+    echo "$PLASMID_COUNT" > TOTAL_PLASMIDS
+    echo "$PROVIRUS_COUNT" > TOTAL_PROVIRUSES
+    echo "$TOP_VIRUS_NAME" > TOP_VIRUS_NAME
+    echo "$TOP_VIRUS_SCORE" > TOP_VIRUS_SCORE
+    echo "$TOP_VIRUS_TAXONOMY" > TOP_VIRUS_TAXONOMY
+  >>>
+
+  output {
+    Int    total_viruses = read_int("TOTAL_VIRUSES")
+    Int    total_plasmids = read_int("TOTAL_PLASMIDS")
+    Int    total_proviruses = read_int("TOTAL_PROVIRUSES")
+    String top_virus_name = read_string("TOP_VIRUS_NAME")
+    Float  top_virus_score = read_float("TOP_VIRUS_SCORE")
+    String top_virus_taxonomy = read_string("TOP_VIRUS_TAXONOMY")
+  }
+
+  runtime {
+    docker: docker
+    memory: "~{machine_mem_gb} GB"
+    cpu: 1
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
