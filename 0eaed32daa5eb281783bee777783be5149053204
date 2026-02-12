@@ -1,0 +1,54 @@
+pipes/WDL/workflows/genomad_multi.wdl
+  905334998db4c963 1-55
+.planning/STATE.md
+  95009867cbea0d19 8,12-15,17,45,48-55,59,63,67-68,70-88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.2",
+  "base_commit_sha": "0eaed32daa5eb281783bee777783be5149053204",
+  "prompts": {
+    "2d02241efdb66a79": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "22e4a643-1b7c-442a-bef6-3456b622eb03",
+        "model": "claude-sonnet-4-5-20250929"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 12,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/ac41d7e85db68bf83d37beceee36b90660e0e0a7d3c7cd3a5f9d989eb8bb40b9"
+    },
+    "905334998db4c963": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7279daa4-24f1-4ade-96da-571df97a019b",
+        "model": "claude-sonnet-4-5-20250929"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 55,
+      "total_deletions": 0,
+      "accepted_lines": 55,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/46b4b77e8be057f07e9e7438076dff81c7b3d618ea6213dc44e2d0835605b612"
+    },
+    "95009867cbea0d19": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28fef152-4ae3-435b-a2e5-349267da1af9",
+        "model": "claude-sonnet-4-5-20250929"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 40,
+      "total_deletions": 20,
+      "accepted_lines": 38,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/62acd6d1753371ac02d2c7c07732f8f3414ee057c08075174ed4977d0834fa42"
+    }
+  }
+}
