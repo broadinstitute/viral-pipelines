@@ -952,3 +952,153 @@ task kaiju {
     maxRetries: 2
   }
 }
+
+task genomad_end_to_end {
+  meta {
+    description: "Runs genomad end-to-end classification on assembled contigs to identify viruses, plasmids, and proviruses."
+  }
+
+  input {
+    File    assembly_fasta
+    File    genomad_db_tgz
+    Int     min_length = 2500
+    Boolean cleanup = true
+    Int     machine_mem_gb = 32
+    Int     cpu = 8
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
+  }
+
+  String out_basename = basename(basename(basename(assembly_fasta, '.fasta'), '.fa'), '.fna')
+  Int disk_size = 50
+
+  parameter_meta {
+    assembly_fasta: {
+      description: "FASTA assembly to classify",
+      patterns: ["*.fasta", "*.fa", "*.fna"],
+      category: "required"
+    }
+    genomad_db_tgz: {
+      description: "Compressed genomad database tarball",
+      patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"],
+      category: "required"
+    }
+    min_length: {
+      description: "Minimum sequence length for genomad classification (maps to --min-length)"
+    }
+    cleanup: {
+      description: "Delete intermediate files after run (maps to --cleanup)"
+    }
+    machine_mem_gb: {
+      description: "Memory allocation in GB"
+    }
+    cpu: {
+      description: "Number of CPU cores"
+    }
+    docker: {
+      description: "Docker image with genomad installed"
+    }
+  }
+
+  command <<<
+    set -ex -o pipefail
+
+    if [ -z "$TMPDIR" ]; then
+      export TMPDIR=$(pwd)
+    fi
+    DB_DIR=$(mktemp -d --suffix _db)
+    mkdir -p $DB_DIR/genomad
+
+    metagenomics --version | tee VERSION
+
+    # decompress genomad database
+    read_utils extract_tarball \
+      "~{genomad_db_tgz}" $DB_DIR/genomad \
+      --loglevel=DEBUG
+    du -hs $DB_DIR/genomad
+
+    # count sequences in input FASTA
+    SEQ_COUNT=$(grep -c '^>' "~{assembly_fasta}" || true)
+    echo "Input sequences: $SEQ_COUNT"
+
+    if [ "$SEQ_COUNT" -gt 0 ]; then
+      # run genomad end-to-end
+      genomad end-to-end \
+        "~{assembly_fasta}" \
+        genomad_output \
+        $DB_DIR/genomad \
+        --threads ~{cpu} \
+        --min-length ~{min_length} \
+        ~{if cleanup then '--cleanup' else ''} \
+        --splits 8
+
+      # extract outputs from genomad directory structure
+      # genomad creates: genomad_output/<basename>_summary/<basename>_virus_summary.tsv etc.
+      # Copy outputs with sample name prefix to working directory
+      GENOMAD_BASENAME=$(basename "~{assembly_fasta}" | sed 's/\.\(fasta\|fa\|fna\)$//')
+
+      # virus summary
+      if [ -f "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_virus_summary.tsv" ]; then
+        VIRUS_ROWS=$(tail -n +2 "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_virus_summary.tsv" | wc -l)
+        if [ "$VIRUS_ROWS" -gt 0 ]; then
+          cp "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_virus_summary.tsv" "~{out_basename}_virus_summary.tsv"
+        fi
+      fi
+
+      # plasmid summary
+      if [ -f "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_plasmid_summary.tsv" ]; then
+        PLASMID_ROWS=$(tail -n +2 "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_plasmid_summary.tsv" | wc -l)
+        if [ "$PLASMID_ROWS" -gt 0 ]; then
+          cp "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_plasmid_summary.tsv" "~{out_basename}_plasmid_summary.tsv"
+        fi
+      fi
+
+      # provirus results
+      if [ -f "genomad_output/${GENOMAD_BASENAME}_find_proviruses/${GENOMAD_BASENAME}_provirus.tsv" ]; then
+        PROVIRUS_ROWS=$(tail -n +2 "genomad_output/${GENOMAD_BASENAME}_find_proviruses/${GENOMAD_BASENAME}_provirus.tsv" | wc -l)
+        if [ "$PROVIRUS_ROWS" -gt 0 ]; then
+          cp "genomad_output/${GENOMAD_BASENAME}_find_proviruses/${GENOMAD_BASENAME}_provirus.tsv" "~{out_basename}_provirus.tsv"
+        fi
+      fi
+
+      # virus FASTA sequences
+      if [ -f "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_virus.fna" ]; then
+        VIRUS_SEQ=$(grep -c '^>' "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_virus.fna" || true)
+        if [ "$VIRUS_SEQ" -gt 0 ]; then
+          cp "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_virus.fna" "~{out_basename}_virus.fna"
+        fi
+      fi
+
+      # plasmid FASTA sequences
+      if [ -f "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_plasmid.fna" ]; then
+        PLASMID_SEQ=$(grep -c '^>' "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_plasmid.fna" || true)
+        if [ "$PLASMID_SEQ" -gt 0 ]; then
+          cp "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_plasmid.fna" "~{out_basename}_plasmid.fna"
+        fi
+      fi
+    fi
+
+    # memory tracking (cgroups v1 and v2 compatible)
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
+  >>>
+
+  output {
+    File?  virus_summary = glob("~{out_basename}_virus_summary.tsv")[0]
+    File?  plasmid_summary = glob("~{out_basename}_plasmid_summary.tsv")[0]
+    File?  provirus_summary = glob("~{out_basename}_provirus.tsv")[0]
+    File?  virus_fasta = glob("~{out_basename}_virus.fna")[0]
+    File?  plasmid_fasta = glob("~{out_basename}_plasmid.fna")[0]
+    Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
+    String viralngs_version = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: "~{machine_mem_gb} GB"
+    cpu: cpu
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB"
+    dx_instance_type: "mem3_ssd1_v2_x8"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
