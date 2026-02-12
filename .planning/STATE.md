@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Phase: 3 of 3 (Terra Integration)
-Plan: 1 of 1 complete
+Plan: 2 of 2 complete
 Status: Complete - Phase 3 execution
-Last activity: 2026-02-12 — Completed plan 03-01 (Terra-Friendly Report Task)
+Last activity: 2026-02-12 — Completed plan 03-02 (Gap Closure - True Optional Primitives)
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 2.8 min
-- Total execution time: 0.28 hours
+- Total plans completed: 7
+- Average duration: 2.6 min
+- Total execution time: 0.31 hours
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [██████████] 100%
 |-------|-------|-------|----------|
 | 01-core-tasks-and-single-sample-workflow | 3/3 | 7.6 min | 2.5 min |
 | 02-multi-sample-workflow | 2/3 | 3.7 min | 1.8 min |
-| 03-terra-integration | 1/1 | 7.0 min | 7.0 min |
+| 03-terra-integration | 2/2 | 8.1 min | 4.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-03 (2.2 min), 02-01 (1.5 min), 02-02 (2.2 min), 03-01 (7.0 min)
-- Trend: Variable (03-01 took longer due to WDL 1.0 optional type research)
+- Last 5 plans: 02-01 (1.5 min), 02-02 (2.2 min), 03-01 (7.0 min), 03-02 (1.1 min)
+- Trend: Stable (03-02 quick execution due to focused refactoring)
 
 *Updated after each plan completion*
 
@@ -64,12 +64,14 @@ Recent decisions affecting current work:
 - Separate miniWDL and Cromwell JSON files (not symlinks) per project convention
 - Docker authentication gate documented (deferred - not blocking Phase 3)
 
-**Phase 3 (Complete - 1/1 plans complete):**
+**Phase 3 (Complete - 2/2 plans complete):**
 - WDL 1.0 limitation: Optional Int?/Float? outputs return 0 instead of undefined when no hits
 - Removed provirus from report_genomad_summary per user decision
 - Implemented correct virus sorting by score+length with tie-breaking
 - Score rounding to 2 decimals and family-level taxonomy extraction with Title Case
-- Workflow outputs updated to match Int?/Float? task signature
+- Array[File] glob pattern at task level for optional primitives (not Int?/Float? with else-0)
+- Conditional extraction at workflow level using if-blocks for true null behavior
+- Verified pattern produces null (not 0) in Terra data tables when zero hits found
 
 ### Pending Todos
 
@@ -81,8 +83,8 @@ None. Phase 1 tested and validated.
 
 ## Session Continuity
 
-Last session: 2026-02-12 (Phase 3 execution - plan 03-01)
-Stopped at: Completed 03-01-PLAN.md (Terra-Friendly Report Task)
+Last session: 2026-02-12 (Phase 3 execution - plan 03-02)
+Stopped at: Completed 03-02-PLAN.md (Gap Closure - True Optional Primitives)
 Resume file: None
 
 ## Phase 1 Completion Summary
