@@ -14,7 +14,6 @@ workflow genomad_single {
         File   assembly_fasta
         File   genomad_db_tgz
 
-        Int    min_length = 2500
         Boolean cleanup   = true
     }
 
@@ -29,10 +28,6 @@ workflow genomad_single {
             patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"],
             category: "required"
         }
-        min_length: {
-            description: "Minimum sequence length (bp) for genomad classification. Default 2500.",
-            category: "common"
-        }
         cleanup: {
             description: "Delete intermediate genomad files after completion. Default true.",
             category: "common"
@@ -43,7 +38,6 @@ workflow genomad_single {
         input:
             assembly_fasta = assembly_fasta,
             genomad_db_tgz = genomad_db_tgz,
-            min_length     = min_length,
             cleanup        = cleanup
     }
 
@@ -55,12 +49,12 @@ workflow genomad_single {
     }
 
     output {
-        # Genomad result files (optional — absent when nothing found)
-        File?  virus_summary_tsv    = genomad_end_to_end.virus_summary
-        File?  plasmid_summary_tsv  = genomad_end_to_end.plasmid_summary
-        File?  provirus_summary_tsv = genomad_end_to_end.provirus_summary
-        File?  virus_fasta          = genomad_end_to_end.virus_fasta
-        File?  plasmid_fasta        = genomad_end_to_end.plasmid_fasta
+        # Genomad result files (always present, may be empty/header-only)
+        File   virus_summary_tsv    = genomad_end_to_end.virus_summary
+        File   plasmid_summary_tsv  = genomad_end_to_end.plasmid_summary
+        File   provirus_summary_tsv = genomad_end_to_end.provirus_summary
+        File   virus_fasta          = genomad_end_to_end.virus_fasta
+        File   plasmid_fasta        = genomad_end_to_end.plasmid_fasta
 
         # Summary statistics for Terra data tables
         Int    total_viruses         = report_genomad_summary.total_viruses

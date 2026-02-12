@@ -961,7 +961,6 @@ task genomad_end_to_end {
   input {
     File    assembly_fasta
     File    genomad_db_tgz
-    Int     min_length = 2500
     Boolean cleanup = true
     Int     machine_mem_gb = 32
     Int     cpu = 8
@@ -981,9 +980,6 @@ task genomad_end_to_end {
       description: "Compressed genomad database tarball",
       patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"],
       category: "required"
-    }
-    min_length: {
-      description: "Minimum sequence length for genomad classification (maps to --min-length)"
     }
     cleanup: {
       description: "Delete intermediate files after run (maps to --cleanup)"
@@ -1025,9 +1021,8 @@ task genomad_end_to_end {
       genomad end-to-end \
         "~{assembly_fasta}" \
         genomad_output \
-        $DB_DIR/genomad \
+        $DB_DIR/genomad/genomad_db \
         --threads ~{cpu} \
-        --min-length ~{min_length} \
         ~{if cleanup then '--cleanup' else ''} \
         --splits 8
 
@@ -1036,45 +1031,12 @@ task genomad_end_to_end {
       # Copy outputs with sample name prefix to working directory
       GENOMAD_BASENAME=$(basename "~{assembly_fasta}" | sed 's/\.\(fasta\|fa\|fna\)$//')
 
-      # virus summary
-      if [ -f "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_virus_summary.tsv" ]; then
-        VIRUS_ROWS=$(tail -n +2 "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_virus_summary.tsv" | wc -l)
-        if [ "$VIRUS_ROWS" -gt 0 ]; then
-          cp "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_virus_summary.tsv" "~{out_basename}_virus_summary.tsv"
-        fi
-      fi
-
-      # plasmid summary
-      if [ -f "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_plasmid_summary.tsv" ]; then
-        PLASMID_ROWS=$(tail -n +2 "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_plasmid_summary.tsv" | wc -l)
-        if [ "$PLASMID_ROWS" -gt 0 ]; then
-          cp "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_plasmid_summary.tsv" "~{out_basename}_plasmid_summary.tsv"
-        fi
-      fi
-
-      # provirus results
-      if [ -f "genomad_output/${GENOMAD_BASENAME}_find_proviruses/${GENOMAD_BASENAME}_provirus.tsv" ]; then
-        PROVIRUS_ROWS=$(tail -n +2 "genomad_output/${GENOMAD_BASENAME}_find_proviruses/${GENOMAD_BASENAME}_provirus.tsv" | wc -l)
-        if [ "$PROVIRUS_ROWS" -gt 0 ]; then
-          cp "genomad_output/${GENOMAD_BASENAME}_find_proviruses/${GENOMAD_BASENAME}_provirus.tsv" "~{out_basename}_provirus.tsv"
-        fi
-      fi
-
-      # virus FASTA sequences
-      if [ -f "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_virus.fna" ]; then
-        VIRUS_SEQ=$(grep -c '^>' "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_virus.fna" || true)
-        if [ "$VIRUS_SEQ" -gt 0 ]; then
-          cp "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_virus.fna" "~{out_basename}_virus.fna"
-        fi
-      fi
-
-      # plasmid FASTA sequences
-      if [ -f "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_plasmid.fna" ]; then
-        PLASMID_SEQ=$(grep -c '^>' "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_plasmid.fna" || true)
-        if [ "$PLASMID_SEQ" -gt 0 ]; then
-          cp "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_plasmid.fna" "~{out_basename}_plasmid.fna"
-        fi
-      fi
+      # Always create output files (genomad creates them, just copy - even if empty with header only)
+      cp "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_virus_summary.tsv" "~{out_basename}_virus_summary.tsv" || touch "~{out_basename}_virus_summary.tsv"
+      cp "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_plasmid_summary.tsv" "~{out_basename}_plasmid_summary.tsv" || touch "~{out_basename}_plasmid_summary.tsv"
+      cp "genomad_output/${GENOMAD_BASENAME}_find_proviruses/${GENOMAD_BASENAME}_provirus.tsv" "~{out_basename}_provirus.tsv" || touch "~{out_basename}_provirus.tsv"
+      cp "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_virus.fna" "~{out_basename}_virus.fna" || touch "~{out_basename}_virus.fna"
+      cp "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_plasmid.fna" "~{out_basename}_plasmid.fna" || touch "~{out_basename}_plasmid.fna"
     fi
 
     # memory tracking (cgroups v1 and v2 compatible)
@@ -1082,11 +1044,11 @@ task genomad_end_to_end {
   >>>
 
   output {
-    File?  virus_summary = glob("~{out_basename}_virus_summary.tsv")[0]
-    File?  plasmid_summary = glob("~{out_basename}_plasmid_summary.tsv")[0]
-    File?  provirus_summary = glob("~{out_basename}_provirus.tsv")[0]
-    File?  virus_fasta = glob("~{out_basename}_virus.fna")[0]
-    File?  plasmid_fasta = glob("~{out_basename}_plasmid.fna")[0]
+    File   virus_summary = "~{out_basename}_virus_summary.tsv"
+    File   plasmid_summary = "~{out_basename}_plasmid_summary.tsv"
+    File   provirus_summary = "~{out_basename}_provirus.tsv"
+    File   virus_fasta = "~{out_basename}_virus.fna"
+    File   plasmid_fasta = "~{out_basename}_plasmid.fna"
     Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
     String viralngs_version = read_string("VERSION")
   }

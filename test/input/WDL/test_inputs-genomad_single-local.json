@@ -1,4 +1,4 @@
 {
   "genomad_single.assembly_fasta": "test/input/G5012.3.fasta",
-  "genomad_single.genomad_db_tgz": "test/input/genomad_db-tinytest.tar.zst"
+  "genomad_single.genomad_db_tgz": "test/input/genomad_db-test.tar.zst"
 }
