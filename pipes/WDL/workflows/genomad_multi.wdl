@@ -4,7 +4,7 @@ import "../tasks/tasks_metagenomics.wdl" as metagenomics
 
 workflow genomad_multi {
     meta {
-        description: "Runs genomad end-to-end classification on multiple assemblies in parallel, identifying viruses, plasmids, and proviruses in each sample."
+        description: "Runs genomad end-to-end classification on multiple assemblies in parallel, identifying viruses and plasmids in each sample."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
         allowNestedInputs: true
@@ -46,7 +46,6 @@ workflow genomad_multi {
     output {
         Array[File] virus_summary_tsvs   = genomad_end_to_end.virus_summary
         Array[File] plasmid_summary_tsvs = genomad_end_to_end.plasmid_summary
-        Array[File] provirus_summary_tsvs = genomad_end_to_end.provirus_summary
         Array[File] virus_fastas         = genomad_end_to_end.virus_fasta
         Array[File] plasmid_fastas       = genomad_end_to_end.plasmid_fasta
         Array[Int]  genomad_max_ram_gb   = genomad_end_to_end.max_ram_gb

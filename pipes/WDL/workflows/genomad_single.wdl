@@ -4,7 +4,7 @@ import "../tasks/tasks_metagenomics.wdl" as metagenomics
 
 workflow genomad_single {
     meta {
-        description: "Runs genomad end-to-end classification on assembled contigs to identify viruses, plasmids, and proviruses. Accepts a FASTA assembly and genomad database, outputs classification summaries and annotated sequences."
+        description: "Runs genomad end-to-end classification on assembled contigs to identify viruses and plasmids. Accepts a FASTA assembly and genomad database, outputs classification summaries and annotated sequences."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
         allowNestedInputs: true
@@ -44,24 +44,21 @@ workflow genomad_single {
     call metagenomics.report_genomad_summary {
         input:
             virus_summary_tsv    = genomad_end_to_end.virus_summary,
-            plasmid_summary_tsv  = genomad_end_to_end.plasmid_summary,
-            provirus_summary_tsv = genomad_end_to_end.provirus_summary
+            plasmid_summary_tsv  = genomad_end_to_end.plasmid_summary
     }
 
     output {
         # Genomad result files (always present, may be empty/header-only)
         File   virus_summary_tsv    = genomad_end_to_end.virus_summary
         File   plasmid_summary_tsv  = genomad_end_to_end.plasmid_summary
-        File   provirus_summary_tsv = genomad_end_to_end.provirus_summary
         File   virus_fasta          = genomad_end_to_end.virus_fasta
         File   plasmid_fasta        = genomad_end_to_end.plasmid_fasta
 
         # Summary statistics for Terra data tables
-        Int    total_viruses         = report_genomad_summary.total_viruses
-        Int    total_plasmids        = report_genomad_summary.total_plasmids
-        Int    total_proviruses      = report_genomad_summary.total_proviruses
+        Int?   total_viruses         = report_genomad_summary.total_viruses
+        Int?   total_plasmids        = report_genomad_summary.total_plasmids
         String top_virus_name        = report_genomad_summary.top_virus_name
-        Float  top_virus_score       = report_genomad_summary.top_virus_score
+        Float? top_virus_score       = report_genomad_summary.top_virus_score
         String top_virus_taxonomy    = report_genomad_summary.top_virus_taxonomy
 
         # Runtime metadata
