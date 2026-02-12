@@ -1,0 +1,47 @@
+test/input/WDL/test_inputs-genomad_single-local.json
+  95009867cbea0d19 3
+test/input/GENOMAD_DB_SETUP.md
+  95009867cbea0d19 1-49
+pipes/WDL/tasks/tasks_metagenomics.wdl
+  95009867cbea0d19 1024,1034-1039,1047-1051
+pipes/WDL/workflows/genomad_single.wdl
+  95009867cbea0d19 52-57
+.gitignore
+  95009867cbea0d19 85-87
+  2d02241efdb66a79 82-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.2",
+  "base_commit_sha": "15173df63315cf697082157da8351e25b851c947",
+  "prompts": {
+    "2d02241efdb66a79": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "22e4a643-1b7c-442a-bef6-3456b622eb03",
+        "model": "claude-sonnet-4-5-20250929"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 15,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/ac41d7e85db68bf83d37beceee36b90660e0e0a7d3c7cd3a5f9d989eb8bb40b9"
+    },
+    "95009867cbea0d19": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28fef152-4ae3-435b-a2e5-349267da1af9",
+        "model": "claude-sonnet-4-5-20250929"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 99,
+      "total_deletions": 91,
+      "accepted_lines": 71,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/2717d2e479369995bd19c1bcbb9b3ba60d9b38f776c82f7327b0efdd916f4c83"
+    }
+  }
+}
