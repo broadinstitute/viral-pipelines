@@ -1,0 +1,42 @@
+.dockstore.yml
+  905334998db4c963 161-165
+test/input/WDL/test_inputs-genomad_multi-local.json
+  905334998db4c963 1-8
+test/input/WDL/miniwdl-local/test_inputs-genomad_multi-local.json
+  905334998db4c963 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.2",
+  "base_commit_sha": "fc93bdced5fcb9f749d97d95b611dcad17fb2dab",
+  "prompts": {
+    "2d02241efdb66a79": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "22e4a643-1b7c-442a-bef6-3456b622eb03",
+        "model": "claude-sonnet-4-5-20250929"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 12,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/ac41d7e85db68bf83d37beceee36b90660e0e0a7d3c7cd3a5f9d989eb8bb40b9"
+    },
+    "905334998db4c963": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7279daa4-24f1-4ade-96da-571df97a019b",
+        "model": "claude-sonnet-4-5-20250929"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 21,
+      "total_deletions": 0,
+      "accepted_lines": 21,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/05e1cd3fe0841a112c75a7f625dece010df772849afa022be825ec34db6a7b8a"
+    }
+  }
+}
