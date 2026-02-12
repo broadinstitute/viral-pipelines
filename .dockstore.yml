@@ -158,6 +158,11 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/genomad_single.wdl
     testParameterFiles:
     - /test/input/WDL/test_inputs-genomad_single-local.json
+  - name: genomad_multi
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/genomad_multi.wdl
+    testParameterFiles:
+    - /test/input/WDL/test_inputs-genomad_multi-local.json
   - name: isnvs_merge_to_vcf
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/isnvs_merge_to_vcf.wdl

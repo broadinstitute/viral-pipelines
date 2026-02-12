@@ -1,0 +1,8 @@
+{
+  "genomad_multi.assembly_fastas": [
+    "test/input/G5012.3.fasta",
+    "test/input/LASV_NGA_2018_0026.fasta",
+    "test/input/LASV_NGA_2018_0097.fasta"
+  ],
+  "genomad_multi.genomad_db_tgz": "test/input/genomad_db-test.tar.zst"
+}
