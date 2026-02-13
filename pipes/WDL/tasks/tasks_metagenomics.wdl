@@ -1095,7 +1095,6 @@ task report_genomad_summary {
     set -e
 
     # Initialize string output files (always present, may be empty)
-    echo "" > TOP_VIRUS_NAME
     echo "" > TOP_VIRUS_TAXONOMY
 
     # Process virus summary
@@ -1108,9 +1107,6 @@ task report_genomad_summary {
 
         # Sort by virus_score (column 7) descending, then length (column 2) descending for tie-breaking
         tail -n +2 "~{virus_summary_tsv}" | sort -t$'\t' -k7nr,7 -k2nr,2 | head -1 > TOP_VIRUS_ROW
-
-        # Extract seq_name (column 1)
-        cut -f1 TOP_VIRUS_ROW > TOP_VIRUS_NAME
 
         # Extract and round score (column 7) to 2 decimal places
         printf "%.2f" "$(cut -f7 TOP_VIRUS_ROW)" > TOP_VIRUS_SCORE

@@ -60,20 +60,15 @@ workflow genomad_single {
 
     output {
         # Genomad result files (always present, may be empty/header-only)
-        File   virus_summary_tsv    = genomad_end_to_end.virus_summary
-        File   plasmid_summary_tsv  = genomad_end_to_end.plasmid_summary
-        File   virus_fasta          = genomad_end_to_end.virus_fasta
-        File   plasmid_fasta        = genomad_end_to_end.plasmid_fasta
+        File   genomad_virus_summary_tsv    = genomad_end_to_end.virus_summary
+        File   genomad_plasmid_summary_tsv  = genomad_end_to_end.plasmid_summary
+        File   genomad_virus_fasta          = genomad_end_to_end.virus_fasta
+        File   genomad_plasmid_fasta        = genomad_end_to_end.plasmid_fasta
 
         # Summary statistics for Terra data tables
-        Int?   total_viruses         = extracted_total_viruses
-        Int?   total_plasmids        = extracted_total_plasmids
-        String top_virus_name        = report_genomad_summary.top_virus_name
-        Float? top_virus_score       = extracted_top_virus_score
-        String top_virus_taxonomy    = report_genomad_summary.top_virus_taxonomy
-
-        # Runtime metadata
-        Int    genomad_max_ram_gb    = genomad_end_to_end.max_ram_gb
-        String viral_classify_version = genomad_end_to_end.viralngs_version
+        Int?   genomad_total_viruses         = extracted_total_viruses
+        Int?   genomad_total_plasmids        = extracted_total_plasmids
+        Float? genomad_top_virus_score       = extracted_top_virus_score
+        String genomad_top_virus_taxonomy    = report_genomad_summary.top_virus_taxonomy
     }
 }
