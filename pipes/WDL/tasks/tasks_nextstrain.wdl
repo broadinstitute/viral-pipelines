@@ -5,7 +5,7 @@ task taxid_to_nextclade_dataset_name {
         Int     taxid
         File    taxdump_tgz
         File    nextclade_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/typing/nextclade-by-taxid.tsv"
-        String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
+        String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.5-classify"
     }
     command <<<
         set -e
@@ -332,7 +332,7 @@ task derived_cols {
         String?       lab_highlight_loc
         Array[File]   table_map = []
 
-        String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+        String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.5-core"
         Int           disk_size = 50
     }
     parameter_meta {
@@ -900,7 +900,7 @@ task filter_sequences_to_list {
 
         String       out_fname = sub(sub(basename(sequences, ".zst"), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
         # Prior docker image: "nextstrain/base:build-20240318T173028Z"
-        String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+        String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.5-core"
         Int          disk_size = 750
     }
     parameter_meta {
@@ -1001,7 +1001,7 @@ task mafft_one_chr {
         Boolean  large = false
         Boolean  memsavetree = false
 
-        String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-phylo"
+        String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.5-phylo"
         Int      mem_size = 500
         Int      cpus = 64
         Int      disk_size = 750
@@ -1091,7 +1091,7 @@ task mafft_one_chr_chunked {
         Int      batch_chunk_size = 2000
         Int      threads_per_job = 2
 
-        String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-phylo"
+        String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.5-phylo"
         Int      mem_size = 32
         Int      cpus = 64
         Int      disk_size = 750
