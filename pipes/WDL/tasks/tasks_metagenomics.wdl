@@ -1129,7 +1129,6 @@ task report_genomad_summary {
   output {
     Array[File] total_viruses_file    = glob("TOTAL_VIRUSES")
     Array[File] total_plasmids_file   = glob("TOTAL_PLASMIDS")
-    String      top_virus_name        = read_string("TOP_VIRUS_NAME")
     Array[File] top_virus_score_file  = glob("TOP_VIRUS_SCORE")
     String      top_virus_taxonomy    = read_string("TOP_VIRUS_TAXONOMY")
   }
