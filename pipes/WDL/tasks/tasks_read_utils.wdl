@@ -84,7 +84,7 @@ task group_bams_by_sample {
 task get_bam_samplename {
   input {
     File    bam
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.5-core"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
   Int   disk_size = round(size(bam, "GB")) + 50
   command <<<
@@ -111,7 +111,7 @@ task get_sample_meta {
   input {
     Array[File] samplesheets_extended
 
-    String      docker = "ghcr.io/broadinstitute/viral-ngs:3.0.5-core"
+    String      docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
   Int disk_size = 50
   command <<<
@@ -172,7 +172,7 @@ task merge_and_reheader_bams {
       File?        reheader_table
       String       out_basename = basename(in_bams[0], ".bam")
 
-      String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.5-core"
+      String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
       Int          disk_size = 750
       Int          machine_mem_gb = 8
     }
@@ -244,7 +244,7 @@ task rmdup_ubam {
 
     Int     max_reads = 100000000
     Int?    machine_mem_gb
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.5-core"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
 
   # Memory autoscaling: M-Vicuna loads reads into memory for deduplication.
@@ -331,7 +331,7 @@ task bbnorm_bam {
 
     Int?    machine_mem_gb
     Int?    cpu
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.5-core"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
 
   # Memory autoscaling: BBNorm uses Java and loads kmer data structures into memory.
@@ -433,7 +433,7 @@ task downsample_bams {
     Boolean      deduplicateAfter = false
 
     Int?         machine_mem_gb
-    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.5-core"
+    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
 
   Int disk_size = 750
@@ -500,7 +500,7 @@ task FastqToUBAM {
     Int     cpus = 2
     Int     mem_gb = 4
     Int     disk_size = 750
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.5-core"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
   parameter_meta {
     fastq_1: { description: "Unaligned read1 file in fastq format", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }
@@ -554,7 +554,7 @@ task read_depths {
     File      aligned_bam
 
     String    out_basename = basename(aligned_bam, '.bam')
-    String    docker = "ghcr.io/broadinstitute/viral-ngs:3.0.5-core"
+    String    docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
   Int disk_size = 200
   command <<<
