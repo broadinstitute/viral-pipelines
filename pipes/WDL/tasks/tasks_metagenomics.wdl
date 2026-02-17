@@ -1371,11 +1371,11 @@ task kallisto_merge_h5ads {
 
 task classify_virnucpro {
   meta {
-    description: "Runs VirNucPro deep learning viral classification on unaligned BAM files using GPU acceleration."
+    description: "Runs VirNucPro deep learning viral classification on unmapped reads using GPU acceleration."
   }
 
   input {
-    File      reads_bam
+    File      reads_input
     Int       expected_length = 300
 
     Boolean   parallel=false
@@ -1385,18 +1385,20 @@ task classify_virnucpro {
     Int?      esm_batch_size
     Int?      dnabert_batch_size
 
+    Boolean   resume = false
+
     String?   accelerator_type
     Int?      accelerator_count
     String?   gpu_type
     Int?      gpu_count
     String?   vm_size
-    String    docker = "ghcr.io/broadinstitute/virnucpro-cuda:1.0.5"
+    String    docker = "ghcr.io/broadinstitute/virnucpro-cuda:1.0.9"
   }
 
   parameter_meta {
-    reads_bam: {
-      description: "Reads to classify. Must be unmapped reads, paired-end or single-end.",
-      patterns: ["*.bam"]
+    reads_input: {
+      description: "Reads to classify. Must be unmapped reads, paired-end or single-end. Accepts BAM or FASTA formats.",
+      patterns: ["*.bam", "*.fasta", "*.fa", "*.fasta.gz", "*.fa.gz"]
     }
     expected_length: {
       description: "Expected sequence length in bp. Must be 300 or 500 to match bundled models (300_model.pth, 500_model.pth). VirNucPro silently accepts other values but produces invalid predictions."
@@ -1419,6 +1421,9 @@ task classify_virnucpro {
     dnabert_batch_size: {
       description: "Batch size specifically for the DNABERT model component. If not provided, defaults to the value of batch_size."
     }
+    resume: {
+      description: "If true, enables checkpoint-based resume for preempted or interrupted runs."
+    }
     accelerator_type: {
       description: "[GCP] The model of GPU to use. For availability and pricing on GCP, see https://cloud.google.com/compute/gpus-pricing#gpus"
     }
@@ -1433,26 +1438,24 @@ task classify_virnucpro {
     }
   }
 
-  String basename = basename(reads_bam, ".bam")
+  String basename = basename(basename(basename(basename(reads_input, ".bam"), ".fasta.gz"), ".fa.gz"), ".fasta")
 
   command <<<
     set -ex -o pipefail
-    
+
     export TMPDIR=/tmp
     export TEMP=/tmp
     export TMP=/tmp
 
-    export TMPDIR=/tmp
-    export TEMP=/tmp
-    export TMP=/tmp    
-
-    /opt/virnucpro_cli.py "~{reads_bam}" "~{basename}.virnucpro.tsv" --expected-length ~{expected_length} \
+    /opt/virnucpro_cli.py "~{reads_input}" "~{basename}.virnucpro.tsv" --expected-length ~{expected_length} \
       ~{true='--use-gpu' false='' use_gpu} \
       ~{true='--parallel' false='' parallel} \
       ~{true='--persistent-models' false='' persist_model} \
       --batch-size ~{batch_size} \
       ~{'--esm-batch-size=' + esm_batch_size} \
-      ~{'--dnabert-batch-size=' + dnabert_batch_size}
+      ~{'--dnabert-batch-size=' + dnabert_batch_size} \
+      --threads $(nproc) \
+      ~{true='--resume' false='' resume}
 
     # Tarball both output files
     tar -czf "~{basename}.virnucpro.tgz" \
@@ -1480,7 +1483,6 @@ task classify_virnucpro {
     gpuType: select_first([gpu_type, "nvidia-tesla-v100"])
     gpuCount: select_first([gpu_count, 1])
     vm_size: select_first([vm_size, "Standard_NC6"])
-    nvidiaDriverVersion: "410.79"
     maxRetries: 1
   }
 }
