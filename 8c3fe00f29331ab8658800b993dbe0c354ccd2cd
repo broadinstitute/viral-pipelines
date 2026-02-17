@@ -1,0 +1,30 @@
+pipes/WDL/tasks/tasks_metagenomics.wdl
+  45abcc1caa0028cd 1374,1378,1388-1389,1395,1399-1401,1424-1426,1441,1450,1456-1458
+pipes/WDL/workflows/classify_virnucpro_single.wdl
+  45abcc1caa0028cd 7,14,23-24,29,36-37
+requirements-modules.txt
+  45abcc1caa0028cd 6
+pipes/WDL/workflows/classify_virnucpro_multi.wdl
+  45abcc1caa0028cd 7,14,17-25,29-31,38,41-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.3",
+  "base_commit_sha": "8c3fe00f29331ab8658800b993dbe0c354ccd2cd",
+  "prompts": {
+    "45abcc1caa0028cd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01555867-1e58-4112-9e96-e889e8fbecaf",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 101,
+      "total_deletions": 80,
+      "accepted_lines": 49,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/4ff9ca919018b6c2ac369033553b56048aac864f7b66712e6ffecf2d373ac2e4"
+    }
+  }
+}
