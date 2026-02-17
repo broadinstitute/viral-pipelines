@@ -70,7 +70,7 @@ workflow classify_kallisto_single {
     }
 
 
-    call metagenomics.kallisto as classify_kallisto_single {
+    call metagenomics.kallisto as kallisto_classify {
         input: 
             reads_bam = reads_bam,
             kmer_size = kmer_size,
@@ -86,7 +86,7 @@ workflow classify_kallisto_single {
     call metagenomics.kallisto_extract as kallisto_extract_single {
         input:
             reads_bam = reads_bam,
-            h5ad_file = classify_kb_single.kb_count_tar,
+            h5ad_file = kallisto_classify.kb_count_tar,
             protein = protein,
             kb_index = kallisto_index,
             t2g = t2g,
@@ -95,7 +95,7 @@ workflow classify_kallisto_single {
 
     call metagenomics.report_primary_kallisto_taxa {
         input:
-            kb_count_tar = classify_kallisto_single.kb_count_tar,
+            kb_count_tar = kallisto_classify.kb_count_tar,
             id_to_taxon_map = id_to_taxa_map
     }
 
@@ -104,7 +104,7 @@ workflow classify_kallisto_single {
     ## TODO: Run kallisto - kallisto read classifier script to create a classification table
     
     output {
-        File  kb_classify_reads                 = classify_kallisto_single.kb_count_tar
+        File  kb_classify_reads                 = kallisto_classify.kb_count_tar
         File  kb_extracted_reads                = kallisto_extract_single.kb_extract_tar
         File   kallisto_top_taxa_report         = report_primary_kallisto_taxa.ranked_focal_report
         String kallisto_focal_taxon_name        = report_primary_kallisto_taxa.focal_tax_name
