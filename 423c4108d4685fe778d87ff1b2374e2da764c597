@@ -1,0 +1,24 @@
+pipes/WDL/workflows/classify_kallisto_single.wdl
+  45abcc1caa0028cd 73,89,98,107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.3",
+  "base_commit_sha": "423c4108d4685fe778d87ff1b2374e2da764c597",
+  "prompts": {
+    "45abcc1caa0028cd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01555867-1e58-4112-9e96-e889e8fbecaf",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 5,
+      "accepted_lines": 4,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/5601c3258cdddcdd8e6ac1a7ec83303a386fb9e8bee7cdc9c64830a014293d27"
+    }
+  }
+}
