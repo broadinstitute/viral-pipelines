@@ -24,7 +24,7 @@ task gcs_copy {
     File logs = stdout()
   }
   runtime {
-    docker: "ghcr.io/broadinstitute/viral-ngs:3.0.5-baseimage"
+    docker: "ghcr.io/broadinstitute/viral-ngs:3.0.6-baseimage"
     memory: "1 GB"
     cpu: 1
     maxRetries: 1
@@ -33,7 +33,7 @@ task gcs_copy {
 
 task check_terra_env {
   input {
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.5-core"
+    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-baseimage"
   }
   meta {
     description: "task for inspection of backend to determine whether the task is running on Terra and/or GCP"
@@ -330,7 +330,7 @@ task upload_entities_tsv {
     String        terra_project
     File          tsv_file
 
-    String        docker = "schaluvadi/pathogen-genomic-surveillance:api-wdl"
+    String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-baseimage"
   }
   meta {
     volatile: true
@@ -369,7 +369,7 @@ task download_entities_tsv {
     String  outname = "~{terra_project}-~{workspace_name}-~{table_name}.tsv"
     String? nop_input_string # this does absolutely nothing, except that it allows an optional mechanism for you to block execution of this step upon the completion of another task in your workflow
 
-    String  docker = "schaluvadi/pathogen-genomic-surveillance:api-wdl"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-baseimage"
   }
 
   meta {
@@ -440,7 +440,7 @@ task create_or_update_sample_tables {
     String  sample_table_name  = "sample"
     String  library_table_name = "library"
 
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.5-core"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-baseimage"
   }
 
   meta {
@@ -613,7 +613,7 @@ task find_illumina_files_in_directory {
     String  illumina_dir
     String? fastq_dir
     Int?    lane
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.5-baseimage"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-baseimage"
   }
   parameter_meta {
     illumina_dir: {
