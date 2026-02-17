@@ -81,7 +81,7 @@ default.profraw
 .vscode/
 
 # GSD planning directory (local-only)
-.planning/*
+.planning/
 
 # Large test database fixtures (obtain separately)
 test/input/genomad_db-test.tar.zst
