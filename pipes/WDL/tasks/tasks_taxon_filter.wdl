@@ -15,7 +15,7 @@ task deplete_taxa {
 
     Int?         cpu
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
   }
 
   # Autoscale CPU based on input size: 8 CPUs for ~1M reads (0.15 GB), 96 CPUs for ~100M reads (15 GB)
@@ -59,21 +59,21 @@ task deplete_taxa {
 
   command <<<
     set -ex -o pipefail
-    taxon_filter.py --version | tee VERSION
+    taxon_filter --version | tee VERSION
 
     if [ -z "$TMPDIR" ]; then
       export TMPDIR=$(pwd)
     fi
 
     # find memory thresholds
-    mem_in_mb_50=$(/opt/viral-ngs/source/docker/calc_mem.py mb 50)
-    mem_in_mb_75=$(/opt/viral-ngs/source/docker/calc_mem.py mb 75)
+    mem_in_mb_50=$(/opt/viral-ngs/scripts/calc_mem.py mb 50)
+    mem_in_mb_75=$(/opt/viral-ngs/scripts/calc_mem.py mb 75)
 
     # depletion db args
-    DBS_MINIMAP="~{sep=' ' minimapDbs}"
-    DBS_BMTAGGER="~{sep=' ' bmtaggerDbs}"
-    DBS_BLAST="~{sep=' ' blastDbs}"
-    DBS_BWA="~{sep=' ' bwaDbs}"
+    DBS_MINIMAP="~{sep=' ' select_first([minimapDbs, []])}"
+    DBS_BMTAGGER="~{sep=' ' select_first([bmtaggerDbs, []])}"
+    DBS_BLAST="~{sep=' ' select_first([blastDbs, []])}"
+    DBS_BWA="~{sep=' ' select_first([bwaDbs, []])}"
     if [ -n "$DBS_MINIMAP" ]; then DBS_MINIMAP="--minimapDbs $DBS_MINIMAP"; fi
     if [ -n "$DBS_BMTAGGER" ]; then DBS_BMTAGGER="--bmtaggerDbs $DBS_BMTAGGER"; fi
     if [ -n "$DBS_BLAST" ]; then DBS_BLAST="--blastDbs $DBS_BLAST"; fi
@@ -87,7 +87,7 @@ task deplete_taxa {
     fi
 
     # run depletion
-    taxon_filter.py deplete \
+    taxon_filter deplete \
       "~{raw_reads_unmapped_bam}" \
       tmpfile.raw.bam \
       tmpfile.minimap.bam \
@@ -122,10 +122,10 @@ task deplete_taxa {
   }
   runtime {
     docker: docker
-    memory: machine_mem_gb_actual + " GB"
+    memory: "~{machine_mem_gb_actual} GB"
     cpu: cpu_actual
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: preemptible_tries
     maxRetries: 1
@@ -143,7 +143,7 @@ task filter_to_taxon {
     String   neg_control_prefixes_space_separated = "neg water NTC"
 
     Int      machine_mem_gb = 15
-    String   docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+    String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
   }
 
   # do this in two steps in case the input doesn't actually have "cleaned" in the name
@@ -152,10 +152,10 @@ task filter_to_taxon {
 
   command <<<
     set -ex -o pipefail
-    taxon_filter.py --version | tee VERSION
+    taxon_filter --version | tee VERSION
 
     # find 90% memory
-    mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
+    mem_in_mb=$(/opt/viral-ngs/scripts/calc_mem.py mb 90)
 
     if [[ "~{error_on_reads_in_neg_control}" == "true" ]]; then
       ERROR_ON_NEG_CONTROL_ARGS="--errorOnReadsInNegControl"
@@ -167,7 +167,7 @@ task filter_to_taxon {
       fi      
     fi
 
-    taxon_filter.py filter_lastal_bam \
+    taxon_filter filter_lastal_bam \
       "~{reads_unmapped_bam}" \
       "~{lastal_db_fasta}" \
       "~{bam_basename}.taxfilt.bam" \
@@ -184,10 +184,10 @@ task filter_to_taxon {
   }
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 16
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     maxRetries: 2
   }
@@ -198,7 +198,7 @@ task build_lastal_db {
     File   sequences_fasta
 
     Int    machine_mem_gb = 7
-    String docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
   }
 
   String db_name = basename(sequences_fasta, ".fasta")
@@ -209,8 +209,8 @@ task build_lastal_db {
     if [ -z "$TMPDIR" ]; then
       export TMPDIR=$(pwd)
     fi
-    taxon_filter.py --version | tee VERSION
-    taxon_filter.py lastal_build_db "~{sequences_fasta}" ./ --loglevel=DEBUG
+    taxon_filter --version | tee VERSION
+    taxon_filter lastal_build_db "~{sequences_fasta}" ./ --loglevel=DEBUG
     tar -c ~{db_name}* | lz4 -9 > "~{db_name}.tar.lz4"
   >>>
 
@@ -221,10 +221,10 @@ task build_lastal_db {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 2
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
   }
@@ -237,19 +237,19 @@ task merge_one_per_sample {
     Boolean      rmdup = false
 
     Int          machine_mem_gb = 7
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
 
   Int disk_size = 750
 
   command <<<
     set -ex -o pipefail
-    read_utils.py --version | tee VERSION
+    read_utils --version | tee VERSION
 
     # find 90% memory
-    mem_in_mb=~(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
+    mem_in_mb=~(/opt/viral-ngs/scripts/calc_mem.py mb 90)
 
-    read_utils.py merge_bams \
+    read_utils merge_bams \
       "~{sep=' ' inputBams}" \
       "~{out_bam_basename}.bam" \
       --picardOptions SORT_ORDER=queryname \
@@ -258,7 +258,7 @@ task merge_one_per_sample {
 
     if [[ "~{rmdup}" == "true" ]]; then
       mv "~{out_bam_basename}.bam" tmp.bam
-      read_utils.py rmdup_mvicuna_bam \
+      read_utils rmdup_mvicuna_bam \
         tmp.bam \
         "~{out_bam_basename}.bam" \
         --loglevel=DEBUG
@@ -271,11 +271,11 @@ task merge_one_per_sample {
   }
 
   runtime{
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 4
     docker: docker
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x4"
     maxRetries: 2
   }

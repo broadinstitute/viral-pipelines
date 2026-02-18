@@ -10,6 +10,9 @@ on:
     types:
       - created
 
+permissions:
+  contents: read
+
 concurrency:
   # Group jobs by the branch or tag ref to ensure only one job runs for a ref at a time.
   # for pull requests, github.ref is the branch being merged into
@@ -311,6 +314,7 @@ jobs:
   deploy_dnanexus:
     #if: ${{ github.event.ref == 'dnanexus' }}
     if: github.event_name == 'release' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dnanexus' || (github.event_name == 'pull_request' && github.base_ref == 'master')
+    timeout-minutes: 60  # Prevent runaway jobs; dxCompiler can hang
     # cancel earlier actions, if a commit is added to a branch or a PR
     concurrency:
       group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

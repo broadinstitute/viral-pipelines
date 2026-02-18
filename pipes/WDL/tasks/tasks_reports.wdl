@@ -15,7 +15,7 @@ task alignment_metrics {
     Int    max_amplicons=500
 
     Int    machine_mem_gb=16
-    String docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
 
   String out_basename = basename(aligned_bam, ".bam")
@@ -31,8 +31,8 @@ task alignment_metrics {
     # requisite Picard fasta indexing
     python3<<CODE
     import shutil
-    import util.file
-    with util.file.fastas_with_sanitized_ids("~{ref_fasta}", use_tmp=True) as sanitized_fastas:
+    from viral_ngs.core import file as util_file
+    with util_file.fastas_with_sanitized_ids("~{ref_fasta}", use_tmp=True) as sanitized_fastas:
         shutil.copyfile(sanitized_fastas[0], 'reference.fasta')
     CODE
     picard $XMX CreateSequenceDictionary -R reference.fasta
@@ -113,10 +113,10 @@ task alignment_metrics {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 4
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x4"
     maxRetries: 2
   }
@@ -143,7 +143,7 @@ task plot_coverage {
     String? plotXLimits # of the form "min max" (ints, space between)
     String? plotYLimits # of the form "min max" (ints, space between)
 
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
 
   Int disk_size = 375
@@ -151,7 +151,7 @@ task plot_coverage {
   command <<<
     set -ex -o pipefail
 
-    read_utils.py --version | tee VERSION
+    read_utils --version | tee VERSION
 
     samtools view -c ~{aligned_reads_bam} | tee reads_aligned
     if [ "$(cat reads_aligned)" != "0" ]; then
@@ -165,7 +165,7 @@ task plot_coverage {
       BINNING_OPTION="~{true='--binLargePlots' false="" bin_large_plots}"
 
       # plot coverage
-      reports.py plot_coverage \
+      reports plot_coverage \
         "~{aligned_reads_bam}" \
         "~{sample_name}.coverage_plot.pdf" \
         --outSummary "~{sample_name}.coverage_plot.txt" \
@@ -214,8 +214,8 @@ task plot_coverage {
     docker: "${docker}"
     memory: "7 GB"
     cpu: 2
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     preemptible: 1
     maxRetries: 2
@@ -229,7 +229,7 @@ task merge_coverage_per_position {
 
     String       out_report_name = "coverage_report.csv"
     Int          disk_size = 100
-    String       docker = "quay.io/broadinstitute/py3-bio:0.1.2"
+    String       docker = "quay.io/broadinstitute/py3-bio:0.1.3"
   }
 
   command <<<
@@ -277,8 +277,8 @@ task merge_coverage_per_position {
     docker: "${docker}"
     memory: "2 GB"
     cpu: 2
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x4"
     maxRetries: 2
   }
@@ -290,18 +290,18 @@ task coverage_report {
     Array[File]  mapped_bam_idx = []  # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name = "coverage_report.txt"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
 
   Int disk_size = 375
 
   command <<<
     set -e
-    reports.py --version | tee VERSION
+    reports --version | tee VERSION
     python3 << CODE
-    import tools.samtools
-    import reports
-    samtools = tools.samtools.SamtoolsTool()
+    from viral_ngs.core import samtools as samtools_module
+    from viral_ngs import reports
+    samtools = samtools_module.SamtoolsTool()
     in_bams = list([bam for bam in ["~{sep='", "' mapped_bams}"] if bam and not samtools.isEmpty(bam)])
     if in_bams:
       reports.coverage_only(in_bams, "~{out_report_name}")
@@ -320,8 +320,8 @@ task coverage_report {
     docker: docker
     memory: "2 GB"
     cpu: 2
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x4"
     maxRetries: 2
   }
@@ -354,8 +354,8 @@ task assembly_bases {
         docker: docker
         memory: "1 GB"
         cpu: 1
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -365,7 +365,7 @@ task fastqc {
   input {
     File   reads_bam
 
-    String docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
   parameter_meta {
     reads_bam:{ 
@@ -380,8 +380,8 @@ task fastqc {
 
   command <<<
     set -ex -o pipefail
-    reports.py --version | tee VERSION
-    reports.py fastqc ~{reads_bam} ~{reads_basename}_fastqc.html --out_zip ~{reads_basename}_fastqc.zip
+    reports --version | tee VERSION
+    reports fastqc ~{reads_bam} ~{reads_basename}_fastqc.html --out_zip ~{reads_basename}_fastqc.zip
   >>>
 
   output {
@@ -394,8 +394,8 @@ task fastqc {
     memory: "2 GB"
     cpu: 1
     docker: "${docker}"
-    disks:  "local-disk " + disk_size + " SSD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} SSD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -409,7 +409,7 @@ task align_and_count {
 
     Int?   cpu
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
@@ -439,10 +439,10 @@ task align_and_count {
   command <<<
     set -ex -o pipefail
 
-    read_utils.py --version | tee VERSION
+    read_utils --version | tee VERSION
 
     ln -s "~{reads_bam}" "~{reads_basename}.bam"
-    read_utils.py minimap2_idxstats \
+    read_utils minimap2_idxstats \
       "~{reads_basename}.bam" \
       "~{ref_db}" \
       "~{reads_basename}.count.~{ref_basename}.txt.unsorted" \
@@ -453,13 +453,12 @@ task align_and_count {
     TOP_HIT="$(head -1 '~{reads_basename}.count.~{ref_basename}.txt' | cut -f 1 | sed 's/\*/\\*/' | tee '~{reads_basename}.count.~{ref_basename}.top.txt')"
 
     TOTAL_COUNT_OF_TOP_HIT=$(grep -E "^($TOP_HIT)" "~{reads_basename}.count.~{ref_basename}.txt" | cut -f3 | tee TOTAL_COUNT_OF_TOP_HIT)
-    TOTAL_COUNT_OF_LESSER_HITS=$((grep -vE "^(\*|$TOP_HIT)" "~{reads_basename}.count.~{ref_basename}.txt" || echo "0" ) | cut -f3 | paste -sd+ - | bc -l | tee TOTAL_COUNT_OF_LESSER_HITS)
+    TOTAL_COUNT_OF_LESSER_HITS=$((grep -vE "^(\*|$TOP_HIT)" "~{reads_basename}.count.~{ref_basename}.txt" || echo "0" ) | cut -f3 | awk '{s+=$1} END {print s+0}' | tee TOTAL_COUNT_OF_LESSER_HITS)
     echo $TOTAL_COUNT_OF_TOP_HIT | tee TOTAL_COUNT_OF_TOP_HIT
     echo $TOTAL_COUNT_OF_LESSER_HITS | tee TOTAL_COUNT_OF_LESSER_HITS
 
     if [ $TOTAL_COUNT_OF_LESSER_HITS -ne 0 -o $TOTAL_COUNT_OF_TOP_HIT -ne 0 ]; then
-      PCT_MAPPING_TO_LESSER_HITS=$( echo "scale=3; 100 * $TOTAL_COUNT_OF_LESSER_HITS / ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT)" | \
-        bc -l | awk '{printf "%.3f\n", $0}' | tee '~{reads_basename}.count.~{ref_basename}.pct_lesser_hits_of_mapped.txt' )
+      PCT_MAPPING_TO_LESSER_HITS=$( awk "BEGIN {printf \"%.3f\n\", 100 * $TOTAL_COUNT_OF_LESSER_HITS / ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT)}" | tee '~{reads_basename}.count.~{ref_basename}.pct_lesser_hits_of_mapped.txt' )
     else
       echo "PCT_MAPPING_TO_LESSER_HITS cannot be calculated: there were no hits to any sequence"
       PCT_MAPPING_TO_LESSER_HITS=$( echo "null" | tee '~{reads_basename}.count.~{ref_basename}.pct_lesser_hits_of_mapped.txt')
@@ -473,12 +472,10 @@ task align_and_count {
       echo "PCT_TOP_HIT_OF_TOTAL_READS cannot be calculated: there were no mapping hits, or no reads"
       PCT_TOP_HIT_OF_TOTAL_READS=$( echo "null" | tee '~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt')
     else
-      PCT_OF_INPUT_READS_MAPPED=$( echo "scale=3; 100 * ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT) / $TOTAL_READS_IN_INPUT" | \
-      bc -l | awk '{printf "%.3f\n", $0}' | tee '~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt' )
+      PCT_OF_INPUT_READS_MAPPED=$( awk "BEGIN {printf \"%.3f\n\", 100 * ($TOTAL_COUNT_OF_LESSER_HITS + $TOTAL_COUNT_OF_TOP_HIT) / $TOTAL_READS_IN_INPUT}" | tee '~{reads_basename}.count.~{ref_basename}.pct_total_reads_mapped.txt' )
 
       if [ $TOTAL_COUNT_OF_TOP_HIT -ne 0 ]; then
-        PCT_TOP_HIT_OF_TOTAL_READS=$( echo "scale=3; 100 * ($TOTAL_COUNT_OF_TOP_HIT / $TOTAL_READS_IN_INPUT)" | \
-          bc -l | awk '{printf "%.3f\n", $0}' | tee '~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt' )
+        PCT_TOP_HIT_OF_TOTAL_READS=$( awk "BEGIN {printf \"%.3f\n\", 100 * $TOTAL_COUNT_OF_TOP_HIT / $TOTAL_READS_IN_INPUT}" | tee '~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt' )
       else
         echo "PCT_TOP_HIT_OF_TOTAL_READS cannot be calculated: there were no mapping hits, or no reads"
         PCT_TOP_HIT_OF_TOTAL_READS=$( echo "null" | tee '~{reads_basename}.count.~{ref_basename}.pct_top_hit_of_total_reads.txt')
@@ -512,11 +509,11 @@ task align_and_count {
   }
 
   runtime {
-    memory: machine_mem_gb_actual + " GB"
+    memory: "~{machine_mem_gb_actual} GB"
     cpu:    cpu_actual
     docker: docker
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
   }
@@ -528,7 +525,7 @@ task align_and_count_summary {
 
     String       output_prefix = "count_summary"
 
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
 
   Int disk_size = 100
@@ -536,8 +533,8 @@ task align_and_count_summary {
   command <<<
     set -ex -o pipefail
 
-    reports.py --version | tee VERSION
-    reports.py aggregate_alignment_counts ~{sep=' ' counts_txt} "~{output_prefix}".tsv --loglevel=DEBUG
+    reports --version | tee VERSION
+    reports aggregate_alignment_counts ~{sep=' ' counts_txt} "~{output_prefix}".tsv --loglevel=DEBUG
   >>>
 
   output {
@@ -549,8 +546,8 @@ task align_and_count_summary {
     memory: "7 GB"
     cpu: 8
     docker: docker
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -563,7 +560,7 @@ task aggregate_metagenomics_reports {
     String       aggregate_taxlevel_focus                 = "species"
     Int          aggregate_top_N_hits                     = 5
 
-    String       docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
   }
 
   parameter_meta {
@@ -578,8 +575,8 @@ task aggregate_metagenomics_reports {
   command <<<
     set -ex -o pipefail
 
-    metagenomics.py --version | tee VERSION
-    metagenomics.py taxlevel_summary \
+    metagenomics --version | tee VERSION
+    metagenomics taxlevel_summary \
       ~{sep=' ' kraken_summary_reports} \
       --csvOut aggregate_taxa_summary_~{aggregate_taxon_heading}_by_~{aggregate_taxlevel_focus}_top_~{aggregate_top_N_hits}_by_sample.csv \
       --noHist \
@@ -598,8 +595,8 @@ task aggregate_metagenomics_reports {
     docker: docker
     memory: "3 GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
     preemptible: 0
     maxRetries: 2
@@ -711,8 +708,8 @@ task MultiQC {
     memory: "8 GB"
     cpu: 16
     docker: docker
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -901,10 +898,10 @@ task multiqc_from_bams {
 
   runtime {
     docker: docker
-    memory: mem_final + " GB"
+    memory: "~{mem_final} GB"
     cpu:    cpu_final
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     maxRetries: 2
   }
@@ -916,15 +913,15 @@ task compare_two_genomes {
     File   genome_two
     String out_basename
 
-    String docker = "quay.io/broadinstitute/viral-assemble:2.5.21.0"
+    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-assemble"
   }
 
   Int disk_size = 50
 
   command <<<
     set -ex -o pipefail
-    assembly.py --version | tee VERSION
-    assembly.py alignment_summary "~{genome_one}" "~{genome_two}" --outfileName "~{out_basename}.txt" --printCounts --loglevel=DEBUG
+    assembly --version | tee VERSION
+    assembly alignment_summary "~{genome_one}" "~{genome_two}" --outfileName "~{out_basename}.txt" --printCounts --loglevel=DEBUG
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     cat /proc/loadavg > CPU_LOAD
     set +o pipefail
@@ -943,8 +940,8 @@ task compare_two_genomes {
     memory: "3 GB"
     cpu: 2
     docker: docker
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 1
     maxRetries: 2

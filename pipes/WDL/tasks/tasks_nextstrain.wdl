@@ -5,24 +5,24 @@ task taxid_to_nextclade_dataset_name {
         Int     taxid
         File    taxdump_tgz
         File    nextclade_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/typing/nextclade-by-taxid.tsv"
-        String  docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+        String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
     }
     command <<<
         set -e
 
         # extract taxdump
         mkdir -p taxdump
-        read_utils.py extract_tarball "~{taxdump_tgz}" taxdump
+        read_utils extract_tarball "~{taxdump_tgz}" taxdump
 
         touch nextclade_dataset_name.str
 
         python3 << CODE
         import csv
-        import metagenomics
+        from viral_ngs.classify import taxonomy
         taxid = ~{taxid}
 
         # load taxdb and retrieve full hierarchy leading to this taxid
-        taxdb = metagenomics.TaxonomyDb(tax_dir="taxdump", load_nodes=True, load_names=True, load_gis=False)
+        taxdb = taxonomy.TaxonomyDb(tax_dir="taxdump", load_nodes=True, load_names=True, load_gis=False)
         ancestors = taxdb.get_ordered_ancestors(taxid)
         this_and_ancestors = [taxid] + ancestors
 
@@ -122,8 +122,8 @@ task nextclade_one_sample {
         docker: docker
         memory: "3 GB"
         cpu:    2
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -230,8 +230,8 @@ task nextclade_many_samples {
         docker: docker
         memory: "3 GB"
         cpu:    4
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x4"
         maxRetries: 2
     }
@@ -332,7 +332,7 @@ task derived_cols {
         String?       lab_highlight_loc
         Array[File]   table_map = []
 
-        String        docker = "quay.io/broadinstitute/viral-core:2.5.21"
+        String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
         Int           disk_size = 50
     }
     parameter_meta {
@@ -430,8 +430,8 @@ task derived_cols {
         docker: docker
         memory: "1 GB"
         cpu:    1
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -476,10 +476,10 @@ task filter_segments {
     >>>
     runtime {
         docker: "python:slim"
-        memory: machine_mem_gb + " GB"
+        memory: "~{machine_mem_gb} GB"
         cpu:    1
-        disks:  "local-disk " + disk_size + " LOCAL"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} LOCAL"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -622,10 +622,10 @@ task nextstrain_build_subsample {
     >>>
     runtime {
         docker: docker
-        memory: machine_mem_gb + " GB"
+        memory: "~{machine_mem_gb} GB"
         cpu :   4
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem3_ssd1_v2_x8"
         maxRetries: 2
     }
@@ -658,8 +658,8 @@ task nextstrain_ncov_defaults {
         docker: docker
         memory: "1 GB"
         cpu:   1
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -716,8 +716,8 @@ task nextstrain_deduplicate_sequences {
         docker: docker
         memory: "7 GB"
         cpu:   1
-        disks:  "local-disk " + disk_size + " LOCAL"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} LOCAL"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -780,8 +780,8 @@ task nextstrain_ncov_sanitize_gisaid_data {
         docker: docker
         memory: "7 GB"
         cpu:   1
-        disks:  "local-disk " + disk_size + " LOCAL"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} LOCAL"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -873,8 +873,8 @@ task filter_subsample_sequences {
         docker: docker
         memory: "15 GB"
         cpu :   4
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x4"
         preemptible: 1
         maxRetries: 2
@@ -900,7 +900,7 @@ task filter_sequences_to_list {
 
         String       out_fname = sub(sub(basename(sequences, ".zst"), ".vcf", ".filtered.vcf"), ".fasta$", ".filtered.fasta")
         # Prior docker image: "nextstrain/base:build-20240318T173028Z"
-        String       docker = "quay.io/broadinstitute/viral-core:2.5.21"
+        String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
         Int          disk_size = 750
     }
     parameter_meta {
@@ -929,14 +929,14 @@ task filter_sequences_to_list {
                 echo filtering fasta file
     python3 <<CODE
     import Bio.SeqIO
-    import util.file
+    from viral_ngs.core import file as util_file
     keep_list = set()
     with open('keep_list.txt', 'rt') as inf:
         keep_list = set(line.strip() for line in inf)
     n_total = 0
     n_kept = 0
-    with util.file.open_or_gzopen('~{sequences}', 'rt') as inf:
-        with util.file.open_or_gzopen('~{out_fname}', 'wt') as outf:
+    with util_file.open_or_gzopen('~{sequences}', 'rt') as inf:
+        with util_file.open_or_gzopen('~{out_fname}', 'wt') as outf:
             for seq in Bio.SeqIO.parse(inf, 'fasta'):
                 n_total += 1
                 if seq.id in keep_list:
@@ -971,8 +971,8 @@ task filter_sequences_to_list {
         docker: docker
         memory: "7 GB"
         cpu :   2
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x4"
         preemptible: 1
         maxRetries: 2
@@ -1001,7 +1001,7 @@ task mafft_one_chr {
         Boolean  large = false
         Boolean  memsavetree = false
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.5.21.0"
+        String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-phylo"
         Int      mem_size = 500
         Int      cpus = 64
         Int      disk_size = 750
@@ -1062,10 +1062,10 @@ task mafft_one_chr {
     >>>
     runtime {
         docker: docker
-        memory: mem_size + " GB"
+        memory: "~{mem_size} GB"
         cpu :   cpus
-        disks:  "local-disk " + disk_size + " LOCAL"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} LOCAL"
+        disk: "~{disk_size} GB" # TES
         preemptible: 0
         dx_instance_type: "mem3_ssd1_v2_x36"
         maxRetries: 2
@@ -1091,7 +1091,7 @@ task mafft_one_chr_chunked {
         Int      batch_chunk_size = 2000
         Int      threads_per_job = 2
 
-        String   docker = "quay.io/broadinstitute/viral-phylo:2.5.21.0"
+        String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-phylo"
         Int      mem_size = 32
         Int      cpus = 64
         Int      disk_size = 750
@@ -1170,10 +1170,10 @@ task mafft_one_chr_chunked {
     >>>
     runtime {
         docker: docker
-        memory: mem_size + " GB"
+        memory: "~{mem_size} GB"
         cpu :   cpus
-        disks:  "local-disk " + disk_size + " LOCAL"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} LOCAL"
+        disk: "~{disk_size} GB" # TES
         preemptible: 0
         dx_instance_type: "mem3_ssd1_v2_x36"
         maxRetries: 2
@@ -1221,10 +1221,10 @@ task augur_mafft_align {
     >>>
     runtime {
         docker: docker
-        memory: mem_size + " GB"
+        memory: "~{mem_size} GB"
         cpu :   cpus
-        disks:  "local-disk " + disk_size + " LOCAL"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} LOCAL"
+        disk: "~{disk_size} GB" # TES
         preemptible: 0
         dx_instance_type: "mem3_ssd2_v2_x32"
         maxRetries: 2
@@ -1254,8 +1254,8 @@ task snp_sites {
         docker: docker
         memory: "31 GB"
         cpu :   2
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         preemptible: 0
         dx_instance_type: "mem3_ssd1_v2_x4"
         maxRetries: 2
@@ -1303,8 +1303,8 @@ task augur_mask_sites {
         docker: docker
         memory: "3 GB"
         cpu :   4
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         preemptible: 1
         dx_instance_type: "mem1_ssd1_v2_x4"
         maxRetries: 2
@@ -1360,10 +1360,10 @@ task draft_augur_tree {
     >>>
     runtime {
         docker: docker
-        memory: machine_mem_gb + " GB"
+        memory: "~{machine_mem_gb} GB"
         cpu:    cpus
-        disks:  "local-disk " + disk_size + " LOCAL"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} LOCAL"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x36"
         preemptible: 0
         maxRetries: 2
@@ -1434,7 +1434,7 @@ task refine_augur_tree {
             ~{"--date-inference " + date_inference} \
             ~{"--branch-length-inference " + branch_length_inference} \
             ~{"--divergence-units " + divergence_units} \
-            ~{true="--covariance" false="--no-covariance" covariance} \
+            ~{if select_first([covariance, true]) then "--covariance" else "--no-covariance"} \
             ~{true="--keep-root" false="" keep_root} \
             ~{true="--keep-polytomies" false="" keep_polytomies} \
             ~{true="--date-confidence" false="" date_confidence} \
@@ -1445,10 +1445,10 @@ task refine_augur_tree {
     >>>
     runtime {
         docker: docker
-        memory: machine_mem_gb + " GB"
+        memory: "~{machine_mem_gb} GB"
         cpu :   2
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem3_ssd1_v2_x8"
         preemptible: 0
         maxRetries: 2
@@ -1498,10 +1498,10 @@ task ancestral_traits {
     >>>
     runtime {
         docker: docker
-        memory: machine_mem_gb + " GB"
+        memory: "~{machine_mem_gb} GB"
         cpu :   4
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem3_ssd1_v2_x4"
         preemptible: 1
         maxRetries: 2
@@ -1564,8 +1564,8 @@ task ancestral_tree {
         docker: docker
         memory: "50 GB"
         cpu :   4
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem3_ssd1_v2_x8"
         preemptible: 0
         maxRetries: 2
@@ -1613,8 +1613,8 @@ task translate_augur_tree {
         docker: docker
         memory: "2 GB"
         cpu :   1
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 1
         maxRetries: 2
@@ -1682,10 +1682,10 @@ task tip_frequencies {
     >>>
     runtime {
         docker: docker
-        memory: machine_mem_gb + " GB"
+        memory: "~{machine_mem_gb} GB"
         cpu :   4
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem3_ssd2_x4"
         preemptible: 1
         maxRetries: 2
@@ -1729,8 +1729,8 @@ task assign_clades_to_nodes {
         docker: docker
         memory: "2 GB"
         cpu :   1
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 1
         maxRetries: 2
@@ -1776,10 +1776,10 @@ task augur_import_beast {
     >>>
     runtime {
         docker: docker
-        memory: machine_mem_gb + " GB"
+        memory: "~{machine_mem_gb} GB"
         cpu :   2
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 1
         maxRetries: 2
@@ -1879,10 +1879,10 @@ task export_auspice_json {
     >>>
     runtime {
         docker: docker
-        memory: machine_mem_gb + " GB"
+        memory: "~{machine_mem_gb} GB"
         cpu :   4
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem3_ssd1_v2_x8"
         preemptible: 0
         maxRetries: 2

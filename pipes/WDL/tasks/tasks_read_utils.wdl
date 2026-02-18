@@ -19,8 +19,8 @@ task max {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -74,8 +74,8 @@ task group_bams_by_sample {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -84,7 +84,7 @@ task group_bams_by_sample {
 task get_bam_samplename {
   input {
     File    bam
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
   Int   disk_size = round(size(bam, "GB")) + 50
   command <<<
@@ -97,8 +97,8 @@ task get_bam_samplename {
     docker: docker
     memory: "1 GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -111,7 +111,7 @@ task get_sample_meta {
   input {
     Array[File] samplesheets_extended
 
-    String      docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String      docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
   Int disk_size = 50
   command <<<
@@ -119,7 +119,7 @@ task get_sample_meta {
     import os.path
     import csv
     import json
-    import util.file
+    from viral_ngs.core import file as util_file
 
     # WDL arrays to python arrays
     library_metadata = '~{sep="*" samplesheets_extended}'.split('*')
@@ -132,7 +132,7 @@ task get_sample_meta {
     for libfile in library_metadata:
       with open(libfile, 'rt') as inf:
         for row in csv.DictReader(inf, delimiter='\t'):
-          sanitized = util.file.string_to_file_name(row['sample'])
+          sanitized = util_file.string_to_file_name(row['sample'])
           for col in meta_cols:
             meta[col].setdefault(sanitized, '')
             if row.get(col):
@@ -153,8 +153,8 @@ task get_sample_meta {
     docker: docker
     memory: "1 GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -172,7 +172,7 @@ task merge_and_reheader_bams {
       File?        reheader_table
       String       out_basename = basename(in_bams[0], ".bam")
 
-      String       docker = "quay.io/broadinstitute/viral-core:2.5.21"
+      String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
       Int          disk_size = 750
       Int          machine_mem_gb = 8
     }
@@ -180,11 +180,11 @@ task merge_and_reheader_bams {
     command <<<
         set -ex -o pipefail
 
-        read_utils.py --version | tee VERSION
-        mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
+        read_utils --version | tee VERSION
+        mem_in_mb=$(/opt/viral-ngs/scripts/calc_mem.py mb 90)
 
         if [ ~{length(in_bams)} -gt 1 ]; then
-            read_utils.py merge_bams ~{sep=' ' in_bams} merged.bam --JVMmemory="$mem_in_mb"m --loglevel DEBUG \
+            read_utils merge_bams ~{sep=' ' in_bams} merged.bam --JVMmemory="$mem_in_mb"m --loglevel DEBUG \
                 --picardOptions COMPRESSION_LEVEL=3 MAX_RECORDS_IN_RAM=200000 VALIDATION_STRINGENCY=SILENT
         else
             echo "Skipping merge, only one input file"
@@ -204,7 +204,7 @@ task merge_and_reheader_bams {
 
         # reheader bam file if requested
         if [ -s reheader_table.txt ]; then
-          read_utils.py reheader_bam merged.bam reheader_table.txt "~{out_basename}.bam" --loglevel DEBUG
+          read_utils reheader_bam merged.bam reheader_table.txt "~{out_basename}.bam" --loglevel DEBUG
         else
           mv merged.bam "~{out_basename}.bam"
         fi
@@ -223,10 +223,10 @@ task merge_and_reheader_bams {
 
     runtime {
         docker: docker
-        memory: machine_mem_gb + " GB"
+        memory: "~{machine_mem_gb} GB"
         cpu: 4
-        disks:  "local-disk " + disk_size + " LOCAL"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} LOCAL"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd2_v2_x4"
         preemptible: 0
         maxRetries: 1
@@ -244,7 +244,7 @@ task rmdup_ubam {
 
     Int     max_reads = 100000000
     Int?    machine_mem_gb
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
 
   # Memory autoscaling: M-Vicuna loads reads into memory for deduplication.
@@ -268,8 +268,8 @@ task rmdup_ubam {
 
   command <<<
     set -ex -o pipefail
-    mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
-    read_utils.py --version | tee VERSION
+    mem_in_mb=$(/opt/viral-ngs/scripts/calc_mem.py mb 90)
+    read_utils --version | tee VERSION
 
     # Count input reads
     INPUT_BAM="~{reads_unmapped_bam}"
@@ -280,7 +280,7 @@ task rmdup_ubam {
     # Downsample if exceeds max_reads threshold
     if [ ~{max_reads} -gt 0 ] && [ "$READ_COUNT" -gt ~{max_reads} ]; then
       echo "Downsampling from $READ_COUNT to ~{max_reads} reads before deduplication"
-      read_utils.py downsample_bams \
+      read_utils downsample_bams \
         "$INPUT_BAM" \
         --outPath ./downsample_out \
         --readCount=~{max_reads} \
@@ -289,7 +289,7 @@ task rmdup_ubam {
       echo "Downsampled BAM: $INPUT_BAM"
     fi
 
-    read_utils.py rmdup_"~{method}"_bam \
+    read_utils rmdup_"~{method}"_bam \
       "$INPUT_BAM" \
       "~{reads_basename}".dedup.bam \
       --loglevel=DEBUG
@@ -306,10 +306,10 @@ task rmdup_ubam {
 
   runtime {
     docker: docker
-    memory: mem_gb + " GB"
+    memory: "~{mem_gb} GB"
     cpu:    2
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -331,7 +331,7 @@ task bbnorm_bam {
 
     Int?    machine_mem_gb
     Int?    cpu
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
 
   # Memory autoscaling: BBNorm uses Java and loads kmer data structures into memory.
@@ -380,15 +380,15 @@ task bbnorm_bam {
 
   command <<<
     set -ex -o pipefail
-    read_utils.py --version | tee VERSION
+    read_utils --version | tee VERSION
 
     # Count input reads first
     samtools view -c "~{reads_bam}" | tee bbnorm_read_count_pre
 
     # Calculate memory for BBNorm (85% of available, more accurate than bbnorm's auto-detect)
-    mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 85)
+    mem_in_mb=$(/opt/viral-ngs/scripts/calc_mem.py mb 85)
 
-    read_utils.py rmdup_bbnorm_bam \
+    read_utils rmdup_bbnorm_bam \
       "~{reads_bam}" \
       "~{reads_basename}.bbnorm.bam" \
       --target=~{target} \
@@ -411,10 +411,10 @@ task bbnorm_bam {
 
   runtime {
     docker: docker
-    memory: mem_gb + " GB"
+    memory: "~{mem_gb} GB"
     cpu:    cpu_count
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x8"
     maxRetries: 2
   }
@@ -433,7 +433,7 @@ task downsample_bams {
     Boolean      deduplicateAfter = false
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
 
   Int disk_size = 750
@@ -442,7 +442,7 @@ task downsample_bams {
     set -ex -o pipefail
 
     # find 90% memory
-    mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
+    mem_in_mb=$(/opt/viral-ngs/scripts/calc_mem.py mb 90)
 
     if [[ "~{deduplicateBefore}" == "true" ]]; then
       DEDUP_OPTION="--deduplicateBefore"
@@ -455,9 +455,9 @@ task downsample_bams {
       exit 1
     fi
 
-    read_utils.py --version | tee VERSION
+    read_utils --version | tee VERSION
 
-    read_utils.py downsample_bams \
+    read_utils downsample_bams \
         ~{sep=' ' reads_bam} \
         --outPath ./output \
         ~{'--readCount=' + readCount} \
@@ -472,10 +472,10 @@ task downsample_bams {
 
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 8]) + " GB"
+    memory: "~{select_first([machine_mem_gb, 8])} GB"
     cpu:    4
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
   }
@@ -500,7 +500,7 @@ task FastqToUBAM {
     Int     cpus = 2
     Int     mem_gb = 4
     Int     disk_size = 750
-    String  docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
   parameter_meta {
     fastq_1: { description: "Unaligned read1 file in fastq format", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }
@@ -514,9 +514,9 @@ task FastqToUBAM {
       set -ex -o pipefail
 
       # find 90% memory
-      mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
+      mem_in_mb=$(/opt/viral-ngs/scripts/calc_mem.py mb 90)
 
-      read_utils.py --version | tee VERSION
+      read_utils --version | tee VERSION
 
       if [[ ! "~{platform_name}" =~ ^(CAPILLARY|DNBSEQ|ELEMENT|HELICOS|ILLUMINA|IONTORRENT|LS454|ONT|PACBIO|SINGULAR|SOLID|ULTIMA)$ ]]; then
         exit 1
@@ -538,9 +538,9 @@ task FastqToUBAM {
   runtime {
     docker: docker
     cpu: cpus
-    memory: mem_gb + " GB"
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    memory: "~{mem_gb} GB"
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -554,7 +554,7 @@ task read_depths {
     File      aligned_bam
 
     String    out_basename = basename(aligned_bam, '.bam')
-    String    docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String    docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
   Int disk_size = 200
   command <<<
@@ -570,8 +570,8 @@ task read_depths {
     docker: docker
     cpu:    2
     memory: "3 GB"
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }

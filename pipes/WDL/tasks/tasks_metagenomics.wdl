@@ -42,10 +42,10 @@ task krakenuniq {
     DB_DIR=$(mktemp -d --suffix _db)
     mkdir -p $DB_DIR/krakenuniq $DB_DIR/krona
 
-    metagenomics.py --version | tee VERSION
+    metagenomics --version | tee VERSION
 
     # decompress DB to $DB_DIR
-    read_utils.py extract_tarball \
+    read_utils extract_tarball \
       "~{krakenuniq_db_tar_lz4}" $DB_DIR/krakenuniq \
       --loglevel=DEBUG
     # Support old db tar format
@@ -55,7 +55,7 @@ task krakenuniq {
 
     # unpack krona taxonomy.tab
     if [[ "~{krona_taxonomy_db_tgz}" == *.tar.* ]]; then
-      read_utils.py extract_tarball \
+      read_utils extract_tarball \
         "~{krona_taxonomy_db_tgz}" $DB_DIR/krona \
         --loglevel=DEBUG &  # we don't need this until later
     else
@@ -82,7 +82,7 @@ task krakenuniq {
 
     # execute on all inputs and outputs serially, but with a single
     # database load into ram
-    metagenomics.py krakenuniq \
+    metagenomics krakenuniq \
       $DB_DIR/krakenuniq \
       "~{sep='" "' reads_unmapped_bam}" \
       --outReads $(cat $OUT_READS) \
@@ -97,7 +97,7 @@ task krakenuniq {
 
     # run single-threaded krona on up to nproc samples at once
     parallel -I ,, \
-      "metagenomics.py krona \
+      "metagenomics krona \
         ,,.krakenuniq-summary_report.txt \
         $DB_DIR/krona \
         ,,.krakenuniq-krona.html \
@@ -125,10 +125,10 @@ task krakenuniq {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 32
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x48"
     preemptible: 0
     maxRetries: 2
@@ -164,20 +164,20 @@ task build_krakenuniq_db {
     DB_DIR="$TMPDIR/~{db_basename}"
     mkdir -p $DB_DIR
 
-    metagenomics.py --version | tee VERSION
+    metagenomics --version | tee VERSION
 
     # decompress input tarballs
-    read_utils.py extract_tarball \
+    read_utils extract_tarball \
       "~{genome_fastas_tarball}" $FASTAS_DIR \
       --loglevel=DEBUG
-    read_utils.py extract_tarball \
+    read_utils extract_tarball \
       "~{taxonomy_db_tarball}" $TAXDB_DIR \
       --loglevel=DEBUG
 
     # build database
-    metagenomics.py krakenuniq_build \
+    metagenomics krakenuniq_build \
       $DB_DIR --library $FASTAS_DIR --taxonomy $TAXDB_DIR \
-      ~{true='--subsetTaxonomy=' false='' subsetTaxonomy} \
+      ~{if select_first([subsetTaxonomy, false]) then '--subsetTaxonomy=' else ''} \
       ~{'--minimizerLen=' + minimizerLen} \
       ~{'--kmerLen=' + kmerLen} \
       ~{'--maxDbSize=' + maxDbSize} \
@@ -195,9 +195,9 @@ task build_krakenuniq_db {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    memory: "~{machine_mem_gb} GB"
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     cpu: 32
     dx_instance_type: "mem3_ssd1_v2_x32"
     preemptible: 0
@@ -218,7 +218,7 @@ task kraken2 {
     Int?   min_base_qual
 
     Int    machine_mem_gb = 90
-    String docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
   }
 
   parameter_meta {
@@ -261,14 +261,14 @@ task kraken2 {
     mkdir -p $DB_DIR/kraken2 $DB_DIR/krona
 
     # decompress DB to $DB_DIR
-    read_utils.py extract_tarball \
+    read_utils extract_tarball \
       "~{kraken2_db_tgz}" $DB_DIR/kraken2 \
       --loglevel=DEBUG
     du -hs $DB_DIR/kraken2
 
     # unpack krona taxonomy.tab
     if [[ "~{krona_taxonomy_db_tgz}" == *.tar.* ]]; then
-      read_utils.py extract_tarball \
+      read_utils extract_tarball \
         "~{krona_taxonomy_db_tgz}" $DB_DIR/krona \
         --loglevel=DEBUG &  # we don't need this until later
     else
@@ -283,10 +283,10 @@ task kraken2 {
       fi
     fi
 
-    metagenomics.py --version | tee VERSION
+    metagenomics --version | tee VERSION
 
     if [[ "~{reads_bam}" == *.bam ]]; then
-        metagenomics.py kraken2 \
+        metagenomics kraken2 \
           $DB_DIR/kraken2 \
           "~{reads_bam}" \
           --outReads   "~{out_basename}".kraken2.reads.txt \
@@ -307,7 +307,7 @@ task kraken2 {
     wait # for krona_taxonomy_db_tgz to download and extract
     pigz "~{out_basename}".kraken2.reads.txt &
 
-    metagenomics.py krona \
+    metagenomics krona \
       "~{out_basename}".kraken2.report.txt \
       $DB_DIR/krona \
       "~{out_basename}".kraken2.krona.html \
@@ -332,11 +332,11 @@ task kraken2 {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 16
     cpuPlatform: "Intel Ice Lake"
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TESs
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem3_ssd1_v2_x8"
     preemptible: 2
     maxRetries: 2
@@ -351,7 +351,7 @@ task report_primary_kraken_taxa {
     File          kraken_summary_report
     String        focal_taxon = "Viruses"
 
-    String        docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+    String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
   }
   String out_basename = basename(kraken_summary_report, '.txt')
   Int disk_size = 50
@@ -359,7 +359,7 @@ task report_primary_kraken_taxa {
 
   command <<<
     set -e
-    metagenomics.py taxlevel_plurality "~{kraken_summary_report}" "~{focal_taxon}" "~{out_basename}.ranked_focal_report.tsv"
+    metagenomics taxlevel_plurality "~{kraken_summary_report}" "~{focal_taxon}" "~{out_basename}.ranked_focal_report.tsv"
     cat "~{out_basename}.ranked_focal_report.tsv" | head -2 | tail +2 > TOPROW
     cut -f 2 TOPROW > NUM_FOCAL
     cut -f 4 TOPROW > PCT_OF_FOCAL
@@ -382,10 +382,10 @@ task report_primary_kraken_taxa {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TESs
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
     maxRetries: 2
@@ -402,7 +402,7 @@ task filter_refs_to_found_taxa {
     File          taxdump_tgz
     Int           min_read_count = 100
 
-    String        docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+    String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
   }
   String ref_basename = basename(taxid_to_ref_accessions_tsv, '.tsv')
   String hits_basename = basename(focal_report_tsv, '.tsv')
@@ -411,8 +411,8 @@ task filter_refs_to_found_taxa {
   command <<<
     set -e
     mkdir -p taxdump
-    read_utils.py extract_tarball "~{taxdump_tgz}" taxdump
-    metagenomics.py filter_taxids_to_focal_hits "~{taxid_to_ref_accessions_tsv}" "~{focal_report_tsv}" taxdump ~{min_read_count} "~{ref_basename}-~{hits_basename}.tsv"
+    read_utils extract_tarball "~{taxdump_tgz}" taxdump
+    metagenomics filter_taxids_to_focal_hits "~{taxid_to_ref_accessions_tsv}" "~{focal_report_tsv}" taxdump ~{min_read_count} "~{ref_basename}-~{hits_basename}.tsv"
   >>>
 
   output {
@@ -423,8 +423,8 @@ task filter_refs_to_found_taxa {
     docker: docker
     memory: "2 GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TESs
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
     maxRetries: 2
@@ -453,7 +453,7 @@ task build_kraken2_db {
     Int?          zstd_compression_level
 
     Int           machine_mem_gb = 100
-    String        docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+    String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
   }
 
   Int disk_size = 750
@@ -496,11 +496,11 @@ task build_kraken2_db {
     KRONA_DIR=$(mktemp -d)
     DB_DIR=$(mktemp -d)
 
-    metagenomics.py --version | tee VERSION
+    metagenomics --version | tee VERSION
 
     # prep input taxonomy db, if specified
     if [ -n "~{taxonomy_db_tgz}" ]; then
-      read_utils.py extract_tarball \
+      read_utils extract_tarball \
         "~{taxonomy_db_tgz}" $TAXDB_DIR \
         --loglevel=DEBUG &
       TAX_INPUT_CMD="--tax_db=$TAXDB_DIR"
@@ -514,7 +514,7 @@ task build_kraken2_db {
       CUSTOM_INPUT_CMD="--custom_libraries "
       for TGZ in ~{sep=' ' custom_libraries}; do
         if [[ ($TGZ == *.tar.*) || ($TGZ == *.tgz) ]]; then
-          read_utils.py extract_tarball \
+          read_utils extract_tarball \
             $TGZ $FASTAS_DIR \
             --loglevel=DEBUG &
         else
@@ -543,7 +543,7 @@ task build_kraken2_db {
 
     # build kraken2 database
     wait # wait for all decompressions to finish
-    metagenomics.py kraken2_build \
+    metagenomics kraken2_build \
       $DB_DIR \
       $TAX_INPUT_CMD \
       $STD_INPUT_CMD \
@@ -558,7 +558,7 @@ task build_kraken2_db {
     tar -c -C $DB_DIR . | zstd ~{"-" + zstd_compression_level} > "kraken2-~{db_basename}.tar.zst" &
 
     # build matching krona db
-    metagenomics.py krona_build \
+    metagenomics krona_build \
       $KRONA_DIR --taxdump_tar_gz "taxdump-~{db_basename}.tar.gz"
     cat $KRONA_DIR/taxonomy.tab | zstd -19 > "krona-~{db_basename}-taxonomy.tab.zst"
 
@@ -574,9 +574,9 @@ task build_kraken2_db {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    memory: "~{machine_mem_gb} GB"
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     cpu: 16
     dx_instance_type: "mem3_ssd1_v2_x16"
     preemptible: 0
@@ -595,7 +595,7 @@ task blastx {
     File   krona_taxonomy_db_tgz
 
     Int    machine_mem_gb = 8
-    String docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
   }
 
   parameter_meta {
@@ -625,12 +625,12 @@ task blastx {
     mkdir -p $DB_DIR/blast $DB_DIR/krona
 
     # decompress DB to $DB_DIR
-    read_utils.py extract_tarball \
+    read_utils extract_tarball \
       "~{blast_db_tgz}" $DB_DIR/blast \
       --loglevel=DEBUG
 
     # unpack krona taxonomy database
-    read_utils.py extract_tarball \
+    read_utils extract_tarball \
       "~{krona_taxonomy_db_tgz}" $DB_DIR/krona \
       --loglevel=DEBUG &  # we don't need this until later
 
@@ -662,10 +662,10 @@ task blastx {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 32
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x36"
     preemptible: 1
     maxRetries: 2
@@ -685,7 +685,7 @@ task krona {
     Int?         magnitude_column
 
     Int          machine_mem_gb = 3
-    String       docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
   }
 
   Int disk_size = 50
@@ -698,11 +698,11 @@ task krona {
     DB_DIR=$(mktemp -d --suffix _db)
     mkdir -p $DB_DIR/krona
 
-    metagenomics.py --version | tee VERSION
+    metagenomics --version | tee VERSION
 
     # unpack krona taxonomy.tab
     if [[ "~{krona_taxonomy_db_tgz}" == *.tar.* ]]; then
-      read_utils.py extract_tarball \
+      read_utils extract_tarball \
         "~{krona_taxonomy_db_tgz}" $DB_DIR/krona \
         --loglevel=DEBUG
     else
@@ -717,7 +717,7 @@ task krona {
       fi
     fi
 
-    metagenomics.py krona \
+    metagenomics krona \
       "~{sep='" "' reports_txt_gz}" \
       $DB_DIR/krona \
       "~{out_basename}.html" \
@@ -737,10 +737,10 @@ task krona {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
     maxRetries: 2
   }
@@ -770,10 +770,10 @@ task krona_merge {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
     maxRetries: 2
   }
@@ -792,7 +792,7 @@ task filter_bam_to_taxa {
     String         out_filename_suffix = "filtered"
 
     Int            machine_mem_gb = 8
-    String         docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+    String         docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
   }
 
   String out_basename = basename(classified_bam, ".bam") + "." + out_filename_suffix
@@ -805,7 +805,7 @@ task filter_bam_to_taxa {
     fi
 
     # decompress taxonomy DB to CWD
-    read_utils.py extract_tarball \
+    read_utils extract_tarball \
       "~{ncbi_taxonomy_db_tgz}" . \
       --loglevel=DEBUG
     if [ -d "taxonomy" ]; then mv taxonomy/* .; fi
@@ -828,11 +828,11 @@ task filter_bam_to_taxa {
     echo "taxfilterargs:"
     cat taxfilterargs
 
-    metagenomics.py --version | tee VERSION
+    metagenomics --version | tee VERSION
 
     samtools view -c "~{classified_bam}" | tee classified_taxonomic_filter_read_count_pre &
 
-    cat taxfilterargs | grep . | xargs -d '\n' metagenomics.py filter_bam_to_taxa \
+    cat taxfilterargs | grep . | xargs -d '\n' metagenomics filter_bam_to_taxa \
       "~{classified_bam}" \
       "~{classified_reads_txt_gz}" \
       "~{out_basename}.bam" \
@@ -867,9 +867,9 @@ task filter_bam_to_taxa {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
-    disks:  "local-disk " + disk_size + " SSD"
-    disk: disk_size + " GB" # TES
+    memory: "~{machine_mem_gb} GB"
+    disks: "local-disk ~{disk_size} SSD"
+    disk: "~{disk_size} GB" # TES
     cpu: 8
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: 1
@@ -885,7 +885,7 @@ task kaiju {
     File   krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
 
     Int    machine_mem_gb = 100
-    String docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
   }
 
   String   input_basename = basename(reads_unmapped_bam, ".bam")
@@ -902,7 +902,7 @@ task kaiju {
 
     lz4 -dc "~{kaiju_db_lz4}" > $DB_DIR/kaiju/kaiju.fmi
 
-    read_utils.py extract_tarball \
+    read_utils extract_tarball \
       "~{ncbi_taxonomy_db_tgz}" $DB_DIR/taxonomy \
       --loglevel=DEBUG
     # Support old db tar format
@@ -910,14 +910,14 @@ task kaiju {
       mv $DB_DIR/taxonomy/taxonomy/* $DB_DIR/taxonomy
     fi
 
-    read_utils.py extract_tarball \
+    read_utils extract_tarball \
       "~{krona_taxonomy_db_tgz}" $DB_DIR/krona \
       --loglevel=DEBUG
 
-    metagenomics.py --version | tee VERSION
+    metagenomics --version | tee VERSION
 
     # classify contigs
-    metagenomics.py kaiju \
+    metagenomics kaiju \
       "~{reads_unmapped_bam}" \
       $DB_DIR/kaiju/kaiju.fmi \
       $DB_DIR/taxonomy \
@@ -926,7 +926,7 @@ task kaiju {
       --loglevel=DEBUG
 
     # run krona
-    metagenomics.py krona \
+    metagenomics krona \
       "~{input_basename}.kaiju.summary_report.txt" \
       $DB_DIR/krona \
       "~{input_basename}.kaiju-krona.html" \
@@ -944,10 +944,10 @@ task kaiju {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 16
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x16"
     maxRetries: 2
   }

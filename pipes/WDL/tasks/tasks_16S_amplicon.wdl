@@ -1,4 +1,4 @@
-version 1.0 
+version 1.0
 
 task qiime_import_from_bam {
     meta {
@@ -63,8 +63,8 @@ task qiime_import_from_bam {
         docker: docker
         memory: "~{memory_mb} MiB"
         cpu: cpu
-        disk: disk_size_gb + " GB"
-        disks: "local-disk " + disk_size_gb + " HDD"
+        disk: "~{disk_size_gb} GB"
+        disks: "local-disk ~{disk_size_gb} HDD"
     }
 }
 
@@ -144,8 +144,8 @@ task trim_reads {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disk: disk_size_gb + " GB"
-        disks: "local-disk " + disk_size_gb + " HDD"
+        disk: "~{disk_size_gb} GB"
+        disks: "local-disk ~{disk_size_gb} HDD"
     }
 }
 
@@ -194,8 +194,8 @@ task join_paired_ends {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disk: disk_size_gb + " GB"
-        disks: "local-disk " + disk_size_gb + " HDD"
+        disk: "~{disk_size_gb} GB"
+        disks: "local-disk ~{disk_size_gb} HDD"
     }
 }
 
@@ -269,8 +269,8 @@ task deblur {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disk: disk_size_gb + " GB"
-        disks: "local-disk " + disk_size_gb + " HDD"
+        disk: "~{disk_size_gb} GB"
+        disks: "local-disk ~{disk_size_gb} HDD"
     }
 }
 task train_classifier {
@@ -357,8 +357,8 @@ task train_classifier {
         docker: docker
         memory: "${memory_mb} MiB"
         cpu: cpu
-        disk: disk_size_gb + " GB"
-        disks: "local-disk " + disk_size_gb + " HDD"
+        disk: "~{disk_size_gb} GB"
+        disks: "local-disk ~{disk_size_gb} HDD"
     }
 }
 task tax_analysis {
@@ -420,7 +420,7 @@ task tax_analysis {
         docker: docker
         memory: "10 GB"
         cpu: cpu
-        disk: disk_size_gb + " GB"
-        disks: "local-disk " + disk_size_gb + " HDD"
+        disk: "~{disk_size_gb} GB"
+        disks: "local-disk ~{disk_size_gb} HDD"
     }
 } 

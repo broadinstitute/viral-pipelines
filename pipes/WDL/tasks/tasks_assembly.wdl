@@ -16,7 +16,7 @@ task assemble {
       
       Int?     machine_mem_gb
       Int?     cpu
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.5.21.0"
+      String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-assemble"
     }
     parameter_meta{
       reads_unmapped_bam: {
@@ -65,12 +65,12 @@ task assemble {
         set -ex -o pipefail
 
         # find 90% memory
-        mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
-        mem_in_gb=$(/opt/viral-ngs/source/docker/calc_mem.py gb 90)
+        mem_in_mb=$(/opt/viral-ngs/scripts/calc_mem.py mb 90)
+        mem_in_gb=$(/opt/viral-ngs/scripts/calc_mem.py gb 90)
 
-        assembly.py --version | tee VERSION
+        assembly --version | tee VERSION
 
-        assembly.py assemble_spades \
+        assembly assemble_spades \
           ~{reads_unmapped_bam} \
           ~{trim_clip_db} \
           ~{sample_name}.assembly1-spades.fasta \
@@ -102,10 +102,10 @@ task assemble {
 
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 32]) + " GB"
+        memory: "~{select_first([machine_mem_gb, 32])} GB"
         cpu:    select_first([cpu, 8])
-        disks:  "local-disk " + disk_size + " SSD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} SSD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
         maxRetries: 2
     }
@@ -125,7 +125,7 @@ task select_references {
     Int?          skani_c
     Int?          skani_n
 
-    String        docker = "quay.io/broadinstitute/viral-assemble:2.5.21.0"
+    String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-assemble"
     Int           machine_mem_gb = 4
     Int           cpu = 2
     Int           disk_size = 100
@@ -136,7 +136,7 @@ task select_references {
     set -e
 
     # run skani, find top hits, cluster references
-    assembly.py skani_contigs_to_refs \
+    assembly skani_contigs_to_refs \
       "~{contigs_fasta}" \
       "~{sep='" "' reference_genomes_fastas}" \
       "~{contigs_basename}.refs_skani_dist.full.tsv" \
@@ -192,10 +192,10 @@ task select_references {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu:    cpu
-    disks:  "local-disk " + disk_size + " SSD"
-    disk: disk_size + " GB" # TESs
+    disks: "local-disk ~{disk_size} SSD"
+    disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
     maxRetries: 2
@@ -225,7 +225,7 @@ task scaffold {
       Float?       scaffold_min_pct_contig_aligned
 
       Int?         machine_mem_gb
-      String       docker="quay.io/broadinstitute/viral-assemble:2.5.21.0"
+      String       docker="ghcr.io/broadinstitute/viral-ngs:3.0.6-assemble"
 
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
@@ -235,6 +235,14 @@ task scaffold {
     # Gap2Seq can take 100+ min for large BAMs (>1GB), providing diminishing returns
     Float reads_bam_size_gb = if defined(reads_bam) then size(select_first([reads_bam]), "GB") else 0.0
     Boolean run_gap2seq = defined(reads_bam) && reads_bam_size_gb < 1.0
+
+    # Calculate memory based on largest reference genome size
+    # MUSCLE memory is linearly proportional to sequence length
+    # Formula: 20GB floor for ≤30kb, scales to ~40GB at 150kb, capped at 64GB
+    Float max_ref_size_kb = size(reference_genome_fasta[0], "KB")
+    Int scaled_mem_gb = if max_ref_size_kb <= 30.0 then 20
+                        else if max_ref_size_kb >= 294.0 then 64
+                        else 20 + ceil((max_ref_size_kb - 30.0) / 6.0)
 
     parameter_meta {
       reads_bam: {
@@ -308,12 +316,12 @@ task scaffold {
         set -ex -o pipefail
 
         # find 90% memory
-        mem_in_gb=$(/opt/viral-ngs/source/docker/calc_mem.py gb 90)
+        mem_in_gb=$(/opt/viral-ngs/scripts/calc_mem.py gb 90)
 
-        assembly.py --version | tee VERSION
+        assembly --version | tee VERSION
 
         # use skani to choose top hit
-        assembly.py skani_contigs_to_refs \
+        assembly skani_contigs_to_refs \
           "~{contigs_fasta}" \
           "~{sep='" "' reference_genome_fasta}" \
           "~{sample_name}.refs_skani_dist.full.tsv" \
@@ -330,7 +338,7 @@ task scaffold {
           CHOSEN_REF_FASTA=$(awk -F'\t' 'NR==2 {print $1; exit}' "~{sample_name}.refs_skani_dist.full.tsv")
           basename "$CHOSEN_REF_FASTA" .fasta > CHOSEN_REF_BASENAME
 
-          assembly.py order_and_orient \
+          assembly order_and_orient \
             "~{contigs_fasta}" \
             "$CHOSEN_REF_FASTA" \
             "~{sample_name}".intermediate_scaffold.fasta \
@@ -356,7 +364,7 @@ task scaffold {
           echo "0" > SKANI_CONTIGS_AF
           echo "" > CHOSEN_REF_BASENAME
 
-          assembly.py order_and_orient \
+          assembly order_and_orient \
             "~{contigs_fasta}" \
             "~{sep='" "' reference_genome_fasta}" \
             "~{sample_name}".intermediate_scaffold.fasta \
@@ -376,7 +384,7 @@ task scaffold {
 
         # Run Gap2Seq only if reads_bam is provided and smaller than 1GB
         if ~{true='true' false='false' run_gap2seq}; then
-            assembly.py gapfill_gap2seq \
+            assembly gapfill_gap2seq \
               "~{sample_name}".intermediate_scaffold.fasta \
               "~{reads_bam}" \
               "~{sample_name}".intermediate_gapfill.fasta \
@@ -399,13 +407,13 @@ task scaffold {
         if ~{true='true' false='false' allow_incomplete_output} && ! cmp -s assembly_num_segments_recovered reference_num_segments_required
         then
           # draft assembly does not have enough segments--and that's okay (allow_incomplete_output=true)
-          file_utils.py rename_fasta_sequences \
+          file_utils rename_fasta_sequences \
             "~{sample_name}".intermediate_gapfill.fasta \
             "~{sample_name}".scaffolded_imputed.fasta \
             "~{sample_name}" --suffix_always --loglevel=DEBUG
         else
           # draft assembly must have the right number of segments (fail if not)
-          assembly.py impute_from_reference \
+          assembly impute_from_reference \
             "~{sample_name}".intermediate_gapfill.fasta \
             "~{sample_name}".scaffolding_chosen_ref.fasta \
             "~{sample_name}".scaffolded_imputed.fasta \
@@ -448,10 +456,10 @@ task scaffold {
 
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 20]) + " GB"
+        memory: "~{select_first([machine_mem_gb, scaled_mem_gb])} GB"
         cpu: 4
-        disks:  "local-disk " + disk_size + " SSD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} SSD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
         maxRetries: 2
     }
@@ -470,7 +478,7 @@ task skani_triangle {
     Int     compression_factor = 10
     Int     min_aligned_frac = 15
 
-    String  docker = "quay.io/broadinstitute/viral-assemble:2.5.21.0"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-assemble"
     Int     machine_mem_gb = 8
     Int     cpu = 4
     Int     disk_size = 100
@@ -533,10 +541,10 @@ task skani_triangle {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb + " GB"
+    memory: "~{machine_mem_gb} GB"
     cpu:    cpu
-    disks:  "local-disk " + disk_size + " SSD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} SSD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     preemptible: 2
     maxRetries: 2
@@ -617,10 +625,10 @@ task ivar_trim {
 
     runtime {
         docker: docker
-        memory: select_first([machine_mem_gb, 7]) + " GB"
+        memory: "~{select_first([machine_mem_gb, 7])} GB"
         cpu: 4
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x4"
         maxRetries: 2
     }
@@ -633,7 +641,7 @@ task ivar_trim_stats {
       String out_basename = "ivar_trim_stats"
       String flowcell = ""
 
-      String docker = "quay.io/broadinstitute/py3-bio:0.1.2"
+      String docker = "quay.io/broadinstitute/py3-bio:0.1.3"
     }
     parameter_meta {
       ivar_trim_stats_tsv: {
@@ -685,8 +693,8 @@ task ivar_trim_stats {
         docker: docker
         memory: "1 GB"
         cpu: 1
-        disks:   "local-disk " + disk_size + " HDD"
-        disk:    disk_size + " GB"
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB"
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -713,7 +721,7 @@ task align_reads {
 
     Int?     cpu
     Int?     machine_mem_gb
-    String   docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
 
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
   }
@@ -758,9 +766,9 @@ task align_reads {
   command <<<
     set -ex # do not set pipefail, since grep exits 1 if it can't find the pattern
 
-    read_utils.py --version | tee VERSION
+    read_utils --version | tee VERSION
 
-    mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
+    mem_in_mb=$(/opt/viral-ngs/scripts/calc_mem.py mb 90)
 
     # Preprocess extremely large inputs with bbnorm to prevent OOM in downstream markdup
     INPUT_BAM="~{reads_unmapped_bam}"
@@ -769,7 +777,7 @@ task align_reads {
 
     if [ "$input_read_count" -ge ~{read_count_downsample_threshold} ]; then
         echo "Input exceeds ~{read_count_downsample_threshold} reads, running bbnorm preprocessing..." >&2
-        read_utils.py rmdup_bbnorm_bam \
+        read_utils rmdup_bbnorm_bam \
             "$INPUT_BAM" \
             preprocessed.bam \
             --target=20000 \
@@ -790,15 +798,15 @@ task align_reads {
       # only perform the following if the reference is non-empty
 
       if [ "~{aligner}" == "novoalign" ]; then
-        read_utils.py novoindex \
+        read_utils novoindex \
           assembly.fasta \
           ~{"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
           --loglevel=DEBUG
       fi
-      read_utils.py index_fasta_picard assembly.fasta --loglevel=DEBUG
-      read_utils.py index_fasta_samtools assembly.fasta --loglevel=DEBUG
+      read_utils index_fasta_picard assembly.fasta --loglevel=DEBUG
+      read_utils index_fasta_samtools assembly.fasta --loglevel=DEBUG
 
-      read_utils.py align_and_fix \
+      read_utils align_and_fix \
         "$INPUT_BAM" \
         assembly.fasta \
         --outBamAll "~{sample_name}.all.bam" \
@@ -856,10 +864,10 @@ task align_reads {
 
   runtime {
     docker: docker
-    memory: machine_mem_gb_actual + " GB"
+    memory: "~{machine_mem_gb_actual} GB"
     cpu: cpu_actual
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: 1
     maxRetries: 2
@@ -882,7 +890,7 @@ task refine_assembly_with_aligned_reads {
       Int      min_coverage = 3
 
       Int      machine_mem_gb = 8
-      String   docker = "quay.io/broadinstitute/viral-assemble:2.5.21.0"
+      String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-assemble"
     }
 
     Int disk_size = 375
@@ -915,12 +923,12 @@ task refine_assembly_with_aligned_reads {
         set -ex -o pipefail
 
         # find 90% memory
-        mem_in_mb=$(/opt/viral-ngs/source/docker/calc_mem.py mb 90)
+        mem_in_mb=$(/opt/viral-ngs/scripts/calc_mem.py mb 90)
 
-        assembly.py --version | tee VERSION
+        assembly --version | tee VERSION
 
         if [ ~{true='true' false='false' mark_duplicates} == "true" ]; then
-          read_utils.py mkdup_picard \
+          read_utils mkdup_picard \
             ~{reads_aligned_bam} \
             temp_markdup.bam \
             --JVMmemory "$mem_in_mb"m \
@@ -931,7 +939,7 @@ task refine_assembly_with_aligned_reads {
         samtools index -@ $(nproc) temp_markdup.bam temp_markdup.bai
 
         ln -s ~{reference_fasta} assembly.fasta
-        assembly.py refine_assembly \
+        assembly refine_assembly \
           assembly.fasta \
           temp_markdup.bam \
           refined.fasta \
@@ -946,7 +954,7 @@ task refine_assembly_with_aligned_reads {
         # (we don't really know how long the last line will be so use both the --ten and --fifty rules
         # and basically disable the --maxfrac rule as we will handle that elsewhere)
         if [ -s refined.fasta ]; then
-          fasta-trim-terminal-ambigs.pl --3rules \
+          /opt/viral-ngs/scripts/fasta-trim-terminal-ambigs.pl --3rules \
             --ten 4 \
             --fifty 15 \
             --maxfrac 0.9 \
@@ -957,7 +965,7 @@ task refine_assembly_with_aligned_reads {
         fi
 
         # rename for external consumption
-        file_utils.py rename_fasta_sequences \
+        file_utils rename_fasta_sequences \
           trimmed.fasta "~{out_basename}.fasta" "~{sample_name}"
 
         # collect variant counts
@@ -998,10 +1006,10 @@ task refine_assembly_with_aligned_reads {
 
     runtime {
         docker: docker
-        memory: machine_mem_gb + " GB"
+        memory: "~{machine_mem_gb} GB"
         cpu: 8
-        disks:  "local-disk " + disk_size + " SSD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} SSD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
         maxRetries: 2
     }
@@ -1019,7 +1027,7 @@ task run_discordance {
       String out_basename = "run"
       Int    min_coverage = 4
 
-      String docker = "quay.io/broadinstitute/viral-core:2.5.21"
+      String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
     }
     parameter_meta {
       reads_aligned_bam: {
@@ -1042,12 +1050,12 @@ task run_discordance {
     command <<<
         set -ex -o pipefail
 
-        read_utils.py --version | tee VERSION
+        read_utils --version | tee VERSION
 
         python3 <<CODE
         # create 2-col table with read group ids in both cols
-        import tools.samtools
-        header = tools.samtools.SamtoolsTool().getHeader("~{reads_aligned_bam}")
+        from viral_ngs.core import samtools
+        header = samtools.SamtoolsTool().getHeader("~{reads_aligned_bam}")
         rgids = [[x[3:] for x in h if x.startswith('ID:')][0] for h in header if h[0]=='@RG']
         n_rgs = len(rgids)
         with open('readgroups.txt', 'wt') as outf:
@@ -1121,8 +1129,8 @@ task run_discordance {
         docker: docker
         memory: "3 GB"
         cpu: 2
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 1
         maxRetries: 2
@@ -1234,8 +1242,8 @@ task filter_bad_ntc_batches {
         docker: "python:slim"
         memory: "2 GB"
         cpu:    1
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -1251,7 +1259,7 @@ task filter_bad_ntc_batches {
 
 task wgsim {
     meta {
-        description: "Generate synthetic Illumina paired-end reads from reference sequences using wgsim via assembly.py simulate_illumina_reads."
+        description: "Generate synthetic Illumina paired-end reads from reference sequences using wgsim via assembly simulate_illumina_reads."
     }
 
     input {
@@ -1268,7 +1276,7 @@ task wgsim {
         Int?   random_seed
 
         Int    machine_mem_gb = 7
-        String docker = "quay.io/broadinstitute/viral-assemble:2.5.21.0"
+        String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-assemble"
     }
 
     parameter_meta {
@@ -1316,10 +1324,10 @@ task wgsim {
 
     command <<<
         set -e
-        assembly.py --version | tee VERSION
+        assembly --version | tee VERSION
 
         # Run simulate_illumina_reads
-        assembly.py simulate_illumina_reads \
+        assembly simulate_illumina_reads \
             "~{reference_fasta}" \
             "~{out_basename}.bam" \
             ~{if defined(coverage_bed) then '--coverage_bed "' + coverage_bed + '"' else '"' + coverage_string + '"'} \
@@ -1343,10 +1351,10 @@ task wgsim {
 
     runtime {
         docker: docker
-        memory: machine_mem_gb + " GB"
+        memory: "~{machine_mem_gb} GB"
         cpu: 2
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }

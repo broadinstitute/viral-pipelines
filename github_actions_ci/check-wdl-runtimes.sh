@@ -34,18 +34,23 @@ for task_file in $(ls -1 pipes/WDL/tasks/*.wdl); do
     while IFS='=' read module version; do
     	OLD_TAG=$module
     	NEW_TAG="$module:$version"
-        
-        offending_lines="$(grep -nE "^[^#]*$OLD_TAG" "${task_file}" | grep -v '#skip-global-version-pin' | grep -v $NEW_TAG)"
+
+        # Escape dots in version for regex and build pattern that allows optional flavor suffix
+        escaped_version=$(echo "$version" | sed 's/\./\\./g')
+        # Pattern matches: module:version or module:version-flavor, followed by quote
+        VALID_PATTERN="${module}:${escaped_version}(-[a-zA-Z0-9_]+)?[\"']"
+
+        offending_lines="$(grep -nE "^[^#]*$OLD_TAG" "${task_file}" | grep -v '#skip-global-version-pin' | grep -Ev "$VALID_PATTERN")"
 
         # if the expected tag is not seen, let us know the file and exit
         if [ $? -eq 0 ]; then
            offending_lines="$(echo "${offending_lines}" | sed 's/^/      /g')"
-           echo "  \"$NEW_TAG\" needed in \"${task_file}\":"
+           echo "  \"$NEW_TAG\" (or $NEW_TAG-<flavor>) needed in \"${task_file}\":"
            echo "$offending_lines"
            should_error=true #exit 1 eventually, but only after printing all of the problems
         fi
         offending_lines=""
-        
+
     done < "${MODULE_VERSIONS}"
 done
 if [ "$should_error" = true ]; then

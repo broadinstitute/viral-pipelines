@@ -77,15 +77,15 @@ task polyphonia_detect_cross_contamination {
     
     # prep plate maps input, if specified
     PLATE_MAPS_INPUT=""
-    if [ -n "${sep=' ' plate_maps}" ]; then
-      PLATE_MAPS_INPUT="--plate-map ~{sep=' ' plate_maps}"
+    if [ -n "${sep=' ' select_first([plate_maps, []])}" ]; then
+      PLATE_MAPS_INPUT="--plate-map ~{sep=' ' select_first([plate_maps, []])}"
     fi
 
     polyphonia cross_contamination \
       --ref ~{reference_fasta} \
       --vcf ~{sep=' ' lofreq_vcfs} \
       --consensus ~{sep=' ' genome_fastas} \
-      --read-depths ~{sep=' ' read_depths} \
+      --read-depths ~{sep=' ' select_first([read_depths, []])} \
       ~{'--min-covered ' + min_genome_coverage} \
       ~{'--min-depth ' + min_read_depth} \
       ~{'--min-readcount ' + min_readcount} \
@@ -99,18 +99,18 @@ task polyphonia_detect_cross_contamination {
       ~{'--plate-size ' + plate_size} \
       ~{'--plate-columns ' + plate_columns} \
       ~{'--plate-rows ' + plate_rows} \
-      --compare-direct ~{true="TRUE" false="FALSE" compare_direct_neighbors} \
-      --compare-diagonal ~{true="TRUE" false="FALSE" compare_diagonal_neighbors} \
-      --compare-row ~{true="TRUE" false="FALSE" compare_full_row} \
-      --compare-column ~{true="TRUE" false="FALSE" compare_full_column} \
-      --compare-plate ~{true="TRUE" false="FALSE" compare_full_plate} \
+      --compare-direct ~{if select_first([compare_direct_neighbors, true]) then "TRUE" else "FALSE"} \
+      --compare-diagonal ~{if select_first([compare_diagonal_neighbors, false]) then "TRUE" else "FALSE"} \
+      --compare-row ~{if select_first([compare_full_row, false]) then "TRUE" else "FALSE"} \
+      --compare-column ~{if select_first([compare_full_column, false]) then "TRUE" else "FALSE"} \
+      --compare-plate ~{if select_first([compare_full_plate, false]) then "TRUE" else "FALSE"} \
       --output ~{out_basename}.txt \
       --out-figures figs \
       --cores `nproc` \
       --verbose TRUE \
       --overwrite TRUE \
-      --print-all-iSNVs ~{true="TRUE" false="FALSE" print_all_isnvs} \
-      --print-all ~{true="TRUE" false="FALSE" print_all}
+      --print-all-iSNVs ~{if select_first([print_all_isnvs, true]) then "TRUE" else "FALSE"} \
+      --print-all ~{if select_first([print_all, false]) then "TRUE" else "FALSE"}
   >>>
 
   output {
@@ -123,8 +123,8 @@ task polyphonia_detect_cross_contamination {
     docker: docker
     cpu:    4
     memory: "13 GB"
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
   }
@@ -136,7 +136,7 @@ task lofreq {
     File      reference_fasta
 
     String    out_basename = basename(aligned_bam, '.bam')
-    String    docker = "quay.io/broadinstitute/viral-phylo:2.5.21.0"
+    String    docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-phylo"
   }
   Int disk_size = 200
   command <<<
@@ -148,8 +148,8 @@ task lofreq {
     cp "~{aligned_bam}" aligned.bam
     python3<<CODE
     import shutil
-    import util.file
-    with util.file.fastas_with_sanitized_ids("~{reference_fasta}", use_tmp=True) as sanitized_fastas:
+    from viral_ngs.core import file as util_file
+    with util_file.fastas_with_sanitized_ids("~{reference_fasta}", use_tmp=True) as sanitized_fastas:
         shutil.copyfile(sanitized_fastas[0], 'reference.fasta')
     CODE
 
@@ -178,8 +178,8 @@ task lofreq {
     docker: docker
     cpu:    2
     memory: "3 GB"
-    disks:  "local-disk " + disk_size + " SSD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} SSD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -196,15 +196,15 @@ task isnvs_per_sample {
     Boolean removeDoublyMappedReads = true
 
     Int?    machine_mem_gb
-    String  docker = "quay.io/broadinstitute/viral-phylo:2.5.21.0"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-phylo"
 
     String  sample_name = basename(basename(basename(mapped_bam, ".bam"), ".all"), ".mapped")
   }
   
 
   command <<<
-    intrahost.py --version | tee VERSION
-    intrahost.py vphaser_one_sample \
+    intrahost --version | tee VERSION
+    intrahost vphaser_one_sample \
         ~{mapped_bam} \
         ~{assembly_fasta} \
         vphaser2.~{sample_name}.txt.gz \
@@ -220,7 +220,7 @@ task isnvs_per_sample {
   }
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 7]) + " GB"
+    memory: "~{select_first([machine_mem_gb, 7])} GB"
     dx_instance_type: "mem1_ssd1_v2_x8"
     maxRetries: 2
   }
@@ -239,7 +239,7 @@ task isnvs_vcf {
     Boolean        naiveFilter = false
 
     Int?           machine_mem_gb
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.5.21.0"
+    String         docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-phylo"
   }
 
   parameter_meta {
@@ -253,12 +253,12 @@ task isnvs_vcf {
   command <<<
     set -ex -o pipefail
 
-    intrahost.py --version | tee VERSION
+    intrahost --version | tee VERSION
 
-    SAMPLES="~{sep=' ' sampleNames}"
+    SAMPLES="~{sep=' ' select_first([sampleNames, []])}"
     if [ -n "$SAMPLES" ]; then SAMPLES="--samples $SAMPLES"; fi
 
-    providedSnpRefAccessions="~{sep=' ' snpEffRef}"
+    providedSnpRefAccessions="~{sep=' ' select_first([snpEffRef, []])}"
     if [ -n "$providedSnpRefAccessions" ]; then
       snpRefAccessions="$providedSnpRefAccessions";
     else
@@ -267,7 +267,7 @@ task isnvs_vcf {
 
     echo "snpRefAccessions: $snpRefAccessions"
 
-    intrahost.py merge_to_vcf \
+    intrahost merge_to_vcf \
         ~{reference_fasta} \
         isnvs.vcf.gz \
         $SAMPLES \
@@ -277,13 +277,13 @@ task isnvs_vcf {
         ~{true="--naive_filter" false="" naiveFilter} \
         --parse_accession
 
-    interhost.py snpEff \
+    interhost snpEff \
         isnvs.vcf.gz \
         $snpRefAccessions \
         isnvs.annot.vcf.gz \
         ~{'--emailAddress=' + emailAddress}
 
-    intrahost.py iSNV_table \
+    intrahost iSNV_table \
         isnvs.annot.vcf.gz \
         isnvs.annot.txt.gz
   >>>
@@ -298,7 +298,7 @@ task isnvs_vcf {
   }
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 4]) + " GB"
+    memory: "~{select_first([machine_mem_gb, 4])} GB"
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
   }
@@ -313,7 +313,7 @@ task annotate_vcf_snpeff {
     String?        emailAddress
 
     Int?           machine_mem_gb
-    String         docker = "quay.io/broadinstitute/viral-phylo:2.5.21.0"
+    String         docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-phylo"
 
     String         output_basename = basename(basename(in_vcf, ".gz"), ".vcf")
   }
@@ -331,9 +331,9 @@ task annotate_vcf_snpeff {
   command <<<
     set -ex -o pipefail
 
-    intrahost.py --version | tee VERSION
+    intrahost --version | tee VERSION
 
-    providedSnpRefAccessions="~{sep=' ' snpEffRef}"
+    providedSnpRefAccessions="~{sep=' ' select_first([snpEffRef, []])}"
     if [ -n "$providedSnpRefAccessions" ]; then
       snpRefAccessions="$providedSnpRefAccessions";
     else
@@ -378,7 +378,7 @@ task annotate_vcf_snpeff {
     bcftools index "$vcf_to_use"
     tabix -p vcf "$vcf_to_use"
 
-    interhost.py snpEff \
+    interhost snpEff \
         "$vcf_to_use" \
         $snpRefAccessions \
         "~{output_basename}.annot.vcf.gz" \
@@ -392,9 +392,9 @@ task annotate_vcf_snpeff {
   }
   runtime {
     docker: docker
-    memory: select_first([machine_mem_gb, 4]) + " GB"
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk: disk_size + " GB" # TES
+    memory: "~{select_first([machine_mem_gb, 4])} GB"
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
   }

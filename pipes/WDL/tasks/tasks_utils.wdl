@@ -17,8 +17,8 @@ task concatenate {
         docker: "ubuntu"
         memory: "1 GB"
         cpu:    cpus
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -52,7 +52,7 @@ task unpack_archive_to_bucket_path {
         # execution and resource requirements
         Int    disk_size      = ceil(3.0 * size(input_archive_files[0], "GB")) + 50
         Int    machine_mem_gb = 8
-        String docker         = "quay.io/broadinstitute/viral-core:2.5.21"
+        String docker         = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
     }
 
     parameter_meta {
@@ -206,10 +206,10 @@ task unpack_archive_to_bucket_path {
 
     runtime {
         docker: docker
-        memory: machine_mem_gb + " GB"
+        memory: "~{machine_mem_gb} GB"
         cpu:    16
-        disks:  "local-disk " + disk_size + " LOCAL"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} LOCAL"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x16"
         preemptible: 0
         maxRetries: 1
@@ -295,11 +295,11 @@ task zcat {
         { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
-        docker: "quay.io/broadinstitute/viral-core:2.5.21"
+        docker: "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
         memory: "1 GB"
         cpu:    cpus
-        disks:  "local-disk " + disk_size + " LOCAL"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} LOCAL"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -329,8 +329,8 @@ task sed {
         docker: "ubuntu"
         memory: "1 GB"
         cpu:    1
-        disks:  "local-disk " + disk_size + " LOCAL"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} LOCAL"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -354,11 +354,11 @@ task tar_extract {
         tar -xv ~{tar_opts} -f "~{tar_file}"
     >>>
     runtime {
-        docker: "quay.io/broadinstitute/viral-baseimage:0.3.0"
+        docker: "ghcr.io/broadinstitute/viral-ngs:3.0.6-baseimage"
         memory: "2 GB"
         cpu:    1
-        disks:  "local-disk " + disk_size + " LOCAL"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} LOCAL"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
         preemptible: 1
@@ -520,11 +520,11 @@ task download_from_url {
         printf "Downloaded file size (bytes): " && stat --format=%s  "~{download_subdir_local}/${downloaded_file_name}" | tee SIZE_OF_DOWNLOADED_FILE_BYTES
     >>>
     runtime {
-        docker: "quay.io/broadinstitute/viral-baseimage:0.3.0"
+        docker: "ghcr.io/broadinstitute/viral-ngs:3.0.6-baseimage"
         memory: "2 GB"
         cpu:    1
-        disks:  "local-disk " + disk_size + " LOCAL"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} LOCAL"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 0
         preemptible: 1
@@ -546,7 +546,7 @@ task sanitize_fasta_headers {
     File   in_fasta
     String out_filename = "~{basename(in_fasta, '.fasta')}-sanitized.fasta"
   }
-  String docker = "quay.io/broadinstitute/py3-bio:0.1.2"
+  String docker = "quay.io/broadinstitute/py3-bio:0.1.3"
   Int    disk_size = 375
   command <<<
     python3<<CODE
@@ -568,8 +568,8 @@ task sanitize_fasta_headers {
     docker: docker
     memory: "2 GB"
     cpu:    2
-    disks:  "local-disk " + disk_size + " LOCAL"
-    disk:   disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 1
   }
@@ -591,8 +591,8 @@ task fasta_to_ids {
         docker: "ubuntu"
         memory: "1 GB"
         cpu:    1
-        disks:  "local-disk " + disk_size + " LOCAL"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} LOCAL"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -616,8 +616,8 @@ task md5sum {
     docker: "ubuntu"
     memory: "1 GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
     maxRetries: 2
   }
@@ -689,8 +689,8 @@ task fetch_row_from_tsv {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
-      disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+      disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
@@ -730,8 +730,8 @@ task fetch_col_from_tsv {
     docker: "python:slim"
     memory: "1 GB"
     cpu: 1
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -859,9 +859,9 @@ task tsv_join {
   runtime {
     memory: "~{machine_mem_gb} GB"
     cpu: 4
-    docker: "quay.io/broadinstitute/viral-core:2.5.21"
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    docker: "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     maxRetries: 2
   }
@@ -896,8 +896,8 @@ task tsv_to_csv {
     memory: "2 GB"
     cpu: 1
     docker: "python:slim"
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -912,7 +912,7 @@ task tsv_drop_cols {
         File          in_tsv
         Array[String] drop_cols
         String        out_filename = basename(in_tsv, '.tsv') + ".drop.tsv"
-        String        docker = "quay.io/broadinstitute/py3-bio:0.1.2"
+        String        docker = "quay.io/broadinstitute/py3-bio:0.1.3"
     }
     Int disk_size = 50
     command <<<
@@ -931,8 +931,8 @@ task tsv_drop_cols {
         docker: docker
         memory: "2 GB"
         cpu:    1
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
@@ -946,7 +946,7 @@ task tsv_stack {
   input {
     Array[File]+ input_tsvs
     String       out_basename
-    String       docker = "quay.io/broadinstitute/viral-core:2.5.21"
+    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
 
   Int disk_size = 50
@@ -966,8 +966,8 @@ task tsv_stack {
     memory: "1 GB"
     cpu: 1
     docker: docker
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -995,8 +995,8 @@ task cat_except_headers {
     memory: "1 GB"
     cpu: 1
     docker: "ubuntu"
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -1016,8 +1016,8 @@ task make_empty_file {
     memory: "1 GB"
     cpu: 1
     docker: "ubuntu"
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -1039,8 +1039,8 @@ task rename_file {
     memory: "2 GB"
     cpu: 2
     docker: "ubuntu"
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -1089,8 +1089,8 @@ task unique_strings {
     memory: "1 GB"
     cpu: 1
     docker: "python:slim"
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -1111,8 +1111,8 @@ task unique_arrays {
     memory: "1 GB"
     cpu: 1
     docker: "ubuntu"
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -1136,9 +1136,9 @@ task today {
   runtime {
     memory: "1 GB"
     cpu: 1
-    docker: "quay.io/broadinstitute/viral-baseimage:0.3.0"
-    disks:  "local-disk " + disk_size + " HDD"
-    disk: disk_size + " GB" # TES
+    docker: "ghcr.io/broadinstitute/viral-ngs:3.0.6-baseimage"
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
   }
@@ -1171,7 +1171,7 @@ task s3_copy {
     Array[String] out_uris = read_lines("OUT_URIS")
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-baseimage:0.3.0"
+    docker: "ghcr.io/broadinstitute/viral-ngs:3.0.6-baseimage"
     memory: "2 GB"
     cpu: cpus
     disks: "local-disk ~{disk_gb} SSD"
@@ -1217,7 +1217,7 @@ task filter_sequences_by_length {
         File   sequences_fasta
         Int    min_non_N = 1
 
-        String docker = "quay.io/broadinstitute/viral-core:2.5.21"
+        String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
         Int    disk_size = 750
     }
     parameter_meta {
@@ -1258,8 +1258,8 @@ task filter_sequences_by_length {
         docker: docker
         memory: "1 GB"
         cpu :   1
-        disks:  "local-disk " + disk_size + " HDD"
-        disk: disk_size + " GB" # TES
+        disks: "local-disk ~{disk_size} HDD"
+        disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
     }
