@@ -19,9 +19,6 @@ workflow classify_kallisto_single {
         String          technology
         String          parity
 
-        Boolean         h5ad=false
-        Boolean         loom=false
-        Boolean         protein=false
 
         File            kallisto_index
         File            id_to_taxa_map  
@@ -45,16 +42,6 @@ workflow classify_kallisto_single {
         parity: {
           description: "Parity of the reads ('single' or 'paired')."
         }
-        h5ad: {
-          description: "Output matrix in HDF5 format. Default is false."
-        }
-        loom: {
-          description: "Output a loom file. Default is false"
-        }
-        protein: {
-          description: "Whether the extraction process is dealing with amino-acid sequences.",
-          options: ["true", "false"]
-        }
         kallisto_index: {
           description: "Kallisto index file for the reference transcriptome.",
           patterns: ["*.idx", "*.idx.gz", "*.idx.zst"]
@@ -76,9 +63,6 @@ workflow classify_kallisto_single {
             kmer_size = kmer_size,
             technology = technology,
             parity = parity,
-            h5ad = h5ad,
-            loom = loom,
-            protein = protein,
             kb_index = kallisto_index,
             t2g = t2g,
     }
@@ -87,7 +71,6 @@ workflow classify_kallisto_single {
         input:
             reads_bam = reads_bam,
             h5ad_file = kallisto_classify.kb_count_tar,
-            protein = protein,
             kb_index = kallisto_index,
             t2g = t2g,
             threshold = threshold
