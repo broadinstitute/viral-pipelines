@@ -1014,12 +1014,12 @@ task kallisto {
 
     printf "%s\n" "$(kb -h 2>&1 | grep "kb_python" | tee VERSION)"
     kallisto version | tee -a VERSION
-    metagenomics.py --version | tee -a VERSION
+    metagenomics --version | tee -a VERSION
 
     paste -sd ';' VERSION | sed 's/;/; /g' > VERSION.tmp && mv VERSION.tmp VERSION
 
     if [[ ${reads_bam} == *.bam ]]; then
-        metagenomics.py kb \
+        metagenomics kb \
           "${reads_bam}" \
           --index "${kb_index}" \
           --t2g "${t2g}" \
@@ -1112,7 +1112,7 @@ task build_kallisto_db {
 
     printf "kb_python %s\n" "$(kb -h 2>&1 | grep "kb_python" | cut -d" " -f2)" | tee VERSION
     kallisto version | tee -a VERSION    
-    metagenomics.py --version | tee -a VERSION
+    metagenomics --version | tee -a VERSION
 
     if [[ ${reference_sequences} == *.gz ]]; then
       gunzip -c "${reference_sequences}" > reference_sequences.fasta
@@ -1122,7 +1122,7 @@ task build_kallisto_db {
     fi
 
     # build kb database
-    metagenomics.py kb_build \
+    metagenomics kb_build \
       ${true='--protein' false='' protein} \
       --kmer_len=${kmer_size} \
       --workflow=${workflow_type} \
@@ -1202,7 +1202,6 @@ task kallisto_extract {
 
   command <<<
     set -ex -o pipefail
-    TARGET_BOOL=false
 
     if [ -z "$TMPDIR" ]; then
       export TMPDIR=$(pwd)
@@ -1210,7 +1209,7 @@ task kallisto_extract {
 
     printf "%s\n" "$(kb -h 2>&1 | grep "kb_python" | tee VERSION)"
     kallisto version | tee -a VERSION
-    metagenomics.py --version | tee -a VERSION
+    metagenomics --version | tee -a VERSION
 
     paste -sd ';' VERSION | sed 's/;/; /g' > VERSION.tmp && mv VERSION.tmp VERSION
 
@@ -1223,7 +1222,7 @@ task kallisto_extract {
       TARGET_SOURCE="--targets $TARGET_IDS"
     fi
 
-    metagenomics.py kb_extract \
+    metagenomics kb_extract \
       "${reads_bam}" \
       --index "${kb_index}" \
       --t2g "${t2g}" \
@@ -1271,11 +1270,11 @@ task report_primary_kallisto_taxa {
 
     printf "%s\n" "$(kb -h 2>&1 | grep "kb_python" | tee VERSION)"
     kallisto version | tee -a VERSION
-    metagenomics.py --version | tee -a VERSION
+    metagenomics --version | tee -a VERSION
 
     paste -sd ';' VERSION | sed 's/;/; /g' > VERSION.tmp && mv VERSION.tmp VERSION
 
-    metagenomics.py kb_top_taxa \
+    metagenomics kb_top_taxa \
       "~{kb_count_tar}" \
       "~{out_basename}.ranked_focal_report.tsv" \
       --id-to-tax-map "~{id_to_taxon_map}" \
@@ -1344,11 +1343,11 @@ task kallisto_merge_h5ads {
 
     printf "%s\n" "$(kb -h 2>&1 | grep "kb_python" | tee VERSION)"
     kallisto version | tee -a VERSION
-    metagenomics.py --version | tee -a VERSION
+    metagenomics --version | tee -a VERSION
 
     paste -sd ';' VERSION | sed 's/;/; /g' > VERSION.tmp && mv VERSION.tmp VERSION
 
-    metagenomics.py kb_merge_h5ads \
+    metagenomics kb_merge_h5ads \
       "~{sep='" "' in_count_tars}" \
       --out-h5ad "${out_basename}.h5ad" \
       --loglevel=DEBUG

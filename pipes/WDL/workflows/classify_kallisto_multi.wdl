@@ -2,7 +2,7 @@ version 1.0
 
 import "../tasks/tasks_metagenomics.wdl" as metagenomics
 
-workflow kb_classify_reads {
+workflow classify_kallisto_multi {
     meta {
         description: "Runs multiple FASTQ/BAM files through kb classify process"
         author: "Broad Viral Genomics"
@@ -87,7 +87,7 @@ workflow kb_classify_reads {
     call metagenomics.kallisto_merge_h5ads as merge_h5ads {
         input:
             in_count_tars = classify_kallisto_single.kb_count_tar,
-            out_basename = "merged_kb_classify",
+            out_basename = "merged_kallisto_classify",
     }
 
     # Now we need to go ahead and extract the reads that were classified by kallisto
