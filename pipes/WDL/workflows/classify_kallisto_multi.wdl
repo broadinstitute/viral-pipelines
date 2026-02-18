@@ -36,7 +36,7 @@ workflow kb_classify_reads {
           description: "K-mer size to use for classification. Default is 31."
         }
         threshold: {
-          description: "When extracting hit/gene ID's from an a5ad before extract, minimum read threshold to filter on. Default is 1"
+          description: "When extracting hit/gene ID's from an h5ad before extract, minimum read threshold to filter on. Default is 1"
         }
         technology: {
           description: "Technology used for sequencing (e.g., '10xv2', '10xv3')."
