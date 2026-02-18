@@ -970,7 +970,7 @@ task kallisto {
     Boolean  loom=false
     Boolean  protein=false
 
-    String   docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+    String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
   }
 
   parameter_meta {
@@ -1018,50 +1018,50 @@ task kallisto {
 
     paste -sd ';' VERSION | sed 's/;/; /g' > VERSION.tmp && mv VERSION.tmp VERSION
 
-    if [[ ${reads_bam} == *.bam ]]; then
+    if [[ ~{reads_bam} == *.bam ]]; then
         metagenomics kb \
-          "${reads_bam}" \
-          --index "${kb_index}" \
-          --t2g "${t2g}" \
-          --kmer_len ${kmer_size} \
-          --technology ${technology} \
-          --parity ${parity} \
+          "~{reads_bam}" \
+          --index "~{kb_index}" \
+          --t2g "~{t2g}" \
+          --kmer_len ~{kmer_size} \
+          --technology ~{technology} \
+          --parity ~{parity} \
           ~{if h5ad then "--h5ad" else ""} \
           ~{if loom then "--loom" else ""} \
           ~{true='--protein' false='' protein} \
-          --out_dir ${out_basename}_count \
+          --out_dir ~{out_basename}_count \
           --loglevel=DEBUG
     else # we have a single-ended fastq file so just call it directly
         kb count \
           --kallisto kallisto \
           -t `nproc` \
-          -k ${kmer_size} \
+          -k ~{kmer_size} \
           --parity single \
-          -i "${kb_index}" \
-          -g "${t2g}" \
-          -o "${out_basename}_count" \
-          -x ${technology} \
+          -i "~{kb_index}" \
+          -g "~{t2g}" \
+          -o "~{out_basename}_count" \
+          -x ~{technology} \
           ~{if h5ad then "--h5ad" else ""} \
           ~{if loom then "--loom" else ""} \
           ~{true='--aa' false='' protein} \
-          "${reads_bam}"
+          "~{reads_bam}"
     fi
 
     # Since we are running this file-by-file we need to add our sample name to the matrix.cells file
-    bn=$(basename "${reads_bam}")
+    bn=$(basename "~{reads_bam}")
     sample_name=$(echo "$bn" | cut -d'.' -f1)
-    echo "$sample_name" > "${out_basename}_count/matrix.cells"
+    echo "$sample_name" > "~{out_basename}_count/matrix.cells"
 
-    tar -c -C "${out_basename}_count" . | zstd > "${out_basename}_kb_count.tar.zst"
+    tar -c -C "~{out_basename}_count" . | zstd > "~{out_basename}_kb_count.tar.zst"
   >>>
 
   output {
-    File    kb_count_tar  = "${out_basename}_kb_count.tar.zst"
+    File    kb_count_tar  = "~{out_basename}_kb_count.tar.zst"
     String  viralngs_version    = read_string("VERSION")
   }
 
   runtime {
-    docker: "${docker}"
+    docker: "~{docker}"
     memory: "32 GB"
     cpu: 16
     disks: "local-disk 350 LOCAL"
@@ -1083,7 +1083,7 @@ task build_kallisto_db {
     Int        kmer_size=31
     String?     workflow_type
 
-    String      docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+    String      docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
   }
 
   parameter_meta {
@@ -1114,33 +1114,33 @@ task build_kallisto_db {
     kallisto version | tee -a VERSION    
     metagenomics --version | tee -a VERSION
 
-    if [[ ${reference_sequences} == *.gz ]]; then
-      gunzip -c "${reference_sequences}" > reference_sequences.fasta
+    if [[ ~{reference_sequences} == *.gz ]]; then
+      gunzip -c "~{reference_sequences}" > reference_sequences.fasta
       REF_FASTA=reference_sequences.fasta
     else
-      REF_FASTA="${reference_sequences}"
+      REF_FASTA="~{reference_sequences}"
     fi
 
     # build kb database
     metagenomics kb_build \
-      ${true='--protein' false='' protein} \
-      --kmer_len=${kmer_size} \
+      ~{true='--protein' false='' protein} \
+      --kmer_len=~{kmer_size} \
       ~{if defined(workflow_type) then "--workflow=" + workflow_type else ""} \
-      --index="${out_basename}.idx" \
+      --index="~{out_basename}.idx" \
       $REF_FASTA \
       --loglevel=DEBUG
 
 
-       tar -c "${out_basename}.idx" | zstd > "${out_basename}.idx.tar.zst"
+       tar -c "~{out_basename}.idx" | zstd > "~{out_basename}.idx.tar.zst"
   >>>
 
   output {
-    File        kb_index   = "${out_basename}.idx.tar.zst"
+    File        kb_index   = "~{out_basename}.idx.tar.zst"
     String      viralngs_version = read_string("VERSION")
   }
 
   runtime {
-    docker: "${docker}"
+    docker: "~{docker}"
     memory: "32 GB"
     disks: "local-disk 750 LOCAL"
     cpu: 16
@@ -1164,7 +1164,7 @@ task kallisto_extract {
     Int             threshold=1
     Boolean         protein=false
 
-     String          docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+     String          docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
   }
 
   parameter_meta {
@@ -1223,25 +1223,25 @@ task kallisto_extract {
     fi
 
     metagenomics kb_extract \
-      "${reads_bam}" \
-      --index "${kb_index}" \
-      --t2g "${t2g}" \
-      --out_dir "${out_basename}_extract" \
+      "~{reads_bam}" \
+      --index "~{kb_index}" \
+      --t2g "~{t2g}" \
+      --out_dir "~{out_basename}_extract" \
       ~{if protein then "--protein" else ""} \
-      --threshold ${threshold} \
+      --threshold ~{threshold} \
       $TARGET_SOURCE \
       --loglevel=DEBUG
 
-    tar -c -C "${out_basename}_extract" . | zstd > "${out_basename}_kb_extract.tar.zst"
+    tar -c -C "~{out_basename}_extract" . | zstd > "~{out_basename}_kb_extract.tar.zst"
   >>>
 
   output {
-    File    kb_extract_tar    = "${out_basename}_kb_extract.tar.zst"
+    File    kb_extract_tar    = "~{out_basename}_kb_extract.tar.zst"
     String  viralngs_version  = read_string("VERSION")
   }
 
   runtime {
-    docker: "${docker}"
+    docker: "~{docker}"
     memory: "32 GB"
     cpu: 16
     disks: "local-disk 350 LOCAL"
@@ -1259,7 +1259,7 @@ task report_primary_kallisto_taxa {
     File          id_to_taxon_map
     String        focal_taxon = "Viruses"
 
-    String        docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+    String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
   }
   String out_basename = sub(basename(kb_count_tar, ".tar.zst"), "_kb_count", "")
   Int disk_size = 200
@@ -1320,7 +1320,7 @@ task kallisto_merge_h5ads {
     Array[File]     in_count_tars
     String          out_basename
 
-    String          docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
+    String          docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
   }
 
   parameter_meta {
@@ -1349,17 +1349,17 @@ task kallisto_merge_h5ads {
 
     metagenomics kb_merge_h5ads \
       "~{sep='" "' in_count_tars}" \
-      --out-h5ad "${out_basename}.h5ad" \
+      --out-h5ad "~{out_basename}.h5ad" \
       --loglevel=DEBUG
    >>>
 
   output {
-    File    kb_merged_h5ad        = "${out_basename}.h5ad"
+    File    kb_merged_h5ad        = "~{out_basename}.h5ad"
     String  viralngs_version      = read_string("VERSION")
   }
 
   runtime {
-    docker: "${docker}"
+    docker: "~{docker}"
     memory: "16 GB"
     cpu: 16
     disks: "local-disk 350 LOCAL"
