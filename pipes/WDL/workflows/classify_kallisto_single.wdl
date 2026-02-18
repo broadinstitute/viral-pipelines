@@ -37,7 +37,7 @@ workflow classify_kallisto_single {
           description: "K-mer size to use for classification. Default is 31."
         }
         threshold: {
-          description: "When extracting hit/gene ID's from an a5ad before extract, minimum read threshold to filter on. Default is 1"
+          description: "When extracting hit/gene ID's from an h5ad before extract, minimum read threshold to filter on. Default is 1"
         }
         technology: {
           description: "Technology used for sequencing (e.g., '10xv2', '10xv3')."
@@ -100,8 +100,6 @@ workflow classify_kallisto_single {
     }
 
     ## TODO: Re-tag all of our sequence IDs from extract reads with our sample names + kallisto DB IDs
-    ## TODO: Parse kallisto read summaries to create a new file containing taxonomic ID's resolve + read IDs
-    ## TODO: Run kallisto - kallisto read classifier script to create a classification table
     
     output {
         File  kb_classify_reads                 = kallisto_classify.kb_count_tar

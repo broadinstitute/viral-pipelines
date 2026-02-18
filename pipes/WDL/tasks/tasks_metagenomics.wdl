@@ -980,7 +980,7 @@ task kallisto {
     }
     kb_index: {
       description: "Pre-built kb index tarball",
-      patterns: ["*.index"]
+      patterns: ["*.idx", "*.index"]
     }
     t2g: {
       description: "Transcript-to-gene mapping file. Two-column TSV with transcript IDs in first column and gene IDs in second column.",
@@ -1080,7 +1080,7 @@ task build_kallisto_db {
     File        reference_sequences
     Boolean     protein=false
 
-    Int?        kmer_size=31
+    Int        kmer_size=31
     String?     workflow_type
 
     String      docker = "quay.io/broadinstitute/viral-classify:2.5.21.0"
@@ -1438,7 +1438,7 @@ task classify_virnucpro {
     }
   }
 
-  String basename = basename(basename(basename(basename(reads_input, ".bam"), ".fasta.gz"), ".fa.gz"), ".fasta")
+  String basename = sub(basename(reads_input), "\\.(bam|fasta\\.gz|fa\\.gz|fasta|fa)$", "")
 
   command <<<
     set -ex -o pipefail

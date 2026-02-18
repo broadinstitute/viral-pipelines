@@ -109,8 +109,6 @@ workflow kb_classify_reads {
     }
 
     ## TODO: Re-tag all of our sequence IDs from extract reads with our sample names + kallisto DB IDs
-    ## TODO: Parse kraken2 read summaries to create a new file containing taxonomic ID's resolve + read IDs
-    ## TODO: Run kraken2 - kallisto read classifier script to create a classification table
     
     output {
         Array[File] kb_classify_reads   = classify_kallisto_single.kb_count_tar
