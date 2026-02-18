@@ -1471,16 +1471,16 @@ task classify_virnucpro {
   runtime {
     docker: docker
     dockerRunOptions: "--tmpfs /dev/shm:rw,nosuid,nodev,size=16g"
-    memory: "128 GB"
-    cpu: 64
+    memory: "30 GB"
+    cpu: 8
     disks: "local-disk 120 SSD"
     disk: "120 GB"
     gpu: true
     dx_instance_type: "mem1_ssd1_gpu2_x8"
     dx_timeout: "6H"
-    acceleratorType: select_first([accelerator_type, "nvidia-tesla-v100"])
+    acceleratorType: select_first([accelerator_type, "nvidia-tesla-t4"])
     acceleratorCount: select_first([accelerator_count, 1])
-    gpuType: select_first([gpu_type, "nvidia-tesla-v100"])
+    gpuType: select_first([gpu_type, "nvidia-tesla-t4"])
     gpuCount: select_first([gpu_count, 1])
     vm_size: select_first([vm_size, "Standard_NC6"])
     maxRetries: 1
