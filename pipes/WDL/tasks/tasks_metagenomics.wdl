@@ -1125,7 +1125,7 @@ task build_kallisto_db {
     metagenomics kb_build \
       ${true='--protein' false='' protein} \
       --kmer_len=${kmer_size} \
-      --workflow=${workflow_type} \
+      ~{if defined(workflow_type) then "--workflow=" + workflow_type else ""} \
       --index="${out_basename}.idx" \
       $REF_FASTA \
       --loglevel=DEBUG
