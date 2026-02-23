@@ -549,6 +549,59 @@ task FastqToUBAM {
   }
 }
 
+task BamToPAF {
+  meta {
+    description: "Convert BAM file to PAF format using Picard and PAFtools. This task first converts the BAM to SAM format using Picard's SamFormatConverter, then uses PAFtools sam2paf to convert the SAM to PAF. The output is a PAF file containing alignment information for each read."
+  }
+  input {
+    File    aligned_bam
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
+  }
+  Int disk_size = ceil(size(aligned_bam, "GB") * 10 + 50)
+
+  command <<<
+    set -ex -o pipefail
+
+    read_utils --version | tee VERSION
+
+    # Convert BAM to SAM using Picard
+    picard -Xmx4g \
+      SamFormatConverter \
+      -I "~{aligned_bam}" \
+      -O "~{basename(aligned_bam, '.bam')}.sam" \
+      --loglevel=DEBUG
+
+    # Convert SAM to PAF using PAFtools
+    paftools.js sam2paf \
+      "~{basename(aligned_bam, '.bam')}.sam" \
+      > "~{basename(aligned_bam, '.bam')}.paf"
+
+
+    cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+    cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+    set +o pipefail
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
+  >>>
+
+  output {
+    File   paf_file        = "~{basename(aligned_bam, '.bam')}.paf"
+    String viralngs_version = read_string("VERSION")
+
+    Int    max_ram_gb       = ceil(read_float("MEM_BYTES")/1000000000)
+    Int    runtime_sec      = ceil(read_float("UPTIME_SEC"))
+    Int    cpu_load_15min   = ceil(read_float("LOAD_15M"))
+  }
+  runtime {
+    docker: docker
+    memory: "8 GB"
+    cpu: 2
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    maxRetries: 2
+  }
+}
+
 task read_depths {
   input {
     File      aligned_bam
