@@ -603,6 +603,93 @@ task aggregate_metagenomics_reports {
   }
 }
 
+task align_and_generate_reads_report {
+  input {
+    File   reads_bam
+    File   ref_db
+
+    Int?   cpu
+    Int?   machine_mem_gb
+    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
+  }
+
+  String  reads_basename=basename(reads_bam, ".bam")
+  String  ref_basename=basename(ref_db, ".fasta")
+  Int disk_size = ceil((3 * size(reads_bam, "GB") + 2 * size(ref_db, "GB") + 150) / 375.0) * 375
+
+  # Autoscale CPU based on input size: 4 CPUs for small inputs, up to 96 CPUs for larger inputs
+  # Linear scaling: 4 + (input_GB / 15) * 60, capped at 96, rounded to nearest multiple of 4
+  # NOTE: Previously capped at 16 due to minimap2_idxstats bottleneck (broadinstitute/viral-core#145), fixed in viral-core 2.5.12
+  Float        cpu_unclamped = 4.0 + (size(reads_bam, "GB") / 15.0) * 60.0
+  Int          cpu_actual = select_first([cpu, floor(((if cpu_unclamped > 96.0 then 96.0 else cpu_unclamped) + 2.0) / 4.0) * 4])
+  # Memory scales with CPU at 2x ratio (default), or use override
+  Int          machine_mem_gb_actual = select_first([machine_mem_gb, cpu_actual * 2])
+
+  parameter_meta {
+    reads_bam: {
+      description: "Unaligned reads in BAM format",
+      pattern: ["*.bam"],
+      category: "required"
+    }
+    ref_db: {
+      description: "Reference genome in FASTA format",
+      pattern: ["*.FASTA"],
+      category: "required"
+    }
+  }
+  command <<<
+    set -ex -o pipefail
+
+    read_utils --version | tee VERSION
+
+    ln -s "~{reads_bam}" "~{reads_basename}.bam"
+
+    reads_utils align_and_fix \
+      "~{reads_basename}.bam" \
+      "~{ref_db}" \
+      --outputBamAll "~{reads_basename}.aligned.bam" \
+      --aligned "minimap2" \
+      --skipMarkDupes \
+      --loglevel=DEBUG
+
+    ## Temporarily convert to SAM file to run PAFtools sam2paf
+    picard $XMX SamFormatConverter \
+      -R reference.fasta \
+      -I "~{aligned_bam}" \
+      -O "~{reads_basename}.aligned.sam" \
+
+    ## Now run paftools.js to convert our SAM file to PAF 
+    paftools.js sam2paf \
+      "~{reads_basename}.aligned.sam" \
+      > "~{reads_basename}.~{ref_basename}.paf"
+
+    cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
+    cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
+    set +o pipefail
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
+  >>>
+
+  output {
+    File   aligned_paf     = "~{reads_basename}.~{ref_basename}.paf"
+    File   aligned_bam      = "~{reads_basename}.aligned.bam"
+
+    Int    max_ram_gb       = ceil(read_float("MEM_BYTES")/1000000000)
+    Int    runtime_sec      = ceil(read_float("UPTIME_SEC"))
+    Int    cpu_load_15min   = ceil(read_float("LOAD_15M"))
+    String viralngs_version = read_string("VERSION")
+  }
+
+  runtime {
+    memory: "~{machine_mem_gb_actual} GB"
+    cpu:    cpu_actual
+    docker: docker
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x4"
+    maxRetries: 2
+  }
+}
+
 task MultiQC {
   input {
     Array[File]    input_files
