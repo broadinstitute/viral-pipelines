@@ -568,8 +568,7 @@ task BamToPAF {
     picard -Xmx4g \
       SamFormatConverter \
       -I "~{aligned_bam}" \
-      -O "~{basename(aligned_bam, '.bam')}.sam" \
-      --loglevel=DEBUG
+      -O "~{basename(aligned_bam, '.bam')}.sam" 
 
     # Convert SAM to PAF using PAFtools
     paftools.js sam2paf \
