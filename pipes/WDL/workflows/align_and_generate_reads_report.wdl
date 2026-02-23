@@ -10,17 +10,21 @@ workflow align_and_generate_reads_report {
         allowNestedInputs: true
     }
     parameter_meta {
-        reads_unmapped_bams: {
+        reads_unmapped_bam: {
             description: "Unaligned reads in BAM format",
             patterns: ["*.bam"]
         }
         ref_db: {
-            description: "File containing sequences against which reads should me aligned and counted",
+            description: "File containing sequences against which reads should be aligned and counted",
             patterns: ["*.fasta","*.fa"]
         }
     }
 
-    call reports.align_and_generate_reads_report
+    call reports.align_and_generate_reads_report {
+        input:
+            reads_unmapped_bam = reads_bam,
+            ref_db = ref_db
+    }
 
     output {
         File   aligned_reads_paf     = align_and_generate_reads_report.aligned_paf

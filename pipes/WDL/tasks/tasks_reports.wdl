@@ -655,8 +655,8 @@ task align_and_generate_reads_report {
     ## Temporarily convert to SAM file to run PAFtools sam2paf
     picard $XMX SamFormatConverter \
       -R reference.fasta \
-      -I "~{aligned_bam}" \
-      -O "~{reads_basename}.aligned.sam" \
+      -I "~{reads_basename}.aligned.bam" \
+      -O "~{reads_basename}.aligned.sam" 
 
     ## Now run paftools.js to convert our SAM file to PAF 
     paftools.js sam2paf \
