@@ -315,4 +315,4 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/classify_virnucpro_multi.wdl
   - name: align_and_generate_reads_report
     subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/align_and_generate_reads_report.wdl
+    primaryDescriptorPath: /pipes/WDL/workflows/align_and_generate_PAF.wdl

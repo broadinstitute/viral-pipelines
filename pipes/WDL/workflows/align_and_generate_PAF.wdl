@@ -3,9 +3,9 @@ version 1.0
 import "../tasks/tasks_assembly.wdl" as assembly
 import "../tasks/tasks_read_utils.wdl" as read_utils
 
-workflow align_and_generate_reads_report {
+workflow align_and_generate_PAF {
     meta {
-        description: "Aligns and generates a report of alignment results for a set of unmapped BAM files against a reference database. The report includes per-read mapping level statistics."
+        description: "Aligns and generates a report of alignment results (in PAF format) for a set of unmapped BAM files against a reference database."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
         allowNestedInputs: true
@@ -27,5 +27,4 @@ workflow align_and_generate_reads_report {
         
         String viral_core_version            = align.viralngs_version
     }
-
 }
