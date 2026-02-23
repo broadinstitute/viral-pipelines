@@ -15,7 +15,7 @@ workflow align_and_generate_reads_report {
 
     call read_utils.BamToPAF {
         input:
-            aligned_bam = align.aligned_bam,
+            aligned_bam = align.aligned_bam
     }
 
     output {

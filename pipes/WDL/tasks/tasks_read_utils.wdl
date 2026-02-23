@@ -584,7 +584,7 @@ task BamToPAF {
   >>>
 
   output {
-    File   paf_file        = "~{basename(aligned_bam, '.bam')}.paf"
+    File   aligned_paf      = "~{basename(aligned_bam, '.bam')}.paf"
     String viralngs_version = read_string("VERSION")
 
     Int    max_ram_gb       = ceil(read_float("MEM_BYTES")/1000000000)
