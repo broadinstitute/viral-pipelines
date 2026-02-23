@@ -575,7 +575,19 @@ task BamToPAF {
       "~{basename(aligned_bam, '.bam')}.sam" \
       > "~{basename(aligned_bam, '.bam')}.paf"
 
+    # Add BLAST-like identity and query coverage to PAF file
+    awk -v OFS='\t' '{
+        id = $10/$11
+        qcov = ($4-$3)/$2
+        tags = ""
+        for(i=13; i<=NF; i++) tags = (tags == "" ? $i : tags ";" $i)
+        print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,
+              tags, id, qcov
+    }' "~{basename(aligned_bam, '.bam')}.paf" > tmp && mv tmp "~{basename(aligned_bam, '.bam')}.paf"
 
+    ## Gunzip our paf file as they can get large
+    gzip -f "~{basename(aligned_bam, '.bam')}.paf"
+  
     cat /proc/uptime | cut -f 1 -d ' ' > UPTIME_SEC
     cat /proc/loadavg | cut -f 3 -d ' ' > LOAD_15M
     set +o pipefail
