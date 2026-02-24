@@ -284,6 +284,7 @@ task check_terra_env {
     docker: docker
     memory: "1 GB"
     cpu: 1
+    maxRetries: 2
   }
 }
 
@@ -414,6 +415,7 @@ task download_entities_tsv {
     docker: docker
     memory: "2 GB"
     cpu: 1
+    maxRetries: 2
   }
   output {
     File tsv_file = '~{outname}'
@@ -593,6 +595,7 @@ task create_or_update_sample_tables {
     docker: docker
     memory: "2 GB"
     cpu: 1
+    maxRetries: 2
   }
   output {
     File library_metadata_tsv = "library_metadata.tsv"

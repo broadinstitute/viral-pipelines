@@ -151,6 +151,7 @@ task Fetch_SRA_to_BAM {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
+        maxRetries: 2
     }
 }
 
@@ -241,6 +242,7 @@ task biosample_tsv_filter_preexisting {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
+        maxRetries: 2
     }
 }
 
@@ -272,6 +274,7 @@ task fetch_biosamples {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
+        maxRetries: 2
     }
 }
 
