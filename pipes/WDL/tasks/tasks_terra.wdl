@@ -27,7 +27,6 @@ task gcs_copy {
     docker: "ghcr.io/broadinstitute/viral-ngs:3.0.6-baseimage"
     memory: "1 GB"
     cpu: 1
-    maxRetries: 1
   }
 }
 
@@ -285,7 +284,6 @@ task check_terra_env {
     docker: docker
     memory: "1 GB"
     cpu: 1
-    maxRetries: 1
   }
 }
 
@@ -416,7 +414,6 @@ task download_entities_tsv {
     docker: docker
     memory: "2 GB"
     cpu: 1
-    maxRetries: 2
   }
   output {
     File tsv_file = '~{outname}'
@@ -596,7 +593,6 @@ task create_or_update_sample_tables {
     docker: docker
     memory: "2 GB"
     cpu: 1
-    maxRetries: 2
   }
   output {
     File library_metadata_tsv = "library_metadata.tsv"
@@ -779,6 +775,5 @@ task find_illumina_files_in_directory {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
