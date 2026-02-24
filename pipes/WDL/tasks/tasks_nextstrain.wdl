@@ -43,7 +43,6 @@ task taxid_to_nextclade_dataset_name {
         disks: "local-disk 100 HDD"
         disk:  "100 GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
     }
     output {
         String nextclade_dataset_name = read_string("nextclade_dataset_name.str")
@@ -125,7 +124,6 @@ task nextclade_one_sample {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
     }
     output {
         String nextclade_version = read_string("VERSION")
@@ -233,7 +231,6 @@ task nextclade_many_samples {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x4"
-        maxRetries: 2
     }
     output {
         Map[String,String] nextclade_clade   = read_json("NEXTCLADE_CLADE.json")
@@ -319,7 +316,6 @@ task nextmeta_prep {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -433,7 +429,6 @@ task derived_cols {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
     }
     output {
         File derived_metadata = "~{basename}.derived_cols.txt"
@@ -481,7 +476,6 @@ task filter_segments {
         disks: "local-disk ~{disk_size} LOCAL"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
     }
     output {
         File assembly_of_segment = stdout()
@@ -627,7 +621,6 @@ task nextstrain_build_subsample {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem3_ssd1_v2_x8"
-        maxRetries: 2
     }
     output {
         File            subsampled_msa  = "ncov/results/~{build_name}/~{build_name}_subsampled_sequences.fasta"
@@ -661,7 +654,6 @@ task nextstrain_ncov_defaults {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
     }
     output {
         File clades_tsv      = "defaults/clades.tsv"
@@ -719,7 +711,6 @@ task nextstrain_deduplicate_sequences {
         disks: "local-disk ~{disk_size} LOCAL"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
-        maxRetries: 2
     }
     output {
         File sequences_deduplicated_fasta = "~{out_filename}"
@@ -783,7 +774,6 @@ task nextstrain_ncov_sanitize_gisaid_data {
         disks: "local-disk ~{disk_size} LOCAL"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
-        maxRetries: 2
     }
     output {
         File sequences_gisaid_sanitized_fasta = "~{out_basename}_sequences_sanitized_for_nextstrain.fasta.gz"
@@ -877,7 +867,6 @@ task filter_subsample_sequences {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x4"
         preemptible: 1
-        maxRetries: 2
     }
     output {
         File   filtered_fasta    = out_fname
@@ -975,7 +964,6 @@ task filter_sequences_to_list {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x4"
         preemptible: 1
-        maxRetries: 2
     }
     output {
         File   filtered_fasta    = out_fname
@@ -1068,7 +1056,6 @@ task mafft_one_chr {
         disk: "~{disk_size} GB" # TES
         preemptible: 0
         dx_instance_type: "mem3_ssd1_v2_x36"
-        maxRetries: 2
     }
     output {
         File   aligned_sequences = "~{basename}_aligned.fasta"
@@ -1176,7 +1163,6 @@ task mafft_one_chr_chunked {
         disk: "~{disk_size} GB" # TES
         preemptible: 0
         dx_instance_type: "mem3_ssd1_v2_x36"
-        maxRetries: 2
     }
     output {
         File   aligned_sequences = "~{basename}_aligned.fasta"
@@ -1227,7 +1213,6 @@ task augur_mafft_align {
         disk: "~{disk_size} GB" # TES
         preemptible: 0
         dx_instance_type: "mem3_ssd2_v2_x32"
-        maxRetries: 2
     }
     output {
         File   aligned_sequences = "~{basename}_aligned.fasta"
@@ -1258,7 +1243,6 @@ task snp_sites {
         disk: "~{disk_size} GB" # TES
         preemptible: 0
         dx_instance_type: "mem3_ssd1_v2_x4"
-        maxRetries: 2
     }
     output {
         File   snps_vcf          = "~{out_basename}.vcf"
@@ -1307,7 +1291,6 @@ task augur_mask_sites {
         disk: "~{disk_size} GB" # TES
         preemptible: 1
         dx_instance_type: "mem1_ssd1_v2_x4"
-        maxRetries: 2
     }
     output {
         File   masked_sequences = out_fname
@@ -1366,7 +1349,6 @@ task draft_augur_tree {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x36"
         preemptible: 0
-        maxRetries: 2
     }
     output {
         File   aligned_tree  = "~{out_basename}_~{method}.nwk"
@@ -1451,7 +1433,6 @@ task refine_augur_tree {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem3_ssd1_v2_x8"
         preemptible: 0
-        maxRetries: 2
     }
     output {
         File   tree_refined   = "~{out_basename}_timetree.nwk"
@@ -1504,7 +1485,6 @@ task ancestral_traits {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem3_ssd1_v2_x4"
         preemptible: 1
-        maxRetries: 2
     }
     output {
         File   node_data_json = "~{out_basename}_ancestral_traits.json"
@@ -1568,7 +1548,6 @@ task ancestral_tree {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem3_ssd1_v2_x8"
         preemptible: 0
-        maxRetries: 2
     }
     output {
         File   nt_muts_json  = "~{out_basename}_nt_muts.json"
@@ -1617,7 +1596,6 @@ task translate_augur_tree {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 1
-        maxRetries: 2
     }
     output {
         File   aa_muts_json = "~{out_basename}_aa_muts.json"
@@ -1688,7 +1666,6 @@ task tip_frequencies {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem3_ssd2_x4"
         preemptible: 1
-        maxRetries: 2
     }
     output {
         File   node_data_json = "~{out_basename}_tip-frequencies.json"
@@ -1733,7 +1710,6 @@ task assign_clades_to_nodes {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 1
-        maxRetries: 2
     }
     output {
         File   node_clade_data_json = "~{out_basename}_clades.json"
@@ -1782,7 +1758,6 @@ task augur_import_beast {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 1
-        maxRetries: 2
     }
     output {
         File   tree_newick    = "~{tree_basename}.nwk"
@@ -1885,7 +1860,6 @@ task export_auspice_json {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem3_ssd1_v2_x8"
         preemptible: 0
-        maxRetries: 2
     }
     output {
         File   virus_json         = "~{out_basename}_auspice.json"

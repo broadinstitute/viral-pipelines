@@ -27,7 +27,6 @@ task gcs_copy {
     docker: "ghcr.io/broadinstitute/viral-ngs:3.0.6-baseimage"
     memory: "1 GB"
     cpu: 1
-    maxRetries: 1
   }
 }
 
@@ -285,7 +284,7 @@ task check_terra_env {
     docker: docker
     memory: "1 GB"
     cpu: 1
-    maxRetries: 1
+    maxRetries: 2
   }
 }
 
@@ -779,6 +778,5 @@ task find_illumina_files_in_directory {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }

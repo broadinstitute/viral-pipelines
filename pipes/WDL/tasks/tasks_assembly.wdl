@@ -107,7 +107,6 @@ task assemble {
         disks: "local-disk ~{disk_size} SSD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
-        maxRetries: 2
     }
 
 }
@@ -198,7 +197,6 @@ task select_references {
     disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
-    maxRetries: 2
   }
 }
 
@@ -461,7 +459,6 @@ task scaffold {
         disks: "local-disk ~{disk_size} SSD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
-        maxRetries: 2
     }
 }
 
@@ -547,7 +544,6 @@ task skani_triangle {
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     preemptible: 2
-    maxRetries: 2
   }
 }
 
@@ -630,7 +626,6 @@ task ivar_trim {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x4"
-        maxRetries: 2
     }
 }
 
@@ -696,7 +691,6 @@ task ivar_trim_stats {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB"
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
     }
 }
 
@@ -870,7 +864,6 @@ task align_reads {
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: 1
-    maxRetries: 2
   }
 }
 
@@ -1011,7 +1004,6 @@ task refine_assembly_with_aligned_reads {
         disks: "local-disk ~{disk_size} SSD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
-        maxRetries: 2
     }
 }
 
@@ -1133,7 +1125,6 @@ task run_discordance {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 1
-        maxRetries: 2
     }
 }
 
@@ -1245,7 +1236,6 @@ task filter_bad_ntc_batches {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
     }
     output {
         File           seqids_kept      = "seqids.filtered.txt"
@@ -1356,6 +1346,5 @@ task wgsim {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
     }
 }

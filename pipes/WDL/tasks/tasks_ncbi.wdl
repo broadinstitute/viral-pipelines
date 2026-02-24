@@ -28,7 +28,6 @@ task download_fasta {
     memory: "7 GB"
     cpu: 2
     dx_instance_type: "mem2_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -84,7 +83,6 @@ task download_fasta_from_accession_string {
     memory: "7 GB"
     cpu: 2
     dx_instance_type: "mem2_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -127,7 +125,6 @@ task download_annotations {
     memory: "7 GB"
     cpu: 2
     dx_instance_type: "mem2_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -175,7 +172,6 @@ task download_ref_genomes_from_tsv {
     memory: "7 GB"
     cpu: 2
     dx_instance_type: "mem2_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -222,7 +218,6 @@ task sequencing_platform_from_bam {
     memory: "3 GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -283,7 +278,6 @@ task align_and_annot_transfer_single {
     cpu: 8
     dx_instance_type: "mem2_ssd1_v2_x4"
     preemptible: 1
-    maxRetries: 2
   }
 }
 
@@ -333,7 +327,6 @@ task structured_comments {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -425,7 +418,6 @@ task structured_comments_from_aligned_bam {
     memory: "2 GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -454,7 +446,6 @@ task prefix_fasta_header {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -480,7 +471,6 @@ task rename_fasta_header {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -588,7 +578,6 @@ task gisaid_meta_prep {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -612,7 +601,6 @@ task lookup_table_by_filename {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -746,7 +734,6 @@ task sra_meta_prep {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -832,7 +819,6 @@ task biosample_to_table {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -1079,7 +1065,6 @@ task biosample_to_genbank {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -1224,7 +1209,6 @@ task generate_author_sbt_file {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -1317,7 +1301,6 @@ task table2asn {
     memory: "~{machine_mem_gb} GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
   }
@@ -1390,7 +1373,6 @@ task package_special_genbank_ftp_submission {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -1560,7 +1542,6 @@ task genbank_special_taxa {
     memory: "2 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -1648,7 +1629,6 @@ task vadr {
     memory: "~{mem_size} GB"
     cpu: cpus
     dx_instance_type: "mem2_ssd1_v2_x4"
-    maxRetries: 2
   }
 }
 
@@ -1831,6 +1811,5 @@ task package_genbank_submissions {
     memory: "~{mem_size} GB"
     cpu: cpus
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 1
   }
 }

@@ -181,7 +181,6 @@ task fetch_genbank_metadata {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         docker:  docker
-        maxRetries: 2
     }
 }
 
@@ -362,7 +361,6 @@ task sra_tsv_to_xml {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
-        maxRetries: 2
     }
 }
 
@@ -399,7 +397,6 @@ task biosample_submit_tsv_to_xml {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
-        maxRetries: 2
     }
 }
 
@@ -478,7 +475,6 @@ task biosample_xml_response_to_tsv {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
-        maxRetries: 2
     }
 }
 
@@ -569,7 +565,6 @@ task group_sra_bams_by_biosample {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 

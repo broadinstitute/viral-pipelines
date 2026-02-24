@@ -22,7 +22,6 @@ task max {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -77,7 +76,6 @@ task group_bams_by_sample {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -100,7 +98,6 @@ task get_bam_samplename {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
   output {
     String sample_name = read_string("SAMPLE_NAME")
@@ -156,7 +153,6 @@ task get_sample_meta {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -229,7 +225,6 @@ task merge_and_reheader_bams {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd2_v2_x4"
         preemptible: 0
-        maxRetries: 1
     }
 }
 
@@ -311,7 +306,6 @@ task rmdup_ubam {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -416,7 +410,6 @@ task bbnorm_bam {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x8"
-    maxRetries: 2
   }
 }
 
@@ -542,7 +535,6 @@ task FastqToUBAM {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
   output {
     File unmapped_bam = "~{sample_name}.bam"
@@ -573,6 +565,5 @@ task read_depths {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }

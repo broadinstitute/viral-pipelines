@@ -37,7 +37,6 @@ task merge_tarballs {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x16"
-    maxRetries: 2
     preemptible: 0
   }
 }
@@ -91,7 +90,6 @@ task samplesheet_rename_ids {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -136,7 +134,6 @@ task revcomp_i5 {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -655,7 +652,6 @@ task illumina_demux {
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem3_ssd2_v2_x32"
     dx_timeout: "20H"
-    maxRetries: 1
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
   }
 }
@@ -689,7 +685,6 @@ task map_map_setdefault {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -721,7 +716,6 @@ task merge_maps {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -810,7 +804,6 @@ task group_fastq_pairs {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -869,7 +862,6 @@ task get_illumina_run_metadata {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -1043,7 +1035,6 @@ task demux_fastqs {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x16"
-    maxRetries: 2
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
   }
 }
@@ -1092,7 +1083,6 @@ task merge_demux_metrics {
     disks: "local-disk 50 HDD"
     disk: "50 GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -1160,6 +1150,5 @@ task merge_sample_metadata {
     disks: "local-disk 50 HDD"
     disk: "50 GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }

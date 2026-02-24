@@ -118,7 +118,6 @@ task alignment_metrics {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x4"
-    maxRetries: 2
   }
 }
 
@@ -218,7 +217,6 @@ task plot_coverage {
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     preemptible: 1
-    maxRetries: 2
   }
 }
 
@@ -280,7 +278,6 @@ task merge_coverage_per_position {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x4"
-    maxRetries: 2
   }
 }
 
@@ -323,7 +320,6 @@ task coverage_report {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x4"
-    maxRetries: 2
   }
 }
 
@@ -357,7 +353,6 @@ task assembly_bases {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
     }
 }
 
@@ -397,7 +392,6 @@ task fastqc {
     disks: "local-disk ~{disk_size} SSD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -515,7 +509,6 @@ task align_and_count {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
-    maxRetries: 2
   }
 }
 
@@ -549,7 +542,6 @@ task align_and_count_summary {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -599,7 +591,6 @@ task aggregate_metagenomics_reports {
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
     preemptible: 0
-    maxRetries: 2
   }
 }
 
@@ -711,7 +702,6 @@ task MultiQC {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -903,7 +893,6 @@ task multiqc_from_bams {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
-    maxRetries: 2
   }
 }
 
@@ -944,7 +933,6 @@ task compare_two_genomes {
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 1
-    maxRetries: 2
   }
 }
 

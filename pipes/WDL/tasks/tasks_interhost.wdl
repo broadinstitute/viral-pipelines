@@ -194,7 +194,6 @@ task multi_align_mafft_ref {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x8"
-    maxRetries: 2
   }
 }
 
@@ -240,7 +239,6 @@ task multi_align_mafft {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x8"
-    maxRetries: 2
   }
 }
 
@@ -332,7 +330,6 @@ task beast {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size_az} GB"
     vm_size: select_first([accelerator_type, "Standard_NC6"])  # TES Azure
-    maxRetries: 1
     bootDiskSizeGb: boot_disk
     gpu:                 true                # dxWDL
     dx_timeout:          "40H"               # dxWDL
@@ -379,7 +376,6 @@ task index_ref {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
 
-    maxRetries: 2
   }
 }
 
@@ -409,7 +405,6 @@ task trimal_clean_msa {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
-    maxRetries: 2
   }
 }
 
@@ -466,7 +461,6 @@ task merge_vcfs_bcftools {
     memory: "~{select_first([machine_mem_gb, 3])} GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -528,7 +522,6 @@ task merge_vcfs_gatk {
     memory: "~{select_first([machine_mem_gb, 3])} GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -598,6 +591,5 @@ task reconstructr {
     disk: "~{disk_size} GB" # TES
     bootDiskSizeGb: 50
     dx_instance_type: "mem1_ssd1_v2_x4"
-    maxRetries: 1
   }
 }
