@@ -440,7 +440,7 @@ task create_or_update_sample_tables {
     String  sample_table_name  = "sample"
     String  library_table_name = "library"
 
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-baseimage"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
   }
 
   meta {
