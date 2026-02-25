@@ -15,7 +15,7 @@ task trim_rmdup_subsamp {
         Int cpu            = 16
         Int disk_size_gb   = 100 
 
-        String docker      = "ghcr.io/broadinstitute/viral-ngs:3.0.7-core"
+        String docker      = "quay.io/broadinstitute/viral-ngs:3.0.7-core"
     }
 
     parameter_meta {
@@ -75,7 +75,7 @@ task lca_megablast {
         Int     cpu            = 16
         Int     disk_size_gb   = 300
 
-        String  docker         = "ghcr.io/broadinstitute/viral-ngs:3.0.7-classify"
+        String  docker         = "quay.io/broadinstitute/viral-ngs:3.0.7-classify"
     }
     parameter_meta {
         trimmed_fasta: {

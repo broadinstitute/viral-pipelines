@@ -6,7 +6,7 @@ task download_fasta {
     Array[String]+ accessions
     String         emailAddress
 
-    String         docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-phylo"
+    String         docker = "quay.io/broadinstitute/viral-ngs:3.0.7-phylo"
   }
 
   command <<<
@@ -41,7 +41,7 @@ task download_fasta_from_accession_string {
     String out_prefix
     String emailAddress
 
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-phylo"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.7-phylo"
   }
 
   command <<<
@@ -92,7 +92,7 @@ task download_annotations {
     String         emailAddress
     String         combined_out_prefix
 
-    String         docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-phylo"
+    String         docker = "quay.io/broadinstitute/viral-ngs:3.0.7-phylo"
   }
 
   command <<<
@@ -133,7 +133,7 @@ task download_ref_genomes_from_tsv {
     File      ref_genomes_tsv    # [tax_id, isolate_prefix, taxname, colon_delim_accession_list]
     String    emailAddress
 
-    String    docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-phylo"
+    String    docker = "quay.io/broadinstitute/viral-ngs:3.0.7-phylo"
   }
 
   command <<<
@@ -179,7 +179,7 @@ task sequencing_platform_from_bam {
   input {
     File    bam
 
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-core"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.7-core"
   }
 
   command <<<
@@ -233,7 +233,7 @@ task align_and_annot_transfer_single {
 
     String       out_basename = basename(genome_fasta, '.fasta')
     Int          machine_mem_gb = 30
-    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-phylo"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.7-phylo"
   }
 
   parameter_meta {
@@ -287,7 +287,7 @@ task structured_comments {
 
     File?  filter_to_ids
 
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-core"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.7-core"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -339,7 +339,7 @@ task structured_comments_from_aligned_bam {
     String  out_basename = basename(aligned_bam, '.bam')
     Boolean is_genome_assembly = true
     Boolean sanitize_ids = true
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-core"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.7-core"
   }
   # see https://www.ncbi.nlm.nih.gov/genbank/structuredcomment/
   command <<<
@@ -456,7 +456,7 @@ task rename_fasta_header {
 
     String out_basename = basename(genome_fasta, ".fasta")
 
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-core"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.7-core"
   }
   command <<<
     set -e
@@ -618,7 +618,7 @@ task sra_meta_prep {
     Boolean     paired
 
     String      out_name = "sra_metadata.tsv"
-    String      docker="ghcr.io/broadinstitute/viral-ngs:3.0.7-core"
+    String      docker="quay.io/broadinstitute/viral-ngs:3.0.7-core"
   }
   Int disk_size = 100
   parameter_meta {
@@ -1230,7 +1230,7 @@ task table2asn {
 
     String       out_basename = basename(assembly_fasta, ".fasta")
     Int          machine_mem_gb = 8
-    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-phylo"  # this could be a simpler docker image, we don't use anything beyond table2asn itself
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.7-phylo"  # this could be a simpler docker image, we don't use anything beyond table2asn itself
   }
   Int disk_size = 50
 
@@ -1321,7 +1321,7 @@ task package_special_genbank_ftp_submission {
     String account_name
     String wizard="BankIt_SARSCoV2_api"
 
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-baseimage"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.7-baseimage"
   }
   command <<<
     set -e
@@ -1385,7 +1385,7 @@ task genbank_special_taxa {
     Int     taxid
     File    taxdump_tgz
     File    vadr_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/annotation/vadr/vadr-by-taxid.tsv"
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-classify"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.7-classify"
   }
 
   command <<<
