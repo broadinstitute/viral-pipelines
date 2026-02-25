@@ -6,7 +6,7 @@ task merge_tarballs {
     String       out_filename
 
     Int?         machine_mem_gb
-    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
+    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-core"
   }
 
   Int disk_size = 2625
@@ -179,7 +179,7 @@ task illumina_demux {
     Int?    machine_mem_gb
     # Note: GCP local SSDs must be allocated in pairs (2, 4, 8, 16, 24 × 375GB), so use 3000 (8 SSDs) instead of 2625 (7 SSDs)
     Int     disk_size = 3000
-    String  docker    = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
+    String  docker    = "ghcr.io/broadinstitute/viral-ngs:3.0.7-core"
   }
 
   parameter_meta {
@@ -817,7 +817,7 @@ task get_illumina_run_metadata {
     String? sequencing_center
 
     Int?   machine_mem_gb
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
+    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-core"
   }
 
   parameter_meta {
@@ -920,7 +920,7 @@ task demux_fastqs {
     Int?    machine_mem_gb
     Int     max_cpu = 32       # Maximum CPU cap for autoscaling (use 16 for 2-barcode, 64 for 3-barcode)
     Int     disk_size = 750
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-core"
   }
 
   # Calculate total input size for autoscaling
@@ -1048,7 +1048,7 @@ task merge_demux_metrics {
   input {
     Array[File]+ metrics_files
     String       output_filename = "merged_demux_metrics.txt"
-    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
+    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-core"
   }
 
   parameter_meta {
