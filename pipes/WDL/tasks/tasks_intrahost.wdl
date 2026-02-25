@@ -135,7 +135,7 @@ task lofreq {
     File      reference_fasta
 
     String    out_basename = basename(aligned_bam, '.bam')
-    String    docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-phylo"
+    String    docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-phylo"
   }
   Int disk_size = 200
   command <<<
@@ -194,7 +194,7 @@ task isnvs_per_sample {
     Boolean removeDoublyMappedReads = true
 
     Int?    machine_mem_gb
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-phylo"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-phylo"
 
     String  sample_name = basename(basename(basename(mapped_bam, ".bam"), ".all"), ".mapped")
   }
@@ -236,7 +236,7 @@ task isnvs_vcf {
     Boolean        naiveFilter = false
 
     Int?           machine_mem_gb
-    String         docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-phylo"
+    String         docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-phylo"
   }
 
   parameter_meta {
@@ -309,7 +309,7 @@ task annotate_vcf_snpeff {
     String?        emailAddress
 
     Int?           machine_mem_gb
-    String         docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-phylo"
+    String         docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-phylo"
 
     String         output_basename = basename(basename(in_vcf, ".gz"), ".vcf")
   }
