@@ -941,3 +941,536 @@ task kaiju {
     dx_instance_type: "mem3_ssd1_v2_x16"
   }
 }
+
+task kallisto {
+  meta {
+    description: "Runs kb count classification tool"
+  }
+
+  input {
+    File     reads_bam
+    File     kb_index
+    File     t2g
+    Int      kmer_size=31
+
+    String   technology
+    String   parity
+    Boolean  h5ad=false
+    Boolean  loom=false
+    Boolean  protein=false
+
+    String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
+  }
+
+  parameter_meta {
+    reads_bam: {
+      description: "Reads to classify. Must be un-mapped reads, paired-end or single-end.",
+      patterns: ["*.bam", "*.fastq", "*.fastq.gz"]
+    }
+    kb_index: {
+      description: "Pre-built kb index tarball",
+      patterns: ["*.idx", "*.index"]
+    }
+    t2g: {
+      description: "Transcript-to-gene mapping file. Two-column TSV with transcript IDs in first column and gene IDs in second column.",
+      patterns: ["*.tsv", "*.txt"]
+    }
+    kmer_size: {
+      description: "K-mer size used in kb index. Must match the k-mer size used to build the index. Default is 31."
+    }
+    technology: {
+      description: "Single-cell technology used  {10xv2, 10xv3, dropseq, inDrops, seqwell, smartseq2, bulk}."
+    }
+    h5ad: {
+      description: "Output an h5ad file (requires scanpy). Default is false"
+    }
+    loom: {
+      description: "Output a loom file (requires loompy). Default is false"
+    }
+    protein: {
+      description: "Indicates that the kb index is built from protein sequences. Default is false"
+    } 
+  }
+
+  String out_basename=basename(basename(reads_bam, '.bam'), '.fasta')
+
+  command <<<
+    set -ex -o pipefail
+
+    if [ -z "$TMPDIR" ]; then
+      export TMPDIR=$(pwd)
+    fi
+
+    printf "%s\n" "$(kb -h 2>&1 | grep "kb_python" | tee VERSION)"
+    kallisto version | tee -a VERSION
+    metagenomics --version | tee -a VERSION
+
+    paste -sd ';' VERSION | sed 's/;/; /g' > VERSION.tmp && mv VERSION.tmp VERSION
+
+    if [[ ~{reads_bam} == *.bam ]]; then
+        metagenomics kb \
+          "~{reads_bam}" \
+          --index "~{kb_index}" \
+          --t2g "~{t2g}" \
+          --kmer_len ~{kmer_size} \
+          --technology ~{technology} \
+          --parity ~{parity} \
+          ~{if h5ad then "--h5ad" else ""} \
+          ~{if loom then "--loom" else ""} \
+          ~{true='--protein' false='' protein} \
+          --out_dir ~{out_basename}_count \
+          --loglevel=DEBUG
+    else # we have a single-ended fastq file so just call it directly
+        kb count \
+          --kallisto kallisto \
+          -t `nproc` \
+          -k ~{kmer_size} \
+          --parity single \
+          -i "~{kb_index}" \
+          -g "~{t2g}" \
+          -o "~{out_basename}_count" \
+          -x ~{technology} \
+          ~{if h5ad then "--h5ad" else ""} \
+          ~{if loom then "--loom" else ""} \
+          ~{true='--aa' false='' protein} \
+          "~{reads_bam}"
+    fi
+
+    # Since we are running this file-by-file we need to add our sample name to the matrix.cells file
+    bn=$(basename "~{reads_bam}")
+    sample_name=$(echo "$bn" | cut -d'.' -f1)
+    echo "$sample_name" > "~{out_basename}_count/matrix.cells"
+
+    tar -c -C "~{out_basename}_count" . | zstd > "~{out_basename}_kb_count.tar.zst"
+  >>>
+
+  output {
+    File    kb_count_tar  = "~{out_basename}_kb_count.tar.zst"
+    String  viralngs_version    = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "~{docker}"
+    memory: "32 GB"
+    cpu: 16
+    disks: "local-disk 350 LOCAL"
+    dx_instance_type: "mem3_ssd1_v2_x16"
+    preemptible: 2
+  }
+}
+
+task build_kallisto_db {
+  meta {
+    description: "Builds a custom kb index from provided input FASTA file."
+  }
+
+  input {
+    String      out_basename
+    File        reference_sequences
+    Boolean     protein=false
+
+    Int        kmer_size=31
+    String?     workflow_type
+
+    String      docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
+  }
+
+  parameter_meta {
+    out_basename: { description: "A descriptive string used in output index filename. Output will be called <out_basename>.idx" }
+    reference_sequences: {
+      description: "FASTA file of reference sequences to index.",
+      patterns: ["*.fasta", "*.fa", "*.fa.gz", "*.fasta.gz"]
+    }
+    protein: {
+      description: "Generate an index from a FASTA file containing protein sequences. Default is nucleotide."
+    }
+    kmer_size: {
+      description: "K-mer size to use in index. Default is 31."
+    }
+    workflow_type: {
+      description: "Type of index to create {standard, nac, kite, custom}. Default is 'standard'."
+    }
+  }
+
+  command <<<
+    set -ex -o pipefail
+
+    if [ -z "$TMPDIR" ]; then
+      export TMPDIR=$(pwd)
+    fi
+
+    printf "kb_python %s\n" "$(kb -h 2>&1 | grep "kb_python" | cut -d" " -f2)" | tee VERSION
+    kallisto version | tee -a VERSION    
+    metagenomics --version | tee -a VERSION
+
+    if [[ ~{reference_sequences} == *.gz ]]; then
+      gunzip -c "~{reference_sequences}" > reference_sequences.fasta
+      REF_FASTA=reference_sequences.fasta
+    else
+      REF_FASTA="~{reference_sequences}"
+    fi
+
+    # build kb database
+    metagenomics kb_build \
+      ~{true='--protein' false='' protein} \
+      --kmer_len=~{kmer_size} \
+      ~{if defined(workflow_type) then "--workflow=" + workflow_type else ""} \
+      --index="~{out_basename}.idx" \
+      $REF_FASTA \
+      --loglevel=DEBUG
+
+
+       tar -c "~{out_basename}.idx" | zstd > "~{out_basename}.idx.tar.zst"
+  >>>
+
+  output {
+    File        kb_index   = "~{out_basename}.idx.tar.zst"
+    String      viralngs_version = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "~{docker}"
+    memory: "32 GB"
+    disks: "local-disk 750 LOCAL"
+    cpu: 16
+    dx_instance_type: "mem3_ssd1_v2_x16"
+    preemptible: 0
+  }
+}
+
+task kallisto_extract {
+  meta {
+    description: "Extracts reads that pseudoalign to a kb index"
+  }
+
+  input {
+    File            reads_bam
+    File            kb_index
+    File            t2g
+    Array[String]?  target_ids
+    File?           h5ad_file
+    Int             threads=8
+    Int             threshold=1
+    Boolean         protein=false
+
+     String          docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
+  }
+
+  parameter_meta {
+    reads_bam: {
+      description: "Reads used by kb count to psuedoalign. Must be un-mapped or single-end.",
+      patterns: ["*.bam", "*.fastq", "*.fastq.gz"]
+    }
+    kb_index: {
+      description: "kb index used to psuedoalign reads.",
+      patterns: ["*.index"]
+    }
+    t2g: {
+      description: "Transcript-to-gene mapping file. Two-column TSV with transcript IDs in first column and gene IDs in second column.",
+      patterns: ["*.tsv", "*.txt"]
+    }
+    target_ids: {
+      description: "List of target transcript or gene IDs to extract reads for."
+    }
+    h5ad_file: {
+      description: "If no target IDs are provided, an h5ad file may be provided from which to extract target IDs. The h5ad file must contain a 'gene_ids' column in the .var dataframe.",
+      patterns: ["*.h5ad"]
+    }
+    protein: {
+      description: "Input sequences contain amino acid sequences."
+    }
+    threshold: {
+      description: "Minimum number of pseudoalignments to a target ID for a read to be extracted. Default is 1."
+    }
+    threads: {
+      description: "Number of threads to use. Default is 8."
+    }
+  }
+
+  String out_basename = sub(sub(sub(sub(basename(reads_bam), "\\.bam$", ""), "\\.gz$", ""), "\\.fastq$", ""), "\\.fq$", "")
+
+  command <<<
+    set -ex -o pipefail
+
+    if [ -z "$TMPDIR" ]; then
+      export TMPDIR=$(pwd)
+    fi
+
+    printf "%s\n" "$(kb -h 2>&1 | grep "kb_python" | tee VERSION)"
+    kallisto version | tee -a VERSION
+    metagenomics --version | tee -a VERSION
+
+    paste -sd ';' VERSION | sed 's/;/; /g' > VERSION.tmp && mv VERSION.tmp VERSION
+
+    # Determine source of target IDs
+    TARGET_IDS="~{sep=' ' select_first([target_ids, []])}"
+    if [ -z "$TARGET_IDS" ]; then
+      echo "No target IDs provided, will attempt to extract from h5ad!" >&2
+      TARGET_SOURCE="--h5ad ~{h5ad_file}"
+    else
+      TARGET_SOURCE="--targets $TARGET_IDS"
+    fi
+
+    metagenomics kb_extract \
+      "~{reads_bam}" \
+      --index "~{kb_index}" \
+      --t2g "~{t2g}" \
+      --out_dir "~{out_basename}_extract" \
+      ~{if protein then "--protein" else ""} \
+      --threshold ~{threshold} \
+      $TARGET_SOURCE \
+      --loglevel=DEBUG
+
+    tar -c -C "~{out_basename}_extract" . | zstd > "~{out_basename}_kb_extract.tar.zst"
+  >>>
+
+  output {
+    File    kb_extract_tar    = "~{out_basename}_kb_extract.tar.zst"
+    String  viralngs_version  = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "~{docker}"
+    memory: "32 GB"
+    cpu: 16
+    disks: "local-disk 350 LOCAL"
+    dx_instance_type: "mem3_ssd1_v2_x16"
+    preemptible: 2
+  }
+}
+
+task report_primary_kallisto_taxa {
+  meta {
+    description: "Interprets kb count output file and emits the primary contributing taxa under a focal taxon of interest."
+  }
+  input {
+    File          kb_count_tar
+    File          id_to_taxon_map
+    String        focal_taxon = "Viruses"
+
+    String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
+  }
+  String out_basename = sub(basename(kb_count_tar, ".tar.zst"), "_kb_count", "")
+  Int disk_size = 200
+  Int machine_mem_gb = 16
+
+  command <<<
+    set -e
+
+    printf "%s\n" "$(kb -h 2>&1 | grep "kb_python" | tee VERSION)"
+    kallisto version | tee -a VERSION
+    metagenomics --version | tee -a VERSION
+
+    paste -sd ';' VERSION | sed 's/;/; /g' > VERSION.tmp && mv VERSION.tmp VERSION
+
+    metagenomics kb_top_taxa \
+      "~{kb_count_tar}" \
+      "~{out_basename}.ranked_focal_report.tsv" \
+      --id-to-tax-map "~{id_to_taxon_map}" \
+      --target-taxon "~{focal_taxon}"
+    cat "~{out_basename}.ranked_focal_report.tsv" | head -2 | tail +2 > TOPROW
+    cut -f 2 TOPROW > NUM_FOCAL           # focal_taxon_count
+    cut -f 7 TOPROW > PCT_OF_FOCAL        # pct_of_focal
+    cut -f 6 TOPROW > NUM_READS           # hit_reads
+    cut -f 3 TOPROW > TAX_ID              # palmdb_id
+    cut -f 4 TOPROW > TAX_NAME            # hit_id (species name)
+    echo "" > TAX_RANK                    # Not provided by kb_top_taxa
+  >>>
+
+  output {
+    File   ranked_focal_report = "~{out_basename}.ranked_focal_report.tsv"
+    String focal_tax_name = focal_taxon
+    Int    total_focal_reads = read_int("NUM_FOCAL")
+    Float  percent_of_focal = read_float("PCT_OF_FOCAL")
+    Int    num_reads = read_int("NUM_READS")
+    String tax_rank = read_string("TAX_RANK")
+    String tax_id = read_string("TAX_ID")
+    String tax_name = read_string("TAX_NAME")
+  }
+
+  runtime {
+    docker: docker
+    memory: machine_mem_gb + " GB"
+    cpu: 16
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TESs
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
+
+task kallisto_merge_h5ads {
+  meta {
+    description: "Merges multiple kb count output tarballs into a single .h5ad file with sample metadata."
+  }
+
+  input {
+    Array[File]     in_count_tars
+    String          out_basename
+
+    String          docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
+  }
+
+  parameter_meta {
+    in_count_tars: {
+      description: "List of kb count output tarballs to merge. Each tarball should contain counts_unfiltered/*.h5ad and matrix.cells.",
+      patterns: ["*.tar.zst", "*.tar.gz"]
+    }
+    out_basename: {
+      description: "Basename for output merged .h5ad file. Output will be named <out_basename>.h5ad."
+    }
+
+  }
+
+  command <<<
+    set -ex -o pipefail
+
+    if [ -z "$TMPDIR" ]; then
+      export TMPDIR=$(pwd)
+    fi
+
+    printf "%s\n" "$(kb -h 2>&1 | grep "kb_python" | tee VERSION)"
+    kallisto version | tee -a VERSION
+    metagenomics --version | tee -a VERSION
+
+    paste -sd ';' VERSION | sed 's/;/; /g' > VERSION.tmp && mv VERSION.tmp VERSION
+
+    metagenomics kb_merge_h5ads \
+      "~{sep='" "' in_count_tars}" \
+      --out-h5ad "~{out_basename}.h5ad" \
+      --loglevel=DEBUG
+   >>>
+
+  output {
+    File    kb_merged_h5ad        = "~{out_basename}.h5ad"
+    String  viralngs_version      = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "~{docker}"
+    memory: "16 GB"
+    cpu: 16
+    disks: "local-disk 350 LOCAL"
+    dx_instance_type: "mem3_ssd1_v2_x16"
+    preemptible: 2
+  }
+}
+
+task classify_virnucpro {
+  meta {
+    description: "Runs VirNucPro deep learning viral classification on unmapped reads using GPU acceleration."
+  }
+
+  input {
+    File      reads_input
+    Int       expected_length = 300
+
+    Boolean   parallel=false
+    Boolean   persist_model=false
+    Boolean   use_gpu=false
+    Int       batch_size=256
+    Int?      esm_batch_size
+    Int?      dnabert_batch_size
+
+    Boolean   resume = false
+
+    String?   accelerator_type
+    Int?      accelerator_count
+    String?   gpu_type
+    Int?      gpu_count
+    String?   vm_size
+    String    docker = "ghcr.io/broadinstitute/virnucpro-cuda:1.0.9"
+  }
+
+  parameter_meta {
+    reads_input: {
+      description: "Reads to classify. Must be unmapped reads, paired-end or single-end. Accepts BAM or FASTA formats.",
+      patterns: ["*.bam", "*.fasta", "*.fa", "*.fasta.gz", "*.fa.gz"]
+    }
+    expected_length: {
+      description: "Expected sequence length in bp. Must be 300 or 500 to match bundled models (300_model.pth, 500_model.pth). VirNucPro silently accepts other values but produces invalid predictions."
+    }
+    parallel: {
+      description: "If true, enables parallel data loading to improve throughput. May increase memory usage."
+    }
+    persist_model: {
+      description: "If true, keeps the model loaded in GPU memory between batches to improve throughput. May increase GPU memory usage."
+    }
+    use_gpu: {
+      description: "If true, uses GPU acceleration for inference. Requires a GPU-enabled runtime."
+    }
+    batch_size: {
+      description: "Number of sequences to process in each batch. Larger batch sizes may improve throughput but increase memory usage."
+    }
+    esm_batch_size: {
+      description: "Batch size specifically for the ESM2 model component. If not provided, defaults to the value of batch_size."
+    }
+    dnabert_batch_size: {
+      description: "Batch size specifically for the DNABERT model component. If not provided, defaults to the value of batch_size."
+    }
+    resume: {
+      description: "If true, enables checkpoint-based resume for preempted or interrupted runs."
+    }
+    accelerator_type: {
+      description: "[GCP] The model of GPU to use. For availability and pricing on GCP, see https://cloud.google.com/compute/gpus-pricing#gpus"
+    }
+    accelerator_count: {
+      description: "[GCP] The number of GPUs of the specified type to use."
+    }
+    gpu_type: {
+      description: "[Terra] The model of GPU to use. For availability and pricing on GCP, see https://support.terra.bio/hc/en-us/articles/4403006001947-Getting-started-with-GPUs-in-a-Cloud-Environment"
+    }
+    gpu_count: {
+      description: "[Terra] The number of GPUs of the specified type to use."
+    }
+  }
+
+  String basename = sub(basename(reads_input), "\\.(bam|fasta\\.gz|fa\\.gz|fasta|fa)$", "")
+
+  command <<<
+    set -ex -o pipefail
+
+    export TMPDIR=/tmp
+    export TEMP=/tmp
+    export TMP=/tmp
+
+    /opt/virnucpro_cli.py "~{reads_input}" "~{basename}.virnucpro.tsv" --expected-length ~{expected_length} \
+      ~{true='--use-gpu' false='' use_gpu} \
+      ~{true='--parallel' false='' parallel} \
+      ~{true='--persistent-models' false='' persist_model} \
+      --batch-size ~{batch_size} \
+      ~{'--esm-batch-size=' + esm_batch_size} \
+      ~{'--dnabert-batch-size=' + dnabert_batch_size} \
+      --threads $(nproc) \
+      ~{true='--resume' false='' resume}
+
+    # Tarball both output files
+    tar -czf "~{basename}.virnucpro.tgz" \
+      "~{basename}.virnucpro.tsv" \
+      "~{basename}.virnucpro_highestscore.csv"
+  >>>
+
+  output {
+    File virnuc_pro_scores = "~{basename}.virnucpro.tgz"
+  }
+
+  # GPU multi-platform support: ALL platform attributes required (GCP: acceleratorType/acceleratorCount, Terra: gpuType/gpuCount, DNAnexus: gpu/dx_instance_type, Azure: vm_size). Missing attributes cause silent CPU fallback.
+  runtime {
+    docker: docker
+    dockerRunOptions: "--tmpfs /dev/shm:rw,nosuid,nodev,size=16g"
+    memory: "30 GB"
+    cpu: 8
+    disks: "local-disk 120 SSD"
+    disk: "120 GB"
+    gpu: true
+    dx_instance_type: "mem1_ssd1_gpu2_x8"
+    dx_timeout: "6H"
+    acceleratorType: select_first([accelerator_type, "nvidia-tesla-t4"])
+    acceleratorCount: select_first([accelerator_count, 1])
+    gpuType: select_first([gpu_type, "nvidia-tesla-t4"])
+    gpuCount: select_first([gpu_count, 1])
+    vm_size: select_first([vm_size, "Standard_NC6"])
+    maxRetries: 1
+  }
+}
