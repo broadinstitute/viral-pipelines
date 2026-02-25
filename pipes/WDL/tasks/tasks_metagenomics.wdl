@@ -216,7 +216,7 @@ task kraken2 {
     Int?   min_base_qual
 
     Int    machine_mem_gb = 90
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-classify"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.7-classify"
   }
 
   parameter_meta {
@@ -348,7 +348,7 @@ task report_primary_kraken_taxa {
     File          kraken_summary_report
     String        focal_taxon = "Viruses"
 
-    String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-classify"
+    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.7-classify"
   }
   String out_basename = basename(kraken_summary_report, '.txt')
   Int disk_size = 50
@@ -398,7 +398,7 @@ task filter_refs_to_found_taxa {
     File          taxdump_tgz
     Int           min_read_count = 100
 
-    String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-classify"
+    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.7-classify"
   }
   String ref_basename = basename(taxid_to_ref_accessions_tsv, '.tsv')
   String hits_basename = basename(focal_report_tsv, '.tsv')
@@ -448,7 +448,7 @@ task build_kraken2_db {
     Int?          zstd_compression_level
 
     Int           machine_mem_gb = 100
-    String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-classify"
+    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.7-classify"
   }
 
   Int disk_size = 750
@@ -589,7 +589,7 @@ task blastx {
     File   krona_taxonomy_db_tgz
 
     Int    machine_mem_gb = 8
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-classify"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.7-classify"
   }
 
   parameter_meta {
@@ -678,7 +678,7 @@ task krona {
     Int?         magnitude_column
 
     Int          machine_mem_gb = 3
-    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-classify"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.7-classify"
   }
 
   Int disk_size = 50
@@ -783,7 +783,7 @@ task filter_bam_to_taxa {
     String         out_filename_suffix = "filtered"
 
     Int            machine_mem_gb = 8
-    String         docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-classify"
+    String         docker = "quay.io/broadinstitute/viral-ngs:3.0.7-classify"
   }
 
   String out_basename = basename(classified_bam, ".bam") + "." + out_filename_suffix
@@ -875,7 +875,7 @@ task kaiju {
     File   krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
 
     Int    machine_mem_gb = 100
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.7-classify"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.7-classify"
   }
 
   String   input_basename = basename(reads_unmapped_bam, ".bam")
