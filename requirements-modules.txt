@@ -1,6 +1,6 @@
 broadinstitute/viral-ngs=3.0.7
 broadinstitute/read-qc-tools=1.0.1
-broadinstitute/py3-bio=0.1.3
+broadinstitute/py3-bio=0.1.4
 broadinstitute/beast-beagle-cuda=1.10.5pre
 broadinstitute/ncbi-tools=2.11.1
 nextstrain/base=build-20240318T173028Z
