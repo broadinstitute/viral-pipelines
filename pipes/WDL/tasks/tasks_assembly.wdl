@@ -636,7 +636,7 @@ task ivar_trim_stats {
       String out_basename = "ivar_trim_stats"
       String flowcell = ""
 
-      String docker = "quay.io/broadinstitute/py3-bio:0.1.3"
+      String docker = "quay.io/broadinstitute/py3-bio:0.1.4"
     }
     parameter_meta {
       ivar_trim_stats_tsv: {
