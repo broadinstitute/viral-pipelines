@@ -133,6 +133,7 @@ task lofreq {
   input {
     File      aligned_bam
     File      reference_fasta
+    Boolean   call_indels = true
 
     String    out_basename = basename(aligned_bam, '.bam')
     String    docker = "quay.io/broadinstitute/viral-ngs:3.0.7-phylo"
@@ -166,6 +167,7 @@ task lofreq {
     lofreq call \
       -f reference.fasta \
       -o "~{out_basename}.vcf" \
+      ~{true="--call-indels" false="" call_indels} \
       aligned.bam
   >>>
 
