@@ -160,7 +160,7 @@ task multi_align_mafft_ref {
     Float?       mafft_gapOpeningPenalty
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.8-phylo"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.9-phylo"
   }
 
   String         fasta_basename = basename(reference_fasta, '.fasta')
@@ -206,7 +206,7 @@ task multi_align_mafft {
     Float?       mafft_gapOpeningPenalty
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.8-phylo"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.9-phylo"
   }
 
   Int disk_size = 200
@@ -348,7 +348,7 @@ task index_ref {
     File?  novocraft_license
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-ngs:3.0.8-core"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.9-core"
   }
 
   Int disk_size = 100
@@ -470,7 +470,7 @@ task merge_vcfs_gatk {
     File        ref_fasta
 
     Int?        machine_mem_gb
-    String      docker = "quay.io/broadinstitute/viral-ngs:3.0.8-phylo"
+    String      docker = "quay.io/broadinstitute/viral-ngs:3.0.9-phylo"
 
     String      output_prefix = "merged"
   }
