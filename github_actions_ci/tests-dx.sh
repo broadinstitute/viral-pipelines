@@ -11,7 +11,7 @@ if [ -n "$DX_API_TOKEN" ]; then
   dx select $DX_PROJECT
 fi
 
-COMPILE_SUCCESS="dxWDL-compile_all-success.txt"
+COMPILE_SUCCESS="dxCompiler-compile_all-success.txt"
 if [ ! -f $COMPILE_SUCCESS ]; then
   dx download --no-progress /build/$VERSION/$COMPILE_SUCCESS
 fi
@@ -79,22 +79,25 @@ else
 fi
 
 # Special case: run test for the demux_(plus|only)_launcher native applet (which invokes
-# the demux_(plus|only) WDL workflow)
-demux_launcher_id=$(grep "^${demux_name}_launcher\s" $COMPILE_SUCCESS | cut -f 2)
+# the demux_(plus|only) WDL workflow). Skip if the launcher was not built.
+demux_launcher_id=$(grep "^${demux_name}_launcher\s" $COMPILE_SUCCESS | cut -f 2 || true)
+demux_workflow_id=$(grep "^${demux_name}\s" $COMPILE_SUCCESS | cut -f 2 || true)
 
-demux_workflow_id=$(grep "^${demux_name}\s" $COMPILE_SUCCESS | cut -f 2)
-
-timeout_args=$(dx_run_timeout_args $demux_workflow_id $demux_launcher_id)
-dx_job_id=$(dx run "${demux_launcher_id}" \
-  -y --brief \
-  -i upload_sentinel_record=record-Bv8qkgQ0jy198GK0QVz2PV8Y \
-  -i demux_workflow_id=${demux_workflow_id} \
-  --name "$VERSION ${demux_name}_launcher" \
-  -i folder=/tests/$VERSION/${demux_name}_launcher \
-  --extra-args $timeout_args \
-  )
-echo "Launched ${demux_name}_launcher as $dx_job_id"
-echo -e "${demux_name}_launcher\t$demux_launcher_id\t$dx_job_id" >> $TEST_LAUNCH_ALL
+if [ -n "$demux_launcher_id" -a -n "$demux_workflow_id" ]; then
+  timeout_args=$(dx_run_timeout_args $demux_workflow_id $demux_launcher_id)
+  dx_job_id=$(dx run "${demux_launcher_id}" \
+    -y --brief \
+    -i upload_sentinel_record=record-Bv8qkgQ0jy198GK0QVz2PV8Y \
+    -i demux_workflow_id=${demux_workflow_id} \
+    --name "$VERSION ${demux_name}_launcher" \
+    -i folder=/tests/$VERSION/${demux_name}_launcher \
+    --extra-args $timeout_args \
+    )
+  echo "Launched ${demux_name}_launcher as $dx_job_id"
+  echo -e "${demux_name}_launcher\t$demux_launcher_id\t$dx_job_id" >> $TEST_LAUNCH_ALL
+else
+  echo "Skipping ${demux_name}_launcher test (launcher was not built)"
+fi
 
 # the presence of this file in the project denotes all tests launched
 dx upload --brief --no-progress --destination /build/$VERSION/ $TEST_LAUNCH_ALL
