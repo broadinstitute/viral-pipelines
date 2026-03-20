@@ -134,10 +134,13 @@ task lofreq {
     File      aligned_bam
     File      reference_fasta
 
+    Boolean   call_indels = true
+    Int       cpu = 4
+
     String    out_basename = basename(aligned_bam, '.bam')
     String    docker = "quay.io/broadinstitute/viral-ngs:3.0.10-phylo"
   }
-  Int disk_size = 200
+  Int disk_size = ceil(5 * size(aligned_bam, "GB") + 50)
   command <<<
     set -e -o pipefail
 
@@ -158,15 +161,33 @@ task lofreq {
       exit 0
     fi
 
-    # index for lofreq
+    # index reference
     samtools faidx reference.fasta
-    samtools index aligned.bam
 
-    # lofreq
-    lofreq call \
+    # viterbi realignment (corrects read alignments around indels)
+    samtools index aligned.bam
+    lofreq viterbi \
+      -f reference.fasta \
+      -o realigned.bam \
+      aligned.bam
+
+    # insert indel qualities (required for indel calling after viterbi)
+    lofreq indelqual --dindel \
+      -f reference.fasta \
+      -o indelqual.bam \
+      realigned.bam
+
+    # re-sort and re-index after viterbi+indelqual
+    samtools sort -o sorted.bam indelqual.bam
+    samtools index sorted.bam
+
+    # parallelized variant calling
+    lofreq call-parallel \
+      --pp-threads ~{cpu} \
+      ~{true='--call-indels' false="" call_indels} \
       -f reference.fasta \
       -o "~{out_basename}.vcf" \
-      aligned.bam
+      sorted.bam
   >>>
 
   output {
@@ -175,11 +196,11 @@ task lofreq {
   }
   runtime {
     docker: docker
-    cpu:    2
-    memory: "3 GB"
+    cpu:    cpu
+    memory: "7 GB"
     disks: "local-disk ~{disk_size} SSD"
     disk: "~{disk_size} GB" # TES
-    dx_instance_type: "mem1_ssd1_v2_x2"
+    dx_instance_type: "mem1_ssd1_v2_x4"
   }
 }
 

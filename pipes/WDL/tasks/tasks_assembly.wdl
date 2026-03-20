@@ -724,10 +724,6 @@ task align_reads {
   # 7x input BAM to account for bbnorm preprocessing temp file
   Int disk_size = ceil((7 * size(reads_unmapped_bam, "GB") + 2 * size(reference_fasta, "GB") + 100) / 750.0) * 750
 
-  # Skip indel realignment for large BAMs (>1GB) to save runtime
-  Float   reads_bam_size_gb = size(reads_unmapped_bam, "GB")
-  Boolean skip_realign = reads_bam_size_gb >= 1.0
-
   # bbnorm preprocessing: max output reads is half the downsample threshold
   Int bbnorm_max_output_reads = read_count_downsample_threshold / 2
 
@@ -808,7 +804,6 @@ task align_reads {
         --aligner ~{aligner} \
         ~{'--aligner_options "' + aligner_options + '"'} \
         ~{true='--skipMarkDupes' false="" skip_mark_dupes} \
-        ~{true='--skipRealign' false="" skip_realign} \
         --JVMmemory "$mem_in_mb"m \
         ~{"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
         --loglevel=DEBUG
