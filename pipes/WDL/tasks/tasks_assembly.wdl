@@ -16,7 +16,7 @@ task assemble {
       
       Int?     machine_mem_gb
       Int?     cpu
-      String   docker = "quay.io/broadinstitute/viral-ngs:3.0.9-assemble"
+      String   docker = "quay.io/broadinstitute/viral-ngs:3.0.10-assemble"
     }
     parameter_meta{
       reads_unmapped_bam: {
@@ -124,7 +124,7 @@ task select_references {
     Int?          skani_c
     Int?          skani_n
 
-    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.9-assemble"
+    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.10-assemble"
     Int           machine_mem_gb = 4
     Int           cpu = 2
     Int           disk_size = 100
@@ -223,7 +223,7 @@ task scaffold {
       Float?       scaffold_min_pct_contig_aligned
 
       Int?         machine_mem_gb
-      String       docker="quay.io/broadinstitute/viral-ngs:3.0.9-assemble"
+      String       docker="quay.io/broadinstitute/viral-ngs:3.0.10-assemble"
 
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
@@ -475,7 +475,7 @@ task skani_triangle {
     Int     compression_factor = 10
     Int     min_aligned_frac = 15
 
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.9-assemble"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.10-assemble"
     Int     machine_mem_gb = 8
     Int     cpu = 4
     Int     disk_size = 100
@@ -636,7 +636,7 @@ task ivar_trim_stats {
       String out_basename = "ivar_trim_stats"
       String flowcell = ""
 
-      String docker = "quay.io/broadinstitute/py3-bio:0.1.4"
+      String docker = "quay.io/broadinstitute/py3-bio:0.1.5"
     }
     parameter_meta {
       ivar_trim_stats_tsv: {
@@ -715,7 +715,7 @@ task align_reads {
 
     Int?     cpu
     Int?     machine_mem_gb
-    String   docker = "quay.io/broadinstitute/viral-ngs:3.0.9-core"
+    String   docker = "quay.io/broadinstitute/viral-ngs:3.0.10-core"
 
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
   }
@@ -723,10 +723,6 @@ task align_reads {
   # Note: GCP local SSDs must be allocated in pairs (2, 4, 8, 16, 24 × 375GB), so we round to 750GB multiples.
   # 7x input BAM to account for bbnorm preprocessing temp file
   Int disk_size = ceil((7 * size(reads_unmapped_bam, "GB") + 2 * size(reference_fasta, "GB") + 100) / 750.0) * 750
-
-  # Skip indel realignment for large BAMs (>1GB) to save runtime
-  Float   reads_bam_size_gb = size(reads_unmapped_bam, "GB")
-  Boolean skip_realign = reads_bam_size_gb >= 1.0
 
   # bbnorm preprocessing: max output reads is half the downsample threshold
   Int bbnorm_max_output_reads = read_count_downsample_threshold / 2
@@ -808,7 +804,6 @@ task align_reads {
         --aligner ~{aligner} \
         ~{'--aligner_options "' + aligner_options + '"'} \
         ~{true='--skipMarkDupes' false="" skip_mark_dupes} \
-        ~{true='--skipRealign' false="" skip_realign} \
         --JVMmemory "$mem_in_mb"m \
         ~{"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
         --loglevel=DEBUG
@@ -883,7 +878,7 @@ task refine_assembly_with_aligned_reads {
       Int      min_coverage = 3
 
       Int      machine_mem_gb = 8
-      String   docker = "quay.io/broadinstitute/viral-ngs:3.0.9-assemble"
+      String   docker = "quay.io/broadinstitute/viral-ngs:3.0.10-assemble"
     }
 
     Int disk_size = 375
@@ -1019,7 +1014,7 @@ task run_discordance {
       String out_basename = "run"
       Int    min_coverage = 4
 
-      String docker = "quay.io/broadinstitute/viral-ngs:3.0.9-core"
+      String docker = "quay.io/broadinstitute/viral-ngs:3.0.10-core"
     }
     parameter_meta {
       reads_aligned_bam: {
@@ -1266,7 +1261,7 @@ task wgsim {
         Int?   random_seed
 
         Int    machine_mem_gb = 7
-        String docker = "quay.io/broadinstitute/viral-ngs:3.0.9-assemble"
+        String docker = "quay.io/broadinstitute/viral-ngs:3.0.10-assemble"
     }
 
     parameter_meta {
