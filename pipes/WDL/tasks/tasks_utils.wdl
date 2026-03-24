@@ -352,11 +352,11 @@ task tar_extract {
     runtime {
         docker: "quay.io/broadinstitute/viral-ngs:3.0.10-baseimage"
         memory: "2 GB"
-        cpu:    1
-        disks: "local-disk ~{disk_size} LOCAL"
+        cpu:    2
+        disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        preemptible: 1
+        preemptible: 2
     }
     output {
         Array[File] files = glob("unpack/*")
