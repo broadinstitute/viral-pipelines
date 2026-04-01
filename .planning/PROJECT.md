@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Two production-ready WDL task wrappers that extend the VirNucPro pipeline in `viral-pipelines` with post-processing steps: contig-level viral classification (from VirNucPro chunk scores) and read-level classification (by joining PAF alignments to contig classifications). Both scripts originate from `respiratory-surveillance/bin/` and are promoted into this repo as first-class WDL tasks, validated with miniwdl, and registered in Dockstore.
+Three production-ready WDL task wrappers that extend the VirNucPro pipeline in `viral-pipelines` with post-processing steps: contig-level viral classification (from VirNucPro chunk scores), read-level classification (by joining PAF alignments to contig classifications), and read-level Kraken2 taxonomy annotation (by joining Kraken2 per-read output to a pre-built DuckDB taxonomy database). All three scripts originate from `respiratory-surveillance/bin/` and are promoted into this repo as first-class WDL tasks, validated with miniwdl, and registered in Dockstore.
 
 ## Core Value
 
@@ -38,15 +38,9 @@ Enables VirNucPro users to complete the full analysis chain — from raw reads t
 - ✓ Test input JSON for `parse_kraken2_reads` — v1.1
 - ✓ `.dockstore.yml` entry for `parse_kraken2_reads` — v1.1
 
-## Completed Milestone: v1.1 Kraken2 Read Taxonomy Annotation WDL Task
+## Current State
 
-**Shipped:** 2026-04-01 — Phase 2 complete (2/2 plans), verification passed (5/5 must-haves)
-
-**Delivered:**
-- ✓ `parse_kraken2_reads` task in `tasks_metagenomics.wdl` (DuckDB path only; 6-column TSV output; 8 GB / 1 CPU; py3-bio + pip install duckdb runtime)
-- ✓ Standalone workflow `parse_kraken2_reads.wdl` (uses `as parse_reads` call alias per WDL constraint)
-- ✓ Test input JSON in `test/input/WDL/miniwdl-local/`
-- ✓ `.dockstore.yml` entry for the new workflow
+Both milestones shipped. All three tasks are production-ready. No active development milestone — next milestone to be defined.
 
 ### Active
 
@@ -65,14 +59,16 @@ Enables VirNucPro users to complete the full analysis chain — from raw reads t
 | py3-bio + pip install duckdb | Avoids new image build; py3-bio already has pandas | ✓ Good — no infra change needed |
 | Scripts as inline `python3<<CODE` heredocs | Consistent with existing repo pattern | ✓ Good — passes miniwdl check |
 | Standalone workflows only | User preference — no combined pipeline needed yet | ✓ Good — simpler, composable |
-| WDL call alias required (`classify_contigs`, `classify_reads`) | WDL disallows call name = containing workflow name | ✓ Good — discovered during execution, now documented |
+| WDL call alias required (`classify_contigs`, `classify_reads`, `parse_reads`) | WDL disallows call name = containing workflow name | ✓ Good — pattern documented, applied consistently |
 | Selective `git show + sed` for content extraction | Avoided merging 30+ unrelated upstream changes from worktree branch | ✓ Good — clean cherry-pick of only new content |
 | `allowNestedInputs: true` + workflow-level JSON keys | Enables direct workflow input in test JSONs without call-alias indirection | ✓ Good — matches miniwdl local run pattern |
 | Dockstore entries without `testParameterFiles` | Placeholder JSON paths not for CI execution | — Pending — add when real test data exists |
+| DuckDB-only heredoc extraction for `parse_kraken2_reads` | Exclude `TaxonomyDatabase`, `_write_parquet`, `argparse` — only DuckDB path needed | ✓ Good — leaner task, no unused dependencies |
+| 8 GB / 1 CPU / `mem2_ssd1_v2_x2` for `parse_kraken2_reads` | DuckDB in-memory join is memory-bound, not CPU-bound | ✓ Good — locked in CONTEXT.md from research phase |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-04-01 — Milestone v1.1 complete (Phase 2)*
+*Last updated: 2026-04-01 after v1.1 milestone*
