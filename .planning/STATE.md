@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_plan: 2 of 2
-status: unknown
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-04-01T14:22:29.180Z"
+current_plan: 1
+status: Executing Phase 01
+stopped_at: Completed 01-04-PLAN.md
+last_updated: "2026-04-01T14:41:08.072Z"
 progress:
   total_phases: 1
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 4
+  completed_plans: 4
   percent: 100
 ---
 
@@ -18,14 +18,14 @@ progress:
 
 ## Current Status
 
-**Phase:** 01-implement-wdl-tasks-and-workflows — All 3 plans complete
-**Last action:** Completed plan 01-03 (test inputs, dockstore entries, final miniwdl validation) — 2026-04-01
+**Phase:** 01-implement-wdl-tasks-and-workflows — All 4 plans complete
+**Last action:** Completed plan 01-04 (gap closure: deduplicated WDL content applied to ca-kb_python, miniwdl check passes) — 2026-04-01
 **Next action:** Phase 01 complete — awaiting phase transition
 
 ## Active Phase
 
 **Phase 01:** implement-wdl-tasks-and-workflows
-**Current Plan:** 3 of 3
+**Current Plan:** 1
 **Progress:** [██████████] 100%
 
 ## Completed Phases
@@ -46,6 +46,8 @@ None (phase 01 complete but not transitioned yet).
 | 2026-04-01 | Parquet output removed from classify_reads_by_contig WDL task | WDL version always outputs TSV via DuckDB COPY; parquet branch not needed |
 | 2026-04-01 | JSON keys use workflow-level input format | allowNestedInputs: true means workflow.input format; call-alias format in plan was incorrect |
 | 2026-04-01 | Dockstore entries added without testParameterFiles | Placeholder test inputs not for CI execution |
+| 2026-04-01 | Used git show + sed line range for content extraction | Avoided merging 30+ unrelated upstream changes from worktree branch |
+| 2026-04-01 | Dockstore entries placed between classify_single and coverage_table | Consistent with worktree branch placement |
 
 ## Performance Metrics
 
@@ -54,8 +56,9 @@ None (phase 01 complete but not transitioned yet).
 | 01 | 01 | ~2m | 2/2 | 4 |
 | 01 | 02 | 4m | 2/2 | 2 |
 | 01 | 03 | 2m | 2/2 | 3 |
+| 01 | 04 | 5m | 2/2 | 6 |
 
 ## Session Info
 
-**Last session:** 2026-04-01T14:22:29.178Z
-**Stopped at:** Completed 01-03-PLAN.md
+**Last session:** 2026-04-01T14:41:08.070Z
+**Stopped at:** Completed 01-04-PLAN.md

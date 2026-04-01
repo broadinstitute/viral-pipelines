@@ -19,13 +19,13 @@
 
 **Requirements covered:** REQ-01 through REQ-19
 
-**Plans:** 4 plans (3 complete, 1 gap closure)
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 01-01-PLAN.md -- classify_virnucpro_contigs task and standalone workflow
 - [x] 01-02-PLAN.md -- classify_reads_by_contig task and standalone workflow
 - [x] 01-03-PLAN.md -- Test input JSONs, dockstore entries, and final validation
-- [ ] 01-04-PLAN.md -- Gap closure: fix duplicated WDL content and merge to ca-kb_python
+- [x] 01-04-PLAN.md -- Gap closure: fix duplicated WDL content and merge to ca-kb_python
 
 ---
 
