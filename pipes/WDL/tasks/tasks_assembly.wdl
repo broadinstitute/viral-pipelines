@@ -196,7 +196,7 @@ task select_references {
     disks: "local-disk ~{disk_size} SSD"
     disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
-    preemptible: 2
+    preemptible: 3
   }
 }
 
@@ -858,7 +858,7 @@ task align_reads {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
-    preemptible: 1
+    preemptible: 3
   }
 }
 
@@ -1125,7 +1125,6 @@ task run_discordance {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        preemptible: 1
     }
 }
 
