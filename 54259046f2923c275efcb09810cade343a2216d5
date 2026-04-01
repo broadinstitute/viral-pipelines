@@ -1,0 +1,64 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.23",
+  "base_commit_sha": "54259046f2923c275efcb09810cade343a2216d5",
+  "prompts": {
+    "0d7b158b320f5c10": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2cefa621-9a60-472c-8c1c-6ce1db14031f",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 0,
+      "accepted_lines": 3,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/7264440d50b704b1834d3c4f1f337ac4e9f7b9ad7fc5f47d22dd9417c4dda8b5"
+    },
+    "7c8a0b7fc2c0bf0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "19bb3bd3-2fd6-4a68-a987-8377c0d67a3c",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 4,
+      "accepted_lines": 5,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/be7c04b4255df671c36ee62685e93073546271e2fdf9e99823b7dfc9df9599b0"
+    },
+    "aad819978c232662": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5983cd8a-ed39-40e0-ac0a-ffcc279df765",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 139,
+      "total_deletions": 71,
+      "accepted_lines": 118,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/912651a23277440b741993e6517992628ba43311fc1f5ab2252f006d251b79fb"
+    },
+    "f7a7d376d2485eec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "325fe480-39ee-4671-8ce2-28be19d71afb",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 34,
+      "total_deletions": 33,
+      "accepted_lines": 29,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/180346e4f65e1bb25f00aa3384b8db2064764da74592d462b7f468332d3262b4"
+    }
+  }
+}
