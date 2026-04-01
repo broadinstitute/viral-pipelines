@@ -721,7 +721,7 @@ task multiqc_from_bams {
     File?          config
     String?        config_yaml
 
-    String         docker = "ghcr.io/broadinstitute/read-qc-tools:1.0.1"
+    String         docker = "ghcr.io/broadinstitute/read-qc-tools:1.1.0"
 
     Int?           cpu              # Override auto-scaled CPU (default: 2*num_bams, capped 4-32)
     Int?           machine_mem_gb   # Override auto-scaled memory (default: 2*cpu GB)
