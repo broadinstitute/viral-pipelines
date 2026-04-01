@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_plan: 1
-status: Executing Phase 01
+current_plan: Not started
+status: v1.0 milestone complete
 stopped_at: Completed 01-04-PLAN.md
-last_updated: "2026-04-01T14:41:08.072Z"
+last_updated: "2026-04-01T14:56:04.691Z"
 progress:
   total_phases: 1
   completed_phases: 1
@@ -16,16 +16,23 @@ progress:
 
 # Project State
 
+## Project Reference
+
+See: .planning/PROJECT.md (updated 2026-04-01)
+
+**Core value:** Enables VirNucPro users to complete the full analysis chain within existing WDL infrastructure on Terra/DNAnexus
+**Current focus:** v1.0 shipped — planning next milestone
+
 ## Current Status
 
-**Phase:** 01-implement-wdl-tasks-and-workflows — All 4 plans complete
-**Last action:** Completed plan 01-04 (gap closure: deduplicated WDL content applied to ca-kb_python, miniwdl check passes) — 2026-04-01
-**Next action:** Phase 01 complete — awaiting phase transition
+**Phase:** v1.0 complete
+**Last action:** Milestone v1.0 archived — all 19 requirements satisfied, miniwdl check passes — 2026-04-01
+**Next action:** `/gsd:new-milestone` — define next milestone
 
 ## Active Phase
 
 **Phase 01:** implement-wdl-tasks-and-workflows
-**Current Plan:** 1
+**Current Plan:** Not started
 **Progress:** [██████████] 100%
 
 ## Completed Phases

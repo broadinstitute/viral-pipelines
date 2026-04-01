@@ -1,41 +1,50 @@
-# Roadmap
+# Roadmap: VirNucPro Contig & Read Classification WDL Pipelines
 
-## Milestone 1: VirNucPro Contig & Read Classification WDL Pipelines
+## Milestones
 
-**Goal:** Two production-ready WDL tasks and standalone workflows that wrap the contig and read classification scripts, integrated into the existing `tasks_metagenomics.wdl` and validated with miniwdl.
+- ✅ **v1.0 VirNucPro Classification WDL** — Phase 1 (shipped 2026-04-01)
+- 🚧 **v1.1 Kraken2 Read Taxonomy Annotation WDL Task** — Phase 2 (in progress)
 
----
+## Phases
 
-## Phase 1: Implement WDL Tasks and Workflows
+<details>
+<summary>✅ v1.0 VirNucPro Classification WDL (Phase 1) — SHIPPED 2026-04-01</summary>
 
-**Goal:** Add `classify_virnucpro_contigs` and `classify_reads_by_contig` tasks to `tasks_metagenomics.wdl`, create two standalone wrapper workflows, add test inputs, and update `.dockstore.yml`.
+- [x] Phase 1: Implement WDL Tasks and Workflows (4/4 plans) — completed 2026-04-01
 
-**Success criteria:**
-- Both tasks present in `tasks_metagenomics.wdl` after the existing `classify_virnucpro` task
-- Both workflows exist in `pipes/WDL/workflows/`
-- `miniwdl check` passes on all four new/modified files
-- Test input JSONs present in `test/input/WDL/miniwdl-local/`
-- `.dockstore.yml` entries added for both workflows
+See archive: `.planning/milestones/v1.0-ROADMAP.md`
 
-**Requirements covered:** REQ-01 through REQ-19
+</details>
 
-**Plans:** 4/4 plans complete
+### 🚧 v1.1 Kraken2 Read Taxonomy Annotation WDL Task (In Progress)
 
+**Milestone Goal:** Promote `parse_kraken2_reads.py` into viral-pipelines as a production WDL task with standalone workflow, test inputs, and Dockstore registration — following the same inline-heredoc and runtime patterns established in v1.0.
+
+- [ ] **Phase 2: parse_kraken2_reads Task, Workflow, and Registration** - Implement and formally verify the Kraken2 taxonomy annotation task end-to-end
+
+## Phase Details
+
+### Phase 2: parse_kraken2_reads Task, Workflow, and Registration
+**Goal**: The parse_kraken2_reads task and standalone workflow are production-ready, validated, and registered in Dockstore
+**Depends on**: Phase 1
+**Requirements**: REQ-01, REQ-02, REQ-03, REQ-04, REQ-05, REQ-06, REQ-07, REQ-08, REQ-09, REQ-10, REQ-11
+**Success Criteria** (what must be TRUE):
+  1. `parse_kraken2_reads` task exists in `tasks_metagenomics.wdl` with correct inputs, outputs, runtime, and `parameter_meta` matching neighbour task conventions — and passes `miniwdl check` with no errors
+  2. Standalone workflow `pipes/WDL/workflows/parse_kraken2_reads.wdl` exists with a `meta` block (`description`, `author`, `email`, `allowNestedInputs: true`) and passes `miniwdl check`
+  3. Test input JSON `test/input/WDL/miniwdl-local/test_inputs-parse_kraken2_reads-local.json` exists with workflow-level input keys and placeholder file paths
+  4. `.dockstore.yml` contains an entry for `parse_kraken2_reads` workflow (no `testParameterFiles`)
+  5. Task `parameter_meta` block includes `description`, `patterns`, and `category` for every input, matching the structure of `classify_virnucpro_contigs` and `classify_reads_by_contig`
+**Plans:** 2 plans
 Plans:
-- [x] 01-01-PLAN.md -- classify_virnucpro_contigs task and standalone workflow
-- [x] 01-02-PLAN.md -- classify_reads_by_contig task and standalone workflow
-- [x] 01-03-PLAN.md -- Test input JSONs, dockstore entries, and final validation
-- [x] 01-04-PLAN.md -- Gap closure: fix duplicated WDL content and merge to ca-kb_python
+- [ ] 02-01-PLAN.md — Implement parse_kraken2_reads WDL task with Python heredoc in tasks_metagenomics.wdl
+- [ ] 02-02-PLAN.md — Standalone workflow, test input JSON, and Dockstore registration
+
+## Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Implement WDL Tasks and Workflows | v1.0 | 4/4 | Complete | 2026-04-01 |
+| 2. parse_kraken2_reads Task, Workflow, and Registration | v1.1 | 0/2 | Not started | - |
 
 ---
-
-## Phase Order
-
-```
-Phase 1: Wave 1 (Plan 01) -> Wave 2 (Plan 02) -> Wave 3 (Plan 03) -> Wave 4 (Plan 04 gap closure)
-```
-
-Plans 01 and 02 are sequential because both modify `tasks_metagenomics.wdl`. Plan 03 depends on both. Plan 04 closes verification gaps from duplicated content and missing merge.
-
----
-*Last updated: 2026-04-01 after gap closure planning*
+*Last updated: 2026-04-01 — Phase 2 plans created*
