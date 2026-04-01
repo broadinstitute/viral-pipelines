@@ -2183,3 +2183,175 @@ task parse_kraken2_reads {
     maxRetries: 2
   }
 }
+
+task summarize_kb_extract_reads {
+  meta {
+    description: "Summarize kb extract read output with taxonomy annotation. Extracts reads from tarball, joins with taxonomy mapping, and outputs zstd-compressed TSV."
+  }
+
+  input {
+    File    extract_reads_tar
+    File    taxonomy_map_csv
+    String  taxonomy_level = "highest"
+
+    String  docker = "quay.io/broadinstitute/py3-bio:0.1.3"
+  }
+
+  parameter_meta {
+    extract_reads_tar: {
+      description: "Tarball of extract_reads/ directory with structure: <sample_name>/<UID>.fastq.gz",
+      patterns: ["*.tar", "*.tar.gz", "*.tar.bz2", "*.tar.zst"],
+      category: "required"
+    }
+    taxonomy_map_csv: {
+      description: "CSV file mapping palmDB_ID to taxonomy lineage. Columns: palmDB_ID,palmDB_ID,tax_level_1,...,tax_level_n,strand",
+      patterns: ["*.csv", "*.tsv"],
+      category: "required"
+    }
+    taxonomy_level: {
+      description: "Taxonomy level to report: 'highest' (most general) or 'deepest' (most specific). Default 'highest'.",
+      category: "advanced"
+    }
+  }
+
+  String out_filename = "extracted_reads_summary.tsv.zst"
+  Int disk_size = 50
+
+  command <<<
+    set -e
+    pip install zstandard --quiet --no-cache-dir
+    python3<<CODE
+    import csv
+    import gzip
+    import os
+    import sys
+    import tarfile
+    import zstandard as zstd
+
+    TAXONOMY_LEVEL = "~{taxonomy_level}"
+    OUTPUT_FILE = "~{out_filename}"
+
+    # Load taxonomy map: palmDB_ID -> taxonomy lineage
+    print("Loading taxonomy map...", file=sys.stderr)
+    taxonomy_map = {}
+    with open("~{taxonomy_map_csv}", 'r') as f:
+        reader = csv.reader(f)
+        header = next(reader, None)  # palmDB_ID,palmDB_ID,tax1,tax2,...,strand
+        if header is None:
+            print("Error: Empty taxonomy map file", file=sys.stderr)
+            sys.exit(1)
+        # Determine which columns contain taxonomy (exclude first 2 palmDB_ID duplicates and last strand)
+        # Header: [palmDB_ID, palmDB_ID_dup, tax_level_1, ..., tax_level_n, strand]
+        tax_cols = header[2:-1]  # All columns between the two IDs and strand
+
+        for row in reader:
+            if len(row) < 3:
+                continue
+            palm_id = row[0]
+            # Extract taxonomy values (skip first 2 cols and last col which is strand)
+            tax_values = row[2:-1] if len(row) > 2 else []
+            taxonomy_map[palm_id] = tax_values
+
+    print(f"  Loaded {len(taxonomy_map)} taxonomy entries", file=sys.stderr)
+
+    # Extract tarball
+    print("Extracting tarball...", file=sys.stderr)
+    with tarfile.open("~{extract_reads_tar}", 'r:*') as tar:
+        tar.extractall(path=".")
+    print("  Extraction complete", file=sys.stderr)
+
+    # Open output file with zstd compression
+    cctx = zstd.ZstdCompressor()
+    with open(OUTPUT_FILE, 'wb') as out_f:
+        compressor = cctx.stream_writer(out_f)
+
+        # Write header
+        header_line = "SAMPLE_ID\tREAD_ID\tDB_ID\tTAXONOMY_LINEAGE\tTAXONOMY_NAME\tSEQUENCE_LENGTH\n"
+        compressor.write(header_line.encode('utf-8'))
+
+        # Process all sample directories
+        extract_dir = "extract_reads"
+        if not os.path.exists(extract_dir):
+            # Try to find extracted contents in current directory
+            extract_dir = "."
+
+        samples_processed = 0
+        reads_processed = 0
+
+        for sample_name in os.listdir(extract_dir):
+            sample_path = os.path.join(extract_dir, sample_name)
+            if not os.path.isdir(sample_path):
+                continue
+
+            samples_processed += 1
+
+            # Process all FASTQ files in sample directory
+            for filename in os.listdir(sample_path):
+                if not filename.endswith('.fastq.gz'):
+                    continue
+
+                filepath = os.path.join(sample_path, filename)
+                # Extract UID from filename (e.g., "UID12345.fastq.gz" -> "UID12345")
+                uid = filename.replace('.fastq.gz', '')
+
+                # Look up taxonomy
+                tax_values = taxonomy_map.get(uid, [])
+
+                if tax_values:
+                    if TAXONOMY_LEVEL == "deepest":
+                        # Get the last non-empty taxonomy level
+                        tax_lineage = [t for t in tax_values if t and t.strip()]
+                        tax_name = tax_lineage[-1] if tax_lineage else "Unclassified RdRP"
+                    else:  # highest
+                        # Get the first non-empty taxonomy level
+                        tax_lineage = [t for t in tax_values if t and t.strip()]
+                        tax_name = tax_lineage[0] if tax_lineage else "Unclassified RdRP"
+                    taxonomy_str = ";".join(tax_lineage) if tax_lineage else "Unclassified RdRP"
+                else:
+                    tax_name = "Unclassified RdRP"
+                    taxonomy_str = "Unclassified RdRP"
+
+                # Parse FASTQ to get read IDs and sequence lengths
+                with gzip.open(filepath, 'rt') as fq:
+                    while True:
+                        # Read 4 lines of FASTQ
+                        header_line = fq.readline()
+                        if not header_line:
+                            break
+                        seq_line = fq.readline().strip()
+                        plus_line = fq.readline()
+                        qual_line = fq.readline()
+
+                        if not header_line.startswith('@'):
+                            continue
+
+                        read_id = header_line[1:].split()[0]  # Remove @ and take first token
+                        seq_length = len(seq_line)
+
+                        # Write output line
+                        out_line = f"{sample_name}\t{read_id}\t{uid}\t{taxonomy_str}\t{tax_name}\t{seq_length}\n"
+                        compressor.write(out_line.encode('utf-8'))
+                        reads_processed += 1
+
+        compressor.close()
+
+    print(f"Processed {samples_processed} samples, {reads_processed} reads", file=sys.stderr)
+    print(f"Output written to: {OUTPUT_FILE}", file=sys.stderr)
+    CODE
+  >>>
+
+  output {
+    File summary_tsv_zst = "~{out_filename}"
+  }
+
+  runtime {
+    docker: docker
+    memory: "4 GB"
+    cpu: 2
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
+    dx_instance_type: "mem2_ssd1_v2_x4"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
