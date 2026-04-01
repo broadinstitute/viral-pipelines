@@ -1020,6 +1020,7 @@ task run_discordance {
       String out_basename = "run"
       Int    min_coverage = 4
 
+      Int    machine_mem_gb = 4
       String docker = "quay.io/broadinstitute/viral-ngs:3.0.10-core"
     }
     parameter_meta {
@@ -1120,7 +1121,7 @@ task run_discordance {
 
     runtime {
         docker: docker
-        memory: "3 GB"
+        memory: "~{machine_mem_gb} GB"
         cpu: 2
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
