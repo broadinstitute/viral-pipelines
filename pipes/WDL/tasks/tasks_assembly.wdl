@@ -876,6 +876,7 @@ task refine_assembly_with_aligned_reads {
       Boolean  mark_duplicates = false
       Float    major_cutoff = 0.5
       Int      min_coverage = 3
+      Int?     max_coverage
 
       Int      machine_mem_gb = 8
       String   docker = "quay.io/broadinstitute/viral-ngs:3.0.10-assemble"
@@ -903,7 +904,11 @@ task refine_assembly_with_aligned_reads {
       }
       min_coverage: {
         description: "Minimum read coverage required to call a position unambiguous.",
-        category: "advanaced"
+        category: "advanced"
+      }
+      max_coverage: {
+        description: "If specified, 'rasusa aln' will be used to downsample alignments at any genomic position that exceeds this level of coverage prior to variant calling. Recommended for any highly 'spiky' coverage samples (e.g. tiled amplicon sequencing).",
+        category: "advanced"
       }
     }
 
@@ -935,6 +940,7 @@ task refine_assembly_with_aligned_reads {
           --outVcf "~{out_basename}.sites.vcf.gz" \
           --min_coverage ~{min_coverage} \
           --major_cutoff ~{major_cutoff} \
+          ~{'--max_coverage ' + max_coverage} \
           --JVMmemory "$mem_in_mb"m \
           --loglevel=DEBUG
 
