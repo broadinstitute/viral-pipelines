@@ -13,9 +13,11 @@ Enables VirNucPro users to complete the full analysis chain — from raw reads t
 - **Codebase:** `viral-pipelines` — WDL workflows/tasks for viral NGS data analysis
 - **Shipped:** v1.0 (2026-04-01) — Phase 1 complete, 4 plans, all tasks verified
 - **Shipped:** v1.1 (2026-04-01) — Phase 2 complete, 2 plans, parse_kraken2_reads task verified
+- **Shipped:** v2.0 (2026-04-01) — Phase 3 complete, 3 plans, summarize_kb_extract_reads task verified
 - **Current state:** `tasks_metagenomics.wdl` contains all three tasks; three standalone workflows exist; all three registered in `.dockstore.yml`; all files pass `miniwdl check`
-- **Tech stack:** WDL 1.0, Python 3 inline heredocs, DuckDB (runtime pip install), `quay.io/broadinstitute/py3-bio:0.1.3`
+- **Tech stack:** WDL 1.0, Python 3 inline heredocs, DuckDB (runtime pip install), zstandard compression, `quay.io/broadinstitute/py3-bio:0.1.3`
 - **Working branch:** `ca-kb_python` — implementation lives here; not yet merged to master
+- **Next milestone:** Planning phase — new requirements to be defined
 
 ## Requirements
 
@@ -37,19 +39,32 @@ Enables VirNucPro users to complete the full analysis chain — from raw reads t
 - ✓ Standalone workflow `parse_kraken2_reads.wdl` — v1.1
 - ✓ Test input JSON for `parse_kraken2_reads` — v1.1
 - ✓ `.dockstore.yml` entry for `parse_kraken2_reads` — v1.1
+- ✓ `summarize_kb_extract_reads` WDL task in `tasks_metagenomics.wdl` — v2.0
+- ✓ Standalone workflow `summarize_kb_extract_reads.wdl` — v2.0
+- ✓ Test input JSON for `summarize_kb_extract_reads` — v2.0
+- ✓ `.dockstore.yml` entry for `summarize_kb_extract_reads` — v2.0
 
-## Current State
+## Current Milestone: v3.0 Centrifuger Taxonomic Classification WDL
 
-Both milestones shipped. All three tasks are production-ready. No active development milestone — next milestone to be defined.
+**Goal:** Add Centrifuger as a first-class taxonomic classifier in viral-pipelines, with single-sample and multi-sample workflows modeled on the existing `classify_single`/`classify_multi` pattern — multi-sample mode designed to amortize the 200+ GB database load across all samples on a node.
+
+**Target features:**
+- `centrifuger` WDL task in `tasks_metagenomics.wdl` (wraps Centrifuger binary; accepts pre-built index, FASTQ inputs, outputs classification report and per-read results)
+- `centrifuger_single.wdl` — standalone workflow for one sample per call (Terra scatter-friendly)
+- `centrifuger_multi.wdl` — batch workflow that loads the database once and scatters classification across multiple samples on the same node (1–4 nodes for a full cohort)
+- Test input JSONs for both workflows
+- Dockstore registration entries for both workflows
 
 ### Active
 
+(Requirements being defined — see REQUIREMENTS.md)
+
 ### Out of Scope
 
-- Combined end-to-end workflow chaining all three stages — user chose standalone only
-- Custom Docker image build — pip install at runtime is sufficient for now
-- Parquet output for `classify_reads_by_contig` — TSV default matches repo conventions
+- Combined end-to-end workflow chaining Centrifuger with downstream steps — standalone only for now
+- Custom Docker image build — will use existing tool image or runtime install
 - Real test data files for `miniwdl run` execution — test JSONs use placeholders; deferred
+- Parquet output for `classify_reads_by_contig` — TSV default matches repo conventions
 
 ## Key Decisions
 
@@ -65,10 +80,13 @@ Both milestones shipped. All three tasks are production-ready. No active develop
 | Dockstore entries without `testParameterFiles` | Placeholder JSON paths not for CI execution | — Pending — add when real test data exists |
 | DuckDB-only heredoc extraction for `parse_kraken2_reads` | Exclude `TaxonomyDatabase`, `_write_parquet`, `argparse` — only DuckDB path needed | ✓ Good — leaner task, no unused dependencies |
 | 8 GB / 1 CPU / `mem2_ssd1_v2_x2` for `parse_kraken2_reads` | DuckDB in-memory join is memory-bound, not CPU-bound | ✓ Good — locked in CONTEXT.md from research phase |
+| py3-bio + runtime zstandard for `summarize_kb_extract_reads` | Consistent with v1.0/v1.1 pattern, no custom image needed | ✓ Good — no infrastructure changes |
+| Inline Python heredoc for kb extract task | Matches existing repo conventions | ✓ Good — passes miniwdl check |
+| Zstd compression for TSV output | Space-efficient, consistent with repo conventions | ✓ Good — smaller outputs |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-04-01 after v1.1 milestone*
+*Last updated: 2026-04-01 — v3.0 milestone started*

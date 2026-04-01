@@ -4,7 +4,7 @@ milestone: v2.0
 milestone_name: KB Extract Read Summarization WDL
 status: Requirements definition phase
 stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-04-01T18:22:57.752Z"
+last_updated: "2026-04-01T18:27:21.713Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 2
@@ -21,11 +21,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** Enables VirNucPro users to complete the full analysis chain within existing WDL infrastructure on Terra/DNAnexus
-**Current focus:** v2.0 milestone - KB Extract Read Summarization WDL
+**Current focus:** v3.0 milestone - Centrifuger Taxonomic Classification WDL
 
 ## Current Position
 
-Milestone v2.0 initializing. Defining requirements and creating roadmap.
+Milestone v3.0 initializing. Defining requirements and creating roadmap.
 Status: Requirements definition phase
 Last activity: 2026-04-01
 
