@@ -126,6 +126,7 @@ task polyphonia_detect_cross_contamination {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
+    noAddress: true
   }
 }
 
@@ -201,6 +202,7 @@ task lofreq {
     disks: "local-disk ~{disk_size} SSD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
+    noAddress: true
   }
 }
 
@@ -241,6 +243,7 @@ task isnvs_per_sample {
     docker: docker
     memory: "~{select_first([machine_mem_gb, 7])} GB"
     dx_instance_type: "mem1_ssd1_v2_x8"
+    noAddress: true
   }
 }
 

@@ -131,6 +131,7 @@ task krakenuniq {
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x48"
     preemptible: 0
+    noAddress: true
   }
 }
 
@@ -200,6 +201,7 @@ task build_krakenuniq_db {
     cpu: 32
     dx_instance_type: "mem3_ssd1_v2_x32"
     preemptible: 0
+    noAddress: true
   }
 }
 
@@ -337,6 +339,7 @@ task kraken2 {
     disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem3_ssd1_v2_x8"
     preemptible: 2
+    noAddress: true
   }
 }
 
@@ -385,6 +388,7 @@ task report_primary_kraken_taxa {
     disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
+    noAddress: true
   }
 }
 
@@ -423,6 +427,7 @@ task filter_refs_to_found_taxa {
     disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
+    noAddress: true
   }
 }
 
@@ -662,6 +667,7 @@ task blastx {
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x36"
     preemptible: 1
+    noAddress: true
   }
 }
 
@@ -735,6 +741,7 @@ task krona {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
+    noAddress: true
   }
 }
 
@@ -767,6 +774,7 @@ task krona_merge {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
+    noAddress: true
   }
 }
 
@@ -864,6 +872,7 @@ task filter_bam_to_taxa {
     cpu: 8
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: 1
+    noAddress: true
   }
 }
 
@@ -939,5 +948,6 @@ task kaiju {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x16"
+    noAddress: true
   }
 }

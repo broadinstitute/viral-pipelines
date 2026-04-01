@@ -222,6 +222,7 @@ task sequencing_report {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
+        noAddress: true
     }
     output {
         Array[File] reports = glob("*.pdf")
@@ -380,6 +381,7 @@ task sc2_meta_final {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
+        noAddress: true
     }
     output {
         File meta_tsv = "~{out_basename}.final.tsv"
@@ -551,6 +553,7 @@ task crsp_meta_etl {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         maxRetries: 2
+        noAddress: true
     }
     output {
         File          biosample_submit_tsv = "biosample_meta_submit-~{out_basename}.tsv"

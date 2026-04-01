@@ -128,6 +128,7 @@ task deplete_taxa {
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: preemptible_tries
+    noAddress: true
   }
 }
 
@@ -188,6 +189,7 @@ task filter_to_taxon {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
+    noAddress: true
   }
 }
 
@@ -224,6 +226,7 @@ task build_lastal_db {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
+    noAddress: true
   }
 }
 
@@ -274,5 +277,6 @@ task merge_one_per_sample {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x4"
+    noAddress: true
   }
 }

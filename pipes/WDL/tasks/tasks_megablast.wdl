@@ -56,6 +56,7 @@ task trim_rmdup_subsamp {
         cpu:    cpu
         disks: "local-disk ~{disk_size_gb} LOCAL"
         dx_instance_type: "n2-highmem-4"
+        noAddress: true
     }
 }
 
@@ -154,6 +155,7 @@ task lca_megablast {
         disks: "local-disk ~{disk_size_gb} HDD"
 
         dx_instance_type: "n2-highmem-16"
+        noAddress: true
     }
 }
 
@@ -233,6 +235,7 @@ task ChunkBlastHits {
         disks: "local-disk ~{disk_size_gb} LOCAL"
 
         dx_instance_type: "n2-standard-16"
+        noAddress: true
     }
 }
 
@@ -406,5 +409,6 @@ task blastoff {
         disks: "local-disk ~{disk_size_gb} HDD"
 
         dx_instance_type: "n2-highmem-8"
+        noAddress: true
     }
 }

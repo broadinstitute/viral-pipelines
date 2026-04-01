@@ -65,6 +65,7 @@ task qiime_import_from_bam {
         cpu: cpu
         disk: "~{disk_size_gb} GB"
         disks: "local-disk ~{disk_size_gb} HDD"
+        noAddress: true
     }
 }
 
@@ -146,6 +147,7 @@ task trim_reads {
         cpu: cpu
         disk: "~{disk_size_gb} GB"
         disks: "local-disk ~{disk_size_gb} HDD"
+        noAddress: true
     }
 }
 
@@ -196,6 +198,7 @@ task join_paired_ends {
         cpu: cpu
         disk: "~{disk_size_gb} GB"
         disks: "local-disk ~{disk_size_gb} HDD"
+        noAddress: true
     }
 }
 
@@ -271,6 +274,7 @@ task deblur {
         cpu: cpu
         disk: "~{disk_size_gb} GB"
         disks: "local-disk ~{disk_size_gb} HDD"
+        noAddress: true
     }
 }
 task train_classifier {
@@ -359,6 +363,7 @@ task train_classifier {
         cpu: cpu
         disk: "~{disk_size_gb} GB"
         disks: "local-disk ~{disk_size_gb} HDD"
+        noAddress: true
     }
 }
 task tax_analysis {
@@ -422,5 +427,6 @@ task tax_analysis {
         cpu: cpu
         disk: "~{disk_size_gb} GB"
         disks: "local-disk ~{disk_size_gb} HDD"
+        noAddress: true
     }
 } 

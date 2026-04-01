@@ -20,6 +20,7 @@ task concatenate {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
+        noAddress: true
     }
     output {
         File combined = "~{output_name}"
@@ -299,6 +300,7 @@ task zcat {
         disks: "local-disk ~{disk_size} LOCAL"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
+        noAddress: true
     }
     output {
         File    combined     = "${output_name}"
@@ -329,6 +331,7 @@ task sed {
         disks: "local-disk ~{disk_size} LOCAL"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
+        noAddress: true
     }
     output {
         File outfile = "~{outfilename}"
@@ -357,6 +360,7 @@ task tar_extract {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 2
+        noAddress: true
     }
     output {
         Array[File] files = glob("unpack/*")
@@ -566,6 +570,7 @@ task sanitize_fasta_headers {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
+    noAddress: true
   }
 }
 
@@ -588,6 +593,7 @@ task fasta_to_ids {
         disks: "local-disk ~{disk_size} LOCAL"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
+        noAddress: true
     }
     output {
         File ids_txt = "~{basename}.txt"
@@ -612,6 +618,7 @@ task md5sum {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
+    noAddress: true
   }
 }
 
@@ -641,6 +648,7 @@ task json_dict_to_tsv {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
+    noAddress: true
   }
 }
 
@@ -684,6 +692,7 @@ task fetch_row_from_tsv {
     disk: "~{disk_size} GB" # TES
     disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
+    noAddress: true
   }
 }
 
@@ -723,6 +732,7 @@ task fetch_col_from_tsv {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
+    noAddress: true
   }
 }
 
@@ -852,6 +862,7 @@ task tsv_join {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
+    noAddress: true
   }
 }
 
@@ -887,6 +898,7 @@ task tsv_to_csv {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
+    noAddress: true
   }
 }
 
@@ -921,6 +933,7 @@ task tsv_drop_cols {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
+        noAddress: true
     }
     output {
         File out_tsv = "~{out_filename}"
@@ -955,6 +968,7 @@ task tsv_stack {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
+    noAddress: true
   }
 }
 
@@ -983,6 +997,7 @@ task cat_except_headers {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
+    noAddress: true
   }
 }
 task make_empty_file {
@@ -1003,6 +1018,7 @@ task make_empty_file {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
+    noAddress: true
   }
 }
 
@@ -1025,6 +1041,7 @@ task rename_file {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
+    noAddress: true
   }
 }
 
@@ -1044,6 +1061,7 @@ task raise {
     disks:  "local-disk 30 HDD"
     disk: "30 GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
+    noAddress: true
   }
 }
 
@@ -1073,6 +1091,7 @@ task unique_strings {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
+    noAddress: true
   }
 }
 
@@ -1094,6 +1113,7 @@ task unique_arrays {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
+    noAddress: true
   }
 }
 
@@ -1120,6 +1140,7 @@ task today {
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     maxRetries: 2
+    noAddress: true
   }
 }
 
@@ -1183,6 +1204,7 @@ task string_split {
     cpu: 1
     disks: "local-disk 50 SSD"
     disk: "50 GB" # TES
+    noAddress: true
   }
 }
 
@@ -1238,6 +1260,7 @@ task filter_sequences_by_length {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
+        noAddress: true
     }
     output {
         File filtered_fasta    = out_fname
@@ -1270,5 +1293,6 @@ task pair_files_by_basename {
     disks:  "local-disk ~{disk_gb} HDD"
     disk: "~{disk_gb} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
+    noAddress: true
   }
 }

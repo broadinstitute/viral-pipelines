@@ -133,6 +133,7 @@ task subsample_by_cases {
         disks:  "local-disk 200 HDD"
         disk:   "200 GB"
         dx_instance_type: "mem3_ssd1_v2_x4"
+        noAddress: true
     }
     output {
         File    genome_matrix_days              =   "genome_matrix_days.tsv"
@@ -194,6 +195,7 @@ task multi_align_mafft_ref {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x8"
+    noAddress: true
   }
 }
 
@@ -239,6 +241,7 @@ task multi_align_mafft {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x8"
+    noAddress: true
   }
 }
 
@@ -339,6 +342,7 @@ task beast {
     gpuType:             select_first([gpu_type, "nvidia-tesla-p4"])  # Terra
     gpuCount:            select_first([gpu_count, 1])  # Terra
     nvidiaDriverVersion: "410.79"
+    noAddress: true
   }
 }
 
@@ -376,6 +380,7 @@ task index_ref {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
 
+    noAddress: true
   }
 }
 
@@ -405,6 +410,7 @@ task trimal_clean_msa {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
+    noAddress: true
   }
 }
 
@@ -461,6 +467,7 @@ task merge_vcfs_bcftools {
     memory: "~{select_first([machine_mem_gb, 3])} GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
+    noAddress: true
   }
 }
 
@@ -522,6 +529,7 @@ task merge_vcfs_gatk {
     memory: "~{select_first([machine_mem_gb, 3])} GB"
     cpu: 2
     dx_instance_type: "mem1_ssd1_v2_x2"
+    noAddress: true
   }
 }
 
@@ -591,5 +599,6 @@ task reconstructr {
     disk: "~{disk_size} GB" # TES
     bootDiskSizeGb: 50
     dx_instance_type: "mem1_ssd1_v2_x4"
+    noAddress: true
   }
 }

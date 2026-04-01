@@ -107,6 +107,7 @@ task assemble {
         disks: "local-disk ~{disk_size} SSD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
+        noAddress: true
     }
 
 }
@@ -197,6 +198,7 @@ task select_references {
     disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
+    noAddress: true
   }
 }
 
@@ -459,6 +461,7 @@ task scaffold {
         disks: "local-disk ~{disk_size} SSD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
+        noAddress: true
     }
 }
 
@@ -544,6 +547,7 @@ task skani_triangle {
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     preemptible: 2
+    noAddress: true
   }
 }
 
@@ -626,6 +630,7 @@ task ivar_trim {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x4"
+        noAddress: true
     }
 }
 
@@ -691,6 +696,7 @@ task ivar_trim_stats {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB"
         dx_instance_type: "mem1_ssd1_v2_x2"
+        noAddress: true
     }
 }
 
@@ -859,6 +865,7 @@ task align_reads {
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: 1
+    noAddress: true
   }
 }
 
@@ -999,6 +1006,7 @@ task refine_assembly_with_aligned_reads {
         disks: "local-disk ~{disk_size} SSD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
+        noAddress: true
     }
 }
 
@@ -1120,6 +1128,7 @@ task run_discordance {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         preemptible: 1
+        noAddress: true
     }
 }
 
@@ -1231,6 +1240,7 @@ task filter_bad_ntc_batches {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
+        noAddress: true
     }
     output {
         File           seqids_kept      = "seqids.filtered.txt"
@@ -1341,5 +1351,6 @@ task wgsim {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
+        noAddress: true
     }
 }
