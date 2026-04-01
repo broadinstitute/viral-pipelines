@@ -81,6 +81,9 @@ workflows:
   - name: classify_reads_by_contig
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/classify_reads_by_contig.wdl
+  - name: parse_kraken2_reads
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/parse_kraken2_reads.wdl
   - name: coverage_table
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/coverage_table.wdl
