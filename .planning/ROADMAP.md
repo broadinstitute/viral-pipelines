@@ -34,9 +34,9 @@ See archive: `.planning/milestones/v1.0-ROADMAP.md`
   3. Test input JSON `test/input/WDL/miniwdl-local/test_inputs-parse_kraken2_reads-local.json` exists with workflow-level input keys and placeholder file paths
   4. `.dockstore.yml` contains an entry for `parse_kraken2_reads` workflow (no `testParameterFiles`)
   5. Task `parameter_meta` block includes `description`, `patterns`, and `category` for every input, matching the structure of `classify_virnucpro_contigs` and `classify_reads_by_contig`
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 02-01-PLAN.md — Implement parse_kraken2_reads WDL task with Python heredoc in tasks_metagenomics.wdl
+- [x] 02-01-PLAN.md — Implement parse_kraken2_reads WDL task with Python heredoc in tasks_metagenomics.wdl
 - [ ] 02-02-PLAN.md — Standalone workflow, test input JSON, and Dockstore registration
 
 ## Progress
@@ -44,7 +44,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. Implement WDL Tasks and Workflows | v1.0 | 4/4 | Complete | 2026-04-01 |
-| 2. parse_kraken2_reads Task, Workflow, and Registration | v1.1 | 0/2 | Not started | - |
+| 2. parse_kraken2_reads Task, Workflow, and Registration | v1.1 | 1/2 | In Progress|  |
 
 ---
 *Last updated: 2026-04-01 — Phase 2 plans created*

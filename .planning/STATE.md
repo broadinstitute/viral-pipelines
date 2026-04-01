@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
+milestone: v1.1
+milestone_name: Kraken2 Read Taxonomy Annotation WDL Task
 current_plan: Not started
 status: v1.0 milestone complete
-stopped_at: Completed 01-04-PLAN.md
-last_updated: "2026-04-01T14:56:04.691Z"
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-04-01T16:36:36.970Z"
 progress:
   total_phases: 1
-  completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  completed_phases: 0
+  total_plans: 2
+  completed_plans: 1
+  percent: 50
 ---
 
 # Project State
@@ -25,19 +25,19 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 
 ## Current Status
 
-**Phase:** v1.0 complete
-**Last action:** Milestone v1.0 archived — all 19 requirements satisfied, miniwdl check passes — 2026-04-01
-**Next action:** `/gsd:new-milestone` — define next milestone
+**Phase:** 02-parse-kraken2-reads-task-workflow-and-registration
+**Last action:** Completed 02-01-PLAN.md — parse_kraken2_reads WDL task added to tasks_metagenomics.wdl — 2026-04-01
+**Next action:** Execute 02-02-PLAN.md (workflow wrapping + Dockstore registration)
 
 ## Active Phase
 
-**Phase 01:** implement-wdl-tasks-and-workflows
-**Current Plan:** Not started
-**Progress:** [██████████] 100%
+**Phase 02:** parse-kraken2-reads-task-workflow-and-registration
+**Current Plan:** 02 (next)
+**Progress:** [█████░░░░░] 50%
 
 ## Completed Phases
 
-None (phase 01 complete but not transitioned yet).
+- Phase 01: implement-wdl-tasks-and-workflows (4/4 plans complete)
 
 ## Decisions Log
 
@@ -55,6 +55,8 @@ None (phase 01 complete but not transitioned yet).
 | 2026-04-01 | Dockstore entries added without testParameterFiles | Placeholder test inputs not for CI execution |
 | 2026-04-01 | Used git show + sed line range for content extraction | Avoided merging 30+ unrelated upstream changes from worktree branch |
 | 2026-04-01 | Dockstore entries placed between classify_single and coverage_table | Consistent with worktree branch placement |
+| 2026-04-01 | parse_kraken2_reads task appended to tasks_metagenomics.wdl after classify_reads_by_contig | Core deliverable of Phase 02; DuckDB-only Python heredoc with resolve_strains handled at DB load time |
+| 2026-04-01 | Dynamic disk sizing embedded directly in runtime strings (no disk_size variable) | Avoids unused declaration lint warning; matches Pitfall 3 guidance |
 
 ## Performance Metrics
 
@@ -64,8 +66,9 @@ None (phase 01 complete but not transitioned yet).
 | 01 | 02 | 4m | 2/2 | 2 |
 | 01 | 03 | 2m | 2/2 | 3 |
 | 01 | 04 | 5m | 2/2 | 6 |
+| 02 | 01 | 15m | 1/1 | 1 |
 
 ## Session Info
 
-**Last session:** 2026-04-01T14:41:08.070Z
-**Stopped at:** Completed 01-04-PLAN.md
+**Last session:** 2026-04-01T16:36:36.968Z
+**Stopped at:** Completed 02-01-PLAN.md
