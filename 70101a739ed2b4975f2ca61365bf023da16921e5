@@ -1,0 +1,22 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.23",
+  "base_commit_sha": "70101a739ed2b4975f2ca61365bf023da16921e5",
+  "prompts": {
+    "2ff0f656862dfe57": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2b5ea821bffe0NBdtJ4vcY0YDP",
+        "model": "synthetic/hf:nvidia/Kimi-K2.5-NVFP4"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 22,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/c7fe78f7fcc13a15d2a87a6419b0e80bf8dcc23aba0814acebae267e1fc9cedc"
+    }
+  }
+}
