@@ -216,7 +216,6 @@ task plot_coverage {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
-    preemptible: 1
   }
 }
 
