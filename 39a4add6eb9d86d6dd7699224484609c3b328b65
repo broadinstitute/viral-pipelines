@@ -1,0 +1,24 @@
+.planning/ROADMAP.md
+  0d7b158b320f5c10 6,19,23,37,40,47,50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.23",
+  "base_commit_sha": "39a4add6eb9d86d6dd7699224484609c3b328b65",
+  "prompts": {
+    "0d7b158b320f5c10": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2cefa621-9a60-472c-8c1c-6ce1db14031f",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 7,
+      "accepted_lines": 7,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/1e6600d0bd69632328b06f8f7be5f20abc1a429d088c64b4c88aa13de59cb2f5"
+    }
+  }
+}
