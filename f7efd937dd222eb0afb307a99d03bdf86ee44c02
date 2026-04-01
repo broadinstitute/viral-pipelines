@@ -1,0 +1,26 @@
+pipes/WDL/workflows/parse_kraken2_reads.wdl
+  0d7b158b320f5c10 1-31
+test/input/WDL/miniwdl-local/test_inputs-parse_kraken2_reads-local.json
+  0d7b158b320f5c10 1-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.23",
+  "base_commit_sha": "f7efd937dd222eb0afb307a99d03bdf86ee44c02",
+  "prompts": {
+    "0d7b158b320f5c10": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2cefa621-9a60-472c-8c1c-6ce1db14031f",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 37,
+      "total_deletions": 2,
+      "accepted_lines": 35,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/7264440d50b704b1834d3c4f1f337ac4e9f7b9ad7fc5f47d22dd9417c4dda8b5"
+    }
+  }
+}
