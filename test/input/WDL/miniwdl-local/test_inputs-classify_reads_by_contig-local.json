@@ -1,0 +1,4 @@
+{
+  "classify_reads_by_contig.paf_file": "test/input/placeholder_reads.paf.gz",
+  "classify_reads_by_contig.contig_classifications": "test/input/placeholder_contigs_classified.tsv"
+}

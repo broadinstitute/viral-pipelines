@@ -941,3 +941,1013 @@ task kaiju {
     dx_instance_type: "mem3_ssd1_v2_x16"
   }
 }
+
+task kallisto {
+  meta {
+    description: "Runs kb count classification tool"
+  }
+
+  input {
+    File     reads_bam
+    File     kb_index
+    File     t2g
+    Int      kmer_size=31
+
+    String   technology
+    String   parity
+    Boolean  h5ad=false
+    Boolean  loom=false
+    Boolean  protein=false
+
+    String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
+  }
+
+  parameter_meta {
+    reads_bam: {
+      description: "Reads to classify. Must be un-mapped reads, paired-end or single-end.",
+      patterns: ["*.bam", "*.fastq", "*.fastq.gz"]
+    }
+    kb_index: {
+      description: "Pre-built kb index tarball",
+      patterns: ["*.idx", "*.index"]
+    }
+    t2g: {
+      description: "Transcript-to-gene mapping file. Two-column TSV with transcript IDs in first column and gene IDs in second column.",
+      patterns: ["*.tsv", "*.txt"]
+    }
+    kmer_size: {
+      description: "K-mer size used in kb index. Must match the k-mer size used to build the index. Default is 31."
+    }
+    technology: {
+      description: "Single-cell technology used  {10xv2, 10xv3, dropseq, inDrops, seqwell, smartseq2, bulk}."
+    }
+    h5ad: {
+      description: "Output an h5ad file (requires scanpy). Default is false"
+    }
+    loom: {
+      description: "Output a loom file (requires loompy). Default is false"
+    }
+    protein: {
+      description: "Indicates that the kb index is built from protein sequences. Default is false"
+    } 
+  }
+
+  String out_basename=basename(basename(reads_bam, '.bam'), '.fasta')
+
+  command <<<
+    set -ex -o pipefail
+
+    if [ -z "$TMPDIR" ]; then
+      export TMPDIR=$(pwd)
+    fi
+
+    printf "%s\n" "$(kb -h 2>&1 | grep "kb_python" | tee VERSION)"
+    kallisto version | tee -a VERSION
+    metagenomics --version | tee -a VERSION
+
+    paste -sd ';' VERSION | sed 's/;/; /g' > VERSION.tmp && mv VERSION.tmp VERSION
+
+    if [[ ~{reads_bam} == *.bam ]]; then
+        metagenomics kb \
+          "~{reads_bam}" \
+          --index "~{kb_index}" \
+          --t2g "~{t2g}" \
+          --kmer_len ~{kmer_size} \
+          --technology ~{technology} \
+          --parity ~{parity} \
+          ~{if h5ad then "--h5ad" else ""} \
+          ~{if loom then "--loom" else ""} \
+          ~{true='--protein' false='' protein} \
+          --out_dir ~{out_basename}_count \
+          --loglevel=DEBUG
+    else # we have a single-ended fastq file so just call it directly
+        kb count \
+          --kallisto kallisto \
+          -t `nproc` \
+          -k ~{kmer_size} \
+          --parity single \
+          -i "~{kb_index}" \
+          -g "~{t2g}" \
+          -o "~{out_basename}_count" \
+          -x ~{technology} \
+          ~{if h5ad then "--h5ad" else ""} \
+          ~{if loom then "--loom" else ""} \
+          ~{true='--aa' false='' protein} \
+          "~{reads_bam}"
+    fi
+
+    # Since we are running this file-by-file we need to add our sample name to the matrix.cells file
+    bn=$(basename "~{reads_bam}")
+    sample_name=$(echo "$bn" | cut -d'.' -f1)
+    echo "$sample_name" > "~{out_basename}_count/matrix.cells"
+
+    tar -c -C "~{out_basename}_count" . | zstd > "~{out_basename}_kb_count.tar.zst"
+  >>>
+
+  output {
+    File    kb_count_tar  = "~{out_basename}_kb_count.tar.zst"
+    String  viralngs_version    = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "~{docker}"
+    memory: "32 GB"
+    cpu: 16
+    disks: "local-disk 350 LOCAL"
+    dx_instance_type: "mem3_ssd1_v2_x16"
+    preemptible: 2
+  }
+}
+
+task build_kallisto_db {
+  meta {
+    description: "Builds a custom kb index from provided input FASTA file."
+  }
+
+  input {
+    String      out_basename
+    File        reference_sequences
+    Boolean     protein=false
+
+    Int        kmer_size=31
+    String?     workflow_type
+
+    String      docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
+  }
+
+  parameter_meta {
+    out_basename: { description: "A descriptive string used in output index filename. Output will be called <out_basename>.idx" }
+    reference_sequences: {
+      description: "FASTA file of reference sequences to index.",
+      patterns: ["*.fasta", "*.fa", "*.fa.gz", "*.fasta.gz"]
+    }
+    protein: {
+      description: "Generate an index from a FASTA file containing protein sequences. Default is nucleotide."
+    }
+    kmer_size: {
+      description: "K-mer size to use in index. Default is 31."
+    }
+    workflow_type: {
+      description: "Type of index to create {standard, nac, kite, custom}. Default is 'standard'."
+    }
+  }
+
+  command <<<
+    set -ex -o pipefail
+
+    if [ -z "$TMPDIR" ]; then
+      export TMPDIR=$(pwd)
+    fi
+
+    printf "kb_python %s\n" "$(kb -h 2>&1 | grep "kb_python" | cut -d" " -f2)" | tee VERSION
+    kallisto version | tee -a VERSION    
+    metagenomics --version | tee -a VERSION
+
+    if [[ ~{reference_sequences} == *.gz ]]; then
+      gunzip -c "~{reference_sequences}" > reference_sequences.fasta
+      REF_FASTA=reference_sequences.fasta
+    else
+      REF_FASTA="~{reference_sequences}"
+    fi
+
+    # build kb database
+    metagenomics kb_build \
+      ~{true='--protein' false='' protein} \
+      --kmer_len=~{kmer_size} \
+      ~{if defined(workflow_type) then "--workflow=" + workflow_type else ""} \
+      --index="~{out_basename}.idx" \
+      $REF_FASTA \
+      --loglevel=DEBUG
+
+
+       tar -c "~{out_basename}.idx" | zstd > "~{out_basename}.idx.tar.zst"
+  >>>
+
+  output {
+    File        kb_index   = "~{out_basename}.idx.tar.zst"
+    String      viralngs_version = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "~{docker}"
+    memory: "32 GB"
+    disks: "local-disk 750 LOCAL"
+    cpu: 16
+    dx_instance_type: "mem3_ssd1_v2_x16"
+    preemptible: 0
+  }
+}
+
+task kallisto_extract {
+  meta {
+    description: "Extracts reads that pseudoalign to a kb index"
+  }
+
+  input {
+    File            reads_bam
+    File            kb_index
+    File            t2g
+    Array[String]?  target_ids
+    File?           h5ad_file
+    Int             threads=8
+    Int             threshold=1
+    Boolean         protein=false
+
+     String          docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
+  }
+
+  parameter_meta {
+    reads_bam: {
+      description: "Reads used by kb count to psuedoalign. Must be un-mapped or single-end.",
+      patterns: ["*.bam", "*.fastq", "*.fastq.gz"]
+    }
+    kb_index: {
+      description: "kb index used to psuedoalign reads.",
+      patterns: ["*.index"]
+    }
+    t2g: {
+      description: "Transcript-to-gene mapping file. Two-column TSV with transcript IDs in first column and gene IDs in second column.",
+      patterns: ["*.tsv", "*.txt"]
+    }
+    target_ids: {
+      description: "List of target transcript or gene IDs to extract reads for."
+    }
+    h5ad_file: {
+      description: "If no target IDs are provided, an h5ad file may be provided from which to extract target IDs. The h5ad file must contain a 'gene_ids' column in the .var dataframe.",
+      patterns: ["*.h5ad"]
+    }
+    protein: {
+      description: "Input sequences contain amino acid sequences."
+    }
+    threshold: {
+      description: "Minimum number of pseudoalignments to a target ID for a read to be extracted. Default is 1."
+    }
+    threads: {
+      description: "Number of threads to use. Default is 8."
+    }
+  }
+
+  String out_basename = sub(sub(sub(sub(basename(reads_bam), "\\.bam$", ""), "\\.gz$", ""), "\\.fastq$", ""), "\\.fq$", "")
+
+  command <<<
+    set -ex -o pipefail
+
+    if [ -z "$TMPDIR" ]; then
+      export TMPDIR=$(pwd)
+    fi
+
+    printf "%s\n" "$(kb -h 2>&1 | grep "kb_python" | tee VERSION)"
+    kallisto version | tee -a VERSION
+    metagenomics --version | tee -a VERSION
+
+    paste -sd ';' VERSION | sed 's/;/; /g' > VERSION.tmp && mv VERSION.tmp VERSION
+
+    # Determine source of target IDs
+    TARGET_IDS="~{sep=' ' select_first([target_ids, []])}"
+    if [ -z "$TARGET_IDS" ]; then
+      echo "No target IDs provided, will attempt to extract from h5ad!" >&2
+      TARGET_SOURCE="--h5ad ~{h5ad_file}"
+    else
+      TARGET_SOURCE="--targets $TARGET_IDS"
+    fi
+
+    metagenomics kb_extract \
+      "~{reads_bam}" \
+      --index "~{kb_index}" \
+      --t2g "~{t2g}" \
+      --out_dir "~{out_basename}_extract" \
+      ~{if protein then "--protein" else ""} \
+      --threshold ~{threshold} \
+      $TARGET_SOURCE \
+      --loglevel=DEBUG
+
+    tar -c -C "~{out_basename}_extract" . | zstd > "~{out_basename}_kb_extract.tar.zst"
+  >>>
+
+  output {
+    File    kb_extract_tar    = "~{out_basename}_kb_extract.tar.zst"
+    String  viralngs_version  = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "~{docker}"
+    memory: "32 GB"
+    cpu: 16
+    disks: "local-disk 350 LOCAL"
+    dx_instance_type: "mem3_ssd1_v2_x16"
+    preemptible: 2
+  }
+}
+
+task report_primary_kallisto_taxa {
+  meta {
+    description: "Interprets kb count output file and emits the primary contributing taxa under a focal taxon of interest."
+  }
+  input {
+    File          kb_count_tar
+    File          id_to_taxon_map
+    String        focal_taxon = "Viruses"
+
+    String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
+  }
+  String out_basename = sub(basename(kb_count_tar, ".tar.zst"), "_kb_count", "")
+  Int disk_size = 200
+  Int machine_mem_gb = 16
+
+  command <<<
+    set -e
+
+    printf "%s\n" "$(kb -h 2>&1 | grep "kb_python" | tee VERSION)"
+    kallisto version | tee -a VERSION
+    metagenomics --version | tee -a VERSION
+
+    paste -sd ';' VERSION | sed 's/;/; /g' > VERSION.tmp && mv VERSION.tmp VERSION
+
+    metagenomics kb_top_taxa \
+      "~{kb_count_tar}" \
+      "~{out_basename}.ranked_focal_report.tsv" \
+      --id-to-tax-map "~{id_to_taxon_map}" \
+      --target-taxon "~{focal_taxon}"
+    cat "~{out_basename}.ranked_focal_report.tsv" | head -2 | tail +2 > TOPROW
+    cut -f 2 TOPROW > NUM_FOCAL           # focal_taxon_count
+    cut -f 7 TOPROW > PCT_OF_FOCAL        # pct_of_focal
+    cut -f 6 TOPROW > NUM_READS           # hit_reads
+    cut -f 3 TOPROW > TAX_ID              # palmdb_id
+    cut -f 4 TOPROW > TAX_NAME            # hit_id (species name)
+    echo "" > TAX_RANK                    # Not provided by kb_top_taxa
+  >>>
+
+  output {
+    File   ranked_focal_report = "~{out_basename}.ranked_focal_report.tsv"
+    String focal_tax_name = focal_taxon
+    Int    total_focal_reads = read_int("NUM_FOCAL")
+    Float  percent_of_focal = read_float("PCT_OF_FOCAL")
+    Int    num_reads = read_int("NUM_READS")
+    String tax_rank = read_string("TAX_RANK")
+    String tax_id = read_string("TAX_ID")
+    String tax_name = read_string("TAX_NAME")
+  }
+
+  runtime {
+    docker: docker
+    memory: machine_mem_gb + " GB"
+    cpu: 16
+    disks:  "local-disk " + disk_size + " LOCAL"
+    disk: disk_size + " GB" # TESs
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
+
+task kallisto_merge_h5ads {
+  meta {
+    description: "Merges multiple kb count output tarballs into a single .h5ad file with sample metadata."
+  }
+
+  input {
+    Array[File]     in_count_tars
+    String          out_basename
+
+    String          docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
+  }
+
+  parameter_meta {
+    in_count_tars: {
+      description: "List of kb count output tarballs to merge. Each tarball should contain counts_unfiltered/*.h5ad and matrix.cells.",
+      patterns: ["*.tar.zst", "*.tar.gz"]
+    }
+    out_basename: {
+      description: "Basename for output merged .h5ad file. Output will be named <out_basename>.h5ad."
+    }
+
+  }
+
+  command <<<
+    set -ex -o pipefail
+
+    if [ -z "$TMPDIR" ]; then
+      export TMPDIR=$(pwd)
+    fi
+
+    printf "%s\n" "$(kb -h 2>&1 | grep "kb_python" | tee VERSION)"
+    kallisto version | tee -a VERSION
+    metagenomics --version | tee -a VERSION
+
+    paste -sd ';' VERSION | sed 's/;/; /g' > VERSION.tmp && mv VERSION.tmp VERSION
+
+    metagenomics kb_merge_h5ads \
+      "~{sep='" "' in_count_tars}" \
+      --out-h5ad "~{out_basename}.h5ad" \
+      --loglevel=DEBUG
+   >>>
+
+  output {
+    File    kb_merged_h5ad        = "~{out_basename}.h5ad"
+    String  viralngs_version      = read_string("VERSION")
+  }
+
+  runtime {
+    docker: "~{docker}"
+    memory: "16 GB"
+    cpu: 16
+    disks: "local-disk 350 LOCAL"
+    dx_instance_type: "mem3_ssd1_v2_x16"
+    preemptible: 2
+  }
+}
+
+task classify_virnucpro {
+  meta {
+    description: "Runs VirNucPro deep learning viral classification on unmapped reads using GPU acceleration."
+  }
+
+  input {
+    File      reads_input
+    Int       expected_length = 300
+
+    Boolean   parallel=false
+    Boolean   persist_model=false
+    Boolean   use_gpu=false
+    Int       batch_size=256
+    Int?      esm_batch_size
+    Int?      dnabert_batch_size
+
+    Boolean   resume = false
+
+    String?   accelerator_type
+    Int?      accelerator_count
+    String?   gpu_type
+    Int?      gpu_count
+    String?   vm_size
+    String    docker = "ghcr.io/broadinstitute/virnucpro-cuda:1.0.9"
+  }
+
+  parameter_meta {
+    reads_input: {
+      description: "Reads to classify. Must be unmapped reads, paired-end or single-end. Accepts BAM or FASTA formats.",
+      patterns: ["*.bam", "*.fasta", "*.fa", "*.fasta.gz", "*.fa.gz"]
+    }
+    expected_length: {
+      description: "Expected sequence length in bp. Must be 300 or 500 to match bundled models (300_model.pth, 500_model.pth). VirNucPro silently accepts other values but produces invalid predictions."
+    }
+    parallel: {
+      description: "If true, enables parallel data loading to improve throughput. May increase memory usage."
+    }
+    persist_model: {
+      description: "If true, keeps the model loaded in GPU memory between batches to improve throughput. May increase GPU memory usage."
+    }
+    use_gpu: {
+      description: "If true, uses GPU acceleration for inference. Requires a GPU-enabled runtime."
+    }
+    batch_size: {
+      description: "Number of sequences to process in each batch. Larger batch sizes may improve throughput but increase memory usage."
+    }
+    esm_batch_size: {
+      description: "Batch size specifically for the ESM2 model component. If not provided, defaults to the value of batch_size."
+    }
+    dnabert_batch_size: {
+      description: "Batch size specifically for the DNABERT model component. If not provided, defaults to the value of batch_size."
+    }
+    resume: {
+      description: "If true, enables checkpoint-based resume for preempted or interrupted runs."
+    }
+    accelerator_type: {
+      description: "[GCP] The model of GPU to use. For availability and pricing on GCP, see https://cloud.google.com/compute/gpus-pricing#gpus"
+    }
+    accelerator_count: {
+      description: "[GCP] The number of GPUs of the specified type to use."
+    }
+    gpu_type: {
+      description: "[Terra] The model of GPU to use. For availability and pricing on GCP, see https://support.terra.bio/hc/en-us/articles/4403006001947-Getting-started-with-GPUs-in-a-Cloud-Environment"
+    }
+    gpu_count: {
+      description: "[Terra] The number of GPUs of the specified type to use."
+    }
+  }
+
+  String basename = sub(basename(reads_input), "\\.(bam|fasta\\.gz|fa\\.gz|fasta|fa)$", "")
+
+  command <<<
+    set -ex -o pipefail
+
+    export TMPDIR=/tmp
+    export TEMP=/tmp
+    export TMP=/tmp
+
+    /opt/virnucpro_cli.py "~{reads_input}" "~{basename}.virnucpro.tsv" --expected-length ~{expected_length} \
+      ~{true='--use-gpu' false='' use_gpu} \
+      ~{true='--parallel' false='' parallel} \
+      ~{true='--persistent-models' false='' persist_model} \
+      --batch-size ~{batch_size} \
+      ~{'--esm-batch-size=' + esm_batch_size} \
+      ~{'--dnabert-batch-size=' + dnabert_batch_size} \
+      --threads $(nproc) \
+      ~{true='--resume' false='' resume}
+
+    # Tarball both output files
+    tar -czf "~{basename}.virnucpro.tgz" \
+      "~{basename}.virnucpro.tsv" \
+      "~{basename}.virnucpro_highestscore.csv"
+  >>>
+
+  output {
+    File virnuc_pro_scores = "~{basename}.virnucpro.tgz"
+  }
+
+  # GPU multi-platform support: ALL platform attributes required (GCP: acceleratorType/acceleratorCount, Terra: gpuType/gpuCount, DNAnexus: gpu/dx_instance_type, Azure: vm_size). Missing attributes cause silent CPU fallback.
+  runtime {
+    docker: docker
+    dockerRunOptions: "--tmpfs /dev/shm:rw,nosuid,nodev,size=16g"
+    memory: "30 GB"
+    cpu: 8
+    disks: "local-disk 120 SSD"
+    disk: "120 GB"
+    gpu: true
+    dx_instance_type: "mem1_ssd1_gpu2_x8"
+    dx_timeout: "6H"
+    acceleratorType: select_first([accelerator_type, "nvidia-tesla-t4"])
+    acceleratorCount: select_first([accelerator_count, 1])
+    gpuType: select_first([gpu_type, "nvidia-tesla-t4"])
+    gpuCount: select_first([gpu_count, 1])
+    vm_size: select_first([vm_size, "Standard_NC6"])
+    maxRetries: 1
+  }
+}
+
+task classify_virnucpro_contigs {
+  meta {
+    description: "Classify contigs as viral or non-viral based on confidence-weighted delta scores from VirNucPro chunk-level predictions."
+  }
+
+  input {
+    File    virnucpro_scores_tsv
+
+    Float   min_viral_prop    = 0.1
+    Float   min_nonviral_prop = 0.1
+    Int     min_chunks        = 5
+    String  id_col            = "Modified_ID"
+    String  id_pattern        = "(NODE_\\d+)"
+
+    String  docker            = "quay.io/broadinstitute/py3-bio:0.1.3"
+  }
+
+  parameter_meta {
+    virnucpro_scores_tsv: {
+      description: "TSV of chunk-level VirNucPro scores with columns: Modified_ID, max_score_0, max_score_1.",
+      patterns: ["*.tsv"],
+      category: "required"
+    }
+    min_viral_prop: {
+      description: "Minimum proportion of confident viral chunks (among non-ambiguous) required for viral call.",
+      category: "advanced"
+    }
+    min_nonviral_prop: {
+      description: "Minimum proportion of confident non-viral chunks (among non-ambiguous) required for non-viral call.",
+      category: "advanced"
+    }
+    min_chunks: {
+      description: "Minimum number of chunks for high/moderate confidence tiers. Contigs with fewer chunks are downgraded.",
+      category: "advanced"
+    }
+    id_col: {
+      description: "Column name containing contig IDs in the input TSV.",
+      category: "advanced"
+    }
+    id_pattern: {
+      description: "Regex pattern to extract contig group ID from the ID column. Default extracts NODE_N from SPAdes contig names.",
+      category: "advanced"
+    }
+  }
+
+  String out_filename = basename(virnucpro_scores_tsv, ".tsv") + ".contigs_classified.tsv"
+  Int disk_size = 50
+
+  command <<<
+    set -e
+    python3<<CODE
+    import re
+    import sys
+    import pandas as pd
+
+    def classify_sequence(group, min_viral_proportion=0.1, min_nonviral_proportion=0.1, min_chunk_count=5):
+        group = group.copy()
+        group['delta'] = group['max_score_1'] - group['max_score_0']
+        group['confidence'] = group['delta'].abs().pow(0.5)
+
+        # Weighted mean delta (confidence-weighted)
+        if group['confidence'].sum() > 0:
+            weighted_delta = (group['delta'] * group['confidence']).sum() / group['confidence'].sum()
+        else:
+            weighted_delta = group['delta'].mean()
+
+        # Count high-confidence viral chunks
+        confident_viral = (group['max_score_1'] > 0.8) & (group['max_score_0'] < 0.3)
+        # Count high-confidence non-viral chunks
+        confident_nonviral = (group['max_score_0'] > 0.8) & (group['max_score_1'] < 0.3)
+        # Count ambiguous chunks
+        ambiguous = (group['max_score_1'] > 0.7) & (group['max_score_0'] > 0.7)
+
+        n_chunks = len(group)
+        n_confident_viral = confident_viral.sum()
+        n_confident_nonviral = confident_nonviral.sum()
+        n_ambiguous = ambiguous.sum()
+        # Option 1: exclude ambiguous chunks from denominator so they don't dilute
+        # the proportion of confident viral/nonviral chunks
+        n_effective = n_chunks - n_ambiguous
+        viral_proportion = n_confident_viral / n_effective if n_effective > 0 else 0
+        nonviral_proportion = n_confident_nonviral / n_effective if n_effective > 0 else 0
+
+        # Option 3: weighted_delta is the primary signal; chunk evidence determines tier
+        if weighted_delta > 0.3:
+            call = 'Viral'
+            if n_confident_viral >= 1 and viral_proportion >= min_viral_proportion:
+                tier = 'high_confidence' if weighted_delta > 0.6 else 'moderate_confidence'
+            else:
+                tier = 'low_confidence'
+        elif weighted_delta < -0.3:
+            call = 'Non-viral'
+            if n_confident_nonviral >= 1 and nonviral_proportion >= min_nonviral_proportion:
+                tier = 'high_confidence' if weighted_delta < -0.6 else 'moderate_confidence'
+            else:
+                tier = 'low_confidence'
+        else:
+            call = 'Ambiguous'
+            tier = 'review'
+
+        # Apply low chunk count penalty
+        if n_chunks < min_chunk_count:
+            if tier in ['high_confidence', 'moderate_confidence']:
+                tier = 'low_confidence'
+            elif tier == 'low_confidence':
+                tier = 'review'
+        return pd.Series({
+            'call': call,
+            'tier': tier,
+            'weighted_delta': round(weighted_delta, 3),
+            'n_chunks': n_chunks,
+            'n_confident_viral': n_confident_viral,
+            'n_confident_nonviral': n_confident_nonviral,
+            'n_ambiguous': n_ambiguous,
+            'viral_proportion': round(viral_proportion, 3),       # of effective (non-ambiguous) chunks
+            'nonviral_proportion': round(nonviral_proportion, 3)  # of effective (non-ambiguous) chunks
+        })
+
+    df = pd.read_csv("~{virnucpro_scores_tsv}", sep='\t')
+
+    required_cols = ["~{id_col}", 'max_score_0', 'max_score_1']
+    missing = [c for c in required_cols if c not in df.columns]
+    if missing:
+        print(f"Error: Missing required columns: {missing}", file=sys.stderr)
+        sys.exit(1)
+
+    df['ID'] = df["~{id_col}"].str.replace(r'_chunk_\d+$', '', regex=True)
+    df['_group'] = df["~{id_col}"].str.extract("~{id_pattern}")
+
+    n_unmatched = df['_group'].isna().sum()
+    if n_unmatched == len(df):
+        print("Error: No valid NODE IDs extracted. Check id_pattern.", file=sys.stderr)
+        sys.exit(1)
+    elif n_unmatched > 0:
+        print(f"Warning: {n_unmatched} of {len(df)} rows did not match id_pattern and were excluded.", file=sys.stderr)
+
+    for col in ['max_score_0', 'max_score_1']:
+        if df[col].isna().any():
+            print(f"Warning: {df[col].isna().sum()} NaN values in {col}.", file=sys.stderr)
+
+    group_to_id = df.dropna(subset=['_group']).groupby('_group')['ID'].first()
+    results = df.groupby('_group').apply(
+        lambda g: classify_sequence(g, ~{min_viral_prop}, ~{min_nonviral_prop}, ~{min_chunks}),
+        include_groups=False
+    )
+    results = results.reset_index()
+    results['ID'] = results['_group'].map(group_to_id)
+    results = results.drop(columns=['_group'])
+    results = results[['ID'] + [c for c in results.columns if c != 'ID']]
+
+    def natural_sort_key(val):
+        return [int(s) if s.isdigit() else s.lower() for s in re.split(r'(\d+)', str(val))]
+    results = results.sort_values('ID', key=lambda col: col.map(natural_sort_key))
+
+    results.to_csv("~{out_filename}", sep='\t', index=False)
+CODE
+  >>>
+
+  output {
+    File contig_classifications = "~{out_filename}"
+  }
+
+  runtime {
+    docker: docker
+    memory: "2 GB"
+    cpu: 1
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
+
+task classify_reads_by_contig {
+  meta {
+    description: "Classify reads by contig mapping using PAF alignments and VirNucPro contig classifications via DuckDB SQL joins."
+  }
+
+  input {
+    File    paf_file
+    File    contig_classifications
+
+    Int     min_mapq       = 5
+    Float   min_identity   = 90.0
+    Float   min_query_cov  = 80.0
+
+    String  docker         = "quay.io/broadinstitute/py3-bio:0.1.3"
+  }
+
+  parameter_meta {
+    paf_file: {
+      description: "Gzipped PAF file from minimap2 alignment (with pct_identity and pct_query_cov appended columns).",
+      patterns: ["*.paf.gz", "*.paf"],
+      category: "required"
+    }
+    contig_classifications: {
+      description: "TSV of contig classifications from classify_virnucpro_contigs (columns: ID, call, tier, weighted_delta, etc.).",
+      patterns: ["*.tsv"],
+      category: "required"
+    }
+    min_mapq: {
+      description: "Minimum mapping quality threshold for well-mapped reads.",
+      category: "advanced"
+    }
+    min_identity: {
+      description: "Minimum percent identity threshold for well-mapped reads (0-100 scale).",
+      category: "advanced"
+    }
+    min_query_cov: {
+      description: "Minimum percent query coverage threshold for well-mapped reads (0-100 scale).",
+      category: "advanced"
+    }
+  }
+
+  String out_filename = basename(paf_file, ".paf.gz") + ".reads_classified.tsv"
+  Int disk_size = 100
+
+  command <<<
+    set -e
+    pip install duckdb --quiet --no-cache-dir
+    python3<<CODE
+    import gzip
+    import os
+    import sys
+    import tempfile
+
+    import duckdb
+
+
+    OUTPUT_COLUMNS = [
+        'read_id', 'read_length', 'contig_id', 'contig_length', 'strand',
+        'mapping_quality', 'pct_identity', 'pct_query_cov', 'mapped_well',
+        'call', 'tier', 'weighted_delta', 'n_chunks', 'n_confident_viral',
+        'n_confident_nonviral', 'n_ambiguous', 'viral_proportion', 'nonviral_proportion',
+    ]
+
+
+    def prepare_paf_file(paf_path):
+        """Normalize PAF to fixed 15-column TSV for duckdb ingestion.
+
+        Standard PAF has 12 columns, followed by optional SAM-like tags (key:type:value),
+        with pct_identity and pct_query_cov appended as the last two tab-separated fields.
+        Tags can appear as a single semicolon-delimited field or as multiple tab-separated
+        fields -- either way they sit between column 12 and the two trailing numeric columns.
+
+        Output: 12 standard PAF cols + tags + pct_identity + pct_query_cov
+        """
+        opener = gzip.open if paf_path.endswith('.gz') else open
+        tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.tsv', delete=False)
+        with opener(paf_path, 'rt') as f:
+            for line in f:
+                fields = line.rstrip('\n').split('\t')
+                if len(fields) < 14:
+                    continue
+                # First 12 are always the standard PAF columns
+                row = fields[:12]
+                # Last 2 are always pct_identity and pct_query_cov
+                pct_identity = fields[-2]
+                pct_query_cov = fields[-1]
+                # Everything in between is tags
+                tag_fields = fields[12:-2]
+                tags = '\t'.join(tag_fields) if tag_fields else ''
+                row.extend([tags, pct_identity, pct_query_cov])
+                tmp.write('\t'.join(row) + '\n')
+        tmp.close()
+        return tmp.name
+
+
+    con = duckdb.connect()
+
+    # Step 1: Parse PAF -- normalize variable-width file then read as fixed 15-col TSV
+    print(f"Reading PAF file: ~{paf_file}", file=sys.stderr)
+    normalized_paf = prepare_paf_file("~{paf_file}")
+
+    con.execute("""
+        CREATE TABLE paf AS
+        SELECT * FROM read_csv($1,
+            delim='\t', header=false, all_varchar=true,
+            columns={
+                'query_name': 'VARCHAR',
+                'query_length': 'VARCHAR',
+                'query_start': 'VARCHAR',
+                'query_end': 'VARCHAR',
+                'strand': 'VARCHAR',
+                'target_name': 'VARCHAR',
+                'target_length': 'VARCHAR',
+                'target_start': 'VARCHAR',
+                'target_end': 'VARCHAR',
+                'num_matches': 'VARCHAR',
+                'alignment_block_length': 'VARCHAR',
+                'mapping_quality': 'VARCHAR',
+                '_tags': 'VARCHAR',
+                'pct_identity': 'VARCHAR',
+                'pct_query_cov': 'VARCHAR'
+            }
+        )
+    """, [normalized_paf])
+
+    os.unlink(normalized_paf)
+
+    n_total = con.execute("SELECT count(*) FROM paf").fetchone()[0]
+    print(f"  {n_total} alignments loaded.", file=sys.stderr)
+
+    # Cast numeric columns
+    con.execute("""
+        CREATE TABLE paf_typed AS
+        SELECT
+            query_name,
+            CAST(query_length AS INTEGER) AS query_length,
+            CAST(query_start AS INTEGER) AS query_start,
+            CAST(query_end AS INTEGER) AS query_end,
+            strand,
+            target_name,
+            CAST(target_length AS INTEGER) AS target_length,
+            CAST(target_start AS INTEGER) AS target_start,
+            CAST(target_end AS INTEGER) AS target_end,
+            CAST(num_matches AS INTEGER) AS num_matches,
+            CAST(alignment_block_length AS INTEGER) AS alignment_block_length,
+            CAST(mapping_quality AS INTEGER) AS mapping_quality,
+            CAST(pct_identity AS DOUBLE) AS pct_identity,
+            CAST(pct_query_cov AS DOUBLE) AS pct_query_cov,
+            _tags
+        FROM paf
+    """)
+    con.execute("DROP TABLE paf")
+
+    # Auto-detect scale of pct_identity and pct_query_cov (0-1 vs 0-100)
+    max_id, max_cov = con.execute(
+        "SELECT max(pct_identity), max(pct_query_cov) FROM paf_typed"
+    ).fetchone()
+    fractional_scale = (max_id is not None and max_id <= 1.0
+                        and max_cov is not None and max_cov <= 1.0)
+    if fractional_scale:
+        print("  Detected fractional scale (0-1) for pct_identity/pct_query_cov.", file=sys.stderr)
+        # Normalize thresholds from percentage to fractional
+        min_identity = ~{min_identity} / 100.0
+        min_query_cov = ~{min_query_cov} / 100.0
+    else:
+        min_identity = ~{min_identity}
+        min_query_cov = ~{min_query_cov}
+
+    # Step 2: Filter secondary/supplementary and flag mapping quality
+    con.execute("""
+        CREATE TABLE paf_filtered AS
+        SELECT
+            query_name, query_length, query_start, query_end, strand,
+            target_name, target_length, target_start, target_end,
+            num_matches, alignment_block_length, mapping_quality,
+            pct_identity, pct_query_cov,
+            (mapping_quality >= $1 AND pct_identity >= $2 AND pct_query_cov >= $3) AS mapped_well
+        FROM paf_typed
+        WHERE _tags IS NULL
+           OR NOT (_tags LIKE '%tp:A:S%' OR _tags LIKE '%tp:A:I%')
+    """, [~{min_mapq}, min_identity, min_query_cov])
+
+    n_secondary = n_total - con.execute("SELECT count(*) FROM paf_filtered").fetchone()[0]
+    if n_secondary > 0:
+        print(f"Removed {n_secondary} secondary/supplementary alignments.", file=sys.stderr)
+    con.execute("DROP TABLE paf_typed")
+
+    n_primary = con.execute("SELECT count(*) FROM paf_filtered").fetchone()[0]
+    print(f"  {n_primary} primary alignments retained.", file=sys.stderr)
+
+    # Read classification file
+    print(f"Reading classification file: ~{contig_classifications}", file=sys.stderr)
+    con.execute("""
+        CREATE TABLE clf AS
+        SELECT * FROM read_csv($1, delim='\t', header=true, auto_detect=true)
+    """, ["~{contig_classifications}"])
+    n_clf = con.execute("SELECT count(*) FROM clf").fetchone()[0]
+    print(f"  {n_clf} classified contigs loaded.", file=sys.stderr)
+
+    # Step 3: Left join + fill defaults for unclassified
+    con.execute("""
+        CREATE TABLE merged AS
+        SELECT
+            p.query_name, p.query_length, p.target_name, p.target_length, p.strand,
+            p.mapping_quality, p.pct_identity, p.pct_query_cov, p.mapped_well,
+            COALESCE(c.call, 'Unclassified') AS call,
+            COALESCE(c.tier, '') AS tier,
+            COALESCE(c.weighted_delta, 0) AS weighted_delta,
+            COALESCE(c.n_chunks, 0) AS n_chunks,
+            COALESCE(c.n_confident_viral, 0) AS n_confident_viral,
+            COALESCE(c.n_confident_nonviral, 0) AS n_confident_nonviral,
+            COALESCE(c.n_ambiguous, 0) AS n_ambiguous,
+            COALESCE(c.viral_proportion, 0) AS viral_proportion,
+            COALESCE(c.nonviral_proportion, 0) AS nonviral_proportion
+        FROM paf_filtered p
+        LEFT JOIN clf c ON p.target_name = c.ID
+    """)
+    con.execute("DROP TABLE paf_filtered")
+    con.execute("DROP TABLE clf")
+
+    # Step 4: Aggregate to one row per read
+    # Pick best alignment per read (highest MAPQ, then highest pct_identity).
+    # If a read maps to contigs with different classifications, flag as Multi-mapped.
+    print("Aggregating to one row per read...", file=sys.stderr)
+    con.execute("""
+        CREATE TABLE result AS
+        WITH ranked AS (
+            SELECT *,
+                ROW_NUMBER() OVER (
+                    PARTITION BY query_name
+                    ORDER BY mapping_quality DESC, pct_identity DESC
+                ) AS rn
+            FROM merged
+        ),
+        best AS (
+            SELECT * FROM ranked WHERE rn = 1
+        ),
+        call_counts AS (
+            SELECT query_name, COUNT(DISTINCT call) AS n_distinct_calls
+            FROM merged
+            GROUP BY query_name
+        )
+        SELECT
+            b.query_name AS read_id,
+            b.query_length AS read_length,
+            b.target_name AS contig_id,
+            b.target_length AS contig_length,
+            b.strand,
+            b.mapping_quality,
+            b.pct_identity,
+            b.pct_query_cov,
+            b.mapped_well,
+            CASE WHEN cc.n_distinct_calls > 1 THEN 'Multi-mapped' ELSE b.call END AS call,
+            CASE WHEN cc.n_distinct_calls > 1 THEN 'review' ELSE b.tier END AS tier,
+            b.weighted_delta,
+            b.n_chunks,
+            b.n_confident_viral,
+            b.n_confident_nonviral,
+            b.n_ambiguous,
+            b.viral_proportion,
+            b.nonviral_proportion
+        FROM best b
+        JOIN call_counts cc ON b.query_name = cc.query_name
+    """)
+    con.execute("DROP TABLE merged")
+
+    # Stats
+    n_reads = con.execute("SELECT count(*) FROM result").fetchone()[0]
+    n_well = con.execute("SELECT count(*) FROM result WHERE mapped_well").fetchone()[0]
+    n_multi = con.execute("SELECT count(*) FROM result WHERE call = 'Multi-mapped'").fetchone()[0]
+    print(f"  {n_reads} reads in output.", file=sys.stderr)
+    pct_well = (n_well / n_reads * 100) if n_reads > 0 else 0
+    print(f"  {n_well} reads mapped well ({pct_well:.1f}%).", file=sys.stderr)
+    if n_multi > 0:
+        print(f"  {n_multi} reads flagged as Multi-mapped.", file=sys.stderr)
+
+    # Step 5: Write output as TSV
+    con.execute(f"""
+        COPY (SELECT {', '.join(OUTPUT_COLUMNS)} FROM result)
+        TO $1 (FORMAT CSV, DELIMITER '\t', HEADER TRUE)
+    """, ["~{out_filename}"])
+    print(f"Output written to: ~{out_filename}", file=sys.stderr)
+
+    con.close()
+CODE
+  >>>
+
+  output {
+    File read_classifications = "~{out_filename}"
+  }
+
+  runtime {
+    docker: docker
+    memory: "4 GB"
+    cpu: 2
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
+    dx_instance_type: "mem2_ssd1_v2_x4"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
