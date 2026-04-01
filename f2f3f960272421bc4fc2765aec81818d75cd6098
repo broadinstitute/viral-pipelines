@@ -1,0 +1,36 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.23",
+  "base_commit_sha": "f2f3f960272421bc4fc2765aec81818d75cd6098",
+  "prompts": {
+    "0d7b158b320f5c10": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2cefa621-9a60-472c-8c1c-6ce1db14031f",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/005fb9b06606c560019bdc195d14587872c933876c856543371193d98decb828"
+    },
+    "2ff0f656862dfe57": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2b5ea821bffe0NBdtJ4vcY0YDP",
+        "model": "synthetic/hf:nvidia/Kimi-K2.5-NVFP4"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 6,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/69705077030c9641f3978fd961e1b653db76d80c6012e806f1a8fee30386b92e"
+    }
+  }
+}
