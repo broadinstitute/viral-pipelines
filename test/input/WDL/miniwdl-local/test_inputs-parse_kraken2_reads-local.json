@@ -1,0 +1,4 @@
+{
+  "parse_kraken2_reads.kraken2_reads_output": "test/input/placeholder_reads.kraken2.reads.txt.gz",
+  "parse_kraken2_reads.taxonomy_db": "test/input/placeholder_taxonomy.duckdb"
+}
