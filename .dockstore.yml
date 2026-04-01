@@ -84,6 +84,9 @@ workflows:
   - name: parse_kraken2_reads
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/parse_kraken2_reads.wdl
+  - name: summarize_kb_extract_reads
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/summarize_kb_extract_reads.wdl
   - name: coverage_table
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/coverage_table.wdl
