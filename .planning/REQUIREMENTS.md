@@ -31,14 +31,14 @@ Add two WDL tasks and standalone workflows to wrap the `classify_virnucpro_conti
 
 ### Validation
 
-- [ ] **REQ-15** — Both workflows pass `miniwdl check`
-- [ ] **REQ-16** — Test input JSON files in `test/input/WDL/miniwdl-local/` for both workflows
-- [ ] **REQ-17** — `.dockstore.yml` entries added for both new workflows
+- [x] **REQ-15** — Both workflows pass `miniwdl check`
+- [x] **REQ-16** — Test input JSON files in `test/input/WDL/miniwdl-local/` for both workflows
+- [x] **REQ-17** — `.dockstore.yml` entries added for both new workflows
 
 ## Non-Functional Requirements
 
 - [x] **REQ-18** — Tasks follow existing `tasks_metagenomics.wdl` conventions: `parameter_meta` with `description`/`patterns`/`category`, `disks`/`disk` dual runtime annotation, `preemptible: 2` default
-- [ ] **REQ-19** — `requirements-modules.txt` does not need a new entry (py3-bio already listed)
+- [x] **REQ-19** — `requirements-modules.txt` does not need a new entry (py3-bio already listed)
 
 ## Out of Scope
 

@@ -19,12 +19,12 @@
 
 **Requirements covered:** REQ-01 through REQ-19
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 01-01-PLAN.md -- classify_virnucpro_contigs task and standalone workflow
 - [x] 01-02-PLAN.md -- classify_reads_by_contig task and standalone workflow
-- [ ] 01-03-PLAN.md -- Test input JSONs, dockstore entries, and final validation
+- [x] 01-03-PLAN.md -- Test input JSONs, dockstore entries, and final validation
 
 ---
 
