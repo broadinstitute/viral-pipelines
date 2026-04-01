@@ -1,0 +1,24 @@
+.dockstore.yml
+  7c8a0b7fc2c0bf0b 78-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.23",
+  "base_commit_sha": "d3deba25bae09f74ceada91e4fe8eb9924e331d0",
+  "prompts": {
+    "7c8a0b7fc2c0bf0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "19bb3bd3-2fd6-4a68-a987-8377c0d67a3c",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 0,
+      "accepted_lines": 6,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/574a64d4a1d2d67e255beda3e63a82168bdb607c90f3323cbe0ec8f2c2b33ad1"
+    }
+  }
+}
