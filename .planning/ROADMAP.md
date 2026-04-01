@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 VirNucPro Classification WDL** — Phase 1 (shipped 2026-04-01)
-- 🚧 **v1.1 Kraken2 Read Taxonomy Annotation WDL Task** — Phase 2 (in progress)
+- ✅ **v1.1 Kraken2 Read Taxonomy Annotation WDL Task** — Phase 2 (shipped 2026-04-01)
 
 ## Phases
 
@@ -16,11 +16,11 @@ See archive: `.planning/milestones/v1.0-ROADMAP.md`
 
 </details>
 
-### 🚧 v1.1 Kraken2 Read Taxonomy Annotation WDL Task (In Progress)
+### ✅ v1.1 Kraken2 Read Taxonomy Annotation WDL Task (SHIPPED 2026-04-01)
 
 **Milestone Goal:** Promote `parse_kraken2_reads.py` into viral-pipelines as a production WDL task with standalone workflow, test inputs, and Dockstore registration — following the same inline-heredoc and runtime patterns established in v1.0.
 
-- [ ] **Phase 2: parse_kraken2_reads Task, Workflow, and Registration** - Implement and formally verify the Kraken2 taxonomy annotation task end-to-end
+- [x] **Phase 2: parse_kraken2_reads Task, Workflow, and Registration** - Implement and formally verify the Kraken2 taxonomy annotation task end-to-end
 
 ## Phase Details
 
@@ -34,17 +34,17 @@ See archive: `.planning/milestones/v1.0-ROADMAP.md`
   3. Test input JSON `test/input/WDL/miniwdl-local/test_inputs-parse_kraken2_reads-local.json` exists with workflow-level input keys and placeholder file paths
   4. `.dockstore.yml` contains an entry for `parse_kraken2_reads` workflow (no `testParameterFiles`)
   5. Task `parameter_meta` block includes `description`, `patterns`, and `category` for every input, matching the structure of `classify_virnucpro_contigs` and `classify_reads_by_contig`
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans executed
 Plans:
 - [x] 02-01-PLAN.md — Implement parse_kraken2_reads WDL task with Python heredoc in tasks_metagenomics.wdl
-- [ ] 02-02-PLAN.md — Standalone workflow, test input JSON, and Dockstore registration
+- [x] 02-02-PLAN.md — Standalone workflow, test input JSON, and Dockstore registration
 
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. Implement WDL Tasks and Workflows | v1.0 | 4/4 | Complete | 2026-04-01 |
-| 2. parse_kraken2_reads Task, Workflow, and Registration | v1.1 | 1/2 | In Progress|  |
+| 2. parse_kraken2_reads Task, Workflow, and Registration | v1.1 | 2/2 | Complete | 2026-04-01 |
 
 ---
-*Last updated: 2026-04-01 — Phase 2 plans created*
+*Last updated: 2026-04-01 — Phase 2 complete*
