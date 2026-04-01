@@ -1951,3 +1951,235 @@ CODE
     maxRetries: 2
   }
 }
+
+task parse_kraken2_reads {
+  meta {
+    description: "Parse Kraken2 per-read output and annotate each read with NCBI taxonomy (name, kingdom, rank) using a pre-built DuckDB taxonomy database."
+  }
+
+  input {
+    File    kraken2_reads_output
+    File    taxonomy_db
+    String  sample_id = sub(basename(kraken2_reads_output), "\\.kraken2\\.reads\\.txt(\\.gz)?$", "")
+    Boolean resolve_strains = false
+
+    String  docker = "quay.io/broadinstitute/py3-bio:0.1.3"
+  }
+
+  parameter_meta {
+    kraken2_reads_output: {
+      description: "Kraken2 per-read classification output file (may be gzipped). Format: C/U <read_id> <taxid> <length> <kmer_info>.",
+      patterns: ["*.txt.gz", "*.txt"],
+      category: "required"
+    }
+    taxonomy_db: {
+      description: "Pre-built DuckDB taxonomy database file from build_taxonomy_db.py.",
+      patterns: ["*.duckdb"],
+      category: "required"
+    }
+    sample_id: {
+      description: "Sample identifier. Defaults to the filename stem after stripping .kraken2.reads.txt(.gz) extension.",
+      category: "common"
+    }
+    resolve_strains: {
+      description: "When true, reclassify 'no rank' nodes whose lineage passes through a species or strain ancestor as 'strain' in TAX_RANK.",
+      category: "advanced"
+    }
+  }
+
+  String out_filename = "~{sample_id}.read_taxonomy.tsv"
+
+  command <<<
+    set -e
+    pip install duckdb --quiet --no-cache-dir
+    python3<<CODE
+    import csv
+    import gzip
+    import sys
+
+    import duckdb
+
+
+    class DuckDBTaxonomyDatabase:
+        """NCBI taxonomy database backed by a pre-built DuckDB file.
+
+        Provides the same interface as TaxonomyDatabase (get_name, get_kingdom)
+        but loads much faster by reading pre-computed data from DuckDB.
+        """
+
+        def __init__(self, db_path, resolve_strains=False):
+            """Initialize taxonomy database from a DuckDB file.
+
+            Args:
+                db_path: Path to ncbi_taxonomy.duckdb file
+                resolve_strains: If True, resolve 'no rank' nodes below species to 'strain'
+            """
+            print(f"Loading taxonomy from DuckDB: {db_path}...", file=sys.stderr)
+
+            con = duckdb.connect(str(db_path), read_only=True)
+            try:
+                rows = con.execute("SELECT taxid, name, kingdom, rank, parent_id FROM taxonomy").fetchall()
+                has_parent = True
+            except Exception:
+                print("Warning: 'rank' column not found in taxonomy table; defaulting ranks to 'unknown'",
+                      file=sys.stderr)
+                rows_no_rank = con.execute("SELECT taxid, name, kingdom FROM taxonomy").fetchall()
+                rows = [(taxid, name, kingdom, 'unknown', None) for taxid, name, kingdom in rows_no_rank]
+                has_parent = False
+            con.close()
+
+            self.names = {}
+            self.kingdoms = {}
+            self.ranks = {}
+            parents = {}
+            for taxid, name, kingdom, rank, parent_id in rows:
+                self.names[taxid] = name
+                self.kingdoms[taxid] = kingdom
+                self.ranks[taxid] = rank
+                if parent_id is not None:
+                    parents[taxid] = parent_id
+
+            if resolve_strains and has_parent:
+                # Resolve "no rank" -> "strain" for nodes below species
+                for taxid, rank in list(self.ranks.items()):
+                    if rank == 'no rank':
+                        current = parents.get(taxid)
+                        while current and current != 1:
+                            ancestor_rank = self.ranks.get(current, 'unknown')
+                            if ancestor_rank in ('species', 'strain'):
+                                self.ranks[taxid] = 'strain'
+                                break
+                            current = parents.get(current)
+
+            print(f"Loaded {len(self.names)} taxonomy entries from DuckDB", file=sys.stderr)
+
+        def get_rank(self, taxid, resolve_strains=False):
+            """Get taxonomic rank for taxid."""
+            if taxid == 0:
+                return 'unclassified'
+            return self.ranks.get(taxid, 'unknown')
+
+        def get_name(self, taxid):
+            """Get scientific name for taxid."""
+            if taxid == 0:
+                return 'Unclassified'
+            return self.names.get(taxid, f'Unknown (taxid:{taxid})')
+
+        def get_kingdom(self, taxid):
+            """Get kingdom/domain for a taxonomy ID."""
+            if taxid == 0:
+                return 'Unclassified'
+            return self.kingdoms.get(taxid, 'Other')
+
+
+    def parse_kraken2_output(kraken_file, tax_db, output_file, sample_id=None, resolve_strains=False):
+        """Parse Kraken2 read classification output and annotate with taxonomy.
+
+        Args:
+            kraken_file: Path to Kraken2 output file (may be gzipped)
+            tax_db: DuckDBTaxonomyDatabase instance
+            output_file: Path to output TSV file
+            sample_id: Sample identifier (if None, extracted from filename)
+            resolve_strains: If True, resolve 'no rank' nodes below species to 'strain'
+        """
+        # Extract sample ID from filename if not provided
+        if sample_id is None:
+            sample_id = kraken_file.split('/')[-1]
+            for ext in ['.kraken2', '.output', '.txt', '.gz']:
+                if sample_id.endswith(ext):
+                    sample_id = sample_id[:-len(ext)]
+
+        print(f"Processing sample: {sample_id}", file=sys.stderr)
+
+        # Handle gzipped files
+        if kraken_file.endswith('.gz'):
+            f = gzip.open(kraken_file, 'rt')
+        else:
+            f = open(kraken_file, 'r')
+
+        classified_count = 0
+        unclassified_count = 0
+
+        # Collect rows
+        rows = []
+
+        try:
+            for line in f:
+                # Skip empty lines
+                line = line.strip()
+                if not line:
+                    continue
+
+                # Parse Kraken2 output format
+                # Format: C/U <read_id> <taxid> <length> <kmer_info>
+                parts = line.split('\t')
+
+                if len(parts) < 3:
+                    print(f"Warning: Skipping malformed line: {line[:100]}", file=sys.stderr)
+                    continue
+
+                classification = parts[0].strip()  # C or U
+                read_id = parts[1].strip()
+                taxid_str = parts[2].strip()
+
+                # Handle unclassified reads (taxid = 0)
+                try:
+                    taxid = int(taxid_str)
+                except ValueError:
+                    print(f"Warning: Invalid taxid '{taxid_str}' for read {read_id}", file=sys.stderr)
+                    continue
+
+                if classification == 'U':
+                    unclassified_count += 1
+                    tax_name = 'Unclassified'
+                    kingdom = 'Unclassified'
+                    tax_rank = 'unclassified'
+                else:
+                    classified_count += 1
+                    tax_name = tax_db.get_name(taxid)
+                    kingdom = tax_db.get_kingdom(taxid)
+                    tax_rank = tax_db.get_rank(taxid, resolve_strains=resolve_strains)
+
+                rows.append((sample_id, read_id, taxid, tax_name, kingdom, tax_rank))
+
+        finally:
+            f.close()
+
+        # Write output as TSV
+        _write_tsv(rows, output_file)
+
+        print(f"\nProcessing complete:", file=sys.stderr)
+        print(f"  Classified reads: {classified_count}", file=sys.stderr)
+        print(f"  Unclassified reads: {unclassified_count}", file=sys.stderr)
+        print(f"  Total reads: {classified_count + unclassified_count}", file=sys.stderr)
+
+
+    def _write_tsv(rows, output_file):
+        """Write rows as TSV."""
+        with open(output_file, 'w', newline='') as out_f:
+            writer = csv.writer(out_f, delimiter='\t')
+            writer.writerow(['SAMPLE_ID', 'READ_ID', 'TAXONOMY_ID', 'TAX_NAME', 'KINGDOM', 'TAX_RANK'])
+            for row in rows:
+                writer.writerow(row)
+
+
+    tax_db = DuckDBTaxonomyDatabase("~{taxonomy_db}", resolve_strains=~{true="True" false="False" resolve_strains})
+    parse_kraken2_output("~{kraken2_reads_output}", tax_db, "~{out_filename}", "~{sample_id}")
+    CODE
+  >>>
+
+  output {
+    File read_taxonomy = "~{out_filename}"
+  }
+
+  runtime {
+    docker: docker
+    memory: "8 GB"
+    cpu: 1
+    disks: "local-disk ~{ceil(size(kraken2_reads_output)*3 + size(taxonomy_db) + 20)} HDD"
+    disk: "~{ceil(size(kraken2_reads_output)*3 + size(taxonomy_db) + 20)} GB" # TES
+    dx_instance_type: "mem2_ssd1_v2_x2"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
