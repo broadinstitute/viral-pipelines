@@ -1485,3 +1485,480 @@ task classify_virnucpro {
     maxRetries: 1
   }
 }
+
+task classify_virnucpro_contigs {
+  meta {
+    description: "Classify contigs as viral or non-viral based on confidence-weighted delta scores from VirNucPro chunk-level predictions."
+  }
+
+  input {
+    File    virnucpro_scores_tsv
+
+    Float   min_viral_prop    = 0.1
+    Float   min_nonviral_prop = 0.1
+    Int     min_chunks        = 5
+    String  id_col            = "Modified_ID"
+    String  id_pattern        = "(NODE_\\d+)"
+
+    String  docker            = "quay.io/broadinstitute/py3-bio:0.1.3"
+  }
+
+  parameter_meta {
+    virnucpro_scores_tsv: {
+      description: "TSV of chunk-level VirNucPro scores with columns: Modified_ID, max_score_0, max_score_1.",
+      patterns: ["*.tsv"],
+      category: "required"
+    }
+    min_viral_prop: {
+      description: "Minimum proportion of confident viral chunks (among non-ambiguous) required for viral call.",
+      category: "advanced"
+    }
+    min_nonviral_prop: {
+      description: "Minimum proportion of confident non-viral chunks (among non-ambiguous) required for non-viral call.",
+      category: "advanced"
+    }
+    min_chunks: {
+      description: "Minimum number of chunks for high/moderate confidence tiers. Contigs with fewer chunks are downgraded.",
+      category: "advanced"
+    }
+    id_col: {
+      description: "Column name containing contig IDs in the input TSV.",
+      category: "advanced"
+    }
+    id_pattern: {
+      description: "Regex pattern to extract contig group ID from the ID column. Default extracts NODE_N from SPAdes contig names.",
+      category: "advanced"
+    }
+  }
+
+  String out_filename = basename(virnucpro_scores_tsv, ".tsv") + ".contigs_classified.tsv"
+  Int disk_size = 50
+
+  command <<<
+    set -e
+    python3<<CODE
+    import re
+    import sys
+    import pandas as pd
+
+    def classify_sequence(group, min_viral_proportion=0.1, min_nonviral_proportion=0.1, min_chunk_count=5):
+        group = group.copy()
+        group['delta'] = group['max_score_1'] - group['max_score_0']
+        group['confidence'] = group['delta'].abs().pow(0.5)
+
+        # Weighted mean delta (confidence-weighted)
+        if group['confidence'].sum() > 0:
+            weighted_delta = (group['delta'] * group['confidence']).sum() / group['confidence'].sum()
+        else:
+            weighted_delta = group['delta'].mean()
+
+        # Count high-confidence viral chunks
+        confident_viral = (group['max_score_1'] > 0.8) & (group['max_score_0'] < 0.3)
+        # Count high-confidence non-viral chunks
+        confident_nonviral = (group['max_score_0'] > 0.8) & (group['max_score_1'] < 0.3)
+        # Count ambiguous chunks
+        ambiguous = (group['max_score_1'] > 0.7) & (group['max_score_0'] > 0.7)
+
+        n_chunks = len(group)
+        n_confident_viral = confident_viral.sum()
+        n_confident_nonviral = confident_nonviral.sum()
+        n_ambiguous = ambiguous.sum()
+        # Option 1: exclude ambiguous chunks from denominator so they don't dilute
+        # the proportion of confident viral/nonviral chunks
+        n_effective = n_chunks - n_ambiguous
+        viral_proportion = n_confident_viral / n_effective if n_effective > 0 else 0
+        nonviral_proportion = n_confident_nonviral / n_effective if n_effective > 0 else 0
+
+        # Option 3: weighted_delta is the primary signal; chunk evidence determines tier
+        if weighted_delta > 0.3:
+            call = 'Viral'
+            if n_confident_viral >= 1 and viral_proportion >= min_viral_proportion:
+                tier = 'high_confidence' if weighted_delta > 0.6 else 'moderate_confidence'
+            else:
+                tier = 'low_confidence'
+        elif weighted_delta < -0.3:
+            call = 'Non-viral'
+            if n_confident_nonviral >= 1 and nonviral_proportion >= min_nonviral_proportion:
+                tier = 'high_confidence' if weighted_delta < -0.6 else 'moderate_confidence'
+            else:
+                tier = 'low_confidence'
+        else:
+            call = 'Ambiguous'
+            tier = 'review'
+
+        # Apply low chunk count penalty
+        if n_chunks < min_chunk_count:
+            if tier in ['high_confidence', 'moderate_confidence']:
+                tier = 'low_confidence'
+            elif tier == 'low_confidence':
+                tier = 'review'
+        return pd.Series({
+            'call': call,
+            'tier': tier,
+            'weighted_delta': round(weighted_delta, 3),
+            'n_chunks': n_chunks,
+            'n_confident_viral': n_confident_viral,
+            'n_confident_nonviral': n_confident_nonviral,
+            'n_ambiguous': n_ambiguous,
+            'viral_proportion': round(viral_proportion, 3),       # of effective (non-ambiguous) chunks
+            'nonviral_proportion': round(nonviral_proportion, 3)  # of effective (non-ambiguous) chunks
+        })
+
+    df = pd.read_csv("~{virnucpro_scores_tsv}", sep='\t')
+
+    required_cols = ["~{id_col}", 'max_score_0', 'max_score_1']
+    missing = [c for c in required_cols if c not in df.columns]
+    if missing:
+        print(f"Error: Missing required columns: {missing}", file=sys.stderr)
+        sys.exit(1)
+
+    df['ID'] = df["~{id_col}"].str.replace(r'_chunk_\d+$', '', regex=True)
+    df['_group'] = df["~{id_col}"].str.extract("~{id_pattern}")
+
+    n_unmatched = df['_group'].isna().sum()
+    if n_unmatched == len(df):
+        print("Error: No valid NODE IDs extracted. Check id_pattern.", file=sys.stderr)
+        sys.exit(1)
+    elif n_unmatched > 0:
+        print(f"Warning: {n_unmatched} of {len(df)} rows did not match id_pattern and were excluded.", file=sys.stderr)
+
+    for col in ['max_score_0', 'max_score_1']:
+        if df[col].isna().any():
+            print(f"Warning: {df[col].isna().sum()} NaN values in {col}.", file=sys.stderr)
+
+    group_to_id = df.dropna(subset=['_group']).groupby('_group')['ID'].first()
+    results = df.groupby('_group').apply(
+        lambda g: classify_sequence(g, ~{min_viral_prop}, ~{min_nonviral_prop}, ~{min_chunks}),
+        include_groups=False
+    )
+    results = results.reset_index()
+    results['ID'] = results['_group'].map(group_to_id)
+    results = results.drop(columns=['_group'])
+    results = results[['ID'] + [c for c in results.columns if c != 'ID']]
+
+    def natural_sort_key(val):
+        return [int(s) if s.isdigit() else s.lower() for s in re.split(r'(\d+)', str(val))]
+    results = results.sort_values('ID', key=lambda col: col.map(natural_sort_key))
+
+    results.to_csv("~{out_filename}", sep='\t', index=False)
+CODE
+  >>>
+
+  output {
+    File contig_classifications = "~{out_filename}"
+  }
+
+  runtime {
+    docker: docker
+    memory: "2 GB"
+    cpu: 1
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
+
+task classify_reads_by_contig {
+  meta {
+    description: "Classify reads by contig mapping using PAF alignments and VirNucPro contig classifications via DuckDB SQL joins."
+  }
+
+  input {
+    File    paf_file
+    File    contig_classifications
+
+    Int     min_mapq       = 5
+    Float   min_identity   = 90.0
+    Float   min_query_cov  = 80.0
+
+    String  docker         = "quay.io/broadinstitute/py3-bio:0.1.3"
+  }
+
+  parameter_meta {
+    paf_file: {
+      description: "Gzipped PAF file from minimap2 alignment (with pct_identity and pct_query_cov appended columns).",
+      patterns: ["*.paf.gz", "*.paf"],
+      category: "required"
+    }
+    contig_classifications: {
+      description: "TSV of contig classifications from classify_virnucpro_contigs (columns: ID, call, tier, weighted_delta, etc.).",
+      patterns: ["*.tsv"],
+      category: "required"
+    }
+    min_mapq: {
+      description: "Minimum mapping quality threshold for well-mapped reads.",
+      category: "advanced"
+    }
+    min_identity: {
+      description: "Minimum percent identity threshold for well-mapped reads (0-100 scale).",
+      category: "advanced"
+    }
+    min_query_cov: {
+      description: "Minimum percent query coverage threshold for well-mapped reads (0-100 scale).",
+      category: "advanced"
+    }
+  }
+
+  String out_filename = basename(paf_file, ".paf.gz") + ".reads_classified.tsv"
+  Int disk_size = 100
+
+  command <<<
+    set -e
+    pip install duckdb --quiet --no-cache-dir
+    python3<<CODE
+    import gzip
+    import os
+    import sys
+    import tempfile
+
+    import duckdb
+
+
+    OUTPUT_COLUMNS = [
+        'read_id', 'read_length', 'contig_id', 'contig_length', 'strand',
+        'mapping_quality', 'pct_identity', 'pct_query_cov', 'mapped_well',
+        'call', 'tier', 'weighted_delta', 'n_chunks', 'n_confident_viral',
+        'n_confident_nonviral', 'n_ambiguous', 'viral_proportion', 'nonviral_proportion',
+    ]
+
+
+    def prepare_paf_file(paf_path):
+        """Normalize PAF to fixed 15-column TSV for duckdb ingestion.
+
+        Standard PAF has 12 columns, followed by optional SAM-like tags (key:type:value),
+        with pct_identity and pct_query_cov appended as the last two tab-separated fields.
+        Tags can appear as a single semicolon-delimited field or as multiple tab-separated
+        fields -- either way they sit between column 12 and the two trailing numeric columns.
+
+        Output: 12 standard PAF cols + tags + pct_identity + pct_query_cov
+        """
+        opener = gzip.open if paf_path.endswith('.gz') else open
+        tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.tsv', delete=False)
+        with opener(paf_path, 'rt') as f:
+            for line in f:
+                fields = line.rstrip('\n').split('\t')
+                if len(fields) < 14:
+                    continue
+                # First 12 are always the standard PAF columns
+                row = fields[:12]
+                # Last 2 are always pct_identity and pct_query_cov
+                pct_identity = fields[-2]
+                pct_query_cov = fields[-1]
+                # Everything in between is tags
+                tag_fields = fields[12:-2]
+                tags = '\t'.join(tag_fields) if tag_fields else ''
+                row.extend([tags, pct_identity, pct_query_cov])
+                tmp.write('\t'.join(row) + '\n')
+        tmp.close()
+        return tmp.name
+
+
+    con = duckdb.connect()
+
+    # Step 1: Parse PAF -- normalize variable-width file then read as fixed 15-col TSV
+    print(f"Reading PAF file: ~{paf_file}", file=sys.stderr)
+    normalized_paf = prepare_paf_file("~{paf_file}")
+
+    con.execute("""
+        CREATE TABLE paf AS
+        SELECT * FROM read_csv($1,
+            delim='\t', header=false, all_varchar=true,
+            columns={
+                'query_name': 'VARCHAR',
+                'query_length': 'VARCHAR',
+                'query_start': 'VARCHAR',
+                'query_end': 'VARCHAR',
+                'strand': 'VARCHAR',
+                'target_name': 'VARCHAR',
+                'target_length': 'VARCHAR',
+                'target_start': 'VARCHAR',
+                'target_end': 'VARCHAR',
+                'num_matches': 'VARCHAR',
+                'alignment_block_length': 'VARCHAR',
+                'mapping_quality': 'VARCHAR',
+                '_tags': 'VARCHAR',
+                'pct_identity': 'VARCHAR',
+                'pct_query_cov': 'VARCHAR'
+            }
+        )
+    """, [normalized_paf])
+
+    os.unlink(normalized_paf)
+
+    n_total = con.execute("SELECT count(*) FROM paf").fetchone()[0]
+    print(f"  {n_total} alignments loaded.", file=sys.stderr)
+
+    # Cast numeric columns
+    con.execute("""
+        CREATE TABLE paf_typed AS
+        SELECT
+            query_name,
+            CAST(query_length AS INTEGER) AS query_length,
+            CAST(query_start AS INTEGER) AS query_start,
+            CAST(query_end AS INTEGER) AS query_end,
+            strand,
+            target_name,
+            CAST(target_length AS INTEGER) AS target_length,
+            CAST(target_start AS INTEGER) AS target_start,
+            CAST(target_end AS INTEGER) AS target_end,
+            CAST(num_matches AS INTEGER) AS num_matches,
+            CAST(alignment_block_length AS INTEGER) AS alignment_block_length,
+            CAST(mapping_quality AS INTEGER) AS mapping_quality,
+            CAST(pct_identity AS DOUBLE) AS pct_identity,
+            CAST(pct_query_cov AS DOUBLE) AS pct_query_cov,
+            _tags
+        FROM paf
+    """)
+    con.execute("DROP TABLE paf")
+
+    # Auto-detect scale of pct_identity and pct_query_cov (0-1 vs 0-100)
+    max_id, max_cov = con.execute(
+        "SELECT max(pct_identity), max(pct_query_cov) FROM paf_typed"
+    ).fetchone()
+    fractional_scale = (max_id is not None and max_id <= 1.0
+                        and max_cov is not None and max_cov <= 1.0)
+    if fractional_scale:
+        print("  Detected fractional scale (0-1) for pct_identity/pct_query_cov.", file=sys.stderr)
+        # Normalize thresholds from percentage to fractional
+        min_identity = ~{min_identity} / 100.0
+        min_query_cov = ~{min_query_cov} / 100.0
+    else:
+        min_identity = ~{min_identity}
+        min_query_cov = ~{min_query_cov}
+
+    # Step 2: Filter secondary/supplementary and flag mapping quality
+    con.execute("""
+        CREATE TABLE paf_filtered AS
+        SELECT
+            query_name, query_length, query_start, query_end, strand,
+            target_name, target_length, target_start, target_end,
+            num_matches, alignment_block_length, mapping_quality,
+            pct_identity, pct_query_cov,
+            (mapping_quality >= $1 AND pct_identity >= $2 AND pct_query_cov >= $3) AS mapped_well
+        FROM paf_typed
+        WHERE _tags IS NULL
+           OR NOT (_tags LIKE '%tp:A:S%' OR _tags LIKE '%tp:A:I%')
+    """, [~{min_mapq}, min_identity, min_query_cov])
+
+    n_secondary = n_total - con.execute("SELECT count(*) FROM paf_filtered").fetchone()[0]
+    if n_secondary > 0:
+        print(f"Removed {n_secondary} secondary/supplementary alignments.", file=sys.stderr)
+    con.execute("DROP TABLE paf_typed")
+
+    n_primary = con.execute("SELECT count(*) FROM paf_filtered").fetchone()[0]
+    print(f"  {n_primary} primary alignments retained.", file=sys.stderr)
+
+    # Read classification file
+    print(f"Reading classification file: ~{contig_classifications}", file=sys.stderr)
+    con.execute("""
+        CREATE TABLE clf AS
+        SELECT * FROM read_csv($1, delim='\t', header=true, auto_detect=true)
+    """, ["~{contig_classifications}"])
+    n_clf = con.execute("SELECT count(*) FROM clf").fetchone()[0]
+    print(f"  {n_clf} classified contigs loaded.", file=sys.stderr)
+
+    # Step 3: Left join + fill defaults for unclassified
+    con.execute("""
+        CREATE TABLE merged AS
+        SELECT
+            p.query_name, p.query_length, p.target_name, p.target_length, p.strand,
+            p.mapping_quality, p.pct_identity, p.pct_query_cov, p.mapped_well,
+            COALESCE(c.call, 'Unclassified') AS call,
+            COALESCE(c.tier, '') AS tier,
+            COALESCE(c.weighted_delta, 0) AS weighted_delta,
+            COALESCE(c.n_chunks, 0) AS n_chunks,
+            COALESCE(c.n_confident_viral, 0) AS n_confident_viral,
+            COALESCE(c.n_confident_nonviral, 0) AS n_confident_nonviral,
+            COALESCE(c.n_ambiguous, 0) AS n_ambiguous,
+            COALESCE(c.viral_proportion, 0) AS viral_proportion,
+            COALESCE(c.nonviral_proportion, 0) AS nonviral_proportion
+        FROM paf_filtered p
+        LEFT JOIN clf c ON p.target_name = c.ID
+    """)
+    con.execute("DROP TABLE paf_filtered")
+    con.execute("DROP TABLE clf")
+
+    # Step 4: Aggregate to one row per read
+    # Pick best alignment per read (highest MAPQ, then highest pct_identity).
+    # If a read maps to contigs with different classifications, flag as Multi-mapped.
+    print("Aggregating to one row per read...", file=sys.stderr)
+    con.execute("""
+        CREATE TABLE result AS
+        WITH ranked AS (
+            SELECT *,
+                ROW_NUMBER() OVER (
+                    PARTITION BY query_name
+                    ORDER BY mapping_quality DESC, pct_identity DESC
+                ) AS rn
+            FROM merged
+        ),
+        best AS (
+            SELECT * FROM ranked WHERE rn = 1
+        ),
+        call_counts AS (
+            SELECT query_name, COUNT(DISTINCT call) AS n_distinct_calls
+            FROM merged
+            GROUP BY query_name
+        )
+        SELECT
+            b.query_name AS read_id,
+            b.query_length AS read_length,
+            b.target_name AS contig_id,
+            b.target_length AS contig_length,
+            b.strand,
+            b.mapping_quality,
+            b.pct_identity,
+            b.pct_query_cov,
+            b.mapped_well,
+            CASE WHEN cc.n_distinct_calls > 1 THEN 'Multi-mapped' ELSE b.call END AS call,
+            CASE WHEN cc.n_distinct_calls > 1 THEN 'review' ELSE b.tier END AS tier,
+            b.weighted_delta,
+            b.n_chunks,
+            b.n_confident_viral,
+            b.n_confident_nonviral,
+            b.n_ambiguous,
+            b.viral_proportion,
+            b.nonviral_proportion
+        FROM best b
+        JOIN call_counts cc ON b.query_name = cc.query_name
+    """)
+    con.execute("DROP TABLE merged")
+
+    # Stats
+    n_reads = con.execute("SELECT count(*) FROM result").fetchone()[0]
+    n_well = con.execute("SELECT count(*) FROM result WHERE mapped_well").fetchone()[0]
+    n_multi = con.execute("SELECT count(*) FROM result WHERE call = 'Multi-mapped'").fetchone()[0]
+    print(f"  {n_reads} reads in output.", file=sys.stderr)
+    pct_well = (n_well / n_reads * 100) if n_reads > 0 else 0
+    print(f"  {n_well} reads mapped well ({pct_well:.1f}%).", file=sys.stderr)
+    if n_multi > 0:
+        print(f"  {n_multi} reads flagged as Multi-mapped.", file=sys.stderr)
+
+    # Step 5: Write output as TSV
+    con.execute(f"""
+        COPY (SELECT {', '.join(OUTPUT_COLUMNS)} FROM result)
+        TO $1 (FORMAT CSV, DELIMITER '\t', HEADER TRUE)
+    """, ["~{out_filename}"])
+    print(f"Output written to: ~{out_filename}", file=sys.stderr)
+
+    con.close()
+CODE
+  >>>
+
+  output {
+    File read_classifications = "~{out_filename}"
+  }
+
+  runtime {
+    docker: docker
+    memory: "4 GB"
+    cpu: 2
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
+    dx_instance_type: "mem2_ssd1_v2_x4"
+    preemptible: 2
+    maxRetries: 2
+  }
+}

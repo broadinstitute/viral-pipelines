@@ -19,22 +19,23 @@
 
 **Requirements covered:** REQ-01 through REQ-19
 
-**Plans:** 3/3 plans complete
+**Plans:** 4 plans (3 complete, 1 gap closure)
 
 Plans:
 - [x] 01-01-PLAN.md -- classify_virnucpro_contigs task and standalone workflow
 - [x] 01-02-PLAN.md -- classify_reads_by_contig task and standalone workflow
 - [x] 01-03-PLAN.md -- Test input JSONs, dockstore entries, and final validation
+- [ ] 01-04-PLAN.md -- Gap closure: fix duplicated WDL content and merge to ca-kb_python
 
 ---
 
 ## Phase Order
 
 ```
-Phase 1: Wave 1 (Plan 01) -> Wave 2 (Plan 02) -> Wave 3 (Plan 03)
+Phase 1: Wave 1 (Plan 01) -> Wave 2 (Plan 02) -> Wave 3 (Plan 03) -> Wave 4 (Plan 04 gap closure)
 ```
 
-Plans 01 and 02 are sequential because both modify `tasks_metagenomics.wdl`. Plan 03 depends on both.
+Plans 01 and 02 are sequential because both modify `tasks_metagenomics.wdl`. Plan 03 depends on both. Plan 04 closes verification gaps from duplicated content and missing merge.
 
 ---
-*Last updated: 2026-03-31 after plan-phase*
+*Last updated: 2026-04-01 after gap closure planning*
