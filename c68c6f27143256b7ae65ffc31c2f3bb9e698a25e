@@ -1,0 +1,26 @@
+.planning/STATE.md
+  0d7b158b320f5c10 28-30,34-35,40,58-59,69
+.planning/phases/02-parse-kraken2-reads-task-workflow-and-registration/02-01-SUMMARY.md
+  0d7b158b320f5c10 1-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.23",
+  "base_commit_sha": "c68c6f27143256b7ae65ffc31c2f3bb9e698a25e",
+  "prompts": {
+    "0d7b158b320f5c10": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2cefa621-9a60-472c-8c1c-6ce1db14031f",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 119,
+      "total_deletions": 7,
+      "accepted_lines": 119,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/c3a497d697cfc7ff327051d241df86574b4d1bdf48f65b999c37be5999e1c575"
+    }
+  }
+}
