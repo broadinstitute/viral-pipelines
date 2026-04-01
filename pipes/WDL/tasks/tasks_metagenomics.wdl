@@ -336,7 +336,7 @@ task kraken2 {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem3_ssd1_v2_x8"
-    preemptible: 2
+    preemptible: 3
   }
 }
 
@@ -384,7 +384,6 @@ task report_primary_kraken_taxa {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
-    preemptible: 2
   }
 }
 
@@ -863,7 +862,7 @@ task filter_bam_to_taxa {
     disk: "~{disk_size} GB" # TES
     cpu: 8
     dx_instance_type: "mem1_ssd1_v2_x8"
-    preemptible: 1
+    preemptible: 3
   }
 }
 
