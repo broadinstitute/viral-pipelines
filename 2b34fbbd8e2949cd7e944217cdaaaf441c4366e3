@@ -1,0 +1,52 @@
+pipes/WDL/workflows/summarize_kb_extract_reads.wdl
+  74fe94f96e9fd20c 1-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.23",
+  "base_commit_sha": "2b34fbbd8e2949cd7e944217cdaaaf441c4366e3",
+  "prompts": {
+    "2ff0f656862dfe57": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2b5ea821bffe0NBdtJ4vcY0YDP",
+        "model": "synthetic/hf:nvidia/Kimi-K2.5-NVFP4"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 69,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/c7fe78f7fcc13a15d2a87a6419b0e80bf8dcc23aba0814acebae267e1fc9cedc"
+    },
+    "48b71f65a8374e7b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2b5cfb335ffeHXWXTsRpkFT3WL",
+        "model": "synthetic/hf:nvidia/Kimi-K2.5-NVFP4"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 9,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/a57b4c0cee3c6b07d0ae03f251099867f44047cc9ac79f737ab8bc29c27e400d"
+    },
+    "74fe94f96e9fd20c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2b5c3a302ffeVVDCAqpQsomR5i",
+        "model": "synthetic/hf:nvidia/Kimi-K2.5-NVFP4"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 29,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/6c971efed19485004404a4bfea7a621a838e789d45e7ff769a7555a8f3a0f470"
+    }
+  }
+}
