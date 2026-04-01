@@ -59,7 +59,7 @@ See archive: `.planning/milestones/v1.1-ROADMAP.md`
 |-------|-----------|----------------|--------|-----------|
 | 1. Implement WDL Tasks and Workflows | v1.0 | 4/4 | Complete | 2026-04-01 |
 | 2. parse_kraken2_reads Task, Workflow, and Registration | v1.1 | 2/2 | Complete | 2026-04-01 |
-| 3. summarize_kb_extract_reads Task, Workflow, and Registration | v2.0 | 2/3 | In Progress|  |
+| 3. summarize_kb_extract_reads Task, Workflow, and Registration | v2.0 | 3/3 | Complete   | 2026-04-01 |
 
 ---
 *Last updated: 2026-04-01 — Phase 3 plans created (3 plans in 2 waves)*
