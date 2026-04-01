@@ -108,6 +108,16 @@ Phase 01 is now fully implemented and verified on ca-kb_python:
 
 Ready for phase transition.
 
+## Self-Check: PASSED
+
+- FOUND: pipes/WDL/tasks/tasks_metagenomics.wdl
+- FOUND: pipes/WDL/workflows/classify_virnucpro_contigs.wdl
+- FOUND: pipes/WDL/workflows/classify_reads_by_contig.wdl
+- FOUND: test/input/WDL/miniwdl-local/test_inputs-classify_virnucpro_contigs-local.json
+- FOUND: test/input/WDL/miniwdl-local/test_inputs-classify_reads_by_contig-local.json
+- FOUND commit: ecd307bd (feat: add WDL tasks, workflows, test inputs, dockstore entries)
+- FOUND commit: d7643fdf (docs: complete gap closure plan)
+
 ---
 *Phase: 01-implement-wdl-tasks-and-workflows*
 *Completed: 2026-04-01*
