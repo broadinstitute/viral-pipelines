@@ -1,0 +1,42 @@
+.dockstore.yml
+  f7a7d376d2485eec 78-83
+test/input/WDL/miniwdl-local/test_inputs-classify_virnucpro_contigs-local.json
+  f7a7d376d2485eec 1-3
+.planning/ROADMAP.md
+  7c8a0b7fc2c0bf0b 22,28,35,38,41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.23",
+  "base_commit_sha": "ecd307bd0f8961cc76a3c228320d10cf9ad75e7c",
+  "prompts": {
+    "7c8a0b7fc2c0bf0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "19bb3bd3-2fd6-4a68-a987-8377c0d67a3c",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 4,
+      "accepted_lines": 5,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/be7c04b4255df671c36ee62685e93073546271e2fdf9e99823b7dfc9df9599b0"
+    },
+    "f7a7d376d2485eec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "325fe480-39ee-4671-8ce2-28be19d71afb",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 9,
+      "total_deletions": 0,
+      "accepted_lines": 9,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/698e663b5a4ed9e2cea5d34473cbf7647493da25a22338623ff96a711e6bea7c"
+    }
+  }
+}
