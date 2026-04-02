@@ -45,15 +45,15 @@
 
 ### Infrastructure
 
-- [ ] **CFGR-05**: Test input JSON `test/input/WDL/miniwdl-local/test_inputs-centrifuger_single-local.json`
+- [x] **CFGR-05**: Test input JSON `test/input/WDL/miniwdl-local/test_inputs-centrifuger_single-local.json`
   - Placeholder paths for index directory and FASTQ/BAM inputs
   - Workflow-level input keys; follows v1.0–v2.0 test file conventions
 
-- [ ] **CFGR-06**: Test input JSON `test/input/WDL/miniwdl-local/test_inputs-centrifuger_multi-local.json`
+- [x] **CFGR-06**: Test input JSON `test/input/WDL/miniwdl-local/test_inputs-centrifuger_multi-local.json`
   - Placeholder paths for Array inputs
   - Workflow-level input keys; follows v1.0–v2.0 test file conventions
 
-- [ ] **CFGR-07**: Dockstore registration entries in `.dockstore.yml` for both `centrifuger_single.wdl` and `centrifuger_multi.wdl`
+- [x] **CFGR-07**: Dockstore registration entries in `.dockstore.yml` for both `centrifuger_single.wdl` and `centrifuger_multi.wdl`
   - Subclass: WDL
   - No `testParameterFiles` (placeholder paths not CI-runnable)
 
@@ -75,9 +75,9 @@
 | CFGR-02 | Phase 4 | Complete |
 | CFGR-03 | Phase 5 | Complete |
 | CFGR-04 | Phase 5 | Complete |
-| CFGR-05 | Phase 6 | Pending |
-| CFGR-06 | Phase 6 | Pending |
-| CFGR-07 | Phase 6 | Pending |
+| CFGR-05 | Phase 6 | Complete |
+| CFGR-06 | Phase 6 | Complete |
+| CFGR-07 | Phase 6 | Complete |
 
 **Coverage:**
 - v1 requirements: 7 total

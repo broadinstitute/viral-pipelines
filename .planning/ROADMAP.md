@@ -40,7 +40,7 @@ See archive: `.planning/milestones/v2.0-ROADMAP.md`
 
 - [x] **Phase 4: Core centrifuger Task** - WDL task in tasks_metagenomics.wdl with BAM/FASTQ inputs, 4 outputs, input validation, and runtime sizing for 200+ GB index (completed 2026-04-02)
 - [x] **Phase 5: centrifuger_single and centrifuger_multi Workflow Wrappers** - Standalone WDL workflows for single-sample and batch classification; multi uses bash-loop (not scatter) (completed 2026-04-02)
-- [ ] **Phase 6: Test Input JSONs and Dockstore Registration** - Placeholder test JSONs for both workflows and .dockstore.yml entries for Dockstore discoverability
+- [x] **Phase 6: Test Input JSONs and Dockstore Registration** - Placeholder test JSONs for both workflows and .dockstore.yml entries for Dockstore discoverability (completed 2026-04-02)
 
 ## Phase Details
 
@@ -83,7 +83,7 @@ Plans:
   4. Neither Dockstore entry contains a `testParameterFiles` key (placeholder paths must not be submitted for CI execution)
 **Plans**: 1 plan
 Plans:
-- [ ] 06-01-PLAN.md — Create test input JSONs and Dockstore registration entries
+- [x] 06-01-PLAN.md — Create test input JSONs and Dockstore registration entries
 
 ## Progress
 
@@ -94,7 +94,7 @@ Plans:
 | 3. summarize_kb_extract_reads Task, Workflow, and Registration | v2.0 | 3/3 | Complete | 2026-04-01 |
 | 4. Core centrifuger Task | v3.0 | 1/1 | Complete   | 2026-04-02 |
 | 5. centrifuger_single and centrifuger_multi Workflow Wrappers | v3.0 | 1/1 | Complete   | 2026-04-02 |
-| 6. Test Input JSONs and Dockstore Registration | v3.0 | 0/1 | Not started | - |
+| 6. Test Input JSONs and Dockstore Registration | v3.0 | 1/1 | Complete   | 2026-04-02 |
 
 ---
 *Last updated: 2026-04-02 — Phase 5 planned*
