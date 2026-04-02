@@ -2198,7 +2198,7 @@ task summarize_kb_extract_reads {
 
   parameter_meta {
     extract_reads_tar: {
-      description: "Tarball of extract_reads/ directory with structure: <sample_name>/<UID>.fastq.gz",
+      description: "Tarball containing sample subdirectories, each with <UID>.fastq.gz files. Top-level structure must be <sample_name>/<UID>.fastq.gz (no enclosing directory required).",
       patterns: ["*.tar", "*.tar.gz", "*.tar.bz2", "*.tar.zst"],
       category: "required"
     }
@@ -2253,10 +2253,12 @@ task summarize_kb_extract_reads {
 
     print(f"  Loaded {len(taxonomy_map)} taxonomy entries", file=sys.stderr)
 
-    # Extract tarball
+    # Extract tarball into isolated subdirectory to avoid iterating over unrelated files
+    extract_dir = "extract_contents"
+    os.makedirs(extract_dir, exist_ok=True)
     print("Extracting tarball...", file=sys.stderr)
     with tarfile.open("~{extract_reads_tar}", 'r:*') as tar:
-        tar.extractall(path=".")
+        tar.extractall(path=extract_dir)
     print("  Extraction complete", file=sys.stderr)
 
     # Open output file with zstd compression
@@ -2267,12 +2269,6 @@ task summarize_kb_extract_reads {
         # Write header
         header_line = "SAMPLE_ID\tREAD_ID\tDB_ID\tTAXONOMY_LINEAGE\tTAXONOMY_NAME\tSEQUENCE_LENGTH\n"
         compressor.write(header_line.encode('utf-8'))
-
-        # Process all sample directories
-        extract_dir = "extract_reads"
-        if not os.path.exists(extract_dir):
-            # Try to find extracted contents in current directory
-            extract_dir = "."
 
         samples_processed = 0
         reads_processed = 0
@@ -2357,26 +2353,21 @@ task summarize_kb_extract_reads {
 
 task centrifuger {
   meta {
-    description: "Runs Centrifuger taxonomic classification on reads (FASTQ or BAM input). Generates a per-read classification TSV and a Kraken-style summary report (kreport). BAM inputs are converted to FASTQ internally via picard SamToFastq. The pre-built index is provided as a compressed tarball and extracted at runtime."
+    description: "Runs Centrifuger taxonomic classification on one or more BAM files. Each BAM is converted to FASTQ via picard SamToFastq, classified, and a Kraken-style kreport is generated. The pre-built index is loaded once and reused across all samples."
   }
 
   input {
-    File      centrifuger_db_tgz  # pre-built Centrifuger index tarball (.tar.gz, .tar.lz4, .tar.zst)
-    String    db_name             # index prefix (common stem of .1.cfr/.2.cfr/.3.cfr/.4.cfr files)
+    File         centrifuger_db_tgz  # pre-built Centrifuger index tarball (.tar.gz, .tar.lz4, .tar.zst)
+    String       db_name             # index prefix (common stem of .1.cfr/.2.cfr/.3.cfr/.4.cfr files)
 
-    File?     reads_fastq1
-    File?     reads_fastq2
-    File?     reads_fastq_unpaired
-    File?     reads_bam
+    Array[File]  reads_bams
 
-    String    sample_name
-
-    Int       machine_mem_gb = 240
-    Int?      cpu
-    String    docker = "ghcr.io/broadinstitute/docker-centrifuger:1.0.0"
+    Int          machine_mem_gb = 240
+    Int?         cpu
+    String       docker = "ghcr.io/broadinstitute/docker-centrifuger:1.0.0"
   }
 
-  Int disk_size = ceil((8 * size(reads_fastq1, "GB") + 3 * size(centrifuger_db_tgz, "GB") + 400) / 400.0) * 400
+  Int disk_size = ceil((8 * size(reads_bams, "GB") + 3 * size(centrifuger_db_tgz, "GB") + 400) / 400.0) * 400
 
   parameter_meta {
     centrifuger_db_tgz: {
@@ -2388,28 +2379,9 @@ task centrifuger {
       description: "Centrifuger index prefix (the common filename stem of the .1.cfr, .2.cfr, .3.cfr, .4.cfr files inside the tarball).",
       category: "required"
     }
-    reads_fastq1: {
-      description: "Forward reads in FASTQ format (paired-end R1). Provide with reads_fastq2 for paired-end classification.",
-      patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"],
-      category: "common"
-    }
-    reads_fastq2: {
-      description: "Reverse reads in FASTQ format (paired-end R2). Must be provided together with reads_fastq1.",
-      patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"],
-      category: "common"
-    }
-    reads_fastq_unpaired: {
-      description: "Unpaired or single-end reads in FASTQ format.",
-      patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"],
-      category: "common"
-    }
-    reads_bam: {
-      description: "Reads in BAM format. Converted to FASTQ internally via picard SamToFastq. Paired-end BAMs produce R1/R2; single-end BAMs produce one FASTQ.",
+    reads_bams: {
+      description: "Reads in BAM format, one file per sample. Each BAM is converted to FASTQ internally via picard SamToFastq. Paired-end BAMs produce R1/R2; single-end BAMs produce one FASTQ. Sample names are derived from BAM filenames.",
       patterns: ["*.bam"],
-      category: "common"
-    }
-    sample_name: {
-      description: "Sample name used as prefix for all output files.",
       category: "required"
     }
     machine_mem_gb: {
@@ -2442,74 +2414,55 @@ task centrifuger {
     fi
     INDEX_PREFIX="$DB_DIR/~{db_name}"
 
-    # Determine input reads: BAM -> FASTQ conversion or direct FASTQ
-    if [ -n "~{default='' reads_bam}" ]; then
-      # BAM input: convert to FASTQ via picard SamToFastq (per CFGR-02 / D-02)
+    # Process each BAM: convert to FASTQ, classify, generate kreport
+    THREADS="~{select_first([cpu, 8])}"
+
+    for bam in "~{sep='" "' reads_bams}"; do
+      SAMPLE="$(basename $bam .bam)"
+
+      # BAM -> FASTQ via picard SamToFastq (per CFGR-02 / D-02)
       picard SamToFastq \
-        I="~{reads_bam}" \
-        FASTQ=R1.fq \
-        SECOND_END_FASTQ=R2.fq \
+        I="$bam" \
+        FASTQ="${SAMPLE}_R1.fq" \
+        SECOND_END_FASTQ="${SAMPLE}_R2.fq" \
         READ1_SUFFIX=/1 \
         READ2_SUFFIX=/2 \
         VALIDATION_STRINGENCY=LENIENT
 
-      if [ -s R2.fq ]; then
+      if [ -s "${SAMPLE}_R2.fq" ]; then
         # Paired-end BAM
-        R1_FQ=R1.fq
-        R2_FQ=R2.fq
-        PAIRED=true
+        centrifuger \
+          -x "$INDEX_PREFIX" \
+          -1 "${SAMPLE}_R1.fq" \
+          -2 "${SAMPLE}_R2.fq" \
+          -t "$THREADS" \
+          > "${SAMPLE}.centrifuger.tsv" \
+          2> "${SAMPLE}.centrifuger.log"
       else
         # Single-end BAM
-        R1_FQ=R1.fq
-        PAIRED=false
+        centrifuger \
+          -x "$INDEX_PREFIX" \
+          -u "${SAMPLE}_R1.fq" \
+          -t "$THREADS" \
+          > "${SAMPLE}.centrifuger.tsv" \
+          2> "${SAMPLE}.centrifuger.log"
       fi
-    elif [ -n "~{default='' reads_fastq1}" ]; then
-      R1_FQ="~{reads_fastq1}"
-      if [ -n "~{default='' reads_fastq2}" ]; then
-        R2_FQ="~{reads_fastq2}"
-        PAIRED=true
-      else
-        PAIRED=false
-      fi
-    elif [ -n "~{default='' reads_fastq_unpaired}" ]; then
-      R1_FQ="~{reads_fastq_unpaired}"
-      PAIRED=false
-    else
-      echo "ERROR: at least one of reads_bam, reads_fastq1, or reads_fastq_unpaired must be provided" >&2
-      exit 1
-    fi
 
-    # Run centrifuger classification
-    THREADS="~{select_first([cpu, 8])}"
-
-    if [ "$PAIRED" = "true" ]; then
-      centrifuger \
+      # Generate Kraken-style report (requires index on disk -- per Phase 4 D-02)
+      centrifuger-kreport \
         -x "$INDEX_PREFIX" \
-        -1 "$R1_FQ" \
-        -2 "$R2_FQ" \
-        -t "$THREADS" \
-        > "~{sample_name}.centrifuger.tsv" \
-        2> "~{sample_name}.centrifuger.log"
-    else
-      centrifuger \
-        -x "$INDEX_PREFIX" \
-        -u "$R1_FQ" \
-        -t "$THREADS" \
-        > "~{sample_name}.centrifuger.tsv" \
-        2> "~{sample_name}.centrifuger.log"
-    fi
+        "${SAMPLE}.centrifuger.tsv" \
+        > "${SAMPLE}.centrifuger.kreport"
 
-    # Generate Kraken-style report (requires index on disk)
-    centrifuger-kreport \
-      -x "$INDEX_PREFIX" \
-      "~{sample_name}.centrifuger.tsv" \
-      > "~{sample_name}.centrifuger.kreport"
+      # Clean up per-sample FASTQ to free disk
+      rm -f "${SAMPLE}_R1.fq" "${SAMPLE}_R2.fq"
+    done
   >>>
 
   output {
-    File classification_tsv = "~{sample_name}.centrifuger.tsv"
-    File kreport            = "~{sample_name}.centrifuger.kreport"
-    File centrifuger_log    = "~{sample_name}.centrifuger.log"
+    Array[File] classification_tsvs = glob("*.centrifuger.tsv")
+    Array[File] kreports            = glob("*.centrifuger.kreport")
+    Array[File] centrifuger_logs    = glob("*.centrifuger.log")
   }
 
   runtime {
