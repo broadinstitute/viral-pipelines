@@ -2476,3 +2476,340 @@ task centrifuger {
     maxRetries:       2
   }
 }
+
+task join_read_classifications {
+  meta {
+    description: "Join read-level classifications from Kallisto, Kraken2, VirNucPro, and geNomad into a single ZSTD-compressed Parquet file keyed on SAMPLE_ID + READ_ID. Uses DuckDB FULL OUTER JOINs so reads from any source are included."
+  }
+
+  input {
+    File?   kallisto_summary          # Kallisto summary parquet (multi-sample, filtered by sample_id)
+    File?   kraken2_reads             # Kraken2 reads parquet (filtered by sample_id)
+    File?   vnp_reads                 # VirNucPro reads parquet (all rows used)
+    File?   genomad_virus_summary     # geNomad virus summary TSV (LEFT JOIN via VNP_CONTIG_ID)
+    String  sample_id                 # Required — filters Kallisto/K2 tables, stamps SAMPLE_ID column
+
+    String  docker = "quay.io/broadinstitute/py3-bio:0.1.3"
+  }
+
+  parameter_meta {
+    kallisto_summary: {
+      description: "Kallisto summary in Parquet format. Multi-sample file filtered by sample_id at runtime. Skipped if not provided or empty.",
+      patterns: ["*.parquet"],
+      category: "common"
+    }
+    kraken2_reads: {
+      description: "Kraken2 per-read classifications in Parquet format. Filtered by sample_id at runtime. Skipped if not provided or empty.",
+      patterns: ["*.parquet"],
+      category: "common"
+    }
+    vnp_reads: {
+      description: "VirNucPro per-read classifications in Parquet format. All rows used (not filtered by sample_id). Skipped if not provided or empty.",
+      patterns: ["*.parquet"],
+      category: "common"
+    }
+    genomad_virus_summary: {
+      description: "geNomad virus summary in TSV format. LEFT JOINed to reads via VNP_CONTIG_ID to annotate viral contigs. Skipped if not provided or empty.",
+      patterns: ["*.tsv"],
+      category: "common"
+    }
+    sample_id: {
+      description: "Sample identifier used to filter Kallisto and Kraken2 tables and stamp the SAMPLE_ID column on every output row.",
+      category: "required"
+    }
+  }
+
+  String out_filename = "~{sample_id}.read_classifications.parquet"
+
+  command <<<
+    set -e
+    pip install duckdb --quiet --no-cache-dir
+    python3<<CODE
+import os
+import sys
+
+import duckdb
+
+
+def _file_is_usable(path):
+    """Return True if path is provided, exists, and is non-empty."""
+    return bool(path) and os.path.isfile(path) and os.path.getsize(path) > 0
+
+
+summary      = "~{default='__NONE__' kallisto_summary}"
+vnp          = "~{default='__NONE__' vnp_reads}"
+kraken2      = "~{default='__NONE__' kraken2_reads}"
+virus_summary = "~{default='__NONE__' genomad_virus_summary}"
+sample_id    = "~{sample_id}"
+output       = "~{out_filename}"
+
+has_kallisto = _file_is_usable(summary)
+has_vnp      = _file_is_usable(vnp)
+has_kraken2  = _file_is_usable(kraken2)
+has_genomad  = _file_is_usable(virus_summary)
+
+if not any([has_kallisto, has_vnp, has_kraken2, has_genomad]):
+    print("ERROR: All input files are missing or empty — nothing to join.", file=sys.stderr)
+    sys.exit(1)
+
+con = duckdb.connect()
+
+# ── 1. Kallisto summary ──────────────────────────────────────────────
+if has_kallisto:
+    print(f"Reading Kallisto summary: {summary}", file=sys.stderr)
+    con.execute("""
+        CREATE TABLE kallisto AS
+        SELECT
+            SAMPLE_ID,
+            READ_ID,
+            DB_ID            AS KALLISTO_DB_ID,
+            TAXONOMY_LINEAGE AS KALLISTO_TAXONOMY_LINEAGE,
+            TAXONOMY_NAME    AS KALLISTO_TAXONOMY_NAME,
+            SEQUENCE_LENGTH  AS KALLISTO_SEQUENCE_LENGTH
+        FROM read_parquet($1)
+        WHERE SAMPLE_ID = $2
+    """, [summary, sample_id])
+    n_kallisto = con.execute("SELECT count(*) FROM kallisto").fetchone()[0]
+    print(f"  {n_kallisto:,} Kallisto reads loaded.", file=sys.stderr)
+else:
+    print(f"  Skipping Kallisto (file missing or empty).", file=sys.stderr)
+    con.execute("""
+        CREATE TABLE kallisto (
+            SAMPLE_ID VARCHAR, READ_ID VARCHAR,
+            KALLISTO_DB_ID VARCHAR, KALLISTO_TAXONOMY_LINEAGE VARCHAR,
+            KALLISTO_TAXONOMY_NAME VARCHAR, KALLISTO_SEQUENCE_LENGTH BIGINT
+        )
+    """)
+
+# ── 2. VirNucPro reads ───────────────────────────────────────────────
+if has_vnp:
+    print(f"Reading VirNucPro reads: {vnp}", file=sys.stderr)
+    con.execute("""
+        CREATE TABLE vnp AS
+        SELECT
+            read_id           AS READ_ID,
+            contig_id         AS VNP_CONTIG_ID,
+            contig_length     AS VNP_CONTIG_LENGTH,
+            strand            AS VNP_STRAND,
+            read_length       AS VNP_READ_LENGTH,
+            mapping_quality   AS VNP_MAPPING_QUALITY,
+            pct_identity      AS VNP_PCT_IDENTITY,
+            pct_query_cov     AS VNP_PCT_QUERY_COV,
+            mapped_well       AS VNP_MAPPED_WELL,
+            call              AS VNP_CALL,
+            tier              AS VNP_TIER,
+            weighted_delta    AS VNP_WEIGHTED_DELTA,
+            n_chunks          AS VNP_N_CHUNKS,
+            n_confident_viral       AS VNP_N_CONFIDENT_VIRAL,
+            n_confident_nonviral    AS VNP_N_CONFIDENT_NONVIRAL,
+            n_ambiguous             AS VNP_N_AMBIGUOUS,
+            viral_proportion        AS VNP_VIRAL_PROPORTION,
+            nonviral_proportion     AS VNP_NONVIRAL_PROPORTION
+        FROM read_parquet($1)
+    """, [vnp])
+    n_vnp = con.execute("SELECT count(*) FROM vnp").fetchone()[0]
+    print(f"  {n_vnp:,} VNP reads loaded.", file=sys.stderr)
+else:
+    print(f"  Skipping VirNucPro (file missing or empty).", file=sys.stderr)
+    con.execute("""
+        CREATE TABLE vnp (
+            READ_ID VARCHAR, VNP_CONTIG_ID VARCHAR, VNP_CONTIG_LENGTH BIGINT,
+            VNP_STRAND VARCHAR, VNP_READ_LENGTH BIGINT, VNP_MAPPING_QUALITY BIGINT,
+            VNP_PCT_IDENTITY DOUBLE, VNP_PCT_QUERY_COV DOUBLE, VNP_MAPPED_WELL BOOLEAN,
+            VNP_CALL VARCHAR, VNP_TIER BIGINT, VNP_WEIGHTED_DELTA DOUBLE,
+            VNP_N_CHUNKS BIGINT, VNP_N_CONFIDENT_VIRAL BIGINT,
+            VNP_N_CONFIDENT_NONVIRAL BIGINT, VNP_N_AMBIGUOUS BIGINT,
+            VNP_VIRAL_PROPORTION DOUBLE, VNP_NONVIRAL_PROPORTION DOUBLE
+        )
+    """)
+
+# Kallisto and VNP both use READ_ID with /1 or /2 mate suffix
+con.execute("""
+    CREATE TABLE joined_kv AS
+    SELECT
+        COALESCE(k.READ_ID, v.READ_ID) AS READ_ID,
+        k.KALLISTO_DB_ID,
+        k.KALLISTO_TAXONOMY_LINEAGE,
+        k.KALLISTO_TAXONOMY_NAME,
+        k.KALLISTO_SEQUENCE_LENGTH,
+        v.VNP_CONTIG_ID,
+        v.VNP_CONTIG_LENGTH,
+        v.VNP_STRAND,
+        v.VNP_READ_LENGTH,
+        v.VNP_MAPPING_QUALITY,
+        v.VNP_PCT_IDENTITY,
+        v.VNP_PCT_QUERY_COV,
+        v.VNP_MAPPED_WELL,
+        v.VNP_CALL,
+        v.VNP_TIER,
+        v.VNP_WEIGHTED_DELTA,
+        v.VNP_N_CHUNKS,
+        v.VNP_N_CONFIDENT_VIRAL,
+        v.VNP_N_CONFIDENT_NONVIRAL,
+        v.VNP_N_AMBIGUOUS,
+        v.VNP_VIRAL_PROPORTION,
+        v.VNP_NONVIRAL_PROPORTION
+    FROM kallisto k
+    FULL OUTER JOIN vnp v ON k.READ_ID = v.READ_ID
+""")
+con.execute("DROP TABLE kallisto")
+con.execute("DROP TABLE vnp")
+n_kv = con.execute("SELECT count(*) FROM joined_kv").fetchone()[0]
+print(f"  {n_kv:,} rows after Kallisto + VNP full outer join.", file=sys.stderr)
+
+# ── 3. Kraken2 reads ─────────────────────────────────────────────────
+# Kraken2 READ_IDs lack the /1 or /2 mate suffix, so strip it from
+# the Kallisto/VNP side when joining.
+if has_kraken2:
+    print(f"Reading Kraken2 reads: {kraken2}", file=sys.stderr)
+    con.execute("""
+        CREATE TABLE k2 AS
+        SELECT
+            READ_ID,
+            TAXONOMY_ID AS K2_TAXONOMY_ID,
+            TAX_NAME    AS K2_TAX_NAME,
+            KINGDOM     AS K2_KINGDOM
+        FROM read_parquet($1)
+        WHERE SAMPLE_ID = $2
+    """, [kraken2, sample_id])
+    n_k2 = con.execute("SELECT count(*) FROM k2").fetchone()[0]
+    print(f"  {n_k2:,} Kraken2 reads loaded.", file=sys.stderr)
+else:
+    print(f"  Skipping Kraken2 (file missing or empty).", file=sys.stderr)
+    con.execute("""
+        CREATE TABLE k2 (
+            READ_ID VARCHAR, K2_TAXONOMY_ID VARCHAR,
+            K2_TAX_NAME VARCHAR, K2_KINGDOM VARCHAR
+        )
+    """)
+
+con.execute("""
+    CREATE TABLE joined_all AS
+    SELECT
+        COALESCE(jkv.READ_ID, k.READ_ID) AS READ_ID,
+        jkv.KALLISTO_DB_ID,
+        jkv.KALLISTO_TAXONOMY_LINEAGE,
+        jkv.KALLISTO_TAXONOMY_NAME,
+        jkv.KALLISTO_SEQUENCE_LENGTH,
+        k.K2_TAXONOMY_ID,
+        k.K2_TAX_NAME,
+        k.K2_KINGDOM,
+        jkv.VNP_CONTIG_ID,
+        jkv.VNP_CONTIG_LENGTH,
+        jkv.VNP_STRAND,
+        jkv.VNP_READ_LENGTH,
+        jkv.VNP_MAPPING_QUALITY,
+        jkv.VNP_PCT_IDENTITY,
+        jkv.VNP_PCT_QUERY_COV,
+        jkv.VNP_MAPPED_WELL,
+        jkv.VNP_CALL,
+        jkv.VNP_TIER,
+        jkv.VNP_WEIGHTED_DELTA,
+        jkv.VNP_N_CHUNKS,
+        jkv.VNP_N_CONFIDENT_VIRAL,
+        jkv.VNP_N_CONFIDENT_NONVIRAL,
+        jkv.VNP_N_AMBIGUOUS,
+        jkv.VNP_VIRAL_PROPORTION,
+        jkv.VNP_NONVIRAL_PROPORTION
+    FROM joined_kv jkv
+    FULL OUTER JOIN k2 k
+        ON regexp_replace(jkv.READ_ID, '/[12]$', '') = k.READ_ID
+""")
+con.execute("DROP TABLE joined_kv")
+con.execute("DROP TABLE k2")
+n_all = con.execute("SELECT count(*) FROM joined_all").fetchone()[0]
+print(f"  {n_all:,} rows after Kraken2 full outer join.", file=sys.stderr)
+
+# ── 4. geNomad virus summary (LEFT JOIN on contig ID) ────────────────
+# geNomad is contig-level annotation, not a read source — LEFT JOIN
+# enriches reads that mapped to viral contigs via VNP.
+if has_genomad:
+    print(f"Reading geNomad virus summary: {virus_summary}", file=sys.stderr)
+    con.execute("""
+        CREATE TABLE genomad AS
+        SELECT
+            seq_name          AS CONTIG_ID,
+            length            AS GENOMAD_LENGTH,
+            topology          AS GENOMAD_TOPOLOGY,
+            coordinates       AS GENOMAD_COORDINATES,
+            n_genes           AS GENOMAD_N_GENES,
+            genetic_code      AS GENOMAD_GENETIC_CODE,
+            virus_score       AS GENOMAD_VIRUS_SCORE,
+            fdr               AS GENOMAD_FDR,
+            n_hallmarks       AS GENOMAD_N_HALLMARKS,
+            marker_enrichment AS GENOMAD_MARKER_ENRICHMENT,
+            taxonomy          AS GENOMAD_TAXONOMY
+        FROM read_csv($1, delim='\t', header=true, auto_detect=true)
+    """, [virus_summary])
+    n_genomad = con.execute("SELECT count(*) FROM genomad").fetchone()[0]
+    print(f"  {n_genomad:,} geNomad contigs loaded.", file=sys.stderr)
+else:
+    print(f"  Skipping geNomad (file missing or empty).", file=sys.stderr)
+    con.execute("""
+        CREATE TABLE genomad (
+            CONTIG_ID VARCHAR, GENOMAD_LENGTH BIGINT, GENOMAD_TOPOLOGY VARCHAR,
+            GENOMAD_COORDINATES VARCHAR, GENOMAD_N_GENES BIGINT,
+            GENOMAD_GENETIC_CODE BIGINT, GENOMAD_VIRUS_SCORE DOUBLE,
+            GENOMAD_FDR DOUBLE, GENOMAD_N_HALLMARKS BIGINT,
+            GENOMAD_MARKER_ENRICHMENT DOUBLE, GENOMAD_TAXONOMY VARCHAR
+        )
+    """)
+
+con.execute("""
+    CREATE TABLE result AS
+    SELECT
+        $1 AS SAMPLE_ID,
+        j.*,
+        g.GENOMAD_LENGTH,
+        g.GENOMAD_TOPOLOGY,
+        g.GENOMAD_COORDINATES,
+        g.GENOMAD_N_GENES,
+        g.GENOMAD_GENETIC_CODE,
+        g.GENOMAD_VIRUS_SCORE,
+        g.GENOMAD_FDR,
+        g.GENOMAD_N_HALLMARKS,
+        g.GENOMAD_MARKER_ENRICHMENT,
+        g.GENOMAD_TAXONOMY
+    FROM joined_all j
+    LEFT JOIN genomad g ON j.VNP_CONTIG_ID = g.CONTIG_ID
+""", [sample_id])
+con.execute("DROP TABLE joined_all")
+con.execute("DROP TABLE genomad")
+
+# ── Stats ────────────────────────────────────────────────────────────
+n_result = con.execute("SELECT count(*) FROM result").fetchone()[0]
+n_with_kallisto = con.execute("SELECT count(*) FROM result WHERE KALLISTO_DB_ID IS NOT NULL").fetchone()[0]
+n_with_k2 = con.execute("SELECT count(*) FROM result WHERE K2_TAXONOMY_ID IS NOT NULL").fetchone()[0]
+n_with_vnp = con.execute("SELECT count(*) FROM result WHERE VNP_CONTIG_ID IS NOT NULL").fetchone()[0]
+n_with_genomad = con.execute("SELECT count(*) FROM result WHERE GENOMAD_VIRUS_SCORE IS NOT NULL").fetchone()[0]
+print(f"\n  Final table: {n_result:,} rows", file=sys.stderr)
+print(f"  With Kallisto hit: {n_with_kallisto:,} ({n_with_kallisto/n_result*100:.1f}%)", file=sys.stderr)
+print(f"  With Kraken2 hit:  {n_with_k2:,} ({n_with_k2/n_result*100:.1f}%)", file=sys.stderr)
+print(f"  With VNP hit:      {n_with_vnp:,} ({n_with_vnp/n_result*100:.1f}%)", file=sys.stderr)
+print(f"  With geNomad hit:  {n_with_genomad:,} ({n_with_genomad/n_result*100:.1f}%)", file=sys.stderr)
+
+# ── Write output ─────────────────────────────────────────────────────
+con.execute("""
+    COPY result TO $1 (FORMAT PARQUET, COMPRESSION ZSTD)
+""", [output])
+print(f"\nOutput written to: {output}", file=sys.stderr)
+
+con.close()
+CODE
+  >>>
+
+  output {
+    File classifications_parquet = "~{out_filename}"
+  }
+
+  runtime {
+    docker:           docker
+    memory:           "16 GB"
+    cpu:              1
+    disks:            "local-disk ~{ceil((size(kallisto_summary, 'GB') + size(kraken2_reads, 'GB') + size(vnp_reads, 'GB') + size(genomad_virus_summary, 'GB')) * 4 + 10)} HDD"
+    disk:             "~{ceil((size(kallisto_summary, 'GB') + size(kraken2_reads, 'GB') + size(vnp_reads, 'GB') + size(genomad_virus_summary, 'GB')) * 4 + 10)} GB"
+    dx_instance_type: "mem2_ssd1_v2_x2"
+    preemptible:      2
+    maxRetries:       2
+  }
+}
