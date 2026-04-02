@@ -1,0 +1,53 @@
+.planning/ROADMAP.md
+  8d286ed09514e8e5 8,39-40,46,91-106,118,121
+.planning/REQUIREMENTS.md
+  8d286ed09514e8e5 60-89,111-114,117-119,123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "939f4d3bceeb7bb92c033c2014e4950194fcde35",
+  "prompts": {
+    "1f8add76093d5dab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a8cc0ada-ef44-47be-96c1-54dcad418d8f",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/5a9ec273d04d0d5cb2448ef6185cc183e79b98969f1227a916b132e431acee58"
+    },
+    "8d286ed09514e8e5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fe77ab0a-0c45-4e5a-a1ff-e0f4a7b1ab0b",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 62,
+      "total_deletions": 17,
+      "accepted_lines": 62,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/d695926bf35f3062ae91b372f20147ecf3d170d3da55d8eb7d8f6a7e88a7aae9"
+    },
+    "c46d9ede72f52039": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "855f90ff-420c-4522-8f0e-7115159068bb",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": null,
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 9,
+      "overriden_lines": 0
+    }
+  }
+}
