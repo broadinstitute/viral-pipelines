@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Centrifuger Taxonomic Classification WDL
-current_phase: 5
+current_phase: 05
 status: verifying
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-04-02T14:05:26.022Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-04-02T14:51:58.972Z"
 last_activity: 2026-04-02
 progress:
   total_phases: 3
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
   percent: 0
 ---
 
@@ -22,14 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-02)
 
 **Core value:** Enables VirNucPro users to complete the full analysis chain within existing WDL infrastructure on Terra/DNAnexus
-**Current focus:** Phase 04 — core-centrifuger-task
+**Current focus:** Phase 05 — centrifuger-single-and-centrifuger-multi-workflow-wrappers
 
 ## Current Position
 
-Phase: 04 (core-centrifuger-task) — EXECUTING
-Plan: Not started
+Phase: 05 (centrifuger-single-and-centrifuger-multi-workflow-wrappers) — EXECUTING
+Plan: 1 of 1
 Milestone: v3.0 Centrifuger Taxonomic Classification WDL
-Current phase: 5
+Current phase: 05
 Status: Phase complete — ready for verification
 Last activity: 2026-04-02
 
@@ -60,6 +60,9 @@ Recent decisions affecting current work:
 - [v3.0] No testParameterFiles in .dockstore.yml — placeholder paths are not CI-runnable
 - [Phase 04-core-centrifuger-task]: File centrifuger_db_tgz (tarball) used instead of Directory — WDL 1.0 does not support Directory type; matches kraken2/krakenuniq tarball pattern
 - [Phase 04-core-centrifuger-task]: Single-end reads use centrifuger -u flag (not -r); -r is centrifuger-build reference input flag
+- [Phase 05]: ONE task (centrifuger), TWO workflow wrappers (single/multi) — same krakenuniq bash-loop approach for amortizing 200+ GB DB load
+- [Phase 05]: centrifuger_multi.wdl has NO scatter block — loop is inside task command block
+- [Phase 05]: Sample names derived from basename(bam, .bam) inside bash loop — String sample_name input removed
 
 ### Pending Todos
 
@@ -74,7 +77,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-02T13:58:21.411Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-04-02T14:51:58.969Z
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 4`

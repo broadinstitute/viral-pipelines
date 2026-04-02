@@ -27,7 +27,7 @@
 
 ### Single-Sample Workflow
 
-- [ ] **CFGR-03**: Standalone workflow `pipes/WDL/workflows/centrifuger_single.wdl`
+- [x] **CFGR-03**: Standalone workflow `pipes/WDL/workflows/centrifuger_single.wdl`
   - Scalar inputs (one sample per workflow call — Terra scatter-friendly)
   - Imports `tasks_metagenomics.wdl` and calls task with alias `as run_centrifuger`
   - `meta { allowNestedInputs: true }` for Terra-compatible test JSON
@@ -35,7 +35,7 @@
 
 ### Multi-Sample Workflow
 
-- [ ] **CFGR-04**: Standalone workflow `pipes/WDL/workflows/centrifuger_multi.wdl`
+- [x] **CFGR-04**: Standalone workflow `pipes/WDL/workflows/centrifuger_multi.wdl`
   - Accepts `Array[File]+ reads_bams` OR `Array[File]+ reads_fastqs` as batch input
   - Uses a single WDL task call — sample loop lives inside the task command block (krakenuniq bash-loop pattern; NOT WDL scatter)
   - Database loaded once per task call; all samples classified in sequence on same node
@@ -73,8 +73,8 @@
 |-------------|-------|--------|
 | CFGR-01 | Phase 4 | Complete |
 | CFGR-02 | Phase 4 | Complete |
-| CFGR-03 | Phase 5 | Pending |
-| CFGR-04 | Phase 5 | Pending |
+| CFGR-03 | Phase 5 | Complete |
+| CFGR-04 | Phase 5 | Complete |
 | CFGR-05 | Phase 6 | Pending |
 | CFGR-06 | Phase 6 | Pending |
 | CFGR-07 | Phase 6 | Pending |

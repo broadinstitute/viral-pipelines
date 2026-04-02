@@ -39,7 +39,7 @@ See archive: `.planning/milestones/v2.0-ROADMAP.md`
 ### v3.0 Centrifuger Taxonomic Classification WDL
 
 - [x] **Phase 4: Core centrifuger Task** - WDL task in tasks_metagenomics.wdl with BAM/FASTQ inputs, 4 outputs, input validation, and runtime sizing for 200+ GB index (completed 2026-04-02)
-- [ ] **Phase 5: centrifuger_single and centrifuger_multi Workflow Wrappers** - Standalone WDL workflows for single-sample and batch classification; multi uses bash-loop (not scatter)
+- [x] **Phase 5: centrifuger_single and centrifuger_multi Workflow Wrappers** - Standalone WDL workflows for single-sample and batch classification; multi uses bash-loop (not scatter) (completed 2026-04-02)
 - [ ] **Phase 6: Test Input JSONs and Dockstore Registration** - Placeholder test JSONs for both workflows and .dockstore.yml entries for Dockstore discoverability
 
 ## Phase Details
@@ -70,7 +70,7 @@ Plans:
   5. Both workflows call the task with alias `as run_centrifuger` (no call-name collision with workflow name)
 **Plans**: 1 plan
 Plans:
-- [ ] 05-01-PLAN.md — Modify centrifuger task to array inputs + create centrifuger_single and centrifuger_multi workflow wrappers
+- [x] 05-01-PLAN.md — Modify centrifuger task to array inputs + create centrifuger_single and centrifuger_multi workflow wrappers
 
 ### Phase 6: Test Input JSONs and Dockstore Registration
 **Goal**: Both workflows have placeholder test input JSONs and are registered in .dockstore.yml, making them discoverable on Dockstore
@@ -93,7 +93,7 @@ Plans:
 | 2. parse_kraken2_reads Task, Workflow, and Registration | v1.1 | 2/2 | Complete | 2026-04-01 |
 | 3. summarize_kb_extract_reads Task, Workflow, and Registration | v2.0 | 3/3 | Complete | 2026-04-01 |
 | 4. Core centrifuger Task | v3.0 | 1/1 | Complete   | 2026-04-02 |
-| 5. centrifuger_single and centrifuger_multi Workflow Wrappers | v3.0 | 0/1 | Not started | - |
+| 5. centrifuger_single and centrifuger_multi Workflow Wrappers | v3.0 | 1/1 | Complete   | 2026-04-02 |
 | 6. Test Input JSONs and Dockstore Registration | v3.0 | 0/1 | Not started | - |
 
 ---
