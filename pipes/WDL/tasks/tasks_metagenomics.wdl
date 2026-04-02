@@ -940,3 +940,158 @@ task kaiju {
     dx_instance_type: "mem3_ssd1_v2_x16"
   }
 }
+
+task centrifuger {
+  meta {
+    description: "Runs Centrifuger taxonomic classification on reads (FASTQ or BAM input). Generates a per-read classification TSV and a Kraken-style summary report (kreport). BAM inputs are converted to FASTQ internally via picard SamToFastq."
+  }
+
+  input {
+    Directory centrifuger_db
+    String    db_name
+
+    File?     reads_fastq1
+    File?     reads_fastq2
+    File?     reads_fastq_unpaired
+    File?     reads_bam
+
+    String    sample_name
+
+    Int       machine_mem_gb = 240
+    Int?      cpu
+    String    docker = "ghcr.io/broadinstitute/docker-centrifuger:1.0.0"
+  }
+
+  Int disk_size = ceil((8 * size(reads_fastq1, "GB") + 400) / 400.0) * 400
+
+  parameter_meta {
+    centrifuger_db: {
+      description: "Pre-built Centrifuger index directory containing index files with a common prefix.",
+      category: "required"
+    }
+    db_name: {
+      description: "Centrifuger index prefix (the common filename stem of the .1.cfr, .2.cfr, .3.cfr, .4.cfr files inside centrifuger_db).",
+      category: "required"
+    }
+    reads_fastq1: {
+      description: "Forward reads in FASTQ format (paired-end R1). Provide with reads_fastq2 for paired-end classification.",
+      patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"],
+      category: "common"
+    }
+    reads_fastq2: {
+      description: "Reverse reads in FASTQ format (paired-end R2). Must be provided together with reads_fastq1.",
+      patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"],
+      category: "common"
+    }
+    reads_fastq_unpaired: {
+      description: "Unpaired or single-end reads in FASTQ format.",
+      patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"],
+      category: "common"
+    }
+    reads_bam: {
+      description: "Reads in BAM format. Converted to FASTQ internally via picard SamToFastq. Paired-end BAMs produce R1/R2; single-end BAMs produce one FASTQ.",
+      patterns: ["*.bam"],
+      category: "common"
+    }
+    sample_name: {
+      description: "Sample name used as prefix for all output files.",
+      category: "required"
+    }
+    machine_mem_gb: {
+      description: "Memory in GB. Default 240 GB sized for NT-scale centrifuger index.",
+      category: "other"
+    }
+    cpu: {
+      description: "Number of CPUs. Default 8.",
+      category: "other"
+    }
+    docker: {
+      description: "Docker image with centrifuger and picard.",
+      category: "other"
+    }
+  }
+
+  command <<<
+    set -ex -o pipefail
+
+    # Determine input reads: BAM -> FASTQ conversion or direct FASTQ
+    if [ -n "~{default='' reads_bam}" ]; then
+      # BAM input: convert to FASTQ via picard SamToFastq (per CFGR-02 / D-02)
+      picard SamToFastq \
+        I="~{reads_bam}" \
+        FASTQ=R1.fq \
+        SECOND_END_FASTQ=R2.fq \
+        READ1_SUFFIX=/1 \
+        READ2_SUFFIX=/2 \
+        VALIDATION_STRINGENCY=LENIENT
+
+      if [ -s R2.fq ]; then
+        # Paired-end BAM
+        R1_FQ=R1.fq
+        R2_FQ=R2.fq
+        PAIRED=true
+      else
+        # Single-end BAM
+        R1_FQ=R1.fq
+        PAIRED=false
+      fi
+    elif [ -n "~{default='' reads_fastq1}" ]; then
+      R1_FQ="~{reads_fastq1}"
+      if [ -n "~{default='' reads_fastq2}" ]; then
+        R2_FQ="~{reads_fastq2}"
+        PAIRED=true
+      else
+        PAIRED=false
+      fi
+    elif [ -n "~{default='' reads_fastq_unpaired}" ]; then
+      R1_FQ="~{reads_fastq_unpaired}"
+      PAIRED=false
+    else
+      echo "ERROR: at least one of reads_bam, reads_fastq1, or reads_fastq_unpaired must be provided" >&2
+      exit 1
+    fi
+
+    # Run centrifuger classification
+    THREADS="~{select_first([cpu, 8])}"
+
+    if [ "$PAIRED" = "true" ]; then
+      centrifuger \
+        -x "~{centrifuger_db}/~{db_name}" \
+        -1 "$R1_FQ" \
+        -2 "$R2_FQ" \
+        -t "$THREADS" \
+        > "~{sample_name}.centrifuger.tsv" \
+        2> "~{sample_name}.centrifuger.log"
+    else
+      centrifuger \
+        -x "~{centrifuger_db}/~{db_name}" \
+        -u "$R1_FQ" \
+        -t "$THREADS" \
+        > "~{sample_name}.centrifuger.tsv" \
+        2> "~{sample_name}.centrifuger.log"
+    fi
+
+    # Generate Kraken-style report (requires index on disk)
+    centrifuger-kreport \
+      -x "~{centrifuger_db}/~{db_name}" \
+      "~{sample_name}.centrifuger.tsv" \
+      > "~{sample_name}.centrifuger.kreport"
+  >>>
+
+  output {
+    File classification_tsv = "~{sample_name}.centrifuger.tsv"
+    File kreport            = "~{sample_name}.centrifuger.kreport"
+    File centrifuger_log    = "~{sample_name}.centrifuger.log"
+  }
+
+  runtime {
+    docker:           docker
+    memory:           "~{machine_mem_gb} GB"
+    cpu:              select_first([cpu, 8])
+    disks:            "local-disk ~{disk_size} SSD"
+    disk:             "~{disk_size} GB" # TES
+    dx_instance_type: "mem3_ssd1_v2_x8"
+    preemptible:      2
+    maxRetries:       2
+  }
+}
