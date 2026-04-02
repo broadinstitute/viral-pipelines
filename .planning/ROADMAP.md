@@ -70,7 +70,7 @@ Plans:
   5. Both workflows call the task with alias `as run_centrifuger` (no call-name collision with workflow name)
 **Plans**: 1 plan
 Plans:
-- [ ] 04-01-PLAN.md — Append centrifuger task to tasks_metagenomics.wdl
+- [ ] 05-01-PLAN.md — Modify centrifuger task to array inputs + create centrifuger_single and centrifuger_multi workflow wrappers
 
 ### Phase 6: Test Input JSONs and Dockstore Registration
 **Goal**: Both workflows have placeholder test input JSONs and are registered in .dockstore.yml, making them discoverable on Dockstore
@@ -83,7 +83,7 @@ Plans:
   4. Neither Dockstore entry contains a `testParameterFiles` key (placeholder paths must not be submitted for CI execution)
 **Plans**: 1 plan
 Plans:
-- [ ] 04-01-PLAN.md — Append centrifuger task to tasks_metagenomics.wdl
+- [ ] 06-01-PLAN.md — Create test input JSONs and Dockstore registration entries
 
 ## Progress
 
@@ -93,8 +93,8 @@ Plans:
 | 2. parse_kraken2_reads Task, Workflow, and Registration | v1.1 | 2/2 | Complete | 2026-04-01 |
 | 3. summarize_kb_extract_reads Task, Workflow, and Registration | v2.0 | 3/3 | Complete | 2026-04-01 |
 | 4. Core centrifuger Task | v3.0 | 1/1 | Complete   | 2026-04-02 |
-| 5. centrifuger_single and centrifuger_multi Workflow Wrappers | v3.0 | 0/? | Not started | - |
-| 6. Test Input JSONs and Dockstore Registration | v3.0 | 0/? | Not started | - |
+| 5. centrifuger_single and centrifuger_multi Workflow Wrappers | v3.0 | 0/1 | Not started | - |
+| 6. Test Input JSONs and Dockstore Registration | v3.0 | 0/1 | Not started | - |
 
 ---
-*Last updated: 2026-04-02 — v3.0 roadmap created*
+*Last updated: 2026-04-02 — Phase 5 planned*
