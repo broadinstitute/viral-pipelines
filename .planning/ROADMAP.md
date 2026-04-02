@@ -115,7 +115,7 @@ Plans:
 | 4. Core centrifuger Task | v3.0 | 1/1 | Complete   | 2026-04-02 |
 | 5. centrifuger_single and centrifuger_multi Workflow Wrappers | v3.0 | 1/1 | Complete   | 2026-04-02 |
 | 6. Test Input JSONs and Dockstore Registration | v3.0 | 1/1 | Complete   | 2026-04-02 |
-| 7. join_read_classifications Task, Workflow, and Registration | v3.1 | 0/2 | Planning | - |
+| 7. join_read_classifications Task, Workflow, and Registration | v3.1 | 1/2 | In Progress|  |
 
 ---
 *Last updated: 2026-04-02 — Phase 7 planned*
