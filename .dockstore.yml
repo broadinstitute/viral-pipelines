@@ -69,6 +69,12 @@ workflows:
   - name: classify_krakenuniq
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/classify_krakenuniq.wdl
+  - name: centrifuger_multi
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/centrifuger_multi.wdl
+  - name: centrifuger_single
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/centrifuger_single.wdl
   - name: classify_multi
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/classify_multi.wdl
