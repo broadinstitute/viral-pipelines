@@ -1,0 +1,38 @@
+.planning/ROADMAP.md
+  6f38480869c54b5c 54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "1d764c81973a8a03b0d020b77341387188a22012",
+  "prompts": {
+    "0d7b158b320f5c10": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2cefa621-9a60-472c-8c1c-6ce1db14031f",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/3a56a755b1773c902943bc6a8ac0c7c5f02c90647dae99d675d0d7e06e27f72e"
+    },
+    "6f38480869c54b5c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8fdba3ee-d180-47f5-b233-c23e21f1fc35",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 2,
+      "accepted_lines": 2,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/0d8245e438bd5a152f66129a60678cb0f1e9af4ef058bb908a141ceb9f0c1fcd"
+    }
+  }
+}
