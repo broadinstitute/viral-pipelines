@@ -1,0 +1,38 @@
+.planning/ROADMAP.md
+  09cce91d32ef81c2 73,86,96-97,100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "40ac0d79921b7f2da43370c0acdacfd2d4b574fe",
+  "prompts": {
+    "09cce91d32ef81c2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f413d192-c02d-4850-8bfe-0aa21d5f6ac1",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 5,
+      "accepted_lines": 5,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/a5474d59afc604b358c74250bf65229fd18bac56f6cba915f52d879f1e24ba04"
+    },
+    "0d7b158b320f5c10": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2cefa621-9a60-472c-8c1c-6ce1db14031f",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/3a56a755b1773c902943bc6a8ac0c7c5f02c90647dae99d675d0d7e06e27f72e"
+    }
+  }
+}
