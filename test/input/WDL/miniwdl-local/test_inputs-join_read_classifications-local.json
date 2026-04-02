@@ -1,0 +1,7 @@
+{
+  "join_read_classifications.kallisto_summary": "test/input/placeholder_kallisto_summary.parquet",
+  "join_read_classifications.kraken2_reads": "test/input/placeholder_kraken2_reads.parquet",
+  "join_read_classifications.vnp_reads": "test/input/placeholder_vnp_reads.parquet",
+  "join_read_classifications.genomad_virus_summary": "test/input/placeholder_genomad_virus_summary.tsv",
+  "join_read_classifications.sample_id": "placeholder_sample"
+}
