@@ -61,7 +61,7 @@
 
 ### WDL Task
 
-- [ ] **JRC-01**: WDL task `join_read_classifications` in `tasks_metagenomics.wdl`
+- [x] **JRC-01**: WDL task `join_read_classifications` in `tasks_metagenomics.wdl`
   - Accepts 4 optional File inputs: `File? kallisto_summary` (Parquet), `File? kraken2_reads` (Parquet), `File? vnp_reads` (Parquet), `File? genomad_virus_summary` (TSV)
   - Accepts required `String sample_id` — filters Kallisto/K2 tables, stamps SAMPLE_ID on output
   - Embeds full join_read_classifications.py logic as inline `python3<<CODE` heredoc

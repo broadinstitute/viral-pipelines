@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.0
-milestone_name: Centrifuger Taxonomic Classification WDL
-current_phase: 06
-status: verifying
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-04-02T15:31:37.999Z"
+milestone: v1.0
+milestone_name: milestone
+current_phase: 07
+status: executing
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-04-02T21:32:52.208Z"
 last_activity: 2026-04-02
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 3
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 5
+  completed_plans: 4
   percent: 0
 ---
 
@@ -22,15 +22,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-02)
 
 **Core value:** Enables VirNucPro users to complete the full analysis chain within existing WDL infrastructure on Terra/DNAnexus
-**Current focus:** Phase 06 — test-input-jsons-and-dockstore-registration
+**Current focus:** Phase 07 — turn-join-read-classifications-py-script-into-a-wdl-pipeline-task-in-task-utils
 
 ## Current Position
 
-Phase: 06 (test-input-jsons-and-dockstore-registration) — EXECUTING
-Plan: Not started
+Phase: 07 (turn-join-read-classifications-py-script-into-a-wdl-pipeline-task-in-task-utils) — EXECUTING
+Plan: 2 of 2
 Milestone: v3.0 Centrifuger Taxonomic Classification WDL
-Current phase: 06
-Status: Phase complete — ready for verification
+Current phase: 07
+Status: Ready to execute
 Last activity: 2026-04-02
 
 Progress: [░░░░░░░░░░] 0% (0/3 phases complete)
@@ -64,6 +64,7 @@ Recent decisions affecting current work:
 - [Phase 05]: centrifuger_multi.wdl has NO scatter block — loop is inside task command block
 - [Phase 05]: Sample names derived from basename(bam, .bam) inside bash loop — String sample_name input removed
 - [Phase 06]: No testParameterFiles on centrifuger Dockstore entries — placeholder paths not CI-runnable
+- [Phase 07]: join_read_classifications task in tasks_metagenomics.wdl — File? optional inputs with __NONE__ sentinel, 16 GB/1 CPU runtime, DuckDB 4-way FULL OUTER JOIN logic embedded verbatim
 
 ### Pending Todos
 
@@ -72,13 +73,17 @@ Recent decisions affecting current work:
 - Run `grep -c "task centrifuger" tasks_metagenomics.wdl` before appending task (must return 0)
 - Resolve RAM default (240 GB for NT-scale vs 50 GB for RefSeq-scope) with team before Phase 4 is finalized
 
+### Roadmap Evolution
+
+- Phase 7 added: Turn join_read_classifications.py script into a WDL pipeline task in task_utils
+
 ### Blockers/Concerns
 
 None.
 
 ## Session Continuity
 
-Last session: 2026-04-02T15:26:43.465Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-04-02T21:32:52.205Z
+Stopped at: Completed 07-01-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 4`

@@ -102,7 +102,7 @@ Plans:
   7. `test/input/WDL/miniwdl-local/test_inputs-join_read_classifications-local.json` exists with workflow-level input keys
 **Plans**: 2 plans
 Plans:
-- [ ] 07-01-PLAN.md — Append join_read_classifications task to tasks_metagenomics.wdl
+- [x] 07-01-PLAN.md — Append join_read_classifications task to tasks_metagenomics.wdl
 - [ ] 07-02-PLAN.md — Create workflow wrapper, test input JSON, and Dockstore entry
 
 ## Progress
