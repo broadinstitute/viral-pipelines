@@ -943,12 +943,12 @@ task kaiju {
 
 task centrifuger {
   meta {
-    description: "Runs Centrifuger taxonomic classification on reads (FASTQ or BAM input). Generates a per-read classification TSV and a Kraken-style summary report (kreport). BAM inputs are converted to FASTQ internally via picard SamToFastq."
+    description: "Runs Centrifuger taxonomic classification on reads (FASTQ or BAM input). Generates a per-read classification TSV and a Kraken-style summary report (kreport). BAM inputs are converted to FASTQ internally via picard SamToFastq. The pre-built index is provided as a compressed tarball and extracted at runtime."
   }
 
   input {
-    Directory centrifuger_db
-    String    db_name
+    File      centrifuger_db_tgz  # pre-built Centrifuger index tarball (.tar.gz, .tar.lz4, .tar.zst)
+    String    db_name             # index prefix (common stem of .1.cfr/.2.cfr/.3.cfr/.4.cfr files)
 
     File?     reads_fastq1
     File?     reads_fastq2
@@ -962,15 +962,16 @@ task centrifuger {
     String    docker = "ghcr.io/broadinstitute/docker-centrifuger:1.0.0"
   }
 
-  Int disk_size = ceil((8 * size(reads_fastq1, "GB") + 400) / 400.0) * 400
+  Int disk_size = ceil((8 * size(reads_fastq1, "GB") + 3 * size(centrifuger_db_tgz, "GB") + 400) / 400.0) * 400
 
   parameter_meta {
-    centrifuger_db: {
-      description: "Pre-built Centrifuger index directory containing index files with a common prefix.",
+    centrifuger_db_tgz: {
+      description: "Pre-built Centrifuger index as a compressed tarball (.tar.gz, .tar.lz4, or .tar.zst). The tarball must contain index files sharing a common prefix (db_name). Extracted at runtime into a temporary directory.",
+      patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.zst", "*.tar.bz2"],
       category: "required"
     }
     db_name: {
-      description: "Centrifuger index prefix (the common filename stem of the .1.cfr, .2.cfr, .3.cfr, .4.cfr files inside centrifuger_db).",
+      description: "Centrifuger index prefix (the common filename stem of the .1.cfr, .2.cfr, .3.cfr, .4.cfr files inside the tarball).",
       category: "required"
     }
     reads_fastq1: {
@@ -1014,6 +1015,19 @@ task centrifuger {
   command <<<
     set -ex -o pipefail
 
+    # Extract centrifuger index tarball
+    DB_DIR=$(mktemp -d --suffix _centrifuger_db)
+    if [[ "~{centrifuger_db_tgz}" == *.tar.lz4 ]]; then
+      lz4 -dc "~{centrifuger_db_tgz}" | tar -x -C "$DB_DIR"
+    elif [[ "~{centrifuger_db_tgz}" == *.tar.zst ]]; then
+      zstd -dc "~{centrifuger_db_tgz}" | tar -x -C "$DB_DIR"
+    elif [[ "~{centrifuger_db_tgz}" == *.tar.bz2 ]]; then
+      tar -xjf "~{centrifuger_db_tgz}" -C "$DB_DIR"
+    else
+      tar -xzf "~{centrifuger_db_tgz}" -C "$DB_DIR"
+    fi
+    INDEX_PREFIX="$DB_DIR/~{db_name}"
+
     # Determine input reads: BAM -> FASTQ conversion or direct FASTQ
     if [ -n "~{default='' reads_bam}" ]; then
       # BAM input: convert to FASTQ via picard SamToFastq (per CFGR-02 / D-02)
@@ -1056,7 +1070,7 @@ task centrifuger {
 
     if [ "$PAIRED" = "true" ]; then
       centrifuger \
-        -x "~{centrifuger_db}/~{db_name}" \
+        -x "$INDEX_PREFIX" \
         -1 "$R1_FQ" \
         -2 "$R2_FQ" \
         -t "$THREADS" \
@@ -1064,7 +1078,7 @@ task centrifuger {
         2> "~{sample_name}.centrifuger.log"
     else
       centrifuger \
-        -x "~{centrifuger_db}/~{db_name}" \
+        -x "$INDEX_PREFIX" \
         -u "$R1_FQ" \
         -t "$THREADS" \
         > "~{sample_name}.centrifuger.tsv" \
@@ -1073,7 +1087,7 @@ task centrifuger {
 
     # Generate Kraken-style report (requires index on disk)
     centrifuger-kreport \
-      -x "~{centrifuger_db}/~{db_name}" \
+      -x "$INDEX_PREFIX" \
       "~{sample_name}.centrifuger.tsv" \
       > "~{sample_name}.centrifuger.kreport"
   >>>
