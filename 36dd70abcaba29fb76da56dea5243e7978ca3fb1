@@ -1,0 +1,28 @@
+test/input/WDL/miniwdl-local/test_inputs-centrifuger_single-local.json
+  913e253fd89df3ec 1-5
+test/input/WDL/miniwdl-local/test_inputs-centrifuger_multi-local.json
+  913e253fd89df3ec 1-8
+.dockstore.yml
+  913e253fd89df3ec 72-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "36dd70abcaba29fb76da56dea5243e7978ca3fb1",
+  "prompts": {
+    "913e253fd89df3ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "20721a51-8ddb-466e-801c-13092615c17d",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 0,
+      "accepted_lines": 19,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/ddfc9f911f3e987fa75db200d28937641afb882d831fee528872fecb57b1355b"
+    }
+  }
+}
