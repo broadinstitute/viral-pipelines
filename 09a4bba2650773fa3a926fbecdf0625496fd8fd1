@@ -1,0 +1,38 @@
+.planning/PROJECT.md
+  ef94118815c7b9de 58-62,65,97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "09a4bba2650773fa3a926fbecdf0625496fd8fd1",
+  "prompts": {
+    "0d7b158b320f5c10": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2cefa621-9a60-472c-8c1c-6ce1db14031f",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/3a56a755b1773c902943bc6a8ac0c7c5f02c90647dae99d675d0d7e06e27f72e"
+    },
+    "ef94118815c7b9de": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "89433a22-2e5e-4bb1-a02f-dd312db4dcf1",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 2,
+      "accepted_lines": 7,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/50249408a9656050bd9295c7515e4c99d27e6743948869017c5681db12ee571e"
+    }
+  }
+}
