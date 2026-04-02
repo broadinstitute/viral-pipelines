@@ -51,10 +51,12 @@ See archive: `.planning/milestones/v2.0-ROADMAP.md`
 **Success Criteria** (what must be TRUE):
   1. `grep -c "task centrifuger" tasks_metagenomics.wdl` returns exactly 1 (no duplicate task body)
   2. The task accepts optional BAM input and converts it to FASTQ via `picard SamToFastq`; paired-end BAMs produce R1/R2 with `/1`/`/2` suffixes; single-end BAMs produce one FASTQ
-  3. The task emits four named outputs: `classification_tsv`, `kreport`, `krona_html`, `centrifuger_log`
+  3. The task emits three named outputs: `classification_tsv`, `kreport`, `centrifuger_log` (`krona_html` deferred — KronaTools absent from Docker image)
   4. `miniwdl check pipes/WDL/tasks/tasks_metagenomics.wdl` exits 0 with no errors
   5. Runtime block specifies `cpu: 8`, `memory: "240 GB"`, and disk sized using the ceil autoscaling formula (not a hardcoded value)
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 04-01-PLAN.md — Append centrifuger task to tasks_metagenomics.wdl
 
 ### Phase 5: centrifuger_single and centrifuger_multi Workflow Wrappers
 **Goal**: Both standalone workflow WDL files exist, import the task correctly, and pass miniwdl check; centrifuger_multi uses a bash-loop not scatter
@@ -66,7 +68,9 @@ See archive: `.planning/milestones/v2.0-ROADMAP.md`
   3. `centrifuger_multi.wdl` contains no `scatter` block — classification loop lives in the task command block
   4. Both workflows include `meta { allowNestedInputs: true }` enabling Terra-compatible test JSON usage
   5. Both workflows call the task with alias `as run_centrifuger` (no call-name collision with workflow name)
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 04-01-PLAN.md — Append centrifuger task to tasks_metagenomics.wdl
 
 ### Phase 6: Test Input JSONs and Dockstore Registration
 **Goal**: Both workflows have placeholder test input JSONs and are registered in .dockstore.yml, making them discoverable on Dockstore
@@ -77,7 +81,9 @@ See archive: `.planning/milestones/v2.0-ROADMAP.md`
   2. `test/input/WDL/miniwdl-local/test_inputs-centrifuger_multi-local.json` exists with workflow-level input keys and array-typed BAM/FASTQ placeholders
   3. `.dockstore.yml` contains entries for both `centrifuger_single.wdl` and `centrifuger_multi.wdl` with `subclass: WDL`
   4. Neither Dockstore entry contains a `testParameterFiles` key (placeholder paths must not be submitted for CI execution)
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 04-01-PLAN.md — Append centrifuger task to tasks_metagenomics.wdl
 
 ## Progress
 
@@ -86,7 +92,7 @@ See archive: `.planning/milestones/v2.0-ROADMAP.md`
 | 1. Implement WDL Tasks and Workflows | v1.0 | 4/4 | Complete | 2026-04-01 |
 | 2. parse_kraken2_reads Task, Workflow, and Registration | v1.1 | 2/2 | Complete | 2026-04-01 |
 | 3. summarize_kb_extract_reads Task, Workflow, and Registration | v2.0 | 3/3 | Complete | 2026-04-01 |
-| 4. Core centrifuger Task | v3.0 | 0/? | Not started | - |
+| 4. Core centrifuger Task | v3.0 | 0/1 | Not started | - |
 | 5. centrifuger_single and centrifuger_multi Workflow Wrappers | v3.0 | 0/? | Not started | - |
 | 6. Test Input JSONs and Dockstore Registration | v3.0 | 0/? | Not started | - |
 
