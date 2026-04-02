@@ -2,15 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Centrifuger Taxonomic Classification WDL
-status: Roadmap created — ready for Phase 4 planning
-stopped_at: Roadmap creation complete
-last_updated: "2026-04-02T00:00:00.000Z"
+current_phase: 04
+status: verifying
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-04-02T13:58:21.413Z"
 last_activity: 2026-04-02
 progress:
   total_phases: 3
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,13 +22,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-02)
 
 **Core value:** Enables VirNucPro users to complete the full analysis chain within existing WDL infrastructure on Terra/DNAnexus
-**Current focus:** v3.0 milestone - Centrifuger Taxonomic Classification WDL
+**Current focus:** Phase 04 — core-centrifuger-task
 
 ## Current Position
 
+Phase: 04 (core-centrifuger-task) — EXECUTING
+Plan: 1 of 1
 Milestone: v3.0 Centrifuger Taxonomic Classification WDL
-Current phase: Phase 4 (not started)
-Status: Roadmap created — ready for Phase 4 planning
+Current phase: 04
+Status: Phase complete — ready for verification
 Last activity: 2026-04-02
 
 Progress: [░░░░░░░░░░] 0% (0/3 phases complete)
@@ -55,6 +58,8 @@ Recent decisions affecting current work:
 - [v3.0] Disk autoscaling with ceil formula — same pattern as kraken2 task; do not hardcode disk size
 - [v3.0] RAM default 240 GB — sized for NT-scale index; must not copy Kraken2's 90 GB default
 - [v3.0] No testParameterFiles in .dockstore.yml — placeholder paths are not CI-runnable
+- [Phase 04-core-centrifuger-task]: File centrifuger_db_tgz (tarball) used instead of Directory — WDL 1.0 does not support Directory type; matches kraken2/krakenuniq tarball pattern
+- [Phase 04-core-centrifuger-task]: Single-end reads use centrifuger -u flag (not -r); -r is centrifuger-build reference input flag
 
 ### Pending Todos
 
@@ -69,7 +74,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-02
-Stopped at: Roadmap creation complete
-Resume file: .planning/ROADMAP.md
+Last session: 2026-04-02T13:58:21.411Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: None
 Next action: `/gsd:plan-phase 4`

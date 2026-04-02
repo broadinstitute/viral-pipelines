@@ -38,7 +38,7 @@ See archive: `.planning/milestones/v2.0-ROADMAP.md`
 
 ### v3.0 Centrifuger Taxonomic Classification WDL
 
-- [ ] **Phase 4: Core centrifuger Task** - WDL task in tasks_metagenomics.wdl with BAM/FASTQ inputs, 4 outputs, input validation, and runtime sizing for 200+ GB index
+- [x] **Phase 4: Core centrifuger Task** - WDL task in tasks_metagenomics.wdl with BAM/FASTQ inputs, 4 outputs, input validation, and runtime sizing for 200+ GB index (completed 2026-04-02)
 - [ ] **Phase 5: centrifuger_single and centrifuger_multi Workflow Wrappers** - Standalone WDL workflows for single-sample and batch classification; multi uses bash-loop (not scatter)
 - [ ] **Phase 6: Test Input JSONs and Dockstore Registration** - Placeholder test JSONs for both workflows and .dockstore.yml entries for Dockstore discoverability
 
@@ -56,7 +56,7 @@ See archive: `.planning/milestones/v2.0-ROADMAP.md`
   5. Runtime block specifies `cpu: 8`, `memory: "240 GB"`, and disk sized using the ceil autoscaling formula (not a hardcoded value)
 **Plans**: 1 plan
 Plans:
-- [ ] 04-01-PLAN.md — Append centrifuger task to tasks_metagenomics.wdl
+- [x] 04-01-PLAN.md — Append centrifuger task to tasks_metagenomics.wdl
 
 ### Phase 5: centrifuger_single and centrifuger_multi Workflow Wrappers
 **Goal**: Both standalone workflow WDL files exist, import the task correctly, and pass miniwdl check; centrifuger_multi uses a bash-loop not scatter
@@ -92,7 +92,7 @@ Plans:
 | 1. Implement WDL Tasks and Workflows | v1.0 | 4/4 | Complete | 2026-04-01 |
 | 2. parse_kraken2_reads Task, Workflow, and Registration | v1.1 | 2/2 | Complete | 2026-04-01 |
 | 3. summarize_kb_extract_reads Task, Workflow, and Registration | v2.0 | 3/3 | Complete | 2026-04-01 |
-| 4. Core centrifuger Task | v3.0 | 0/1 | Not started | - |
+| 4. Core centrifuger Task | v3.0 | 1/1 | Complete   | 2026-04-02 |
 | 5. centrifuger_single and centrifuger_multi Workflow Wrappers | v3.0 | 0/? | Not started | - |
 | 6. Test Input JSONs and Dockstore Registration | v3.0 | 0/? | Not started | - |
 

@@ -7,22 +7,22 @@
 
 ### Centrifuger Task
 
-- [ ] **CFGR-01**: WDL task `centrifuger` in `tasks_metagenomics.wdl` that wraps the `centrifuger` binary
+- [x] **CFGR-01**: WDL task `centrifuger` in `tasks_metagenomics.wdl` that wraps the `centrifuger` binary
   - Accepts pre-built index via `Directory centrifuger_db` and `String db_name` (index prefix)
   - Accepts optional FASTQ inputs: `File? reads_fastq1`, `File? reads_fastq2` (paired-end), `File? reads_fastq_unpaired` (single-end/long)
   - Accepts optional BAM input: `File? reads_bam` — converted to FASTQ internally via `picard SamToFastq`
   - Accepts `String sample_name` for output file naming
   - Outputs `File classification_tsv` — per-read classification results
   - Outputs `File kreport` — Kraken-style summary report (via `centrifuger-kreport`)
-  - Outputs `File krona_html` — Krona visualization HTML
+  - ~~Outputs `File krona_html`~~ — **deferred**: KronaTools absent from `ghcr.io/broadinstitute/docker-centrifuger:1.0.0`; will be addressed in a future phase when Docker image is updated
   - Outputs `File centrifuger_log` — captured stderr/runtime log
   - Runtime sized for 200+ GB index: `cpu: 8`, `memory: "240 GB"`, `disks: "local-disk 400 SSD"`
   - Docker: `ghcr.io/broadinstitute/docker-centrifuger:1.0.0`
 
-- [ ] **CFGR-02**: BAM→FASTQ conversion via `picard SamToFastq`
+- [x] **CFGR-02**: BAM→FASTQ conversion via `picard SamToFastq`
   - Paired-end detection: run `picard SamToFastq` with both `FASTQ=R1.fq` and `SECOND_END_FASTQ=R2.fq`; check if R2 is non-empty to determine paired vs. single-end
   - Paired-end reads: pass `-1 R1.fq -2 R2.fq` to centrifuger; read IDs must carry `/1` and `/2` suffixes (use Picard `READ1_SUFFIX=/1 READ2_SUFFIX=/2`)
-  - Single-end reads: pass `-r reads.fq` to centrifuger
+  - Single-end reads: pass `-u reads.fq` to centrifuger (note: `-r` is a centrifuger-build flag for reference sequences, not for classification reads)
   - At least one of `reads_bam`, `reads_fastq1`, or `reads_fastq_unpaired` must be provided
 
 ### Single-Sample Workflow
@@ -71,8 +71,8 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CFGR-01 | Phase 4 | Pending |
-| CFGR-02 | Phase 4 | Pending |
+| CFGR-01 | Phase 4 | Complete |
+| CFGR-02 | Phase 4 | Complete |
 | CFGR-03 | Phase 5 | Pending |
 | CFGR-04 | Phase 5 | Pending |
 | CFGR-05 | Phase 6 | Pending |
