@@ -57,6 +57,36 @@
   - Subclass: WDL
   - No `testParameterFiles` (placeholder paths not CI-runnable)
 
+## v2 Requirements — join_read_classifications
+
+### WDL Task
+
+- [ ] **JRC-01**: WDL task `join_read_classifications` in `tasks_metagenomics.wdl`
+  - Accepts 4 optional File inputs: `File? kallisto_summary` (Parquet), `File? kraken2_reads` (Parquet), `File? vnp_reads` (Parquet), `File? genomad_virus_summary` (TSV)
+  - Accepts required `String sample_id` — filters Kallisto/K2 tables, stamps SAMPLE_ID on output
+  - Embeds full join_read_classifications.py logic as inline `python3<<CODE` heredoc
+  - 4-way DuckDB join: Kallisto FULL OUTER VNP on READ_ID, then FULL OUTER K2 with /1|/2 suffix strip, then LEFT JOIN geNomad via VNP_CONTIG_ID
+  - Outputs `File classifications_parquet` — ZSTD-compressed Parquet
+  - Docker: `quay.io/broadinstitute/py3-bio:0.1.3` with `pip install duckdb`
+  - Runtime: 16 GB memory, 1 CPU, disk autoscaled from input sizes
+
+### Standalone Workflow
+
+- [ ] **JRC-02**: Standalone workflow `pipes/WDL/workflows/join_read_classifications.wdl`
+  - Imports `tasks_metagenomics.wdl`, calls task with alias `as join_reads`
+  - `meta { allowNestedInputs: true }` for Terra-compatible test JSON
+  - Passes `miniwdl check` validation
+
+### Infrastructure
+
+- [ ] **JRC-03**: Test input JSON `test/input/WDL/miniwdl-local/test_inputs-join_read_classifications-local.json`
+  - Placeholder paths for all 4 optional File inputs plus sample_id
+  - Workflow-level input keys; follows existing test file conventions
+
+- [ ] **JRC-04**: Dockstore registration entry in `.dockstore.yml` for `join_read_classifications.wdl`
+  - Subclass: WDL
+  - No `testParameterFiles` (placeholder paths not CI-runnable)
+
 ## Out of Scope
 
 | Feature | Reason |
@@ -78,12 +108,16 @@
 | CFGR-05 | Phase 6 | Complete |
 | CFGR-06 | Phase 6 | Complete |
 | CFGR-07 | Phase 6 | Complete |
+| JRC-01 | Phase 7 | Planned |
+| JRC-02 | Phase 7 | Planned |
+| JRC-03 | Phase 7 | Planned |
+| JRC-04 | Phase 7 | Planned |
 
 **Coverage:**
-- v1 requirements: 7 total
-- Mapped to phases: 7
-- Unmapped: 0 ✓
+- v1 requirements: 7 total, 7 complete
+- v2 requirements: 4 total, 0 complete
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-02*
-*Last updated: 2026-04-02 — traceability filled after roadmap creation*
+*Last updated: 2026-04-02 — Phase 7 requirements added*

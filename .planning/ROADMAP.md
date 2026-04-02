@@ -5,7 +5,7 @@
 - ✅ **v1.0 VirNucPro Classification WDL** — Phase 1 (shipped 2026-04-01)
 - ✅ **v1.1 Kraken2 Read Taxonomy Annotation WDL Task** — Phase 2 (shipped 2026-04-01)
 - ✅ **v2.0 KB Extract Read Summarization WDL** — Phase 3 (shipped 2026-04-01)
-- 🔄 **v3.0 Centrifuger Taxonomic Classification WDL** — Phases 4–6 (active)
+- ✅ **v3.0 Centrifuger Taxonomic Classification WDL** — Phases 4-6 (shipped 2026-04-02)
 
 ## Phases
 
@@ -36,11 +36,14 @@ See archive: `.planning/milestones/v2.0-ROADMAP.md`
 
 </details>
 
-### v3.0 Centrifuger Taxonomic Classification WDL
+<details>
+<summary>✅ v3.0 Centrifuger Taxonomic Classification WDL (Phases 4-6) — SHIPPED 2026-04-02</summary>
 
 - [x] **Phase 4: Core centrifuger Task** - WDL task in tasks_metagenomics.wdl with BAM/FASTQ inputs, 4 outputs, input validation, and runtime sizing for 200+ GB index (completed 2026-04-02)
 - [x] **Phase 5: centrifuger_single and centrifuger_multi Workflow Wrappers** - Standalone WDL workflows for single-sample and batch classification; multi uses bash-loop (not scatter) (completed 2026-04-02)
 - [x] **Phase 6: Test Input JSONs and Dockstore Registration** - Placeholder test JSONs for both workflows and .dockstore.yml entries for Dockstore discoverability (completed 2026-04-02)
+
+</details>
 
 ## Phase Details
 
@@ -85,6 +88,23 @@ Plans:
 Plans:
 - [x] 06-01-PLAN.md — Create test input JSONs and Dockstore registration entries
 
+### Phase 7: join_read_classifications WDL Task, Workflow, and Registration
+**Goal**: The join_read_classifications WDL task exists in tasks_metagenomics.wdl with the full 4-way DuckDB join logic embedded, a standalone workflow wrapper exists and passes miniwdl check, and the workflow is registered in .dockstore.yml
+**Depends on**: Phase 6
+**Requirements**: JRC-01, JRC-02, JRC-03, JRC-04
+**Success Criteria** (what must be TRUE):
+  1. `grep -c "task join_read_classifications" tasks_metagenomics.wdl` returns exactly 1
+  2. The task accepts 4 optional File inputs (kallisto_summary, kraken2_reads, vnp_reads, genomad_virus_summary) and required String sample_id
+  3. The task embeds the complete join_read_classifications.py logic as an inline python3 heredoc with DuckDB
+  4. `miniwdl check pipes/WDL/tasks/tasks_metagenomics.wdl` exits 0
+  5. `miniwdl check pipes/WDL/workflows/join_read_classifications.wdl` exits 0
+  6. `.dockstore.yml` contains entry for `join_read_classifications.wdl` with `subclass: WDL` and no `testParameterFiles`
+  7. `test/input/WDL/miniwdl-local/test_inputs-join_read_classifications-local.json` exists with workflow-level input keys
+**Plans**: 2 plans
+Plans:
+- [ ] 07-01-PLAN.md — Append join_read_classifications task to tasks_metagenomics.wdl
+- [ ] 07-02-PLAN.md — Create workflow wrapper, test input JSON, and Dockstore entry
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -95,6 +115,7 @@ Plans:
 | 4. Core centrifuger Task | v3.0 | 1/1 | Complete   | 2026-04-02 |
 | 5. centrifuger_single and centrifuger_multi Workflow Wrappers | v3.0 | 1/1 | Complete   | 2026-04-02 |
 | 6. Test Input JSONs and Dockstore Registration | v3.0 | 1/1 | Complete   | 2026-04-02 |
+| 7. join_read_classifications Task, Workflow, and Registration | v3.1 | 0/2 | Planning | - |
 
 ---
-*Last updated: 2026-04-02 — Phase 5 planned*
+*Last updated: 2026-04-02 — Phase 7 planned*
