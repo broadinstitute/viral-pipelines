@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 current_phase: 07
-status: executing
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-04-02T21:32:52.208Z"
+status: verifying
+stopped_at: Completed 07-02-PLAN.md
+last_updated: "2026-04-02T21:39:26.485Z"
 last_activity: 2026-04-02
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 5
-  completed_plans: 4
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 3
   percent: 0
 ---
 
@@ -30,7 +30,7 @@ Phase: 07 (turn-join-read-classifications-py-script-into-a-wdl-pipeline-task-in-
 Plan: 2 of 2
 Milestone: v3.0 Centrifuger Taxonomic Classification WDL
 Current phase: 07
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-02
 
 Progress: [░░░░░░░░░░] 0% (0/3 phases complete)
@@ -65,6 +65,8 @@ Recent decisions affecting current work:
 - [Phase 05]: Sample names derived from basename(bam, .bam) inside bash loop — String sample_name input removed
 - [Phase 06]: No testParameterFiles on centrifuger Dockstore entries — placeholder paths not CI-runnable
 - [Phase 07]: join_read_classifications task in tasks_metagenomics.wdl — File? optional inputs with __NONE__ sentinel, 16 GB/1 CPU runtime, DuckDB 4-way FULL OUTER JOIN logic embedded verbatim
+- [Phase 07]: Call alias as join_reads — WDL disallows call name = containing workflow name (per D-10)
+- [Phase 07]: No testParameterFiles in Dockstore entry for join_read_classifications — placeholder paths not CI-runnable
 
 ### Pending Todos
 
@@ -83,7 +85,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-02T21:32:52.205Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-04-02T21:39:22.390Z
+Stopped at: Completed 07-02-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 4`

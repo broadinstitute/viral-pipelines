@@ -72,18 +72,18 @@
 
 ### Standalone Workflow
 
-- [ ] **JRC-02**: Standalone workflow `pipes/WDL/workflows/join_read_classifications.wdl`
+- [x] **JRC-02**: Standalone workflow `pipes/WDL/workflows/join_read_classifications.wdl`
   - Imports `tasks_metagenomics.wdl`, calls task with alias `as join_reads`
   - `meta { allowNestedInputs: true }` for Terra-compatible test JSON
   - Passes `miniwdl check` validation
 
 ### Infrastructure
 
-- [ ] **JRC-03**: Test input JSON `test/input/WDL/miniwdl-local/test_inputs-join_read_classifications-local.json`
+- [x] **JRC-03**: Test input JSON `test/input/WDL/miniwdl-local/test_inputs-join_read_classifications-local.json`
   - Placeholder paths for all 4 optional File inputs plus sample_id
   - Workflow-level input keys; follows existing test file conventions
 
-- [ ] **JRC-04**: Dockstore registration entry in `.dockstore.yml` for `join_read_classifications.wdl`
+- [x] **JRC-04**: Dockstore registration entry in `.dockstore.yml` for `join_read_classifications.wdl`
   - Subclass: WDL
   - No `testParameterFiles` (placeholder paths not CI-runnable)
 
