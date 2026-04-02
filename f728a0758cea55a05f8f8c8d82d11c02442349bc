@@ -1,0 +1,41 @@
+.planning/ROADMAP.md
+  2ff0f656862dfe57 7,31,33,35,88
+  0d7b158b320f5c10 8,39-81,89-91,94
+.planning/STATE.md
+  0d7b158b320f5c10 3-8,10-13,21,28-31,33,39-41,51-57,61-64,72-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "f728a0758cea55a05f8f8c8d82d11c02442349bc",
+  "prompts": {
+    "0d7b158b320f5c10": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2cefa621-9a60-472c-8c1c-6ce1db14031f",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 83,
+      "total_deletions": 29,
+      "accepted_lines": 87,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/3a56a755b1773c902943bc6a8ac0c7c5f02c90647dae99d675d0d7e06e27f72e"
+    },
+    "2ff0f656862dfe57": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2b5ea821bffe0NBdtJ4vcY0YDP",
+        "model": "synthetic/hf:nvidia/Kimi-K2.5-NVFP4"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/69705077030c9641f3978fd961e1b653db76d80c6012e806f1a8fee30386b92e"
+    }
+  }
+}
