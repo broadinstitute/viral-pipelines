@@ -876,7 +876,7 @@ task refine_assembly_with_aligned_reads {
       Boolean  mark_duplicates = false
       Float    major_cutoff = 0.5
       Int      min_coverage = 3
-      Int?     max_coverage
+      Int?     max_coverage = 4000
 
       Int      machine_mem_gb = 8
       String   docker = "quay.io/broadinstitute/viral-ngs:3.0.11-assemble"
