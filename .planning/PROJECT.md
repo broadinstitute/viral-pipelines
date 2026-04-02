@@ -60,9 +60,15 @@ Enables VirNucPro users to complete the full analysis chain — from raw reads t
 - ✓ `centrifuger` WDL task in `tasks_metagenomics.wdl` — v3.0 Phase 4 (input: `File centrifuger_db_tgz` + `String db_name`; outputs: classification_tsv, kreport, centrifuger_log)
 - ✓ BAM→FASTQ conversion via picard SamToFastq with `/1`/`/2` suffixes — v3.0 Phase 4
 
-### Active
+- ✓ `centrifuger` task refactored to accept `Array[File] reads_bams` with krakenuniq-style bash loop — v3.0 Phase 5
+- ✓ `centrifuger_single.wdl` — scalar BAM wrapper passing `[reads_bam]` array literal — v3.0 Phase 5
+- ✓ `centrifuger_multi.wdl` — batch wrapper, no scatter, 480 GB RAM / 16 CPU defaults — v3.0 Phase 5
 
-(CFGR-03, CFGR-04 — centrifuger_single and centrifuger_multi workflows)
+- ✓ Test input JSON for `centrifuger_single` (3 required scalar inputs) — v3.0 Phase 6
+- ✓ Test input JSON for `centrifuger_multi` (3 required inputs, reads_bams as 2-entry array) — v3.0 Phase 6
+- ✓ `.dockstore.yml` entries for `centrifuger_single` and `centrifuger_multi` — v3.0 Phase 6
+
+### Active
 
 ### Out of Scope
 
@@ -94,4 +100,4 @@ Enables VirNucPro users to complete the full analysis chain — from raw reads t
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-04-02 — Phase 4 complete: centrifuger WDL task added to tasks_metagenomics.wdl*
+*Last updated: 2026-04-02 — Phase 6 complete: test input JSONs and Dockstore registration for centrifuger_single and centrifuger_multi; v3.0 milestone complete*
