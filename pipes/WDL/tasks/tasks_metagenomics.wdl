@@ -2506,18 +2506,18 @@ task join_read_classifications {
 
   parameter_meta {
     kallisto_summary: {
-      description: "Kallisto summary in Parquet format. Multi-sample file filtered by sample_id at runtime. Skipped if not provided or empty.",
-      patterns: ["*.parquet"],
+      description: "Kallisto summary TSV for a single sample, or a tar.zst/tar.gz tarball containing one such file. Skipped if not provided or empty.",
+      patterns: ["*.tsv", "*.tar.zst", "*.tar.gz"],
       category: "common"
     }
     kraken2_reads: {
-      description: "Kraken2 per-read classifications in Parquet format. Filtered by sample_id at runtime. Skipped if not provided or empty.",
-      patterns: ["*.parquet"],
+      description: "Kraken2 per-read classifications in Parquet or TSV format, or a tar.zst/tar.gz tarball containing one such file. Filtered by sample_id at runtime. Skipped if not provided or empty.",
+      patterns: ["*.parquet", "*.tsv", "*.tar.zst", "*.tar.gz"],
       category: "common"
     }
     vnp_reads: {
-      description: "VirNucPro per-read classifications in Parquet format. All rows used (not filtered by sample_id). Skipped if not provided or empty.",
-      patterns: ["*.parquet"],
+      description: "VirNucPro per-read classifications in Parquet or TSV format, or a tar.zst/tar.gz tarball containing one such file. All rows used (not filtered by sample_id). Skipped if not provided or empty.",
+      patterns: ["*.parquet", "*.tsv", "*.tar.zst", "*.tar.gz"],
       category: "common"
     }
     genomad_virus_summary: {
@@ -2535,17 +2535,50 @@ task join_read_classifications {
 
   command <<<
     set -e
-    pip install duckdb --quiet --no-cache-dir
+    pip install duckdb zstandard --quiet --no-cache-dir
     python3<<CODE
 import os
 import sys
+import tarfile
+import tempfile
 
 import duckdb
+import zstandard as zstd
 
 
 def _file_is_usable(path):
     """Return True if path is provided, exists, and is non-empty."""
     return bool(path) and os.path.isfile(path) and os.path.getsize(path) > 0
+
+
+def _resolve_file(path):
+    """If path is a tarball, extract it to a temp dir and return the single inner file path.
+    Supports .tar.zst, .tar.gz, .tar.bz2, and .tar. Otherwise returns path unchanged."""
+    if not any(path.endswith(ext) for ext in ('.tar.zst', '.tar.gz', '.tar.bz2', '.tar')):
+        return path
+    extract_dir = tempfile.mkdtemp()
+    if path.endswith('.tar.zst'):
+        dctx = zstd.ZstdDecompressor()
+        with open(path, 'rb') as fh:
+            with dctx.stream_reader(fh) as reader:
+                with tarfile.open(fileobj=reader, mode='r|') as tar:
+                    tar.extractall(path=extract_dir)
+    else:
+        with tarfile.open(path, 'r:*') as tar:
+            tar.extractall(path=extract_dir)
+    files = [os.path.join(extract_dir, f) for f in os.listdir(extract_dir)
+             if os.path.isfile(os.path.join(extract_dir, f))]
+    if len(files) != 1:
+        print(f"ERROR: expected exactly 1 file in tarball {path}, found {len(files)}", file=sys.stderr)
+        sys.exit(1)
+    return files[0]
+
+
+def _duckdb_reader(path):
+    """Return the appropriate DuckDB reader function call string for a given file path."""
+    if path.endswith('.parquet'):
+        return f"read_parquet('{path}')"
+    return f"read_csv('{path}', delim='\\t', header=true, auto_detect=true)"
 
 
 summary      = "~{default='__NONE__' kallisto_summary}"
@@ -2560,6 +2593,13 @@ has_vnp      = _file_is_usable(vnp)
 has_kraken2  = _file_is_usable(kraken2)
 has_genomad  = _file_is_usable(virus_summary)
 
+if has_kallisto:
+    summary = _resolve_file(summary)
+if has_vnp:
+    vnp = _resolve_file(vnp)
+if has_kraken2:
+    kraken2 = _resolve_file(kraken2)
+
 if not any([has_kallisto, has_vnp, has_kraken2, has_genomad]):
     print("ERROR: All input files are missing or empty — nothing to join.", file=sys.stderr)
     sys.exit(1)
@@ -2569,7 +2609,7 @@ con = duckdb.connect()
 # ── 1. Kallisto summary ──────────────────────────────────────────────
 if has_kallisto:
     print(f"Reading Kallisto summary: {summary}", file=sys.stderr)
-    con.execute("""
+    con.execute(f"""
         CREATE TABLE kallisto AS
         SELECT
             SAMPLE_ID,
@@ -2578,9 +2618,8 @@ if has_kallisto:
             TAXONOMY_LINEAGE AS KALLISTO_TAXONOMY_LINEAGE,
             TAXONOMY_NAME    AS KALLISTO_TAXONOMY_NAME,
             SEQUENCE_LENGTH  AS KALLISTO_SEQUENCE_LENGTH
-        FROM read_parquet($1)
-        WHERE SAMPLE_ID = $2
-    """, [summary, sample_id])
+        FROM {_duckdb_reader(summary)}
+    """)
     n_kallisto = con.execute("SELECT count(*) FROM kallisto").fetchone()[0]
     print(f"  {n_kallisto:,} Kallisto reads loaded.", file=sys.stderr)
 else:
@@ -2596,7 +2635,7 @@ else:
 # ── 2. VirNucPro reads ───────────────────────────────────────────────
 if has_vnp:
     print(f"Reading VirNucPro reads: {vnp}", file=sys.stderr)
-    con.execute("""
+    con.execute(f"""
         CREATE TABLE vnp AS
         SELECT
             read_id           AS READ_ID,
@@ -2617,8 +2656,8 @@ if has_vnp:
             n_ambiguous             AS VNP_N_AMBIGUOUS,
             viral_proportion        AS VNP_VIRAL_PROPORTION,
             nonviral_proportion     AS VNP_NONVIRAL_PROPORTION
-        FROM read_parquet($1)
-    """, [vnp])
+        FROM {_duckdb_reader(vnp)}
+    """)
     n_vnp = con.execute("SELECT count(*) FROM vnp").fetchone()[0]
     print(f"  {n_vnp:,} VNP reads loaded.", file=sys.stderr)
 else:
@@ -2674,16 +2713,16 @@ print(f"  {n_kv:,} rows after Kallisto + VNP full outer join.", file=sys.stderr)
 # the Kallisto/VNP side when joining.
 if has_kraken2:
     print(f"Reading Kraken2 reads: {kraken2}", file=sys.stderr)
-    con.execute("""
+    con.execute(f"""
         CREATE TABLE k2 AS
         SELECT
             READ_ID,
             TAXONOMY_ID AS K2_TAXONOMY_ID,
             TAX_NAME    AS K2_TAX_NAME,
             KINGDOM     AS K2_KINGDOM
-        FROM read_parquet($1)
-        WHERE SAMPLE_ID = $2
-    """, [kraken2, sample_id])
+        FROM {_duckdb_reader(kraken2)}
+        WHERE SAMPLE_ID = $1
+    """, [sample_id])
     n_k2 = con.execute("SELECT count(*) FROM k2").fetchone()[0]
     print(f"  {n_k2:,} Kraken2 reads loaded.", file=sys.stderr)
 else:
