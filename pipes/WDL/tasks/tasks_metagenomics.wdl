@@ -1493,8 +1493,8 @@ task classify_virnucpro_contigs {
 
   parameter_meta {
     virnucpro_scores_tsv: {
-      description: "TSV of chunk-level VirNucPro scores with columns: Modified_ID, max_score_0, max_score_1.",
-      patterns: ["*.tsv"],
+      description: "TSV of chunk-level VirNucPro scores with columns: Modified_ID, max_score_0, max_score_1. Also accepts a tar.zst/tar.gz tarball containing one such file.",
+      patterns: ["*.tsv", "*.tar.zst", "*.tar.gz"],
       category: "required"
     }
     min_viral_prop: {
@@ -1524,11 +1524,37 @@ task classify_virnucpro_contigs {
 
   command <<<
     set -e
-    pip install pandas --quiet --no-cache-dir
+    pip install pandas zstandard --quiet --no-cache-dir
     python3<<CODE
 import re
 import sys
+import tarfile
+import tempfile
+
 import pandas as pd
+import zstandard as zstd
+
+
+def _resolve_file(path):
+    if not any(path.endswith(ext) for ext in ('.tar.zst', '.tar.gz', '.tar.bz2', '.tar')):
+        return path
+    extract_dir = tempfile.mkdtemp()
+    if path.endswith('.tar.zst'):
+        dctx = zstd.ZstdDecompressor()
+        with open(path, 'rb') as fh:
+            with dctx.stream_reader(fh) as reader:
+                with tarfile.open(fileobj=reader, mode='r|') as tar:
+                    tar.extractall(path=extract_dir)
+    else:
+        with tarfile.open(path, 'r:*') as tar:
+            tar.extractall(path=extract_dir)
+    import os
+    files = [os.path.join(extract_dir, f) for f in os.listdir(extract_dir)
+             if os.path.isfile(os.path.join(extract_dir, f))]
+    if len(files) != 1:
+        print(f"ERROR: expected exactly 1 file in tarball {path}, found {len(files)}", file=sys.stderr)
+        sys.exit(1)
+    return files[0]
 
 def classify_sequence(group, min_viral_proportion=0.1, min_nonviral_proportion=0.1, min_chunk_count=5):
     group = group.copy()
@@ -1593,7 +1619,7 @@ def classify_sequence(group, min_viral_proportion=0.1, min_nonviral_proportion=0
         'nonviral_proportion': round(nonviral_proportion, 3)
     })
 
-df = pd.read_csv("~{virnucpro_scores_tsv}", sep='\t')
+df = pd.read_csv(_resolve_file("~{virnucpro_scores_tsv}"), sep='\t')
 
 required_cols = ["~{id_col}", 'max_score_0', 'max_score_1']
 missing = [c for c in required_cols if c not in df.columns]
