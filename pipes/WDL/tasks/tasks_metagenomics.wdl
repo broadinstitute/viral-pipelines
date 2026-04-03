@@ -2230,6 +2230,10 @@ task summarize_kb_extract_reads {
     TAXONOMY_LEVEL = "~{taxonomy_level}"
     OUTPUT_FILE = "~{out_filename}"
 
+    # Derive sample ID from tarball filename, stripping all extensions (e.g. .tar.gz, .tar.zst)
+    tar_basename = os.path.basename("~{extract_reads_tar}")
+    sample_id = tar_basename.split('.')[0]
+
     # Load taxonomy map: palmDB_ID -> taxonomy lineage
     print("Loading taxonomy map...", file=sys.stderr)
     taxonomy_map = {}
@@ -2294,11 +2298,11 @@ task summarize_kb_extract_reads {
                     continue
 
                 filepath = os.path.join(sample_path, filename)
-                # Extract UID from filename (e.g., "UID12345.fastq.gz" -> "UID12345")
-                uid = filename.replace('.fastq.gz', '')
+                # Directory name is the DB_ID (palmDB_ID); sample ID comes from the tarball name
+                db_id = sample_name
 
-                # Look up taxonomy
-                tax_values = taxonomy_map.get(uid, [])
+                # Look up taxonomy by DB_ID
+                tax_values = taxonomy_map.get(db_id, [])
 
                 if tax_values:
                     if TAXONOMY_LEVEL == "deepest":
@@ -2332,7 +2336,7 @@ task summarize_kb_extract_reads {
                         seq_length = len(seq_line)
 
                         # Write output line
-                        out_line = f"{sample_name}\t{read_id}\t{uid}\t{taxonomy_str}\t{tax_name}\t{seq_length}\n"
+                        out_line = f"{sample_id}\t{read_id}\t{db_id}\t{taxonomy_str}\t{tax_name}\t{seq_length}\n"
                         compressor.write(out_line.encode('utf-8'))
                         reads_processed += 1
 
