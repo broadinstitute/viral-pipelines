@@ -1,0 +1,28 @@
+pipes/WDL/workflows/parse_kraken2_reads.wdl
+  89fd0f264d9b45eb 16,24
+pipes/WDL/tasks/tasks_metagenomics.wdl
+  89fd0f264d9b45eb 1483,1491,1495-1497,1522,1527,1529,1601-1609,1618,1678,1706-1707,1712,1714-1717,1719-1720,1723-1728,1731-1732,1734-1737,1739-1759,1762,1764-1790,1792,1794-1795,1797-1833,1835-1847,1849-1852,1854-1855,1857-1947,1950-1953,1958,1981-1984,1987,2001-2004,2006,2015-2016,2020,2027,2185-2191,2195,2200,2225,2533,2543-2544,2548-2549,2584-2594,2762-2763,2817,2831-2832,2847,2850,2864,2881-2883
+pipes/WDL/workflows/classify_virnucpro_contigs.wdl
+  89fd0f264d9b45eb 14,25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "3993a87fd610a973f354b2c628604faa17bdfe28",
+  "prompts": {
+    "89fd0f264d9b45eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5eb40558-dbc5-4830-a370-b027db8328e5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 420,
+      "total_deletions": 431,
+      "accepted_lines": 322,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/b512e0f23bf5b8718d81190529213e6a4f434911ea42a9f159f790061a1d491d"
+    }
+  }
+}
