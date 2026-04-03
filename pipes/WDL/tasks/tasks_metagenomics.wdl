@@ -1493,8 +1493,8 @@ task classify_virnucpro_contigs {
 
   parameter_meta {
     virnucpro_scores_tsv: {
-      description: "TSV of chunk-level VirNucPro scores with columns: Modified_ID, max_score_0, max_score_1. Also accepts a tar.zst/tar.gz tarball containing one such file.",
-      patterns: ["*.tsv", "*.tar.zst", "*.tar.gz"],
+      description: "TSV of chunk-level VirNucPro scores with columns: Modified_ID, max_score_0, max_score_1. Also accepts a zstd-compressed or tarball-wrapped file.",
+      patterns: ["*.tsv"],
       category: "required"
     }
     min_viral_prop: {
@@ -1536,25 +1536,47 @@ import zstandard as zstd
 
 
 def _resolve_file(path):
-    if not any(path.endswith(ext) for ext in ('.tar.zst', '.tar.gz', '.tar.bz2', '.tar')):
-        return path
-    extract_dir = tempfile.mkdtemp()
-    if path.endswith('.tar.zst'):
+    """Decompress and/or extract path as needed, returning the final plain file path.
+    Uses magic bytes for detection so filenames without proper extensions are handled."""
+    import os
+    ZSTD_MAGIC = b'\x28\xb5\x2f\xfd'
+    GZIP_MAGIC = b'\x1f\x8b'
+
+    with open(path, 'rb') as fh:
+        magic = fh.read(4)
+
+    # Decompress zstd to a temp file first
+    if magic[:4] == ZSTD_MAGIC:
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.tmp')
         dctx = zstd.ZstdDecompressor()
         with open(path, 'rb') as fh:
             with dctx.stream_reader(fh) as reader:
-                with tarfile.open(fileobj=reader, mode='r|') as tar:
-                    tar.extractall(path=extract_dir)
-    else:
-        with tarfile.open(path, 'r:*') as tar:
-            tar.extractall(path=extract_dir)
-    import os
-    files = [os.path.join(extract_dir, f) for f in os.listdir(extract_dir)
-             if os.path.isfile(os.path.join(extract_dir, f))]
-    if len(files) != 1:
-        print(f"ERROR: expected exactly 1 file in tarball {path}, found {len(files)}", file=sys.stderr)
-        sys.exit(1)
-    return files[0]
+                tmp.write(reader.read())
+        tmp.flush()
+        tmp.close()
+        path = tmp.name
+        with open(path, 'rb') as fh:
+            magic = fh.read(4)
+
+    # Now check if the (possibly decompressed) result is a tarball
+    if tarfile.is_tarfile(path):
+        extract_dir = tempfile.mkdtemp()
+        if magic[:2] == GZIP_MAGIC:
+            with tarfile.open(path, 'r:gz') as tar:
+                tar.extractall(path=extract_dir, filter='data')
+        else:
+            with tarfile.open(path, 'r:*') as tar:
+                tar.extractall(path=extract_dir, filter='data')
+        files = [os.path.join(root, f)
+                 for root, dirs, filenames in os.walk(extract_dir)
+                 for f in filenames]
+        print(f"Extracted {len(files)} file(s) from tarball: {files}", file=sys.stderr)
+        if len(files) != 1:
+            print(f"ERROR: expected exactly 1 file in tarball, found {len(files)}", file=sys.stderr)
+            sys.exit(1)
+        return files[0]
+
+    return path
 
 def classify_sequence(group, min_viral_proportion=0.1, min_nonviral_proportion=0.1, min_chunk_count=5):
     group = group.copy()
