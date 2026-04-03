@@ -1,4 +1,4 @@
-broadinstitute/viral-ngs=3.0.10
+broadinstitute/viral-ngs=3.0.11
 broadinstitute/read-qc-tools=1.1.0
 broadinstitute/py3-bio=0.1.5
 broadinstitute/beast-beagle-cuda=1.10.5pre
