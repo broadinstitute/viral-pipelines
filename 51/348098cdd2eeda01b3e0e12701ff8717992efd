@@ -1,0 +1,30 @@
+pipes/WDL/tasks/tasks_read_utils.wdl
+  89fd0f264d9b45eb 85,111,171,242,328,429,496,550,613
+requirements-modules.txt
+  89fd0f264d9b45eb 1
+pipes/WDL/tasks/tasks_metagenomics.wdl
+  89fd0f264d9b45eb 219,351,400,450,591,680,785,877,961,1074,1155,1250,1311
+pipes/WDL/tasks/tasks_reports.wdl
+  89fd0f264d9b45eb 18,145,289,362,405,520,554,603,991
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "51348098cdd2eeda01b3e0e12701ff8717992efd",
+  "prompts": {
+    "89fd0f264d9b45eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5eb40558-dbc5-4830-a370-b027db8328e5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 32,
+      "total_deletions": 32,
+      "accepted_lines": 32,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/1176c290cfe25888aec5d0cb8508fcd22c35caa9ad23761ad86f5ca46fcfbc9a"
+    }
+  }
+}
