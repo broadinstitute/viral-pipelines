@@ -1,4 +1,4 @@
-version 1.0
+version 1.1
 
 import "../tasks/tasks_assembly.wdl" as assembly
 import "assemble_refbased.wdl" as assemble_refbased
