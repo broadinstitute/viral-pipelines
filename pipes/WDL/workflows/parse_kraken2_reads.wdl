@@ -13,7 +13,7 @@ workflow parse_kraken2_reads {
     input {
         File    kraken2_reads_output
         File    taxonomy_db
-        String  sample_id = sub(basename(kraken2_reads_output), "\\.kraken2\\.reads\\.txt(\\.gz)?$", "")
+        String  sample_id_suffix_re = "\\.l0\\d+.*$"
         Boolean resolve_strains = false
     }
 
@@ -21,7 +21,7 @@ workflow parse_kraken2_reads {
         input:
             kraken2_reads_output = kraken2_reads_output,
             taxonomy_db          = taxonomy_db,
-            sample_id            = sample_id,
+            sample_id_suffix_re  = sample_id_suffix_re,
             resolve_strains      = resolve_strains
     }
 

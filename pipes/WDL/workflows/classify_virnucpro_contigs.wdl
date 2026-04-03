@@ -11,7 +11,7 @@ workflow classify_virnucpro_contigs {
     }
 
     input {
-        File    virnucpro_scores_tsv
+        File    virnucpro_tgz
 
         Float   min_viral_prop    = 0.1
         Float   min_nonviral_prop = 0.1
@@ -22,7 +22,7 @@ workflow classify_virnucpro_contigs {
 
     call metagenomics.classify_virnucpro_contigs as classify_contigs {
         input:
-            virnucpro_scores_tsv = virnucpro_scores_tsv,
+            virnucpro_tgz        = virnucpro_tgz,
             min_viral_prop       = min_viral_prop,
             min_nonviral_prop    = min_nonviral_prop,
             min_chunks           = min_chunks,

@@ -1480,7 +1480,7 @@ task classify_virnucpro_contigs {
   }
 
   input {
-    File    virnucpro_scores_tsv
+    File    virnucpro_tgz
 
     Float   min_viral_prop    = 0.1
     Float   min_nonviral_prop = 0.1
@@ -1488,13 +1488,13 @@ task classify_virnucpro_contigs {
     String  id_col            = "Modified_ID"
     String  id_pattern        = "(NODE_\\d+)"
 
-    String  docker            = "quay.io/broadinstitute/py3-bio:0.1.3"
+    String  docker            = "quay.io/broadinstitute/py3-bio:0.1.5"
   }
 
   parameter_meta {
-    virnucpro_scores_tsv: {
-      description: "TSV of chunk-level VirNucPro scores with columns: Modified_ID, max_score_0, max_score_1. Also accepts a zstd-compressed or tarball-wrapped file.",
-      patterns: ["*.tsv"],
+    virnucpro_tgz: {
+      description: "Tarball (.tgz) produced by VirNucPro containing a *_highestscore.csv file with chunk-level scores (columns: Modified_ID, max_score_0, max_score_1).",
+      patterns: ["*.tgz"],
       category: "required"
     }
     min_viral_prop: {
@@ -1519,64 +1519,21 @@ task classify_virnucpro_contigs {
     }
   }
 
-  String out_filename = basename(virnucpro_scores_tsv, ".tsv") + ".contigs_classified.tsv"
+  String out_filename = sub(basename(virnucpro_tgz), "\\.virnucpro\\.tgz$", "") + ".contigs_classified.tsv"
   Int disk_size = 50
 
   command <<<
     set -e
-    pip install pandas zstandard --quiet --no-cache-dir
+    pip install pandas --quiet --no-cache-dir
     python3<<CODE
+import glob
 import re
 import sys
 import tarfile
 import tempfile
 
 import pandas as pd
-import zstandard as zstd
 
-
-def _resolve_file(path):
-    """Decompress and/or extract path as needed, returning the final plain file path.
-    Uses magic bytes for detection so filenames without proper extensions are handled."""
-    import os
-    ZSTD_MAGIC = b'\x28\xb5\x2f\xfd'
-    GZIP_MAGIC = b'\x1f\x8b'
-
-    with open(path, 'rb') as fh:
-        magic = fh.read(4)
-
-    # Decompress zstd to a temp file first
-    if magic[:4] == ZSTD_MAGIC:
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.tmp')
-        dctx = zstd.ZstdDecompressor()
-        with open(path, 'rb') as fh:
-            with dctx.stream_reader(fh) as reader:
-                tmp.write(reader.read())
-        tmp.flush()
-        tmp.close()
-        path = tmp.name
-        with open(path, 'rb') as fh:
-            magic = fh.read(4)
-
-    # Now check if the (possibly decompressed) result is a tarball
-    if tarfile.is_tarfile(path):
-        extract_dir = tempfile.mkdtemp()
-        if magic[:2] == GZIP_MAGIC:
-            with tarfile.open(path, 'r:gz') as tar:
-                tar.extractall(path=extract_dir, filter='data')
-        else:
-            with tarfile.open(path, 'r:*') as tar:
-                tar.extractall(path=extract_dir, filter='data')
-        files = [os.path.join(root, f)
-                 for root, dirs, filenames in os.walk(extract_dir)
-                 for f in filenames]
-        print(f"Extracted {len(files)} file(s) from tarball: {files}", file=sys.stderr)
-        if len(files) != 1:
-            print(f"ERROR: expected exactly 1 file in tarball, found {len(files)}", file=sys.stderr)
-            sys.exit(1)
-        return files[0]
-
-    return path
 
 def classify_sequence(group, min_viral_proportion=0.1, min_nonviral_proportion=0.1, min_chunk_count=5):
     group = group.copy()
@@ -1641,7 +1598,15 @@ def classify_sequence(group, min_viral_proportion=0.1, min_nonviral_proportion=0
         'nonviral_proportion': round(nonviral_proportion, 3)
     })
 
-df = pd.read_csv(_resolve_file("~{virnucpro_scores_tsv}"), sep='\t')
+extract_dir = tempfile.mkdtemp()
+with tarfile.open("~{virnucpro_tgz}", 'r:gz') as tar:
+    tar.extractall(path=extract_dir, filter='data')
+csv_files = glob.glob(f"{extract_dir}/*_highestscore.csv")
+if len(csv_files) != 1:
+    print(f"ERROR: expected 1 *_highestscore.csv in tarball, found {csv_files}", file=sys.stderr)
+    sys.exit(1)
+
+df = pd.read_csv(csv_files[0], sep='\t')
 
 required_cols = ["~{id_col}", 'max_score_0', 'max_score_1']
 missing = [c for c in required_cols if c not in df.columns]
@@ -1650,7 +1615,7 @@ if missing:
     sys.exit(1)
 
 df['ID'] = df["~{id_col}"].str.replace(r'_chunk_\d+$', '', regex=True)
-df['_group'] = df["~{id_col}"].str.extract("~{id_pattern}")
+df['_group'] = df["~{id_col}"].str.extract(r"~{id_pattern}")
 
 n_unmatched = df['_group'].isna().sum()
 if n_unmatched == len(df):
@@ -1710,7 +1675,7 @@ task classify_reads_by_contig {
     Float   min_identity   = 90.0
     Float   min_query_cov  = 80.0
 
-    String  docker         = "quay.io/broadinstitute/py3-bio:0.1.3"
+    String  docker         = "quay.io/broadinstitute/py3-bio:0.1.5"
   }
 
   parameter_meta {
@@ -1738,254 +1703,259 @@ task classify_reads_by_contig {
     }
   }
 
-  String out_filename = basename(paf_file, ".paf.gz") + ".reads_classified.tsv"
+  String out_filename   = basename(paf_file, ".paf.gz") + ".reads_classified.tsv"
+  String out_compressed = out_filename + ".zst"
   Int disk_size = 100
 
   command <<<
     set -e
-    pip install duckdb --quiet --no-cache-dir
+    pip install duckdb zstandard --quiet --no-cache-dir
     python3<<CODE
-    import gzip
-    import os
-    import sys
-    import tempfile
+import gzip
+import os
+import sys
+import tempfile
 
-    import duckdb
-
-
-    OUTPUT_COLUMNS = [
-        'read_id', 'read_length', 'contig_id', 'contig_length', 'strand',
-        'mapping_quality', 'pct_identity', 'pct_query_cov', 'mapped_well',
-        'call', 'tier', 'weighted_delta', 'n_chunks', 'n_confident_viral',
-        'n_confident_nonviral', 'n_ambiguous', 'viral_proportion', 'nonviral_proportion',
-    ]
+import duckdb
+import zstandard as zstd
 
 
-    def prepare_paf_file(paf_path):
-        """Normalize PAF to fixed 15-column TSV for duckdb ingestion.
-
-        Standard PAF has 12 columns, followed by optional SAM-like tags (key:type:value),
-        with pct_identity and pct_query_cov appended as the last two tab-separated fields.
-        Tags can appear as a single semicolon-delimited field or as multiple tab-separated
-        fields -- either way they sit between column 12 and the two trailing numeric columns.
-
-        Output: 12 standard PAF cols + tags + pct_identity + pct_query_cov
-        """
-        opener = gzip.open if paf_path.endswith('.gz') else open
-        tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.tsv', delete=False)
-        with opener(paf_path, 'rt') as f:
-            for line in f:
-                fields = line.rstrip('\n').split('\t')
-                if len(fields) < 14:
-                    continue
-                # First 12 are always the standard PAF columns
-                row = fields[:12]
-                # Last 2 are always pct_identity and pct_query_cov
-                pct_identity = fields[-2]
-                pct_query_cov = fields[-1]
-                # Everything in between is tags
-                tag_fields = fields[12:-2]
-                tags = '\t'.join(tag_fields) if tag_fields else ''
-                row.extend([tags, pct_identity, pct_query_cov])
-                tmp.write('\t'.join(row) + '\n')
-        tmp.close()
-        return tmp.name
+OUTPUT_COLUMNS = [
+    'read_id', 'read_length', 'contig_id', 'contig_length', 'strand',
+    'mapping_quality', 'pct_identity', 'pct_query_cov', 'mapped_well',
+    'call', 'tier', 'weighted_delta', 'n_chunks', 'n_confident_viral',
+    'n_confident_nonviral', 'n_ambiguous', 'viral_proportion', 'nonviral_proportion',
+]
 
 
-    con = duckdb.connect()
+def prepare_paf_file(paf_path):
+    """Normalize PAF to fixed 15-column TSV for duckdb ingestion.
 
-    # Step 1: Parse PAF -- normalize variable-width file then read as fixed 15-col TSV
-    print(f"Reading PAF file: ~{paf_file}", file=sys.stderr)
-    normalized_paf = prepare_paf_file("~{paf_file}")
+    Standard PAF has 12 columns, followed by optional SAM-like tags (key:type:value),
+    with pct_identity and pct_query_cov appended as the last two tab-separated fields.
+    Tags can appear as a single semicolon-delimited field or as multiple tab-separated
+    fields -- either way they sit between column 12 and the two trailing numeric columns.
 
-    con.execute("""
-        CREATE TABLE paf AS
-        SELECT * FROM read_csv($1,
-            delim='\t', header=false, all_varchar=true,
-            columns={
-                'query_name': 'VARCHAR',
-                'query_length': 'VARCHAR',
-                'query_start': 'VARCHAR',
-                'query_end': 'VARCHAR',
-                'strand': 'VARCHAR',
-                'target_name': 'VARCHAR',
-                'target_length': 'VARCHAR',
-                'target_start': 'VARCHAR',
-                'target_end': 'VARCHAR',
-                'num_matches': 'VARCHAR',
-                'alignment_block_length': 'VARCHAR',
-                'mapping_quality': 'VARCHAR',
-                '_tags': 'VARCHAR',
-                'pct_identity': 'VARCHAR',
-                'pct_query_cov': 'VARCHAR'
-            }
-        )
-    """, [normalized_paf])
+    Output: 12 standard PAF cols + tags + pct_identity + pct_query_cov
+    """
+    opener = gzip.open if paf_path.endswith('.gz') else open
+    tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.tsv', delete=False)
+    with opener(paf_path, 'rt') as f:
+        for line in f:
+            fields = line.rstrip('\n').split('\t')
+            if len(fields) < 14:
+                continue
+            # First 12 are always the standard PAF columns
+            row = fields[:12]
+            # Last 2 are always pct_identity and pct_query_cov
+            pct_identity = fields[-2]
+            pct_query_cov = fields[-1]
+            # Everything in between is tags
+            tag_fields = fields[12:-2]
+            tags = '\t'.join(tag_fields) if tag_fields else ''
+            row.extend([tags, pct_identity, pct_query_cov])
+            tmp.write('\t'.join(row) + '\n')
+    tmp.close()
+    return tmp.name
 
-    os.unlink(normalized_paf)
 
-    n_total = con.execute("SELECT count(*) FROM paf").fetchone()[0]
-    print(f"  {n_total} alignments loaded.", file=sys.stderr)
+con = duckdb.connect()
 
-    # Cast numeric columns
-    con.execute("""
-        CREATE TABLE paf_typed AS
-        SELECT
-            query_name,
-            CAST(query_length AS INTEGER) AS query_length,
-            CAST(query_start AS INTEGER) AS query_start,
-            CAST(query_end AS INTEGER) AS query_end,
-            strand,
-            target_name,
-            CAST(target_length AS INTEGER) AS target_length,
-            CAST(target_start AS INTEGER) AS target_start,
-            CAST(target_end AS INTEGER) AS target_end,
-            CAST(num_matches AS INTEGER) AS num_matches,
-            CAST(alignment_block_length AS INTEGER) AS alignment_block_length,
-            CAST(mapping_quality AS INTEGER) AS mapping_quality,
-            CAST(pct_identity AS DOUBLE) AS pct_identity,
-            CAST(pct_query_cov AS DOUBLE) AS pct_query_cov,
-            _tags
-        FROM paf
-    """)
-    con.execute("DROP TABLE paf")
+# Step 1: Parse PAF -- normalize variable-width file then read as fixed 15-col TSV
+print(f"Reading PAF file: ~{paf_file}", file=sys.stderr)
+normalized_paf = prepare_paf_file("~{paf_file}")
 
-    # Auto-detect scale of pct_identity and pct_query_cov (0-1 vs 0-100)
-    max_id, max_cov = con.execute(
-        "SELECT max(pct_identity), max(pct_query_cov) FROM paf_typed"
-    ).fetchone()
-    fractional_scale = (max_id is not None and max_id <= 1.0
-                        and max_cov is not None and max_cov <= 1.0)
-    if fractional_scale:
-        print("  Detected fractional scale (0-1) for pct_identity/pct_query_cov.", file=sys.stderr)
-        # Normalize thresholds from percentage to fractional
-        min_identity = ~{min_identity} / 100.0
-        min_query_cov = ~{min_query_cov} / 100.0
-    else:
-        min_identity = ~{min_identity}
-        min_query_cov = ~{min_query_cov}
+con.execute(f"""
+    CREATE TABLE paf AS
+    SELECT * FROM read_csv('{normalized_paf}',
+        delim='\t', header=false, all_varchar=true,
+        columns={{
+            'query_name': 'VARCHAR',
+            'query_length': 'VARCHAR',
+            'query_start': 'VARCHAR',
+            'query_end': 'VARCHAR',
+            'strand': 'VARCHAR',
+            'target_name': 'VARCHAR',
+            'target_length': 'VARCHAR',
+            'target_start': 'VARCHAR',
+            'target_end': 'VARCHAR',
+            'num_matches': 'VARCHAR',
+            'alignment_block_length': 'VARCHAR',
+            'mapping_quality': 'VARCHAR',
+            '_tags': 'VARCHAR',
+            'pct_identity': 'VARCHAR',
+            'pct_query_cov': 'VARCHAR'
+        }}
+    )
+""")
 
-    # Step 2: Filter secondary/supplementary and flag mapping quality
-    con.execute("""
-        CREATE TABLE paf_filtered AS
-        SELECT
-            query_name, query_length, query_start, query_end, strand,
-            target_name, target_length, target_start, target_end,
-            num_matches, alignment_block_length, mapping_quality,
-            pct_identity, pct_query_cov,
-            (mapping_quality >= $1 AND pct_identity >= $2 AND pct_query_cov >= $3) AS mapped_well
-        FROM paf_typed
-        WHERE _tags IS NULL
-           OR NOT (_tags LIKE '%tp:A:S%' OR _tags LIKE '%tp:A:I%')
-    """, [~{min_mapq}, min_identity, min_query_cov])
+os.unlink(normalized_paf)
 
-    n_secondary = n_total - con.execute("SELECT count(*) FROM paf_filtered").fetchone()[0]
-    if n_secondary > 0:
-        print(f"Removed {n_secondary} secondary/supplementary alignments.", file=sys.stderr)
-    con.execute("DROP TABLE paf_typed")
+n_total = con.execute("SELECT count(*) FROM paf").fetchone()[0]
+print(f"  {n_total} alignments loaded.", file=sys.stderr)
 
-    n_primary = con.execute("SELECT count(*) FROM paf_filtered").fetchone()[0]
-    print(f"  {n_primary} primary alignments retained.", file=sys.stderr)
+# Cast numeric columns
+con.execute("""
+    CREATE TABLE paf_typed AS
+    SELECT
+        query_name,
+        CAST(query_length AS INTEGER) AS query_length,
+        CAST(query_start AS INTEGER) AS query_start,
+        CAST(query_end AS INTEGER) AS query_end,
+        strand,
+        target_name,
+        CAST(target_length AS INTEGER) AS target_length,
+        CAST(target_start AS INTEGER) AS target_start,
+        CAST(target_end AS INTEGER) AS target_end,
+        CAST(num_matches AS INTEGER) AS num_matches,
+        CAST(alignment_block_length AS INTEGER) AS alignment_block_length,
+        CAST(mapping_quality AS INTEGER) AS mapping_quality,
+        CAST(pct_identity AS DOUBLE) AS pct_identity,
+        CAST(pct_query_cov AS DOUBLE) AS pct_query_cov,
+        _tags
+    FROM paf
+""")
+con.execute("DROP TABLE paf")
 
-    # Read classification file
-    print(f"Reading classification file: ~{contig_classifications}", file=sys.stderr)
-    con.execute("""
-        CREATE TABLE clf AS
-        SELECT * FROM read_csv($1, delim='\t', header=true, auto_detect=true)
-    """, ["~{contig_classifications}"])
-    n_clf = con.execute("SELECT count(*) FROM clf").fetchone()[0]
-    print(f"  {n_clf} classified contigs loaded.", file=sys.stderr)
+# Auto-detect scale of pct_identity and pct_query_cov (0-1 vs 0-100)
+max_id, max_cov = con.execute(
+    "SELECT max(pct_identity), max(pct_query_cov) FROM paf_typed"
+).fetchone()
+fractional_scale = (max_id is not None and max_id <= 1.0
+                    and max_cov is not None and max_cov <= 1.0)
+if fractional_scale:
+    print("  Detected fractional scale (0-1) for pct_identity/pct_query_cov.", file=sys.stderr)
+    # Normalize thresholds from percentage to fractional
+    min_identity = ~{min_identity} / 100.0
+    min_query_cov = ~{min_query_cov} / 100.0
+else:
+    min_identity = ~{min_identity}
+    min_query_cov = ~{min_query_cov}
 
-    # Step 3: Left join + fill defaults for unclassified
-    con.execute("""
-        CREATE TABLE merged AS
-        SELECT
-            p.query_name, p.query_length, p.target_name, p.target_length, p.strand,
-            p.mapping_quality, p.pct_identity, p.pct_query_cov, p.mapped_well,
-            COALESCE(c.call, 'Unclassified') AS call,
-            COALESCE(c.tier, '') AS tier,
-            COALESCE(c.weighted_delta, 0) AS weighted_delta,
-            COALESCE(c.n_chunks, 0) AS n_chunks,
-            COALESCE(c.n_confident_viral, 0) AS n_confident_viral,
-            COALESCE(c.n_confident_nonviral, 0) AS n_confident_nonviral,
-            COALESCE(c.n_ambiguous, 0) AS n_ambiguous,
-            COALESCE(c.viral_proportion, 0) AS viral_proportion,
-            COALESCE(c.nonviral_proportion, 0) AS nonviral_proportion
-        FROM paf_filtered p
-        LEFT JOIN clf c ON p.target_name = c.ID
-    """)
-    con.execute("DROP TABLE paf_filtered")
-    con.execute("DROP TABLE clf")
+# Step 2: Filter secondary/supplementary and flag mapping quality
+con.execute(f"""
+    CREATE TABLE paf_filtered AS
+    SELECT
+        query_name, query_length, query_start, query_end, strand,
+        target_name, target_length, target_start, target_end,
+        num_matches, alignment_block_length, mapping_quality,
+        pct_identity, pct_query_cov,
+        (mapping_quality >= ~{min_mapq} AND pct_identity >= {min_identity} AND pct_query_cov >= {min_query_cov}) AS mapped_well
+    FROM paf_typed
+    WHERE _tags IS NULL
+       OR NOT (_tags LIKE '%tp:A:S%' OR _tags LIKE '%tp:A:I%')
+""")
 
-    # Step 4: Aggregate to one row per read
-    # Pick best alignment per read (highest MAPQ, then highest pct_identity).
-    # If a read maps to contigs with different classifications, flag as Multi-mapped.
-    print("Aggregating to one row per read...", file=sys.stderr)
-    con.execute("""
-        CREATE TABLE result AS
-        WITH ranked AS (
-            SELECT *,
-                ROW_NUMBER() OVER (
-                    PARTITION BY query_name
-                    ORDER BY mapping_quality DESC, pct_identity DESC
-                ) AS rn
-            FROM merged
-        ),
-        best AS (
-            SELECT * FROM ranked WHERE rn = 1
-        ),
-        call_counts AS (
-            SELECT query_name, COUNT(DISTINCT call) AS n_distinct_calls
-            FROM merged
-            GROUP BY query_name
-        )
-        SELECT
-            b.query_name AS read_id,
-            b.query_length AS read_length,
-            b.target_name AS contig_id,
-            b.target_length AS contig_length,
-            b.strand,
-            b.mapping_quality,
-            b.pct_identity,
-            b.pct_query_cov,
-            b.mapped_well,
-            CASE WHEN cc.n_distinct_calls > 1 THEN 'Multi-mapped' ELSE b.call END AS call,
-            CASE WHEN cc.n_distinct_calls > 1 THEN 'review' ELSE b.tier END AS tier,
-            b.weighted_delta,
-            b.n_chunks,
-            b.n_confident_viral,
-            b.n_confident_nonviral,
-            b.n_ambiguous,
-            b.viral_proportion,
-            b.nonviral_proportion
-        FROM best b
-        JOIN call_counts cc ON b.query_name = cc.query_name
-    """)
-    con.execute("DROP TABLE merged")
+n_secondary = n_total - con.execute("SELECT count(*) FROM paf_filtered").fetchone()[0]
+if n_secondary > 0:
+    print(f"Removed {n_secondary} secondary/supplementary alignments.", file=sys.stderr)
+con.execute("DROP TABLE paf_typed")
 
-    # Stats
-    n_reads = con.execute("SELECT count(*) FROM result").fetchone()[0]
-    n_well = con.execute("SELECT count(*) FROM result WHERE mapped_well").fetchone()[0]
-    n_multi = con.execute("SELECT count(*) FROM result WHERE call = 'Multi-mapped'").fetchone()[0]
-    print(f"  {n_reads} reads in output.", file=sys.stderr)
-    pct_well = (n_well / n_reads * 100) if n_reads > 0 else 0
-    print(f"  {n_well} reads mapped well ({pct_well:.1f}%).", file=sys.stderr)
-    if n_multi > 0:
-        print(f"  {n_multi} reads flagged as Multi-mapped.", file=sys.stderr)
+n_primary = con.execute("SELECT count(*) FROM paf_filtered").fetchone()[0]
+print(f"  {n_primary} primary alignments retained.", file=sys.stderr)
 
-    # Step 5: Write output as TSV
-    con.execute(f"""
-        COPY (SELECT {', '.join(OUTPUT_COLUMNS)} FROM result)
-        TO $1 (FORMAT CSV, DELIMITER '\t', HEADER TRUE)
-    """, ["~{out_filename}"])
-    print(f"Output written to: ~{out_filename}", file=sys.stderr)
+# Read classification file
+print(f"Reading classification file: ~{contig_classifications}", file=sys.stderr)
+con.execute("""
+    CREATE TABLE clf AS
+    SELECT * FROM read_csv('~{contig_classifications}', delim='\t', header=true, auto_detect=true)
+""")
+n_clf = con.execute("SELECT count(*) FROM clf").fetchone()[0]
+print(f"  {n_clf} classified contigs loaded.", file=sys.stderr)
 
-    con.close()
+# Step 3: Left join + fill defaults for unclassified
+con.execute("""
+    CREATE TABLE merged AS
+    SELECT
+        p.query_name, p.query_length, p.target_name, p.target_length, p.strand,
+        p.mapping_quality, p.pct_identity, p.pct_query_cov, p.mapped_well,
+        COALESCE(c.call, 'Unclassified') AS call,
+        COALESCE(c.tier, '') AS tier,
+        COALESCE(c.weighted_delta, 0) AS weighted_delta,
+        COALESCE(c.n_chunks, 0) AS n_chunks,
+        COALESCE(c.n_confident_viral, 0) AS n_confident_viral,
+        COALESCE(c.n_confident_nonviral, 0) AS n_confident_nonviral,
+        COALESCE(c.n_ambiguous, 0) AS n_ambiguous,
+        COALESCE(c.viral_proportion, 0) AS viral_proportion,
+        COALESCE(c.nonviral_proportion, 0) AS nonviral_proportion
+    FROM paf_filtered p
+    LEFT JOIN clf c ON p.target_name = c.ID
+""")
+con.execute("DROP TABLE paf_filtered")
+con.execute("DROP TABLE clf")
+
+# Step 4: Aggregate to one row per read
+# Pick best alignment per read (highest MAPQ, then highest pct_identity).
+# If a read maps to contigs with different classifications, flag as Multi-mapped.
+print("Aggregating to one row per read...", file=sys.stderr)
+con.execute("""
+    CREATE TABLE result AS
+    WITH ranked AS (
+        SELECT *,
+            ROW_NUMBER() OVER (
+                PARTITION BY query_name
+                ORDER BY mapping_quality DESC, pct_identity DESC
+            ) AS rn
+        FROM merged
+    ),
+    best AS (
+        SELECT * FROM ranked WHERE rn = 1
+    ),
+    call_counts AS (
+        SELECT query_name, COUNT(DISTINCT call) AS n_distinct_calls
+        FROM merged
+        GROUP BY query_name
+    )
+    SELECT
+        b.query_name AS read_id,
+        b.query_length AS read_length,
+        b.target_name AS contig_id,
+        b.target_length AS contig_length,
+        b.strand,
+        b.mapping_quality,
+        b.pct_identity,
+        b.pct_query_cov,
+        b.mapped_well,
+        CASE WHEN cc.n_distinct_calls > 1 THEN 'Multi-mapped' ELSE b.call END AS call,
+        CASE WHEN cc.n_distinct_calls > 1 THEN 'review' ELSE b.tier END AS tier,
+        b.weighted_delta,
+        b.n_chunks,
+        b.n_confident_viral,
+        b.n_confident_nonviral,
+        b.n_ambiguous,
+        b.viral_proportion,
+        b.nonviral_proportion
+    FROM best b
+    JOIN call_counts cc ON b.query_name = cc.query_name
+""")
+con.execute("DROP TABLE merged")
+
+# Stats
+n_reads = con.execute("SELECT count(*) FROM result").fetchone()[0]
+n_well = con.execute("SELECT count(*) FROM result WHERE mapped_well").fetchone()[0]
+n_multi = con.execute("SELECT count(*) FROM result WHERE call = 'Multi-mapped'").fetchone()[0]
+print(f"  {n_reads} reads in output.", file=sys.stderr)
+pct_well = (n_well / n_reads * 100) if n_reads > 0 else 0
+print(f"  {n_well} reads mapped well ({pct_well:.1f}%).", file=sys.stderr)
+if n_multi > 0:
+    print(f"  {n_multi} reads flagged as Multi-mapped.", file=sys.stderr)
+
+# Step 5: Write output as TSV, then compress
+con.execute(f"""
+    COPY (SELECT {', '.join(OUTPUT_COLUMNS)} FROM result)
+    TO '~{out_filename}' (FORMAT CSV, DELIMITER '\t', HEADER TRUE)
+""")
+con.close()
+
+cctx = zstd.ZstdCompressor()
+with open("~{out_filename}", 'rb') as fin, open("~{out_compressed}", 'wb') as fout:
+    cctx.copy_stream(fin, fout)
+print(f"Output written to: ~{out_compressed}", file=sys.stderr)
 CODE
   >>>
 
   output {
-    File read_classifications = "~{out_filename}"
+    File read_classifications = "~{out_compressed}"
   }
 
   runtime {
@@ -2008,10 +1978,13 @@ task parse_kraken2_reads {
   input {
     File    kraken2_reads_output
     File    taxonomy_db
-    String  sample_id = sub(basename(kraken2_reads_output), "\\.kraken2\\.reads\\.txt(\\.gz)?$", "")
+    String  sample_id_suffix_re = "\\.l0\\d+.*$"
+    String  sample_id = if sample_id_suffix_re != ""
+        then sub(sub(basename(kraken2_reads_output), "\\.kraken2\\.reads\\.txt(\\.gz)?$", ""), sample_id_suffix_re, "")
+        else sub(basename(kraken2_reads_output), "\\.kraken2\\.reads\\.txt(\\.gz)?$", "")
     Boolean resolve_strains = false
 
-    String  docker = "quay.io/broadinstitute/py3-bio:0.1.3"
+    String  docker = "quay.io/broadinstitute/py3-bio:0.1.5"
   }
 
   parameter_meta {
@@ -2025,8 +1998,12 @@ task parse_kraken2_reads {
       patterns: ["*.duckdb"],
       category: "required"
     }
+    sample_id_suffix_re: {
+      description: "Regex pattern applied to the auto-derived sample_id to strip unwanted suffixes. Default '\\.l0\\d+.*$' strips library/lane/flowcell suffixes of the form '.l000XXXXXXX...' Ignored if sample_id is set explicitly.",
+      category: "common"
+    }
     sample_id: {
-      description: "Sample identifier. Defaults to the filename stem after stripping .kraken2.reads.txt(.gz) extension.",
+      description: "Sample identifier. Defaults to the filename stem after stripping .kraken2.reads.txt(.gz) and any sample_id_suffix_re match.",
       category: "common"
     }
     resolve_strains: {
@@ -2035,17 +2012,19 @@ task parse_kraken2_reads {
     }
   }
 
-  String out_filename = "~{sample_id}.read_taxonomy.tsv"
+  String out_filename   = "~{sample_id}.read_taxonomy.tsv"
+  String out_compressed = out_filename + ".zst"
 
   command <<<
     set -e
-    pip install duckdb --quiet --no-cache-dir
+    pip install duckdb zstandard --quiet --no-cache-dir
     python3<<CODE
     import csv
     import gzip
     import sys
 
     import duckdb
+    import zstandard as zstd
 
 
     class DuckDBTaxonomyDatabase:
@@ -2203,21 +2182,22 @@ task parse_kraken2_reads {
 
 
     def _write_tsv(rows, output_file):
-        """Write rows as TSV."""
-        with open(output_file, 'w', newline='') as out_f:
-            writer = csv.writer(out_f, delimiter='\t')
-            writer.writerow(['SAMPLE_ID', 'READ_ID', 'TAXONOMY_ID', 'TAX_NAME', 'KINGDOM', 'TAX_RANK'])
-            for row in rows:
-                writer.writerow(row)
+        """Write rows as zstd-compressed TSV."""
+        cctx = zstd.ZstdCompressor()
+        with open(output_file, 'wb') as raw_f:
+            with cctx.stream_writer(raw_f) as compressor:
+                compressor.write(b'SAMPLE_ID\tREAD_ID\tTAXONOMY_ID\tTAX_NAME\tKINGDOM\tTAX_RANK\n')
+                for row in rows:
+                    compressor.write(('\t'.join(str(v) for v in row) + '\n').encode('utf-8'))
 
 
     tax_db = DuckDBTaxonomyDatabase("~{taxonomy_db}", resolve_strains=~{true="True" false="False" resolve_strains})
-    parse_kraken2_output("~{kraken2_reads_output}", tax_db, "~{out_filename}", "~{sample_id}")
+    parse_kraken2_output("~{kraken2_reads_output}", tax_db, "~{out_compressed}", "~{sample_id}")
     CODE
   >>>
 
   output {
-    File read_taxonomy = "~{out_filename}"
+    File read_taxonomy = "~{out_compressed}"
   }
 
   runtime {
@@ -2242,7 +2222,7 @@ task summarize_kb_extract_reads {
     File    taxonomy_map_csv
     String  taxonomy_level = "highest"
 
-    String  docker = "quay.io/broadinstitute/py3-bio:0.1.3"
+    String  docker = "quay.io/broadinstitute/py3-bio:0.1.5"
   }
 
   parameter_meta {
@@ -2550,7 +2530,7 @@ task join_read_classifications {
     File?   genomad_virus_summary     # geNomad virus summary TSV (LEFT JOIN via VNP_CONTIG_ID)
     String  sample_id                 # Required — filters Kallisto/K2 tables, stamps SAMPLE_ID column
 
-    String  docker = "quay.io/broadinstitute/py3-bio:0.1.3"
+    String  docker = "quay.io/broadinstitute/py3-bio:0.1.5"
   }
 
   parameter_meta {
@@ -2560,13 +2540,13 @@ task join_read_classifications {
       category: "common"
     }
     kraken2_reads: {
-      description: "Kraken2 per-read classifications in Parquet or TSV format, or a tar.zst/tar.gz tarball containing one such file. Filtered by sample_id at runtime. Skipped if not provided or empty.",
-      patterns: ["*.parquet", "*.tsv", "*.tar.zst", "*.tar.gz"],
+      description: "Kraken2 per-read classifications in Parquet or TSV format, optionally zstd-compressed (.tsv.zst) or in a tar.zst/tar.gz tarball. Filtered by sample_id at runtime. Skipped if not provided or empty.",
+      patterns: ["*.parquet", "*.tsv", "*.tsv.zst", "*.tar.zst", "*.tar.gz"],
       category: "common"
     }
     vnp_reads: {
-      description: "VirNucPro per-read classifications in Parquet or TSV format, or a tar.zst/tar.gz tarball containing one such file. All rows used (not filtered by sample_id). Skipped if not provided or empty.",
-      patterns: ["*.parquet", "*.tsv", "*.tar.zst", "*.tar.gz"],
+      description: "VirNucPro per-read classifications in Parquet or TSV format, optionally zstd-compressed (.tsv.zst) or in a tar.zst/tar.gz tarball. All rows used (not filtered by sample_id). Skipped if not provided or empty.",
+      patterns: ["*.parquet", "*.tsv", "*.tsv.zst", "*.tar.zst", "*.tar.gz"],
       category: "common"
     }
     genomad_virus_summary: {
@@ -2601,8 +2581,17 @@ def _file_is_usable(path):
 
 
 def _resolve_file(path):
-    """If path is a tarball, extract it to a temp dir and return the single inner file path.
-    Supports .tar.zst, .tar.gz, .tar.bz2, and .tar. Otherwise returns path unchanged."""
+    """Decompress and/or extract path as needed, returning the final plain file path.
+    Supports plain .zst, .tar.zst, .tar.gz, .tar.bz2, and .tar."""
+    if path.endswith('.zst') and not path.endswith('.tar.zst'):
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.tmp')
+        dctx = zstd.ZstdDecompressor()
+        with open(path, 'rb') as fh:
+            with dctx.stream_reader(fh) as reader:
+                tmp.write(reader.read())
+        tmp.flush()
+        tmp.close()
+        return tmp.name
     if not any(path.endswith(ext) for ext in ('.tar.zst', '.tar.gz', '.tar.bz2', '.tar')):
         return path
     extract_dir = tempfile.mkdtemp()
@@ -2770,8 +2759,8 @@ if has_kraken2:
             TAX_NAME    AS K2_TAX_NAME,
             KINGDOM     AS K2_KINGDOM
         FROM {_duckdb_reader(kraken2)}
-        WHERE SAMPLE_ID = $1
-    """, [sample_id])
+        WHERE SAMPLE_ID = '{sample_id}'
+    """)
     n_k2 = con.execute("SELECT count(*) FROM k2").fetchone()[0]
     print(f"  {n_k2:,} Kraken2 reads loaded.", file=sys.stderr)
 else:
@@ -2825,7 +2814,7 @@ print(f"  {n_all:,} rows after Kraken2 full outer join.", file=sys.stderr)
 # enriches reads that mapped to viral contigs via VNP.
 if has_genomad:
     print(f"Reading geNomad virus summary: {virus_summary}", file=sys.stderr)
-    con.execute("""
+    con.execute(f"""
         CREATE TABLE genomad AS
         SELECT
             seq_name          AS CONTIG_ID,
@@ -2839,8 +2828,8 @@ if has_genomad:
             n_hallmarks       AS GENOMAD_N_HALLMARKS,
             marker_enrichment AS GENOMAD_MARKER_ENRICHMENT,
             taxonomy          AS GENOMAD_TAXONOMY
-        FROM read_csv($1, delim='\t', header=true, auto_detect=true)
-    """, [virus_summary])
+        FROM read_csv('{virus_summary}', delim='\t', header=true, auto_detect=true)
+    """)
     n_genomad = con.execute("SELECT count(*) FROM genomad").fetchone()[0]
     print(f"  {n_genomad:,} geNomad contigs loaded.", file=sys.stderr)
 else:
@@ -2855,10 +2844,10 @@ else:
         )
     """)
 
-con.execute("""
+con.execute(f"""
     CREATE TABLE result AS
     SELECT
-        $1 AS SAMPLE_ID,
+        '{sample_id}' AS SAMPLE_ID,
         j.*,
         g.GENOMAD_LENGTH,
         g.GENOMAD_TOPOLOGY,
@@ -2872,7 +2861,7 @@ con.execute("""
         g.GENOMAD_TAXONOMY
     FROM joined_all j
     LEFT JOIN genomad g ON j.VNP_CONTIG_ID = g.CONTIG_ID
-""", [sample_id])
+""")
 con.execute("DROP TABLE joined_all")
 con.execute("DROP TABLE genomad")
 
@@ -2889,9 +2878,9 @@ print(f"  With VNP hit:      {n_with_vnp:,} ({n_with_vnp/n_result*100:.1f}%)", f
 print(f"  With geNomad hit:  {n_with_genomad:,} ({n_with_genomad/n_result*100:.1f}%)", file=sys.stderr)
 
 # ── Write output ─────────────────────────────────────────────────────
-con.execute("""
-    COPY result TO $1 (FORMAT PARQUET, COMPRESSION ZSTD)
-""", [output])
+con.execute(f"""
+    COPY result TO '{output}' (FORMAT PARQUET, COMPRESSION ZSTD)
+""")
 print(f"\nOutput written to: {output}", file=sys.stderr)
 
 con.close()
