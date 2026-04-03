@@ -958,7 +958,7 @@ task kallisto {
     Boolean  loom=false
     Boolean  protein=false
 
-    String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
+    String   docker = "quay.io/broadinstitute/viral-ngs:3.0.10-classify"
   }
 
   parameter_meta {
@@ -1071,7 +1071,7 @@ task build_kallisto_db {
     Int        kmer_size=31
     String?     workflow_type
 
-    String      docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
+    String      docker = "quay.io/broadinstitute/viral-ngs:3.0.10-classify"
   }
 
   parameter_meta {
@@ -1152,7 +1152,7 @@ task kallisto_extract {
     Int             threshold=1
     Boolean         protein=false
 
-     String          docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
+     String          docker = "quay.io/broadinstitute/viral-ngs:3.0.10-classify"
   }
 
   parameter_meta {
@@ -1247,7 +1247,7 @@ task report_primary_kallisto_taxa {
     File          id_to_taxon_map
     String        focal_taxon = "Viruses"
 
-    String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
+    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.10-classify"
   }
   String out_basename = sub(basename(kb_count_tar, ".tar.zst"), "_kb_count", "")
   Int disk_size = 200
@@ -1308,7 +1308,7 @@ task kallisto_merge_h5ads {
     Array[File]     in_count_tars
     String          out_basename
 
-    String          docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
+    String          docker = "quay.io/broadinstitute/viral-ngs:3.0.10-classify"
   }
 
   parameter_meta {
@@ -2257,8 +2257,16 @@ task summarize_kb_extract_reads {
     extract_dir = "extract_contents"
     os.makedirs(extract_dir, exist_ok=True)
     print("Extracting tarball...", file=sys.stderr)
-    with tarfile.open("~{extract_reads_tar}", 'r:*') as tar:
-        tar.extractall(path=extract_dir)
+    tar_path = "~{extract_reads_tar}"
+    if tar_path.endswith('.zst'):
+        dctx = zstd.ZstdDecompressor()
+        with open(tar_path, 'rb') as zst_f:
+            with dctx.stream_reader(zst_f) as reader:
+                with tarfile.open(fileobj=reader, mode='r|') as tar:
+                    tar.extractall(path=extract_dir)
+    else:
+        with tarfile.open(tar_path, 'r:*') as tar:
+            tar.extractall(path=extract_dir)
     print("  Extraction complete", file=sys.stderr)
 
     # Open output file with zstd compression

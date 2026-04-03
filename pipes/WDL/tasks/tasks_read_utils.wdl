@@ -547,7 +547,7 @@ task BamToPAF {
   }
   input {
     File    aligned_bam
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-classify"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.10-classify"
   }
   Int disk_size = ceil(size(aligned_bam, "GB") * 10 + 50)
 

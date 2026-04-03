@@ -600,7 +600,7 @@ task align_and_generate_reads_report {
 
     Int?   cpu
     Int?   machine_mem_gb
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.6-core"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.10-core"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
