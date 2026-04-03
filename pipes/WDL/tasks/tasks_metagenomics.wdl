@@ -1524,111 +1524,112 @@ task classify_virnucpro_contigs {
 
   command <<<
     set -e
+    pip install pandas --quiet --no-cache-dir
     python3<<CODE
-    import re
-    import sys
-    import pandas as pd
+import re
+import sys
+import pandas as pd
 
-    def classify_sequence(group, min_viral_proportion=0.1, min_nonviral_proportion=0.1, min_chunk_count=5):
-        group = group.copy()
-        group['delta'] = group['max_score_1'] - group['max_score_0']
-        group['confidence'] = group['delta'].abs().pow(0.5)
+def classify_sequence(group, min_viral_proportion=0.1, min_nonviral_proportion=0.1, min_chunk_count=5):
+    group = group.copy()
+    group['delta'] = group['max_score_1'] - group['max_score_0']
+    group['confidence'] = group['delta'].abs().pow(0.5)
 
-        # Weighted mean delta (confidence-weighted)
-        if group['confidence'].sum() > 0:
-            weighted_delta = (group['delta'] * group['confidence']).sum() / group['confidence'].sum()
+    # Weighted mean delta (confidence-weighted)
+    if group['confidence'].sum() > 0:
+        weighted_delta = (group['delta'] * group['confidence']).sum() / group['confidence'].sum()
+    else:
+        weighted_delta = group['delta'].mean()
+
+    # Count high-confidence viral chunks
+    confident_viral = (group['max_score_1'] > 0.8) & (group['max_score_0'] < 0.3)
+    # Count high-confidence non-viral chunks
+    confident_nonviral = (group['max_score_0'] > 0.8) & (group['max_score_1'] < 0.3)
+    # Count ambiguous chunks
+    ambiguous = (group['max_score_1'] > 0.7) & (group['max_score_0'] > 0.7)
+
+    n_chunks = len(group)
+    n_confident_viral = confident_viral.sum()
+    n_confident_nonviral = confident_nonviral.sum()
+    n_ambiguous = ambiguous.sum()
+    # exclude ambiguous chunks from denominator so they don't dilute
+    # the proportion of confident viral/nonviral chunks
+    n_effective = n_chunks - n_ambiguous
+    viral_proportion = n_confident_viral / n_effective if n_effective > 0 else 0
+    nonviral_proportion = n_confident_nonviral / n_effective if n_effective > 0 else 0
+
+    # weighted_delta is the primary signal; chunk evidence determines tier
+    if weighted_delta > 0.3:
+        call = 'Viral'
+        if n_confident_viral >= 1 and viral_proportion >= min_viral_proportion:
+            tier = 'high_confidence' if weighted_delta > 0.6 else 'moderate_confidence'
         else:
-            weighted_delta = group['delta'].mean()
-
-        # Count high-confidence viral chunks
-        confident_viral = (group['max_score_1'] > 0.8) & (group['max_score_0'] < 0.3)
-        # Count high-confidence non-viral chunks
-        confident_nonviral = (group['max_score_0'] > 0.8) & (group['max_score_1'] < 0.3)
-        # Count ambiguous chunks
-        ambiguous = (group['max_score_1'] > 0.7) & (group['max_score_0'] > 0.7)
-
-        n_chunks = len(group)
-        n_confident_viral = confident_viral.sum()
-        n_confident_nonviral = confident_nonviral.sum()
-        n_ambiguous = ambiguous.sum()
-        # Option 1: exclude ambiguous chunks from denominator so they don't dilute
-        # the proportion of confident viral/nonviral chunks
-        n_effective = n_chunks - n_ambiguous
-        viral_proportion = n_confident_viral / n_effective if n_effective > 0 else 0
-        nonviral_proportion = n_confident_nonviral / n_effective if n_effective > 0 else 0
-
-        # Option 3: weighted_delta is the primary signal; chunk evidence determines tier
-        if weighted_delta > 0.3:
-            call = 'Viral'
-            if n_confident_viral >= 1 and viral_proportion >= min_viral_proportion:
-                tier = 'high_confidence' if weighted_delta > 0.6 else 'moderate_confidence'
-            else:
-                tier = 'low_confidence'
-        elif weighted_delta < -0.3:
-            call = 'Non-viral'
-            if n_confident_nonviral >= 1 and nonviral_proportion >= min_nonviral_proportion:
-                tier = 'high_confidence' if weighted_delta < -0.6 else 'moderate_confidence'
-            else:
-                tier = 'low_confidence'
+            tier = 'low_confidence'
+    elif weighted_delta < -0.3:
+        call = 'Non-viral'
+        if n_confident_nonviral >= 1 and nonviral_proportion >= min_nonviral_proportion:
+            tier = 'high_confidence' if weighted_delta < -0.6 else 'moderate_confidence'
         else:
-            call = 'Ambiguous'
+            tier = 'low_confidence'
+    else:
+        call = 'Ambiguous'
+        tier = 'review'
+
+    # Apply low chunk count penalty
+    if n_chunks < min_chunk_count:
+        if tier in ['high_confidence', 'moderate_confidence']:
+            tier = 'low_confidence'
+        elif tier == 'low_confidence':
             tier = 'review'
+    return pd.Series({
+        'call': call,
+        'tier': tier,
+        'weighted_delta': round(weighted_delta, 3),
+        'n_chunks': n_chunks,
+        'n_confident_viral': n_confident_viral,
+        'n_confident_nonviral': n_confident_nonviral,
+        'n_ambiguous': n_ambiguous,
+        'viral_proportion': round(viral_proportion, 3),
+        'nonviral_proportion': round(nonviral_proportion, 3)
+    })
 
-        # Apply low chunk count penalty
-        if n_chunks < min_chunk_count:
-            if tier in ['high_confidence', 'moderate_confidence']:
-                tier = 'low_confidence'
-            elif tier == 'low_confidence':
-                tier = 'review'
-        return pd.Series({
-            'call': call,
-            'tier': tier,
-            'weighted_delta': round(weighted_delta, 3),
-            'n_chunks': n_chunks,
-            'n_confident_viral': n_confident_viral,
-            'n_confident_nonviral': n_confident_nonviral,
-            'n_ambiguous': n_ambiguous,
-            'viral_proportion': round(viral_proportion, 3),       # of effective (non-ambiguous) chunks
-            'nonviral_proportion': round(nonviral_proportion, 3)  # of effective (non-ambiguous) chunks
-        })
+df = pd.read_csv("~{virnucpro_scores_tsv}", sep='\t')
 
-    df = pd.read_csv("~{virnucpro_scores_tsv}", sep='\t')
+required_cols = ["~{id_col}", 'max_score_0', 'max_score_1']
+missing = [c for c in required_cols if c not in df.columns]
+if missing:
+    print(f"Error: Missing required columns: {missing}", file=sys.stderr)
+    sys.exit(1)
 
-    required_cols = ["~{id_col}", 'max_score_0', 'max_score_1']
-    missing = [c for c in required_cols if c not in df.columns]
-    if missing:
-        print(f"Error: Missing required columns: {missing}", file=sys.stderr)
-        sys.exit(1)
+df['ID'] = df["~{id_col}"].str.replace(r'_chunk_\d+$', '', regex=True)
+df['_group'] = df["~{id_col}"].str.extract("~{id_pattern}")
 
-    df['ID'] = df["~{id_col}"].str.replace(r'_chunk_\d+$', '', regex=True)
-    df['_group'] = df["~{id_col}"].str.extract("~{id_pattern}")
+n_unmatched = df['_group'].isna().sum()
+if n_unmatched == len(df):
+    print("Error: No valid NODE IDs extracted. Check id_pattern.", file=sys.stderr)
+    sys.exit(1)
+elif n_unmatched > 0:
+    print(f"Warning: {n_unmatched} of {len(df)} rows did not match id_pattern and were excluded.", file=sys.stderr)
 
-    n_unmatched = df['_group'].isna().sum()
-    if n_unmatched == len(df):
-        print("Error: No valid NODE IDs extracted. Check id_pattern.", file=sys.stderr)
-        sys.exit(1)
-    elif n_unmatched > 0:
-        print(f"Warning: {n_unmatched} of {len(df)} rows did not match id_pattern and were excluded.", file=sys.stderr)
+for col in ['max_score_0', 'max_score_1']:
+    if df[col].isna().any():
+        print(f"Warning: {df[col].isna().sum()} NaN values in {col}.", file=sys.stderr)
 
-    for col in ['max_score_0', 'max_score_1']:
-        if df[col].isna().any():
-            print(f"Warning: {df[col].isna().sum()} NaN values in {col}.", file=sys.stderr)
+group_to_id = df.dropna(subset=['_group']).groupby('_group')['ID'].first()
+results = df.groupby('_group').apply(
+    lambda g: classify_sequence(g, ~{min_viral_prop}, ~{min_nonviral_prop}, ~{min_chunks}),
+    include_groups=False
+)
+results = results.reset_index()
+results['ID'] = results['_group'].map(group_to_id)
+results = results.drop(columns=['_group'])
+results = results[['ID'] + [c for c in results.columns if c != 'ID']]
 
-    group_to_id = df.dropna(subset=['_group']).groupby('_group')['ID'].first()
-    results = df.groupby('_group').apply(
-        lambda g: classify_sequence(g, ~{min_viral_prop}, ~{min_nonviral_prop}, ~{min_chunks}),
-        include_groups=False
-    )
-    results = results.reset_index()
-    results['ID'] = results['_group'].map(group_to_id)
-    results = results.drop(columns=['_group'])
-    results = results[['ID'] + [c for c in results.columns if c != 'ID']]
+def natural_sort_key(val):
+    return [int(s) if s.isdigit() else s.lower() for s in re.split(r'(\d+)', str(val))]
+results = results.sort_values('ID', key=lambda col: col.map(natural_sort_key))
 
-    def natural_sort_key(val):
-        return [int(s) if s.isdigit() else s.lower() for s in re.split(r'(\d+)', str(val))]
-    results = results.sort_values('ID', key=lambda col: col.map(natural_sort_key))
-
-    results.to_csv("~{out_filename}", sep='\t', index=False)
+results.to_csv("~{out_filename}", sep='\t', index=False)
 CODE
   >>>
 
