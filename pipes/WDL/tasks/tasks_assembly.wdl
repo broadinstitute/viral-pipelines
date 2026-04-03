@@ -16,7 +16,7 @@ task assemble {
       
       Int?     machine_mem_gb
       Int?     cpu
-      String   docker = "quay.io/broadinstitute/viral-ngs:3.0.10-assemble"
+      String   docker = "quay.io/broadinstitute/viral-ngs:3.0.11-assemble"
     }
     parameter_meta{
       reads_unmapped_bam: {
@@ -124,7 +124,7 @@ task select_references {
     Int?          skani_c
     Int?          skani_n
 
-    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.10-assemble"
+    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.11-assemble"
     Int           machine_mem_gb = 4
     Int           cpu = 2
     Int           disk_size = 100
@@ -223,7 +223,7 @@ task scaffold {
       Float?       scaffold_min_pct_contig_aligned
 
       Int?         machine_mem_gb
-      String       docker="quay.io/broadinstitute/viral-ngs:3.0.10-assemble"
+      String       docker="quay.io/broadinstitute/viral-ngs:3.0.11-assemble"
 
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
@@ -475,7 +475,7 @@ task skani_triangle {
     Int     compression_factor = 10
     Int     min_aligned_frac = 15
 
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.10-assemble"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.11-assemble"
     Int     machine_mem_gb = 8
     Int     cpu = 4
     Int     disk_size = 100
@@ -715,7 +715,7 @@ task align_reads {
 
     Int?     cpu
     Int?     machine_mem_gb
-    String   docker = "quay.io/broadinstitute/viral-ngs:3.0.10-core"
+    String   docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
 
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
   }
@@ -876,9 +876,10 @@ task refine_assembly_with_aligned_reads {
       Boolean  mark_duplicates = false
       Float    major_cutoff = 0.5
       Int      min_coverage = 3
+      Int?     max_coverage = 4000
 
       Int      machine_mem_gb = 8
-      String   docker = "quay.io/broadinstitute/viral-ngs:3.0.10-assemble"
+      String   docker = "quay.io/broadinstitute/viral-ngs:3.0.11-assemble"
     }
 
     Int disk_size = 375
@@ -903,7 +904,11 @@ task refine_assembly_with_aligned_reads {
       }
       min_coverage: {
         description: "Minimum read coverage required to call a position unambiguous.",
-        category: "advanaced"
+        category: "advanced"
+      }
+      max_coverage: {
+        description: "If specified, 'rasusa aln' will be used to downsample alignments at any genomic position that exceeds this level of coverage prior to variant calling. Recommended for any highly 'spiky' coverage samples (e.g. tiled amplicon sequencing).",
+        category: "advanced"
       }
     }
 
@@ -935,6 +940,7 @@ task refine_assembly_with_aligned_reads {
           --outVcf "~{out_basename}.sites.vcf.gz" \
           --min_coverage ~{min_coverage} \
           --major_cutoff ~{major_cutoff} \
+          ~{'--max_coverage ' + max_coverage} \
           --JVMmemory "$mem_in_mb"m \
           --loglevel=DEBUG
 
@@ -1014,7 +1020,8 @@ task run_discordance {
       String out_basename = "run"
       Int    min_coverage = 4
 
-      String docker = "quay.io/broadinstitute/viral-ngs:3.0.10-core"
+      Int    machine_mem_gb = 4
+      String docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
     }
     parameter_meta {
       reads_aligned_bam: {
@@ -1114,7 +1121,7 @@ task run_discordance {
 
     runtime {
         docker: docker
-        memory: "3 GB"
+        memory: "~{machine_mem_gb} GB"
         cpu: 2
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
@@ -1260,7 +1267,7 @@ task wgsim {
         Int?   random_seed
 
         Int    machine_mem_gb = 7
-        String docker = "quay.io/broadinstitute/viral-ngs:3.0.10-assemble"
+        String docker = "quay.io/broadinstitute/viral-ngs:3.0.11-assemble"
     }
 
     parameter_meta {
