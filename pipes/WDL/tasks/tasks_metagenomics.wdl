@@ -1488,6 +1488,7 @@ task classify_virnucpro_contigs {
     String  id_col            = "Modified_ID"
     String  id_pattern        = "(NODE_\\d+)"
 
+    Int     machine_mem_gb    = 2
     String  docker            = "quay.io/broadinstitute/py3-bio:0.1.5"
   }
 
@@ -1652,7 +1653,7 @@ CODE
 
   runtime {
     docker: docker
-    memory: "2 GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 1
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
@@ -1675,6 +1676,7 @@ task classify_reads_by_contig {
     Float   min_identity   = 90.0
     Float   min_query_cov  = 80.0
 
+    Int     machine_mem_gb = 4
     String  docker         = "quay.io/broadinstitute/py3-bio:0.1.5"
   }
 
@@ -1960,11 +1962,11 @@ CODE
 
   runtime {
     docker: docker
-    memory: "4 GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 2
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
-    dx_instance_type: "mem2_ssd1_v2_x4"
+    dx_instance_type: "mem1_ssd1_v2_x4"
     preemptible: 2
     maxRetries: 2
   }
@@ -1984,6 +1986,7 @@ task parse_kraken2_reads {
         else sub(basename(kraken2_reads_output), "\\.kraken2\\.reads\\.txt(\\.gz)?$", "")
     Boolean resolve_strains = false
 
+    Int     machine_mem_gb = 8
     String  docker = "quay.io/broadinstitute/py3-bio:0.1.5"
   }
 
@@ -2202,11 +2205,11 @@ task parse_kraken2_reads {
 
   runtime {
     docker: docker
-    memory: "8 GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 1
     disks: "local-disk ~{ceil(size(kraken2_reads_output)*3 + size(taxonomy_db) + 20)} HDD"
     disk: "~{ceil(size(kraken2_reads_output)*3 + size(taxonomy_db) + 20)} GB" # TES
-    dx_instance_type: "mem2_ssd1_v2_x2"
+    dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
     maxRetries: 2
   }
@@ -2222,6 +2225,7 @@ task summarize_kb_extract_reads {
     File    taxonomy_map_csv
     String  taxonomy_level = "highest"
 
+    Int     machine_mem_gb = 4
     String  docker = "quay.io/broadinstitute/py3-bio:0.1.5"
   }
 
@@ -2382,11 +2386,11 @@ task summarize_kb_extract_reads {
 
   runtime {
     docker: docker
-    memory: "4 GB"
+    memory: "~{machine_mem_gb} GB"
     cpu: 2
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
-    dx_instance_type: "mem2_ssd1_v2_x4"
+    dx_instance_type: "mem1_ssd1_v2_x4"
     preemptible: 2
     maxRetries: 2
   }
@@ -2530,6 +2534,7 @@ task join_read_classifications {
     File?   genomad_virus_summary     # geNomad virus summary TSV (LEFT JOIN via VNP_CONTIG_ID)
     String  sample_id                 # Required — filters Kallisto/K2 tables, stamps SAMPLE_ID column
 
+    Int     machine_mem_gb = 16
     String  docker = "quay.io/broadinstitute/py3-bio:0.1.5"
   }
 
@@ -2893,11 +2898,11 @@ CODE
 
   runtime {
     docker:           docker
-    memory:           "16 GB"
+    memory:           "~{machine_mem_gb} GB"
     cpu:              1
     disks:            "local-disk ~{ceil((size(kallisto_summary, 'GB') + size(kraken2_reads, 'GB') + size(vnp_reads, 'GB') + size(genomad_virus_summary, 'GB')) * 4 + 10)} HDD"
     disk:             "~{ceil((size(kallisto_summary, 'GB') + size(kraken2_reads, 'GB') + size(vnp_reads, 'GB') + size(genomad_virus_summary, 'GB')) * 4 + 10)} GB"
-    dx_instance_type: "mem2_ssd1_v2_x2"
+    dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible:      2
     maxRetries:       2
   }
