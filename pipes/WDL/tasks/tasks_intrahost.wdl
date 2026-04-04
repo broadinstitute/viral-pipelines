@@ -138,7 +138,7 @@ task lofreq {
     Int       cpu = 4
 
     String    out_basename = basename(aligned_bam, '.bam')
-    String    docker = "quay.io/broadinstitute/viral-ngs:3.0.10-phylo"
+    String    docker = "quay.io/broadinstitute/viral-ngs:3.0.11-phylo"
   }
   Int disk_size = ceil(5 * size(aligned_bam, "GB") + 50)
   command <<<
@@ -215,7 +215,7 @@ task isnvs_per_sample {
     Boolean removeDoublyMappedReads = true
 
     Int?    machine_mem_gb
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.10-phylo"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.11-phylo"
 
     String  sample_name = basename(basename(basename(mapped_bam, ".bam"), ".all"), ".mapped")
   }
@@ -257,7 +257,7 @@ task isnvs_vcf {
     Boolean        naiveFilter = false
 
     Int?           machine_mem_gb
-    String         docker = "quay.io/broadinstitute/viral-ngs:3.0.10-phylo"
+    String         docker = "quay.io/broadinstitute/viral-ngs:3.0.11-phylo"
   }
 
   parameter_meta {
@@ -330,7 +330,7 @@ task annotate_vcf_snpeff {
     String?        emailAddress
 
     Int?           machine_mem_gb
-    String         docker = "quay.io/broadinstitute/viral-ngs:3.0.10-phylo"
+    String         docker = "quay.io/broadinstitute/viral-ngs:3.0.11-phylo"
 
     String         output_basename = basename(basename(in_vcf, ".gz"), ".vcf")
   }
