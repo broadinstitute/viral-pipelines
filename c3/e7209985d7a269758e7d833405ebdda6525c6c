@@ -1,0 +1,42 @@
+pipes/WDL/tasks/tasks_interhost.wdl
+  89fd0f264d9b45eb 163,209,351,473
+pipes/WDL/tasks/tasks_utils.wdl
+  89fd0f264d9b45eb 54,296,353,517,850,934,1117,1152,1196
+pipes/WDL/tasks/tasks_nextstrain.wdl
+  89fd0f264d9b45eb 8,331,892,992,1081
+pipes/WDL/tasks/tasks_ncbi.wdl
+  89fd0f264d9b45eb 9,44,95,136,182,236,290,342,459,621,1233,1324,1388
+pipes/WDL/tasks/tasks_taxon_filter.wdl
+  89fd0f264d9b45eb 18,145,199,237
+pipes/WDL/tasks/tasks_terra.wdl
+  89fd0f264d9b45eb 27,35,332,371,442,615
+pipes/WDL/tasks/tasks_demux.wdl
+  89fd0f264d9b45eb 9,182,820,923,1051
+pipes/WDL/tasks/tasks_megablast.wdl
+  89fd0f264d9b45eb 18,78
+pipes/WDL/tasks/tasks_assembly.wdl
+  89fd0f264d9b45eb 19,127,226,478,718,881,1017,1263
+pipes/WDL/tasks/tasks_intrahost.wdl
+  89fd0f264d9b45eb 141,218,260,333
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "c3e7209985d7a269758e7d833405ebdda6525c6c",
+  "prompts": {
+    "89fd0f264d9b45eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5eb40558-dbc5-4830-a370-b027db8328e5",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 60,
+      "total_deletions": 60,
+      "accepted_lines": 60,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/2858b9c5be66dc75330aa084a39217cbed5536f2438098da12caab51b3999fb1"
+    }
+  }
+}
