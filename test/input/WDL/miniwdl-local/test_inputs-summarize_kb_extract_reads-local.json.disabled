@@ -1,0 +1,5 @@
+{
+  "summarize_kb_extract_reads.extract_reads_tar": "test/input/placeholder_extract_reads.tar.gz",
+  "summarize_kb_extract_reads.taxonomy_map_csv": "test/input/placeholder_taxonomy_map.csv",
+  "summarize_kb_extract_reads.taxonomy_level": "highest"
+}

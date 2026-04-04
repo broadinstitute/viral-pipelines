@@ -1,0 +1,8 @@
+{
+  "centrifuger_multi.reads_bams": [
+    "test/input/placeholder_sample1.bam",
+    "test/input/placeholder_sample2.bam"
+  ],
+  "centrifuger_multi.centrifuger_db_tgz": "test/input/placeholder_centrifuger_db.tar.gz",
+  "centrifuger_multi.db_name": "hpvc"
+}

@@ -69,12 +69,30 @@ workflows:
   - name: classify_krakenuniq
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/classify_krakenuniq.wdl
+  - name: centrifuger_multi
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/centrifuger_multi.wdl
+  - name: centrifuger_single
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/centrifuger_single.wdl
   - name: classify_multi
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/classify_multi.wdl
   - name: classify_single
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/classify_single.wdl
+  - name: classify_virnucpro_contigs
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/classify_virnucpro_contigs.wdl
+  - name: classify_reads_by_contig
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/classify_reads_by_contig.wdl
+  - name: parse_kraken2_reads
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/parse_kraken2_reads.wdl
+  - name: summarize_kb_extract_reads
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/summarize_kb_extract_reads.wdl
   - name: coverage_table
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/coverage_table.wdl
@@ -304,3 +322,18 @@ workflows:
   - name: unpack_archive_to_bucket
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/unpack_archive_to_bucket.wdl
+  - name: classify_kallisto_single
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/classify_kallisto_single.wdl
+  - name: classify_virnucpro_single
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/classify_virnucpro_single.wdl
+  - name: classify_virnucpro_multi
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/classify_virnucpro_multi.wdl
+  - name: align_and_generate_reads_report
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/align_and_generate_PAF.wdl
+  - name: join_read_classifications
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/join_read_classifications.wdl
