@@ -2235,7 +2235,7 @@ task summarize_kb_extract_reads {
     }
   }
 
-  String out_filename = sub(basename(extract_reads_tar), "\\.hs_depleted_kb_extract\\.tar\\.(zst|gz|bz2)$", "") + ".kallisto_reads_summary.tsv.zst"
+  String out_filename = sub(basename(extract_reads_tar), "\\..*$", "") + ".kallisto_reads_summary.tsv.zst"
   Int disk_size = 50
 
   command <<<
