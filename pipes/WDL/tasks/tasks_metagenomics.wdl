@@ -2440,7 +2440,7 @@ task centrifuger {
     if [[ "~{centrifuger_db_tgz}" == *.tar.lz4 ]]; then
       lz4 -dc "~{centrifuger_db_tgz}" | tar -x -C "$DB_DIR"
     elif [[ "~{centrifuger_db_tgz}" == *.tar.zst ]]; then
-      zstd -dc "~{centrifuger_db_tgz}" | tar -x -C "$DB_DIR"
+      zstd -dc -T0 "~{centrifuger_db_tgz}" | tar -x -C "$DB_DIR"
     elif [[ "~{centrifuger_db_tgz}" == *.tar.bz2 ]]; then
       tar -xjf "~{centrifuger_db_tgz}" -C "$DB_DIR"
     else
