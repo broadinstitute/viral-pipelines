@@ -2015,8 +2015,8 @@ task parse_kraken2_reads {
     }
   }
 
-  String out_filename   = "~{sample_id}.read_taxonomy.tsv"
-  String out_compressed = out_filename + ".zst"
+  String out_filename   = sample_id + ".read_taxonomy.tsv"
+  String out_compressed = sample_id + ".read_taxonomy.tsv.zst"
 
   command <<<
     set -e
