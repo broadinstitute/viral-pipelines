@@ -1,0 +1,26 @@
+pipes/WDL/workflows/centrifuger_single.wdl
+  ea17a26beaae4537 18-20,37-42,55-61,65-67
+pipes/WDL/workflows/centrifuger_multi.wdl
+  ea17a26beaae4537 18-20,38-43,63-71,75-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "e6d27c73ceb8c07ad57721c6f17ba7733bb1e438",
+  "prompts": {
+    "ea17a26beaae4537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9bcc1b61-2217-4417-9617-7358116c3560",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 46,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/a46362beb82b3a2d54b15dd6ff00ef93c852138561e6ff88faefef09b40f1043"
+    }
+  }
+}
