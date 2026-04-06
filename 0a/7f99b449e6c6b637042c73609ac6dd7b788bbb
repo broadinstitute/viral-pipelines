@@ -1,0 +1,32 @@
+pipes/WDL/workflows/parse_kraken2_reads.wdl
+  ea17a26beaae4537 29
+pipes/WDL/workflows/classify_virnucpro_contigs.wdl
+  ea17a26beaae4537 34
+pipes/WDL/workflows/classify_reads_by_contig.wdl
+  ea17a26beaae4537 32
+pipes/WDL/workflows/join_read_classifications.wdl
+  ea17a26beaae4537 31
+pipes/WDL/workflows/summarize_kb_extract_reads.wdl
+  ea17a26beaae4537 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "0a7f99b449e6c6b637042c73609ac6dd7b788bbb",
+  "prompts": {
+    "ea17a26beaae4537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9bcc1b61-2217-4417-9617-7358116c3560",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 5,
+      "accepted_lines": 5,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/667c6c5c1f98b57a2109080162a82c7739365943bf5418f260eabe89baf3187a"
+    }
+  }
+}
