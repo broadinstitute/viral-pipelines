@@ -26,6 +26,6 @@ workflow parse_kraken2_reads {
     }
 
     output {
-        File read_taxonomy = parse_reads.read_taxonomy
+        File kraken2_reads_classified = parse_reads.read_taxonomy
     }
 }

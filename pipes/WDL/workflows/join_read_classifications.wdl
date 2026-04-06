@@ -28,6 +28,6 @@ workflow join_read_classifications {
     }
 
     output {
-        File classifications_parquet = join_reads.classifications_parquet
+        File classifications_summary = join_reads.classifications_parquet
     }
 }

@@ -29,6 +29,6 @@ workflow classify_reads_by_contig {
     }
 
     output {
-        File read_classifications = classify_reads.read_classifications
+        File virnucpro_reads_classifications = classify_reads.read_classifications
     }
 }
