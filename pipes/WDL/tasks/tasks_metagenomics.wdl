@@ -1986,7 +1986,7 @@ task parse_kraken2_reads {
         else sub(basename(kraken2_reads_output), "\\.kraken2\\.reads\\.txt(\\.gz)?$", "")
     Boolean resolve_strains = false
 
-    Int     machine_mem_gb = 8
+    Int     machine_mem_gb = 16
     String  docker = "quay.io/broadinstitute/py3-bio:0.1.5"
   }
 
@@ -2130,68 +2130,57 @@ task parse_kraken2_reads {
         classified_count = 0
         unclassified_count = 0
 
-        # Collect rows
-        rows = []
-
-        try:
-            for line in f:
-                # Skip empty lines
-                line = line.strip()
-                if not line:
-                    continue
-
-                # Parse Kraken2 output format
-                # Format: C/U <read_id> <taxid> <length> <kmer_info>
-                parts = line.split('\t')
-
-                if len(parts) < 3:
-                    print(f"Warning: Skipping malformed line: {line[:100]}", file=sys.stderr)
-                    continue
-
-                classification = parts[0].strip()  # C or U
-                read_id = parts[1].strip()
-                taxid_str = parts[2].strip()
-
-                # Handle unclassified reads (taxid = 0)
+        cctx = zstd.ZstdCompressor()
+        with open(output_file, 'wb') as raw_f:
+            with cctx.stream_writer(raw_f) as compressor:
+                compressor.write(b'SAMPLE_ID\tREAD_ID\tTAXONOMY_ID\tTAX_NAME\tKINGDOM\tTAX_RANK\n')
                 try:
-                    taxid = int(taxid_str)
-                except ValueError:
-                    print(f"Warning: Invalid taxid '{taxid_str}' for read {read_id}", file=sys.stderr)
-                    continue
+                    for line in f:
+                        # Skip empty lines
+                        line = line.strip()
+                        if not line:
+                            continue
 
-                if classification == 'U':
-                    unclassified_count += 1
-                    tax_name = 'Unclassified'
-                    kingdom = 'Unclassified'
-                    tax_rank = 'unclassified'
-                else:
-                    classified_count += 1
-                    tax_name = tax_db.get_name(taxid)
-                    kingdom = tax_db.get_kingdom(taxid)
-                    tax_rank = tax_db.get_rank(taxid, resolve_strains=resolve_strains)
+                        # Parse Kraken2 output format
+                        # Format: C/U <read_id> <taxid> <length> <kmer_info>
+                        parts = line.split('\t')
 
-                rows.append((sample_id, read_id, taxid, tax_name, kingdom, tax_rank))
+                        if len(parts) < 3:
+                            print(f"Warning: Skipping malformed line: {line[:100]}", file=sys.stderr)
+                            continue
 
-        finally:
-            f.close()
+                        classification = parts[0].strip()  # C or U
+                        read_id = parts[1].strip()
+                        taxid_str = parts[2].strip()
 
-        # Write output as TSV
-        _write_tsv(rows, output_file)
+                        # Handle unclassified reads (taxid = 0)
+                        try:
+                            taxid = int(taxid_str)
+                        except ValueError:
+                            print(f"Warning: Invalid taxid '{taxid_str}' for read {read_id}", file=sys.stderr)
+                            continue
+
+                        if classification == 'U':
+                            unclassified_count += 1
+                            tax_name = 'Unclassified'
+                            kingdom = 'Unclassified'
+                            tax_rank = 'unclassified'
+                        else:
+                            classified_count += 1
+                            tax_name = tax_db.get_name(taxid)
+                            kingdom = tax_db.get_kingdom(taxid)
+                            tax_rank = tax_db.get_rank(taxid, resolve_strains=resolve_strains)
+
+                        row = (sample_id, read_id, taxid, tax_name, kingdom, tax_rank)
+                        compressor.write(('\t'.join(str(v) for v in row) + '\n').encode('utf-8'))
+
+                finally:
+                    f.close()
 
         print(f"\nProcessing complete:", file=sys.stderr)
         print(f"  Classified reads: {classified_count}", file=sys.stderr)
         print(f"  Unclassified reads: {unclassified_count}", file=sys.stderr)
         print(f"  Total reads: {classified_count + unclassified_count}", file=sys.stderr)
-
-
-    def _write_tsv(rows, output_file):
-        """Write rows as zstd-compressed TSV."""
-        cctx = zstd.ZstdCompressor()
-        with open(output_file, 'wb') as raw_f:
-            with cctx.stream_writer(raw_f) as compressor:
-                compressor.write(b'SAMPLE_ID\tREAD_ID\tTAXONOMY_ID\tTAX_NAME\tKINGDOM\tTAX_RANK\n')
-                for row in rows:
-                    compressor.write(('\t'.join(str(v) for v in row) + '\n').encode('utf-8'))
 
 
     tax_db = DuckDBTaxonomyDatabase("~{taxonomy_db}", resolve_strains=~{true="True" false="False" resolve_strains})
