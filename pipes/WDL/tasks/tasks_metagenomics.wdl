@@ -2459,8 +2459,6 @@ task centrifuger {
         I="$bam" \
         FASTQ="${SAMPLE}_R1.fq" \
         SECOND_END_FASTQ="${SAMPLE}_R2.fq" \
-        READ1_SUFFIX=/1 \
-        READ2_SUFFIX=/2 \
         VALIDATION_STRINGENCY=LENIENT
 
       if [ -s "${SAMPLE}_R2.fq" ]; then
