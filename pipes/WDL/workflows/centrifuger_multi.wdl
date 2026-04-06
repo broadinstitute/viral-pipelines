@@ -15,6 +15,9 @@ workflow centrifuger_multi {
         File          centrifuger_db_tgz
         String        db_name
 
+        File?         taxonomy_db
+        Boolean       resolve_strains = false
+
         Int           machine_mem_gb = 480
         Int           cpu            = 16
         String        docker = "ghcr.io/broadinstitute/docker-centrifuger:1.0.0"
@@ -31,6 +34,13 @@ workflow centrifuger_multi {
         }
         db_name: {
             description: "Centrifuger index prefix (common filename stem of .1.cfr/.2.cfr/.3.cfr/.4.cfr files inside the tarball)."
+        }
+        taxonomy_db: {
+            description: "Pre-built DuckDB taxonomy database. If provided, each centrifuger output is annotated with TAX_NAME, KINGDOM, and TAX_RANK.",
+            patterns: ["*.duckdb"]
+        }
+        resolve_strains: {
+            description: "When true and taxonomy_db is provided, reclassify 'no rank' nodes below species as 'strain'."
         }
         machine_mem_gb: {
             description: "Memory in GB. Default 480 GB sized for multi-sample batch with NT-scale index."
@@ -50,9 +60,20 @@ workflow centrifuger_multi {
             docker             = docker
     }
 
+    if (defined(taxonomy_db)) {
+        scatter (tsv in run_centrifuger.classification_tsvs) {
+            call metagenomics.parse_centrifuger_reads as parse_reads {
+                input:
+                    centrifuger_output = tsv,
+                    taxonomy_db        = select_first([taxonomy_db]),
+                    resolve_strains    = resolve_strains
+            }
+        }
+    }
+
     output {
-        Array[File] classification_tsvs = run_centrifuger.classification_tsvs
-        Array[File] kreports            = run_centrifuger.kreports
-        Array[File] centrifuger_logs    = run_centrifuger.centrifuger_logs
+        Array[File]  kreports                     = run_centrifuger.kreports
+        Array[File]  centrifuger_logs             = run_centrifuger.centrifuger_logs
+        Array[File]? centrifuger_reads_classified = parse_reads.centrifuger_reads_classified
     }
 }

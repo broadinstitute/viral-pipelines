@@ -15,6 +15,9 @@ workflow centrifuger_single {
         File    centrifuger_db_tgz
         String  db_name
 
+        File?   taxonomy_db
+        Boolean resolve_strains = false
+
         Int     machine_mem_gb = 240
         String  docker = "ghcr.io/broadinstitute/docker-centrifuger:1.0.0"
     }
@@ -31,6 +34,13 @@ workflow centrifuger_single {
         db_name: {
             description: "Centrifuger index prefix (common filename stem of .1.cfr/.2.cfr/.3.cfr/.4.cfr files inside the tarball)."
         }
+        taxonomy_db: {
+            description: "Pre-built DuckDB taxonomy database. If provided, centrifuger output is annotated with TAX_NAME, KINGDOM, and TAX_RANK.",
+            patterns: ["*.duckdb"]
+        }
+        resolve_strains: {
+            description: "When true and taxonomy_db is provided, reclassify 'no rank' nodes below species as 'strain'."
+        }
     }
 
     call metagenomics.centrifuger as run_centrifuger {
@@ -42,9 +52,18 @@ workflow centrifuger_single {
             docker             = docker
     }
 
+    if (defined(taxonomy_db)) {
+        call metagenomics.parse_centrifuger_reads as parse_reads {
+            input:
+                centrifuger_output = run_centrifuger.classification_tsvs[0],
+                taxonomy_db        = select_first([taxonomy_db]),
+                resolve_strains    = resolve_strains
+        }
+    }
+
     output {
-        Array[File] classification_tsvs = run_centrifuger.classification_tsvs
-        Array[File] kreports            = run_centrifuger.kreports
-        Array[File] centrifuger_logs    = run_centrifuger.centrifuger_logs
+        Array[File] kreports                     = run_centrifuger.kreports
+        Array[File] centrifuger_logs             = run_centrifuger.centrifuger_logs
+        File?       centrifuger_reads_classified = parse_reads.centrifuger_reads_classified
     }
 }
