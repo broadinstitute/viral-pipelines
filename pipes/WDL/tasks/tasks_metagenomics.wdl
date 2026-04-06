@@ -1981,9 +1981,7 @@ task parse_kraken2_reads {
     File    kraken2_reads_output
     File    taxonomy_db
     String  sample_id_suffix_re = "\\.l0\\d+.*$"
-    String  sample_id = if sample_id_suffix_re != ""
-        then sub(sub(basename(kraken2_reads_output), "\\.kraken2\\.reads\\.txt(\\.gz)?$", ""), sample_id_suffix_re, "")
-        else sub(basename(kraken2_reads_output), "\\.kraken2\\.reads\\.txt(\\.gz)?$", "")
+    String? sample_id_override
     Boolean resolve_strains = false
 
     Int     machine_mem_gb = 16
@@ -2002,11 +2000,11 @@ task parse_kraken2_reads {
       category: "required"
     }
     sample_id_suffix_re: {
-      description: "Regex pattern applied to the auto-derived sample_id to strip unwanted suffixes. Default '\\.l0\\d+.*$' strips library/lane/flowcell suffixes of the form '.l000XXXXXXX...' Ignored if sample_id is set explicitly.",
+      description: "Regex pattern applied to the auto-derived sample_id to strip unwanted suffixes. Default '\\.l0\\d+.*$' strips library/lane/flowcell suffixes of the form '.l000XXXXXXX...' Ignored if sample_id_override is set.",
       category: "common"
     }
-    sample_id: {
-      description: "Sample identifier. Defaults to the filename stem after stripping .kraken2.reads.txt(.gz) and any sample_id_suffix_re match.",
+    sample_id_override: {
+      description: "Explicit sample identifier. If not provided, derived from the input filename after stripping .kraken2.reads.txt(.gz) and any sample_id_suffix_re match.",
       category: "common"
     }
     resolve_strains: {
@@ -2015,8 +2013,10 @@ task parse_kraken2_reads {
     }
   }
 
-  String out_filename   = sample_id + ".read_taxonomy.tsv"
-  String out_compressed = sample_id + ".read_taxonomy.tsv.zst"
+  String derived_sample_id = sub(sub(basename(kraken2_reads_output), "\\.kraken2\\.reads\\.txt(\\.gz)?$", ""), sample_id_suffix_re, "")
+  String sample_id         = select_first([sample_id_override, derived_sample_id])
+  String out_filename      = sample_id + ".read_taxonomy.tsv"
+  String out_compressed    = sample_id + ".read_taxonomy.tsv.zst"
 
   command <<<
     set -e
@@ -2380,6 +2380,184 @@ task summarize_kb_extract_reads {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
+
+task parse_centrifuger_reads {
+  meta {
+    description: "Parse Centrifuger per-read output and annotate each read with NCBI taxonomy (name, kingdom, rank) using a pre-built DuckDB taxonomy database."
+  }
+
+  input {
+    File    centrifuger_output
+    File    taxonomy_db
+    String  sample_id = sub(basename(centrifuger_output), "\\.centrifuger\\.tsv$", "")
+    Boolean resolve_strains = false
+
+    Int     machine_mem_gb = 16
+    String  docker = "quay.io/broadinstitute/py3-bio:0.1.5"
+  }
+
+  parameter_meta {
+    centrifuger_output: {
+      description: "Centrifuger per-read classification output file. Format: readID seqID taxID score 2ndBestScore hitLength queryLength numMatches.",
+      patterns: ["*.tsv"],
+      category: "required"
+    }
+    taxonomy_db: {
+      description: "Pre-built DuckDB taxonomy database file from build_taxonomy_db.py.",
+      patterns: ["*.duckdb"],
+      category: "required"
+    }
+    sample_id: {
+      description: "Sample identifier. Defaults to the filename stem after stripping .centrifuger.tsv.",
+      category: "common"
+    }
+    resolve_strains: {
+      description: "When true, reclassify 'no rank' nodes whose lineage passes through a species or strain ancestor as 'strain' in TAX_RANK.",
+      category: "advanced"
+    }
+  }
+
+  String out_compressed = sample_id + ".centrifuger_reads_classified.tsv.zst"
+
+  command <<<
+    set -e
+    pip install duckdb zstandard --quiet --no-cache-dir
+    python3<<CODE
+    import sys
+
+    import duckdb
+    import zstandard as zstd
+
+
+    class DuckDBTaxonomyDatabase:
+        """NCBI taxonomy database backed by a pre-built DuckDB file."""
+
+        def __init__(self, db_path, resolve_strains=False):
+            print(f"Loading taxonomy from DuckDB: {db_path}...", file=sys.stderr)
+
+            con = duckdb.connect(str(db_path), read_only=True)
+            try:
+                rows = con.execute("SELECT taxid, name, kingdom, rank, parent_id FROM taxonomy").fetchall()
+                has_parent = True
+            except Exception:
+                print("Warning: 'rank' column not found in taxonomy table; defaulting ranks to 'unknown'",
+                      file=sys.stderr)
+                rows_no_rank = con.execute("SELECT taxid, name, kingdom FROM taxonomy").fetchall()
+                rows = [(taxid, name, kingdom, 'unknown', None) for taxid, name, kingdom in rows_no_rank]
+                has_parent = False
+            con.close()
+
+            self.names = {}
+            self.kingdoms = {}
+            self.ranks = {}
+            parents = {}
+            for taxid, name, kingdom, rank, parent_id in rows:
+                self.names[taxid] = name
+                self.kingdoms[taxid] = kingdom
+                self.ranks[taxid] = rank
+                if parent_id is not None:
+                    parents[taxid] = parent_id
+
+            if resolve_strains and has_parent:
+                for taxid, rank in list(self.ranks.items()):
+                    if rank == 'no rank':
+                        current = parents.get(taxid)
+                        while current and current != 1:
+                            ancestor_rank = self.ranks.get(current, 'unknown')
+                            if ancestor_rank in ('species', 'strain'):
+                                self.ranks[taxid] = 'strain'
+                                break
+                            current = parents.get(current)
+
+            print(f"Loaded {len(self.names)} taxonomy entries from DuckDB", file=sys.stderr)
+
+        def get_rank(self, taxid):
+            if taxid == 0:
+                return 'unclassified'
+            return self.ranks.get(taxid, 'unknown')
+
+        def get_name(self, taxid):
+            if taxid == 0:
+                return 'Unclassified'
+            return self.names.get(taxid, f'Unknown (taxid:{taxid})')
+
+        def get_kingdom(self, taxid):
+            if taxid == 0:
+                return 'Unclassified'
+            return self.kingdoms.get(taxid, 'Other')
+
+
+    def parse_centrifuger_output(centrifuger_file, tax_db, output_file, sample_id):
+        print(f"Processing sample: {sample_id}", file=sys.stderr)
+
+        classified_count = 0
+
+        cctx = zstd.ZstdCompressor()
+        with open(output_file, 'wb') as raw_f:
+            with cctx.stream_writer(raw_f) as compressor:
+                header = 'SAMPLE_ID\tREAD_ID\tSEQ_ID\tTAXONOMY_ID\tSCORE\tSECOND_BEST_SCORE\tHIT_LENGTH\tQUERY_LENGTH\tNUM_MATCHES\tTAX_NAME\tKINGDOM\tTAX_RANK\n'
+                compressor.write(header.encode('utf-8'))
+
+                with open(centrifuger_file, 'r') as f:
+                    # Skip header line
+                    next(f)
+
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+
+                        parts = line.split('\t')
+                        if len(parts) < 8:
+                            print(f"Warning: Skipping malformed line: {line[:100]}", file=sys.stderr)
+                            continue
+
+                        read_id = parts[0]
+                        seq_id = parts[1]
+                        try:
+                            taxid = int(parts[2])
+                        except ValueError:
+                            print(f"Warning: Invalid taxid '{parts[2]}' for read {read_id}", file=sys.stderr)
+                            continue
+                        score = parts[3]
+                        second_best_score = parts[4]
+                        hit_length = parts[5]
+                        query_length = parts[6]
+                        num_matches = parts[7]
+
+                        classified_count += 1
+                        tax_name = tax_db.get_name(taxid)
+                        kingdom = tax_db.get_kingdom(taxid)
+                        tax_rank = tax_db.get_rank(taxid)
+
+                        row = (sample_id, read_id, seq_id, taxid, score, second_best_score,
+                               hit_length, query_length, num_matches, tax_name, kingdom, tax_rank)
+                        compressor.write(('\t'.join(str(v) for v in row) + '\n').encode('utf-8'))
+
+        print(f"\nProcessing complete:", file=sys.stderr)
+        print(f"  Classified reads: {classified_count}", file=sys.stderr)
+
+
+    tax_db = DuckDBTaxonomyDatabase("~{taxonomy_db}", resolve_strains=~{true="True" false="False" resolve_strains})
+    parse_centrifuger_output("~{centrifuger_output}", tax_db, "~{out_compressed}", "~{sample_id}")
+    CODE
+  >>>
+
+  output {
+    File centrifuger_reads_classified = "~{out_compressed}"
+  }
+
+  runtime {
+    docker: docker
+    memory: "~{machine_mem_gb} GB"
+    cpu: 1
+    disks: "local-disk ~{ceil(size(centrifuger_output, "GB")*3 + size(taxonomy_db, "GB") + 20)} HDD"
+    disk: "~{ceil(size(centrifuger_output, "GB")*3 + size(taxonomy_db, "GB") + 20)} GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
     maxRetries: 2
   }
