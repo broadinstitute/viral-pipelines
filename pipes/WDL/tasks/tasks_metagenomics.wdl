@@ -2207,8 +2207,8 @@ task parse_kraken2_reads {
     docker: docker
     memory: "~{machine_mem_gb} GB"
     cpu: 1
-    disks: "local-disk ~{ceil(size(kraken2_reads_output)*3 + size(taxonomy_db) + 20)} HDD"
-    disk: "~{ceil(size(kraken2_reads_output)*3 + size(taxonomy_db) + 20)} GB" # TES
+    disks: "local-disk ~{ceil(size(kraken2_reads_output, "GB")*3 + size(taxonomy_db, "GB") + 20)} HDD"
+    disk: "~{ceil(size(kraken2_reads_output, "GB")*3 + size(taxonomy_db, "GB") + 20)} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
     maxRetries: 2
