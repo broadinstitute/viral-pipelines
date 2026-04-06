@@ -1,0 +1,24 @@
+pipes/WDL/tasks/tasks_metagenomics.wdl
+  ea17a26beaae4537 2018-2019
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "22b9c8cf26e3a41c80312219392693d687546fa5",
+  "prompts": {
+    "ea17a26beaae4537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9bcc1b61-2217-4417-9617-7358116c3560",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 2,
+      "accepted_lines": 2,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/36cce93072cfc3efcfedf5934be844fe02fc33eee518a2f1154b749738a3593a"
+    }
+  }
+}
