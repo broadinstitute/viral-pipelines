@@ -24,6 +24,6 @@ workflow summarize_kb_extract_reads {
     }
 
     output {
-        File kallisto_read_classifications = summarize.summary_tsv_zst
+        File kallisto_reads_classified = summarize.summary_tsv_zst
     }
 }

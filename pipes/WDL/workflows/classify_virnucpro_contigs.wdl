@@ -31,6 +31,6 @@ workflow classify_virnucpro_contigs {
     }
 
     output {
-        File virnucpro_contigs_classifications = classify_contigs.contig_classifications
+        File virnucpro_contigs_classified = classify_contigs.contig_classifications
     }
 }
