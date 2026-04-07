@@ -1,0 +1,26 @@
+pipes/WDL/workflows/filter_viral_reads.wdl
+  ea17a26beaae4537 1-28
+pipes/WDL/tasks/tasks_metagenomics.wdl
+  ea17a26beaae4537 2396,2414-2415,2424-2426,3076-3199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "b5601674262b05384233c38f3db2e67757b3f809",
+  "prompts": {
+    "ea17a26beaae4537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9bcc1b61-2217-4417-9617-7358116c3560",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 176,
+      "total_deletions": 22,
+      "accepted_lines": 158,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/6508eb93bfb582295caba798508c2e3d82827c4bf37a365e2e82b8f4e21a28cf"
+    }
+  }
+}
