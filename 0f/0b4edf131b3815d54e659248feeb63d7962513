@@ -1,0 +1,28 @@
+pipes/WDL/tasks/tasks_metagenomics.wdl
+  ea17a26beaae4537 3175
+pipes/WDL/workflows/filter_bam_by_read_list.wdl
+  ea17a26beaae4537 1-29
+pipes/WDL/tasks/tasks_read_utils.wdl
+  ea17a26beaae4537 634-728
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "0f0b4edf131b3815d54e659248feeb63d7962513",
+  "prompts": {
+    "ea17a26beaae4537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9bcc1b61-2217-4417-9617-7358116c3560",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 175,
+      "total_deletions": 51,
+      "accepted_lines": 127,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/b129780426ceeee1ee3ffa29f9b86cd397f536be204096e70bb0dc54f7851210"
+    }
+  }
+}
