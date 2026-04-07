@@ -2393,7 +2393,7 @@ task parse_centrifuger_reads {
   input {
     File    centrifuger_output
     File    taxonomy_db
-    String  sample_id = sub(basename(centrifuger_output), "\\.centrifuger\\.tsv$", "")
+    String? sample_id_override
     Boolean resolve_strains = false
 
     Int     machine_mem_gb = 16
@@ -2411,8 +2411,8 @@ task parse_centrifuger_reads {
       patterns: ["*.duckdb"],
       category: "required"
     }
-    sample_id: {
-      description: "Sample identifier. Defaults to the filename stem after stripping .centrifuger.tsv.",
+    sample_id_override: {
+      description: "Optional sample identifier. Defaults to the filename stem after stripping .centrifuger.tsv.",
       category: "common"
     }
     resolve_strains: {
@@ -2421,7 +2421,9 @@ task parse_centrifuger_reads {
     }
   }
 
-  String out_compressed = sample_id + ".centrifuger_reads_classified.tsv.zst"
+  String derived_sample_id = sub(basename(centrifuger_output), "\\.centrifuger\\.tsv$", "")
+  String sample_id         = select_first([sample_id_override, derived_sample_id])
+  String out_compressed    = sample_id + ".centrifuger_reads_classified.tsv.zst"
 
   command <<<
     set -e
@@ -3066,6 +3068,130 @@ CODE
     cpu:              1
     disks:            "local-disk ~{ceil((size(kallisto_summary, 'GB') + size(kraken2_reads, 'GB') + size(vnp_reads, 'GB') + size(genomad_virus_summary, 'GB')) * 4 + 10)} HDD"
     disk:             "~{ceil((size(kallisto_summary, 'GB') + size(kraken2_reads, 'GB') + size(vnp_reads, 'GB') + size(genomad_virus_summary, 'GB')) * 4 + 10)} GB"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible:      2
+    maxRetries:       2
+  }
+}
+
+task filter_viral_reads {
+  meta {
+    description: "Filter a joined read-classification parquet to retain reads with any viral signal (OR semantics across K2 kingdom, Kallisto hit, VNP viral call, and geNomad viral taxonomy). Emits a filtered parquet and a plain-text list of READ_IDs."
+  }
+
+  input {
+    File    joined_parquet
+    String? sample_id_override
+
+    Int     machine_mem_gb = 16
+    String  docker = "quay.io/broadinstitute/py3-bio:0.1.5"
+  }
+
+  parameter_meta {
+    joined_parquet: {
+      description: "Joined read-classification parquet (output of join_read_classifications). Must contain READ_ID, K2_KINGDOM, KALLISTO_DB_ID, VNP_CALL, and GENOMAD_TAXONOMY columns.",
+      patterns: ["*.parquet"],
+      category: "required"
+    }
+    sample_id_override: {
+      description: "Optional sample identifier. Defaults to the filename stem after stripping .read_classifications.parquet.",
+      category: "common"
+    }
+  }
+
+  String derived_sample_id = sub(basename(joined_parquet), "\\.read_classifications\\.parquet$", "")
+  String sample_id         = select_first([sample_id_override, derived_sample_id])
+  String out_parquet       = sample_id + ".viral_reads.parquet"
+  String out_read_ids      = sample_id + ".viral_read_ids.txt"
+
+  command <<<
+    set -e
+    pip install duckdb --quiet --no-cache-dir
+    python3<<CODE
+import sys
+import duckdb
+
+INPUT       = "~{joined_parquet}"
+OUT_PARQUET = "~{out_parquet}"
+OUT_IDS     = "~{out_read_ids}"
+
+REQUIRED_COLUMNS = {
+    "READ_ID", "K2_KINGDOM", "KALLISTO_DB_ID", "VNP_CALL", "GENOMAD_TAXONOMY",
+}
+
+def _qsql(s):
+    return s.replace("'", "''")
+
+con = duckdb.connect()
+con.execute(f"CREATE VIEW input_reads AS SELECT * FROM read_parquet('{_qsql(INPUT)}')")
+
+# -- Schema check ---------------------------------------------------------
+cols = con.execute("DESCRIBE SELECT * FROM input_reads").fetchall()
+col_names = {c[0] for c in cols}
+missing = REQUIRED_COLUMNS - col_names
+if missing:
+    print(f"ERROR: Missing required columns: {sorted(missing)}", file=sys.stderr)
+    sys.exit(1)
+
+# -- Input stats ----------------------------------------------------------
+n_input = con.execute("SELECT count(*) FROM input_reads").fetchone()[0]
+print(f"Input: {n_input:,} rows", file=sys.stderr)
+
+# -- Per-rule diagnostic counts ------------------------------------------
+rule_counts = con.execute("""
+    SELECT
+        count(*) FILTER (WHERE K2_KINGDOM = 'Viruses')                              AS r1,
+        count(*) FILTER (WHERE KALLISTO_DB_ID IS NOT NULL AND KALLISTO_DB_ID != '') AS r2,
+        count(*) FILTER (WHERE VNP_CALL IN ('Viral', 'Unclassified', 'Ambiguous', 'Multi-mapped')) AS r3,
+        count(*) FILTER (WHERE starts_with(GENOMAD_TAXONOMY, 'Viruses'))            AS r4
+    FROM input_reads
+""").fetchone()
+
+print(f"  Rule 1 - K2_KINGDOM = 'Viruses':       {rule_counts[0]:>10,}", file=sys.stderr)
+print(f"  Rule 2 - KALLISTO_DB_ID not empty:     {rule_counts[1]:>10,}", file=sys.stderr)
+print(f"  Rule 3 - VNP_CALL in viral whitelist:  {rule_counts[2]:>10,}", file=sys.stderr)
+print(f"  Rule 4 - GENOMAD_TAXONOMY ~ 'Viruses': {rule_counts[3]:>10,}", file=sys.stderr)
+
+# -- Filter (OR semantics) -----------------------------------------------
+con.execute("""
+    CREATE TABLE filtered AS
+    SELECT *
+    FROM input_reads
+    WHERE K2_KINGDOM = 'Viruses'
+       OR (KALLISTO_DB_ID IS NOT NULL AND KALLISTO_DB_ID != '')
+       OR VNP_CALL IN ('Viral', 'Unclassified', 'Ambiguous', 'Multi-mapped')
+       OR starts_with(GENOMAD_TAXONOMY, 'Viruses')
+""")
+
+n_filtered = con.execute("SELECT count(*) FROM filtered").fetchone()[0]
+pct = (n_filtered / n_input * 100) if n_input else 0.0
+print(f"\nFiltered: {n_filtered:,} rows ({pct:.1f}% of input)", file=sys.stderr)
+
+# -- Write outputs --------------------------------------------------------
+con.execute(f"COPY filtered TO '{_qsql(OUT_PARQUET)}' (FORMAT PARQUET, COMPRESSION ZSTD)")
+print(f"Parquet: {OUT_PARQUET}", file=sys.stderr)
+
+con.execute(f"""
+    COPY (SELECT READ_ID FROM filtered ORDER BY READ_ID)
+    TO '{_qsql(OUT_IDS)}' (FORMAT CSV, DELIMITER '\t', HEADER FALSE)
+""")
+print(f"Read IDs: {OUT_IDS}", file=sys.stderr)
+
+con.close()
+CODE
+  >>>
+
+  output {
+    File viral_reads_parquet = "~{out_parquet}"
+    File viral_read_ids      = "~{out_read_ids}"
+  }
+
+  runtime {
+    docker:           docker
+    memory:           "~{machine_mem_gb} GB"
+    cpu:              2
+    disks:            "local-disk ~{ceil(size(joined_parquet, 'GB') * 3 + 20)} HDD"
+    disk:             "~{ceil(size(joined_parquet, 'GB') * 3 + 20)} GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible:      2
     maxRetries:       2
