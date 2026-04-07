@@ -3172,7 +3172,7 @@ con.execute(f"COPY filtered TO '{_qsql(OUT_PARQUET)}' (FORMAT PARQUET, COMPRESSI
 print(f"Parquet: {OUT_PARQUET}", file=sys.stderr)
 
 con.execute(f"""
-    COPY (SELECT READ_ID FROM filtered ORDER BY READ_ID)
+    COPY (SELECT DISTINCT READ_ID FROM filtered ORDER BY READ_ID)
     TO '{_qsql(OUT_IDS)}' (FORMAT CSV, DELIMITER '\t', HEADER FALSE)
 """)
 print(f"Read IDs: {OUT_IDS}", file=sys.stderr)

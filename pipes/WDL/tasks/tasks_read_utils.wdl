@@ -631,3 +631,98 @@ task read_depths {
     dx_instance_type: "mem1_ssd1_v2_x2"
   }
 }
+
+task filter_bam_by_read_list {
+  meta {
+    description: "Subset a BAM to only reads listed in a flat READ_ID text file, preserving mate-level specificity. Each line is a READ_ID optionally ending in '/1' or '/2'; lines with no suffix are treated as 'both mates'. If both /1 and /2 appear for the same bare qname, both mates are kept. Uses samtools+awk streaming for speed."
+  }
+
+  input {
+    File    reads_bam
+    File    read_ids_txt
+    String? sample_id_override
+
+    Int     machine_mem_gb = 8
+    Int     cpu            = 4
+    String  docker         = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+  }
+
+  parameter_meta {
+    reads_bam: {
+      description: "Input BAM file.",
+      patterns: ["*.bam"],
+      category: "required"
+    }
+    read_ids_txt: {
+      description: "Flat text file of READ_IDs, one per line. Each READ_ID may optionally end in '/1' or '/2' to indicate a specific mate; bare READ_IDs are interpreted as 'keep both mates'.",
+      patterns: ["*.txt", "*.tsv"],
+      category: "required"
+    }
+    sample_id_override: {
+      description: "Optional sample identifier. Defaults to the BAM filename stem.",
+      category: "common"
+    }
+  }
+
+  String derived_sample_id = sub(basename(reads_bam), "\\.bam$", "")
+  String sample_id         = select_first([sample_id_override, derived_sample_id])
+  String out_bam           = sample_id + ".filtered.bam"
+
+  command <<<
+    set -eo pipefail
+
+    samtools view -@ ~{cpu} -h "~{reads_bam}" \
+      | awk -v ids="~{read_ids_txt}" '
+          BEGIN {
+              while ((getline line < ids) > 0) {
+                  mate  = "both"
+                  qname = line
+                  if (match(line, /\/[12]$/)) {
+                      mate  = substr(line, RSTART + 1, 1)
+                      qname = substr(line, 1, RSTART - 1)
+                  }
+                  if (qname in keep) {
+                      if (keep[qname] != mate) keep[qname] = "both"
+                  } else {
+                      keep[qname] = mate
+                  }
+              }
+              close(ids)
+          }
+          /^@/ { print; next }
+          {
+              m = keep[$1]
+              if (m == "") next
+              if (m == "both") { print; next }
+              f = $2
+              is_r1 = (int(f/64) % 2)
+              is_r2 = (int(f/128) % 2)
+              if (m == "1" && is_r1) { print; next }
+              if (m == "2" && is_r2) { print; next }
+          }
+        ' \
+      | samtools view -@ ~{cpu} -b -o "~{out_bam}" -
+
+    echo "=== filter_bam_by_read_list counts ===" >&2
+    echo -n "input records:    " >&2; samtools view -c "~{reads_bam}"           >&2
+    echo -n "output records:   " >&2; samtools view -c "~{out_bam}"             >&2
+    echo -n "output primary:   " >&2; samtools view -c -F 2304 "~{out_bam}"     >&2
+    echo -n "output primary R1:" >&2; samtools view -c -F 2304 -f 64 "~{out_bam}"  >&2
+    echo -n "output primary R2:" >&2; samtools view -c -F 2304 -f 128 "~{out_bam}" >&2
+  >>>
+
+  output {
+    File filtered_bam = "~{out_bam}"
+  }
+
+  runtime {
+    docker:           docker
+    memory:           "~{machine_mem_gb} GB"
+    cpu:              cpu
+    disks:            "local-disk ~{ceil(size(reads_bam, 'GB') * 2 + size(read_ids_txt, 'GB') + 20)} HDD"
+    disk:             "~{ceil(size(reads_bam, 'GB') * 2 + size(read_ids_txt, 'GB') + 20)} GB"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible:      2
+    maxRetries:       2
+  }
+}
