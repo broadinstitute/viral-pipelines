@@ -2189,7 +2189,7 @@ task parse_kraken2_reads {
   >>>
 
   output {
-    File read_taxonomy = "~{out_compressed}"
+    File read_taxonomy = glob("*.read_taxonomy.tsv.zst")[0]
   }
 
   runtime {
