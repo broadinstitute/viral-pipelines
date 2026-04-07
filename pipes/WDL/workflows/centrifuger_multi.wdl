@@ -18,7 +18,7 @@ workflow centrifuger_multi {
         File?         taxonomy_db
         Boolean       resolve_strains = false
 
-        Int           machine_mem_gb = 480
+        Int           machine_mem_gb = 256
         Int           cpu            = 16
         String        docker = "ghcr.io/broadinstitute/docker-centrifuger:1.0.0"
     }
@@ -43,7 +43,7 @@ workflow centrifuger_multi {
             description: "When true and taxonomy_db is provided, reclassify 'no rank' nodes below species as 'strain'."
         }
         machine_mem_gb: {
-            description: "Memory in GB. Default 480 GB sized for multi-sample batch with NT-scale index."
+            description: "Memory in GB. Default 256 GB sized for multi-sample batch with NT-scale index."
         }
         cpu: {
             description: "Number of CPUs. Default 16 for multi-sample batch processing."

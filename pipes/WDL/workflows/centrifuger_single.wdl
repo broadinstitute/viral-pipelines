@@ -18,7 +18,7 @@ workflow centrifuger_single {
         File?   taxonomy_db
         Boolean resolve_strains = false
 
-        Int     machine_mem_gb = 240
+        Int     machine_mem_gb = 256
         String  docker = "ghcr.io/broadinstitute/docker-centrifuger:1.0.0"
     }
 
