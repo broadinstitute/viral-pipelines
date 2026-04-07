@@ -62,8 +62,6 @@ workflow centrifuger_single {
     }
 
     output {
-        Array[File] kreports                     = run_centrifuger.kreports
-        Array[File] centrifuger_logs             = run_centrifuger.centrifuger_logs
-        File?       centrifuger_reads_classified = parse_reads.centrifuger_reads_classified
+        File        centrifuger_reads_classified = select_first([parse_reads.centrifuger_reads_classified, run_centrifuger.classification_tsvs[0]])
     }
 }

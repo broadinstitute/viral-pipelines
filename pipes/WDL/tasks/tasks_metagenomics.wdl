@@ -2672,7 +2672,6 @@ task centrifuger {
   output {
     Array[File] classification_tsvs = glob("*.centrifuger.tsv")
     Array[File] kreports            = glob("*.centrifuger.kreport")
-    Array[File] centrifuger_logs    = glob("*.centrifuger.log")
   }
 
   runtime {
