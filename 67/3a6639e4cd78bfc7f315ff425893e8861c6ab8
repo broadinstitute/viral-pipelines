@@ -1,0 +1,24 @@
+pipes/WDL/workflows/join_read_classifications.wdl
+  aa2f0e565a0ecac3 18,28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "673a6639e4cd78bfc7f315ff425893e8861c6ab8",
+  "prompts": {
+    "aa2f0e565a0ecac3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "259e3d77-4ca5-4a86-9794-9bcfb6474d45",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/073e9639d1d4dc4e4b48081b4e53c4e18c9723b6878b727176249b42bdea13ca"
+    }
+  }
+}
