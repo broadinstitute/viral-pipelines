@@ -15,6 +15,7 @@ workflow join_read_classifications {
         File?   kraken2_reads
         File?   vnp_reads
         File?   genomad_virus_summary
+        File?   centrifuger_reads
         String  sample_id
     }
 
@@ -24,6 +25,7 @@ workflow join_read_classifications {
             kraken2_reads         = kraken2_reads,
             vnp_reads             = vnp_reads,
             genomad_virus_summary = genomad_virus_summary,
+            centrifuger_reads     = centrifuger_reads,
             sample_id             = sample_id
     }
 
