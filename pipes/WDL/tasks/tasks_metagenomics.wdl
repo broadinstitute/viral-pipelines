@@ -3308,8 +3308,8 @@ CODE
     docker:           docker
     memory:           "~{machine_mem_gb} GB"
     cpu:              1
-    disks:            "local-disk ~{ceil((size(kallisto_summary, 'GB') + size(kraken2_reads, 'GB') + size(vnp_reads, 'GB') + size(genomad_virus_summary, 'GB') + size(centrifuger_reads, 'GB')) * 4 + 10)} HDD"
-    disk:             "~{ceil((size(kallisto_summary, 'GB') + size(kraken2_reads, 'GB') + size(vnp_reads, 'GB') + size(genomad_virus_summary, 'GB') + size(centrifuger_reads, 'GB')) * 4 + 10)} GB"
+    disks:            "local-disk ~{ceil((size(kallisto_summary, 'GB') + size(kraken2_reads, 'GB') + size(vnp_reads, 'GB') + size(genomad_virus_summary, 'GB') + size(centrifuger_reads, 'GB')) * 8 + 50)} HDD"
+    disk:             "~{ceil((size(kallisto_summary, 'GB') + size(kraken2_reads, 'GB') + size(vnp_reads, 'GB') + size(genomad_virus_summary, 'GB') + size(centrifuger_reads, 'GB')) * 8 + 50)} GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible:      2
     maxRetries:       2
