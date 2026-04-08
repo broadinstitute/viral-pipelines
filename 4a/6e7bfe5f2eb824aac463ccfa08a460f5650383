@@ -1,0 +1,24 @@
+.dockstore.yml
+  ea17a26beaae4537 160-165
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "4a6e7bfe5f2eb824aac463ccfa08a460f5650383",
+  "prompts": {
+    "ea17a26beaae4537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9bcc1b61-2217-4417-9617-7358116c3560",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 0,
+      "accepted_lines": 6,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/7bb67d0cc92fa1d0419099f01ac3784a40b960c874e1a9ac317f396a5adb8f86"
+    }
+  }
+}
