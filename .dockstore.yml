@@ -157,6 +157,12 @@ workflows:
   - name: find_illumina_files
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/find_illumina_files.wdl
+  - name: filter_bam_by_read_list
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/filter_bam_by_read_list.wdl
+  - name: filter_viral_reads
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/filter_viral_reads.wdl
   - name: filter_classified_bam_to_taxa
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/filter_classified_bam_to_taxa.wdl
