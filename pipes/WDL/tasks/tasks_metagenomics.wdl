@@ -1676,7 +1676,7 @@ task classify_reads_by_contig {
     Float   min_identity   = 90.0
     Float   min_query_cov  = 80.0
 
-    Int     machine_mem_gb = 4
+    Int     machine_mem_gb = 16
     String  docker         = "quay.io/broadinstitute/py3-bio:0.1.5"
   }
 
@@ -1762,6 +1762,8 @@ def prepare_paf_file(paf_path):
 
 
 con = duckdb.connect()
+con.execute("SET memory_limit='~{machine_mem_gb}gb'")
+con.execute("SET temp_directory='/tmp/duckdb_spill'")
 
 # Step 1: Parse PAF -- normalize variable-width file then read as fixed 15-col TSV
 print(f"Reading PAF file: ~{paf_file}", file=sys.stderr)
@@ -1889,25 +1891,38 @@ con.execute("DROP TABLE clf")
 # Step 4: Aggregate to one row per read
 # Pick best alignment per read (highest MAPQ, then highest pct_identity).
 # If a read maps to contigs with different classifications, flag as Multi-mapped.
+# Three sequential passes over merged so it can be freed before result is built:
+# Pass 1 (cheap, streaming): multi-mapping detection via GROUP BY
+# Pass 2 (expensive, window fn): best alignment per read via ROW_NUMBER()
+# Pass 3: join two small O(unique reads) tables; merged already freed
 print("Aggregating to one row per read...", file=sys.stderr)
+
+# Pass 1: cheap streaming aggregation -- tiny output, frees memory before window fn
 con.execute("""
-    CREATE TABLE result AS
-    WITH ranked AS (
+    CREATE TABLE call_counts AS
+    SELECT query_name, COUNT(DISTINCT call) AS n_distinct_calls
+    FROM merged
+    GROUP BY query_name
+""")
+
+# Pass 2: expensive window function -- call_counts (~2 cols) is all that sits alongside merged
+con.execute("""
+    CREATE TABLE best AS
+    SELECT * EXCLUDE (rn) FROM (
         SELECT *,
             ROW_NUMBER() OVER (
                 PARTITION BY query_name
                 ORDER BY mapping_quality DESC, pct_identity DESC
             ) AS rn
         FROM merged
-    ),
-    best AS (
-        SELECT * FROM ranked WHERE rn = 1
-    ),
-    call_counts AS (
-        SELECT query_name, COUNT(DISTINCT call) AS n_distinct_calls
-        FROM merged
-        GROUP BY query_name
-    )
+    ) WHERE rn = 1
+""")
+
+con.execute("DROP TABLE merged")
+
+# Pass 3: join two small tables -- merged already freed
+con.execute("""
+    CREATE TABLE result AS
     SELECT
         b.query_name AS read_id,
         b.query_length AS read_length,
@@ -1930,7 +1945,8 @@ con.execute("""
     FROM best b
     JOIN call_counts cc ON b.query_name = cc.query_name
 """)
-con.execute("DROP TABLE merged")
+con.execute("DROP TABLE best")
+con.execute("DROP TABLE call_counts")
 
 # Stats
 n_reads = con.execute("SELECT count(*) FROM result").fetchone()[0]
@@ -2700,7 +2716,7 @@ task join_read_classifications {
     File?   genomad_virus_summary     # geNomad virus summary TSV (LEFT JOIN via VNP_CONTIG_ID)
     String  sample_id                 # Required — filters Kallisto/K2 tables, stamps SAMPLE_ID column
 
-    Int     machine_mem_gb = 16
+    Int     machine_mem_gb = 32
     String  docker = "quay.io/broadinstitute/py3-bio:0.1.5"
   }
 
