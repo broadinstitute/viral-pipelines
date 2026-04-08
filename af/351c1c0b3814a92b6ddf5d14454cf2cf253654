@@ -1,0 +1,39 @@
+pipes/WDL/tasks/tasks_metagenomics.wdl
+  ea17a26beaae4537 2719
+  aa2f0e565a0ecac3 1679,1765-1766,1894-1897,1899-1900,1902-1911,1918-1925,1948-1949
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "af351c1c0b3814a92b6ddf5d14454cf2cf253654",
+  "prompts": {
+    "aa2f0e565a0ecac3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "259e3d77-4ca5-4a86-9794-9bcfb6474d45",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 29,
+      "total_deletions": 13,
+      "accepted_lines": 29,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/14e15b97dd8102b8512777934e2ea59e314efd02f37349963a7311ba49340ccc"
+    },
+    "ea17a26beaae4537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9bcc1b61-2217-4417-9617-7358116c3560",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Cesar Arze",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/44a7faabbfac3f85cff712722c60c9f884a2eb34b08f5075ba58b09c60749b86"
+    }
+  }
+}
