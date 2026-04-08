@@ -2706,7 +2706,7 @@ task centrifuger {
 
 task join_read_classifications {
   meta {
-    description: "Join read-level classifications from Kallisto, Kraken2, VirNucPro, and geNomad into a single ZSTD-compressed Parquet file keyed on SAMPLE_ID + READ_ID. Uses DuckDB FULL OUTER JOINs so reads from any source are included."
+    description: "Join read-level classifications from Kallisto, Kraken2, VirNucPro, geNomad, and (optionally) Centrifuger into a single ZSTD-compressed Parquet file keyed on SAMPLE_ID + READ_ID. Uses DuckDB FULL OUTER JOINs across the primary read sources; Centrifuger and geNomad are LEFT JOINed as enrichments."
   }
 
   input {
@@ -2714,6 +2714,7 @@ task join_read_classifications {
     File?   kraken2_reads             # Kraken2 reads parquet (filtered by sample_id)
     File?   vnp_reads                 # VirNucPro reads parquet (all rows used)
     File?   genomad_virus_summary     # geNomad virus summary TSV (LEFT JOIN via VNP_CONTIG_ID)
+    File?   centrifuger_reads         # Centrifuger reads TSV (LEFT JOIN via stripped READ_ID; secondary tie-breaker)
     String  sample_id                 # Required — filters Kallisto/K2 tables, stamps SAMPLE_ID column
 
     Int     machine_mem_gb = 32
@@ -2739,6 +2740,11 @@ task join_read_classifications {
     genomad_virus_summary: {
       description: "geNomad virus summary in TSV format. LEFT JOINed to reads via VNP_CONTIG_ID to annotate viral contigs. Skipped if not provided or empty.",
       patterns: ["*.tsv"],
+      category: "common"
+    }
+    centrifuger_reads: {
+      description: "Centrifuger per-read classifications in TSV format, optionally zstd-compressed (.tsv.zst) or in a tar.zst/tar.gz tarball. LEFT JOINed onto the main result via stripped READ_ID (no mate suffix). Used as a secondary tie-breaker pass run on viral-filtered reads from a prior invocation. Skipped if not provided or empty.",
+      patterns: ["*.parquet", "*.tsv", "*.tsv.zst", "*.tar.zst", "*.tar.gz"],
       category: "common"
     }
     sample_id: {
@@ -2806,17 +2812,19 @@ def _duckdb_reader(path):
     return f"read_csv('{path}', delim='\\t', header=true, auto_detect=true)"
 
 
-summary      = "~{default='__NONE__' kallisto_summary}"
-vnp          = "~{default='__NONE__' vnp_reads}"
-kraken2      = "~{default='__NONE__' kraken2_reads}"
+summary       = "~{default='__NONE__' kallisto_summary}"
+vnp           = "~{default='__NONE__' vnp_reads}"
+kraken2       = "~{default='__NONE__' kraken2_reads}"
 virus_summary = "~{default='__NONE__' genomad_virus_summary}"
-sample_id    = "~{sample_id}"
-output       = "~{out_filename}"
+centrifuger   = "~{default='__NONE__' centrifuger_reads}"
+sample_id     = "~{sample_id}"
+output        = "~{out_filename}"
 
-has_kallisto = _file_is_usable(summary)
-has_vnp      = _file_is_usable(vnp)
-has_kraken2  = _file_is_usable(kraken2)
-has_genomad  = _file_is_usable(virus_summary)
+has_kallisto    = _file_is_usable(summary)
+has_vnp         = _file_is_usable(vnp)
+has_kraken2     = _file_is_usable(kraken2)
+has_genomad     = _file_is_usable(virus_summary)
+has_centrifuger = _file_is_usable(centrifuger)
 
 if has_kallisto:
     summary = _resolve_file(summary)
@@ -2824,46 +2832,106 @@ if has_vnp:
     vnp = _resolve_file(vnp)
 if has_kraken2:
     kraken2 = _resolve_file(kraken2)
+if has_centrifuger:
+    centrifuger = _resolve_file(centrifuger)
 
-if not any([has_kallisto, has_vnp, has_kraken2, has_genomad]):
+if not any([has_kallisto, has_vnp, has_kraken2, has_genomad, has_centrifuger]):
     print("ERROR: All input files are missing or empty — nothing to join.", file=sys.stderr)
     sys.exit(1)
 
 con = duckdb.connect()
+con.execute("SET memory_limit='~{machine_mem_gb}gb'")
+con.execute("SET temp_directory='/tmp/duckdb_spill'")
 
 # ── 1. Kallisto summary ──────────────────────────────────────────────
+# Kallisto pseudoaligns each mate independently and emits one row per mate
+# with /1 or /2 suffixed READ_IDs. We strip the suffix and collapse mates
+# into one row per bare READ_ID, picking the longer KALLISTO_SEQUENCE_LENGTH
+# hit (stronger pseudoalignment evidence) and computing a per-read
+# KALLISTO_CONCORDANCE flag based on whether mates agreed on KALLISTO_DB_ID.
 if has_kallisto:
     print(f"Reading Kallisto summary: {summary}", file=sys.stderr)
     con.execute(f"""
-        CREATE TABLE kallisto AS
+        CREATE TABLE kallisto_raw AS
         SELECT
             SAMPLE_ID,
-            READ_ID,
+            regexp_replace(READ_ID, '/[12]$', '') AS READ_ID,
+            CASE WHEN READ_ID LIKE '%/2' THEN 2 ELSE 1 END AS MATE,
             DB_ID            AS KALLISTO_DB_ID,
             TAXONOMY_LINEAGE AS KALLISTO_TAXONOMY_LINEAGE,
             TAXONOMY_NAME    AS KALLISTO_TAXONOMY_NAME,
             SEQUENCE_LENGTH  AS KALLISTO_SEQUENCE_LENGTH
         FROM {_duckdb_reader(summary)}
     """)
+    n_kallisto_raw = con.execute("SELECT count(*) FROM kallisto_raw").fetchone()[0]
+    print(f"  {n_kallisto_raw:,} Kallisto mate rows loaded.", file=sys.stderr)
+
+    con.execute("""
+        CREATE TABLE kallisto AS
+        WITH ranked AS (
+            SELECT *,
+                ROW_NUMBER() OVER (
+                    PARTITION BY READ_ID
+                    ORDER BY KALLISTO_SEQUENCE_LENGTH DESC NULLS LAST,
+                             MATE ASC
+                ) AS rn
+            FROM kallisto_raw
+        ),
+        per_read AS (
+            SELECT READ_ID,
+                COUNT(*) AS n_mate_rows,
+                COUNT(DISTINCT KALLISTO_DB_ID) AS n_distinct_db
+            FROM kallisto_raw
+            GROUP BY READ_ID
+        )
+        SELECT
+            r.SAMPLE_ID,
+            r.READ_ID,
+            r.KALLISTO_DB_ID,
+            r.KALLISTO_TAXONOMY_LINEAGE,
+            r.KALLISTO_TAXONOMY_NAME,
+            r.KALLISTO_SEQUENCE_LENGTH,
+            CASE
+                WHEN p.n_mate_rows = 1     THEN 'Singleton'
+                WHEN p.n_distinct_db <= 1  THEN 'Concordant'
+                ELSE                            'Discordant'
+            END AS KALLISTO_CONCORDANCE
+        FROM ranked r
+        JOIN per_read p USING (READ_ID)
+        WHERE r.rn = 1
+    """)
+    con.execute("DROP TABLE kallisto_raw")
     n_kallisto = con.execute("SELECT count(*) FROM kallisto").fetchone()[0]
-    print(f"  {n_kallisto:,} Kallisto reads loaded.", file=sys.stderr)
+    n_disc = con.execute("SELECT count(*) FROM kallisto WHERE KALLISTO_CONCORDANCE='Discordant'").fetchone()[0]
+    n_sing = con.execute("SELECT count(*) FROM kallisto WHERE KALLISTO_CONCORDANCE='Singleton'").fetchone()[0]
+    print(f"  {n_kallisto:,} Kallisto reads after mate collapse "
+          f"({n_disc:,} discordant, {n_sing:,} singleton).", file=sys.stderr)
 else:
     print(f"  Skipping Kallisto (file missing or empty).", file=sys.stderr)
     con.execute("""
         CREATE TABLE kallisto (
             SAMPLE_ID VARCHAR, READ_ID VARCHAR,
             KALLISTO_DB_ID VARCHAR, KALLISTO_TAXONOMY_LINEAGE VARCHAR,
-            KALLISTO_TAXONOMY_NAME VARCHAR, KALLISTO_SEQUENCE_LENGTH BIGINT
+            KALLISTO_TAXONOMY_NAME VARCHAR, KALLISTO_SEQUENCE_LENGTH BIGINT,
+            KALLISTO_CONCORDANCE VARCHAR
         )
     """)
 
 # ── 2. VirNucPro reads ───────────────────────────────────────────────
+# VNP aligns each mate independently and emits one row per mate with /1 or
+# /2 suffixed read_ids. We strip the suffix and collapse mates into one row
+# per bare READ_ID, picking the best alignment per read (highest
+# VNP_MAPPING_QUALITY, then VNP_PCT_IDENTITY — same tie-break as
+# classify_reads_by_contig). VNP_CONCORDANCE compares the high-level
+# VNP_CALL between mates, so two mates aligned to different viral contigs
+# are still considered concordant in classification.
 if has_vnp:
     print(f"Reading VirNucPro reads: {vnp}", file=sys.stderr)
     con.execute(f"""
-        CREATE TABLE vnp AS
+        CREATE TABLE vnp_raw AS
         SELECT
-            read_id           AS READ_ID,
+            regexp_replace(read_id, '/[12]$', '') AS READ_ID,
+            CASE WHEN read_id LIKE '%/2' THEN 2 ELSE 1 END AS MATE,
             contig_id         AS VNP_CONTIG_ID,
             contig_length     AS VNP_CONTIG_LENGTH,
             strand            AS VNP_STRAND,
@@ -2883,8 +2951,50 @@ if has_vnp:
             nonviral_proportion     AS VNP_NONVIRAL_PROPORTION
         FROM {_duckdb_reader(vnp)}
     """)
+    n_vnp_raw = con.execute("SELECT count(*) FROM vnp_raw").fetchone()[0]
+    print(f"  {n_vnp_raw:,} VNP mate rows loaded.", file=sys.stderr)
+
+    con.execute("""
+        CREATE TABLE vnp AS
+        WITH ranked AS (
+            SELECT *,
+                ROW_NUMBER() OVER (
+                    PARTITION BY READ_ID
+                    ORDER BY VNP_MAPPING_QUALITY DESC NULLS LAST,
+                             VNP_PCT_IDENTITY DESC NULLS LAST,
+                             MATE ASC
+                ) AS rn
+            FROM vnp_raw
+        ),
+        per_read AS (
+            SELECT READ_ID,
+                COUNT(*) AS n_mate_rows,
+                COUNT(DISTINCT VNP_CALL) AS n_distinct_call
+            FROM vnp_raw
+            GROUP BY READ_ID
+        )
+        SELECT
+            r.READ_ID,
+            r.VNP_CONTIG_ID, r.VNP_CONTIG_LENGTH, r.VNP_STRAND, r.VNP_READ_LENGTH,
+            r.VNP_MAPPING_QUALITY, r.VNP_PCT_IDENTITY, r.VNP_PCT_QUERY_COV,
+            r.VNP_MAPPED_WELL, r.VNP_CALL, r.VNP_TIER, r.VNP_WEIGHTED_DELTA,
+            r.VNP_N_CHUNKS, r.VNP_N_CONFIDENT_VIRAL, r.VNP_N_CONFIDENT_NONVIRAL,
+            r.VNP_N_AMBIGUOUS, r.VNP_VIRAL_PROPORTION, r.VNP_NONVIRAL_PROPORTION,
+            CASE
+                WHEN p.n_mate_rows = 1       THEN 'Singleton'
+                WHEN p.n_distinct_call <= 1  THEN 'Concordant'
+                ELSE                              'Discordant'
+            END AS VNP_CONCORDANCE
+        FROM ranked r
+        JOIN per_read p USING (READ_ID)
+        WHERE r.rn = 1
+    """)
+    con.execute("DROP TABLE vnp_raw")
     n_vnp = con.execute("SELECT count(*) FROM vnp").fetchone()[0]
-    print(f"  {n_vnp:,} VNP reads loaded.", file=sys.stderr)
+    n_disc = con.execute("SELECT count(*) FROM vnp WHERE VNP_CONCORDANCE='Discordant'").fetchone()[0]
+    n_sing = con.execute("SELECT count(*) FROM vnp WHERE VNP_CONCORDANCE='Singleton'").fetchone()[0]
+    print(f"  {n_vnp:,} VNP reads after mate collapse "
+          f"({n_disc:,} discordant, {n_sing:,} singleton).", file=sys.stderr)
 else:
     print(f"  Skipping VirNucPro (file missing or empty).", file=sys.stderr)
     con.execute("""
@@ -2895,11 +3005,13 @@ else:
             VNP_CALL VARCHAR, VNP_TIER BIGINT, VNP_WEIGHTED_DELTA DOUBLE,
             VNP_N_CHUNKS BIGINT, VNP_N_CONFIDENT_VIRAL BIGINT,
             VNP_N_CONFIDENT_NONVIRAL BIGINT, VNP_N_AMBIGUOUS BIGINT,
-            VNP_VIRAL_PROPORTION DOUBLE, VNP_NONVIRAL_PROPORTION DOUBLE
+            VNP_VIRAL_PROPORTION DOUBLE, VNP_NONVIRAL_PROPORTION DOUBLE,
+            VNP_CONCORDANCE VARCHAR
         )
     """)
 
-# Kallisto and VNP both use READ_ID with /1 or /2 mate suffix
+# Both kallisto and vnp tables now key on bare READ_ID after mate collapse,
+# so this is a plain equi-join.
 con.execute("""
     CREATE TABLE joined_kv AS
     SELECT
@@ -2908,6 +3020,7 @@ con.execute("""
         k.KALLISTO_TAXONOMY_LINEAGE,
         k.KALLISTO_TAXONOMY_NAME,
         k.KALLISTO_SEQUENCE_LENGTH,
+        k.KALLISTO_CONCORDANCE,
         v.VNP_CONTIG_ID,
         v.VNP_CONTIG_LENGTH,
         v.VNP_STRAND,
@@ -2924,7 +3037,8 @@ con.execute("""
         v.VNP_N_CONFIDENT_NONVIRAL,
         v.VNP_N_AMBIGUOUS,
         v.VNP_VIRAL_PROPORTION,
-        v.VNP_NONVIRAL_PROPORTION
+        v.VNP_NONVIRAL_PROPORTION,
+        v.VNP_CONCORDANCE
     FROM kallisto k
     FULL OUTER JOIN vnp v ON k.READ_ID = v.READ_ID
 """)
@@ -2934,8 +3048,8 @@ n_kv = con.execute("SELECT count(*) FROM joined_kv").fetchone()[0]
 print(f"  {n_kv:,} rows after Kallisto + VNP full outer join.", file=sys.stderr)
 
 # ── 3. Kraken2 reads ─────────────────────────────────────────────────
-# Kraken2 READ_IDs lack the /1 or /2 mate suffix, so strip it from
-# the Kallisto/VNP side when joining.
+# Kraken2 (paired-end mode) emits one classification per read pair, so its
+# READ_IDs are already bare. Plain equi-join now that the kv side is also bare.
 if has_kraken2:
     print(f"Reading Kraken2 reads: {kraken2}", file=sys.stderr)
     con.execute(f"""
@@ -2967,6 +3081,7 @@ con.execute("""
         jkv.KALLISTO_TAXONOMY_LINEAGE,
         jkv.KALLISTO_TAXONOMY_NAME,
         jkv.KALLISTO_SEQUENCE_LENGTH,
+        jkv.KALLISTO_CONCORDANCE,
         k.K2_TAXONOMY_ID,
         k.K2_TAX_NAME,
         k.K2_KINGDOM,
@@ -2986,17 +3101,92 @@ con.execute("""
         jkv.VNP_N_CONFIDENT_NONVIRAL,
         jkv.VNP_N_AMBIGUOUS,
         jkv.VNP_VIRAL_PROPORTION,
-        jkv.VNP_NONVIRAL_PROPORTION
+        jkv.VNP_NONVIRAL_PROPORTION,
+        jkv.VNP_CONCORDANCE
     FROM joined_kv jkv
-    FULL OUTER JOIN k2 k
-        ON regexp_replace(jkv.READ_ID, '/[12]$', '') = k.READ_ID
+    FULL OUTER JOIN k2 k ON jkv.READ_ID = k.READ_ID
 """)
 con.execute("DROP TABLE joined_kv")
 con.execute("DROP TABLE k2")
 n_all = con.execute("SELECT count(*) FROM joined_all").fetchone()[0]
 print(f"  {n_all:,} rows after Kraken2 full outer join.", file=sys.stderr)
 
-# ── 4. geNomad virus summary (LEFT JOIN on contig ID) ────────────────
+# ── 4. Centrifuger reads (LEFT JOIN on bare READ_ID) ─────────────────
+# Centrifuger is a secondary tie-breaker pass run on viral-filtered reads
+# from a prior invocation, so its read set is by construction a subset of
+# joined_all. LEFT JOIN preserves all joined_all rows and adds CENTRIFUGER_*
+# columns where a match exists. Centrifuger (paired-end mode) emits one
+# classification per read pair so its READ_IDs are already bare — same key
+# as the now-collapsed joined_all.
+if has_centrifuger:
+    print(f"Reading Centrifuger reads: {centrifuger}", file=sys.stderr)
+    con.execute(f"""
+        CREATE TABLE centrifuger AS
+        SELECT
+            READ_ID,
+            SEQ_ID            AS CENTRIFUGER_SEQ_ID,
+            TAXONOMY_ID       AS CENTRIFUGER_TAXONOMY_ID,
+            SCORE             AS CENTRIFUGER_SCORE,
+            SECOND_BEST_SCORE AS CENTRIFUGER_SECOND_BEST_SCORE,
+            HIT_LENGTH        AS CENTRIFUGER_HIT_LENGTH,
+            QUERY_LENGTH      AS CENTRIFUGER_QUERY_LENGTH,
+            NUM_MATCHES       AS CENTRIFUGER_NUM_MATCHES,
+            TAX_NAME          AS CENTRIFUGER_TAX_NAME,
+            KINGDOM           AS CENTRIFUGER_KINGDOM,
+            TAX_RANK          AS CENTRIFUGER_TAX_RANK
+        FROM {_duckdb_reader(centrifuger)}
+    """)
+    n_centrifuger = con.execute("SELECT count(*) FROM centrifuger").fetchone()[0]
+    print(f"  {n_centrifuger:,} Centrifuger reads loaded.", file=sys.stderr)
+else:
+    print(f"  Skipping Centrifuger (file missing or empty).", file=sys.stderr)
+    con.execute("""
+        CREATE TABLE centrifuger (
+            READ_ID VARCHAR,
+            CENTRIFUGER_SEQ_ID VARCHAR, CENTRIFUGER_TAXONOMY_ID BIGINT,
+            CENTRIFUGER_SCORE BIGINT, CENTRIFUGER_SECOND_BEST_SCORE BIGINT,
+            CENTRIFUGER_HIT_LENGTH BIGINT, CENTRIFUGER_QUERY_LENGTH BIGINT,
+            CENTRIFUGER_NUM_MATCHES BIGINT, CENTRIFUGER_TAX_NAME VARCHAR,
+            CENTRIFUGER_KINGDOM VARCHAR, CENTRIFUGER_TAX_RANK VARCHAR
+        )
+    """)
+
+con.execute("""
+    CREATE TABLE joined_all_c AS
+    SELECT
+        a.*,
+        c.CENTRIFUGER_SEQ_ID,
+        c.CENTRIFUGER_TAXONOMY_ID,
+        c.CENTRIFUGER_SCORE,
+        c.CENTRIFUGER_SECOND_BEST_SCORE,
+        c.CENTRIFUGER_HIT_LENGTH,
+        c.CENTRIFUGER_QUERY_LENGTH,
+        c.CENTRIFUGER_NUM_MATCHES,
+        c.CENTRIFUGER_TAX_NAME,
+        c.CENTRIFUGER_KINGDOM,
+        c.CENTRIFUGER_TAX_RANK
+    FROM joined_all a
+    LEFT JOIN centrifuger c ON a.READ_ID = c.READ_ID
+""")
+con.execute("DROP TABLE joined_all")
+
+# Integrity check: every centrifuger read should already be present in
+# joined_all (centrifuger is a downstream pass on viral-filtered reads).
+# A non-zero count here suggests centrifuger was run on reads outside the
+# upstream joined set, which would indicate a workflow wiring bug.
+if has_centrifuger:
+    n_orphan = con.execute("""
+        SELECT count(*) FROM centrifuger c
+        WHERE c.READ_ID NOT IN (SELECT READ_ID FROM joined_all_c)
+    """).fetchone()[0]
+    if n_orphan > 0:
+        print(f"  WARNING: {n_orphan:,} Centrifuger reads have no match in the joined read set "
+              f"(unexpected — centrifuger should be a subset of upstream classifications).",
+              file=sys.stderr)
+
+con.execute("DROP TABLE centrifuger")
+
+# ── 5. geNomad virus summary (LEFT JOIN on contig ID) ────────────────
 # geNomad is contig-level annotation, not a read source — LEFT JOIN
 # enriches reads that mapped to viral contigs via VNP.
 if has_genomad:
@@ -3046,23 +3236,39 @@ con.execute(f"""
         g.GENOMAD_N_HALLMARKS,
         g.GENOMAD_MARKER_ENRICHMENT,
         g.GENOMAD_TAXONOMY
-    FROM joined_all j
+    FROM joined_all_c j
     LEFT JOIN genomad g ON j.VNP_CONTIG_ID = g.CONTIG_ID
 """)
-con.execute("DROP TABLE joined_all")
+con.execute("DROP TABLE joined_all_c")
 con.execute("DROP TABLE genomad")
 
 # ── Stats ────────────────────────────────────────────────────────────
 n_result = con.execute("SELECT count(*) FROM result").fetchone()[0]
-n_with_kallisto = con.execute("SELECT count(*) FROM result WHERE KALLISTO_DB_ID IS NOT NULL").fetchone()[0]
-n_with_k2 = con.execute("SELECT count(*) FROM result WHERE K2_TAXONOMY_ID IS NOT NULL").fetchone()[0]
-n_with_vnp = con.execute("SELECT count(*) FROM result WHERE VNP_CONTIG_ID IS NOT NULL").fetchone()[0]
-n_with_genomad = con.execute("SELECT count(*) FROM result WHERE GENOMAD_VIRUS_SCORE IS NOT NULL").fetchone()[0]
+n_with_kallisto    = con.execute("SELECT count(*) FROM result WHERE KALLISTO_DB_ID IS NOT NULL").fetchone()[0]
+n_with_k2          = con.execute("SELECT count(*) FROM result WHERE K2_TAXONOMY_ID IS NOT NULL").fetchone()[0]
+n_with_vnp         = con.execute("SELECT count(*) FROM result WHERE VNP_CONTIG_ID IS NOT NULL").fetchone()[0]
+n_with_genomad     = con.execute("SELECT count(*) FROM result WHERE GENOMAD_VIRUS_SCORE IS NOT NULL").fetchone()[0]
+n_with_centrifuger = con.execute("SELECT count(*) FROM result WHERE CENTRIFUGER_TAXONOMY_ID IS NOT NULL").fetchone()[0]
 print(f"\n  Final table: {n_result:,} rows", file=sys.stderr)
-print(f"  With Kallisto hit: {n_with_kallisto:,} ({n_with_kallisto/n_result*100:.1f}%)", file=sys.stderr)
-print(f"  With Kraken2 hit:  {n_with_k2:,} ({n_with_k2/n_result*100:.1f}%)", file=sys.stderr)
-print(f"  With VNP hit:      {n_with_vnp:,} ({n_with_vnp/n_result*100:.1f}%)", file=sys.stderr)
-print(f"  With geNomad hit:  {n_with_genomad:,} ({n_with_genomad/n_result*100:.1f}%)", file=sys.stderr)
+print(f"  With Kallisto hit:    {n_with_kallisto:,} ({n_with_kallisto/n_result*100:.1f}%)", file=sys.stderr)
+print(f"  With Kraken2 hit:     {n_with_k2:,} ({n_with_k2/n_result*100:.1f}%)", file=sys.stderr)
+print(f"  With VNP hit:         {n_with_vnp:,} ({n_with_vnp/n_result*100:.1f}%)", file=sys.stderr)
+print(f"  With geNomad hit:     {n_with_genomad:,} ({n_with_genomad/n_result*100:.1f}%)", file=sys.stderr)
+print(f"  With Centrifuger hit: {n_with_centrifuger:,} ({n_with_centrifuger/n_result*100:.1f}%)", file=sys.stderr)
+
+# Concordance breakdowns (Kallisto and VNP only — K2 and Centrifuger emit
+# pair-level classifications upstream so no mate-level data exists for them)
+for source, col in [("Kallisto", "KALLISTO_CONCORDANCE"), ("VNP", "VNP_CONCORDANCE")]:
+    rows = con.execute(f"""
+        SELECT {col}, count(*)
+        FROM result
+        WHERE {col} IS NOT NULL
+        GROUP BY {col}
+        ORDER BY {col}
+    """).fetchall()
+    if rows:
+        breakdown = ", ".join(f"{label}={n:,}" for label, n in rows)
+        print(f"  {source} concordance: {breakdown}", file=sys.stderr)
 
 # ── Write output ─────────────────────────────────────────────────────
 con.execute(f"""
@@ -3082,8 +3288,8 @@ CODE
     docker:           docker
     memory:           "~{machine_mem_gb} GB"
     cpu:              1
-    disks:            "local-disk ~{ceil((size(kallisto_summary, 'GB') + size(kraken2_reads, 'GB') + size(vnp_reads, 'GB') + size(genomad_virus_summary, 'GB')) * 4 + 10)} HDD"
-    disk:             "~{ceil((size(kallisto_summary, 'GB') + size(kraken2_reads, 'GB') + size(vnp_reads, 'GB') + size(genomad_virus_summary, 'GB')) * 4 + 10)} GB"
+    disks:            "local-disk ~{ceil((size(kallisto_summary, 'GB') + size(kraken2_reads, 'GB') + size(vnp_reads, 'GB') + size(genomad_virus_summary, 'GB') + size(centrifuger_reads, 'GB')) * 4 + 10)} HDD"
+    disk:             "~{ceil((size(kallisto_summary, 'GB') + size(kraken2_reads, 'GB') + size(vnp_reads, 'GB') + size(genomad_virus_summary, 'GB') + size(centrifuger_reads, 'GB')) * 4 + 10)} GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible:      2
     maxRetries:       2
