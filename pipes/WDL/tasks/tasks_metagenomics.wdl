@@ -2716,6 +2716,7 @@ task join_read_classifications {
     File?   genomad_virus_summary     # geNomad virus summary TSV (LEFT JOIN via VNP_CONTIG_ID)
     File?   centrifuger_reads         # Centrifuger reads TSV (LEFT JOIN via stripped READ_ID; secondary tie-breaker)
     String  sample_id                 # Required — filters Kallisto/K2 tables, stamps SAMPLE_ID column
+    Boolean filter_human_only_k2 = true  # Drop rows where K2=Homo sapiens and no other tool classified the read
 
     Int     machine_mem_gb = 32
     String  docker = "quay.io/broadinstitute/py3-bio:0.1.5"
@@ -2750,6 +2751,10 @@ task join_read_classifications {
     sample_id: {
       description: "Sample identifier used to filter Kallisto and Kraken2 tables and stamp the SAMPLE_ID column on every output row.",
       category: "required"
+    }
+    filter_human_only_k2: {
+      description: "When true (default), drop rows where Kraken2 classifies the read as Homo sapiens and no other tool (Kallisto, VNP, Centrifuger, geNomad) produced a classification. These reads are pre-depletion human reads that add no viral signal and account for ~97% of rows and ~93% of file size.",
+      category: "common"
     }
   }
 
@@ -3269,6 +3274,21 @@ for source, col in [("Kallisto", "KALLISTO_CONCORDANCE"), ("VNP", "VNP_CONCORDAN
     if rows:
         breakdown = ", ".join(f"{label}={n:,}" for label, n in rows)
         print(f"  {source} concordance: {breakdown}", file=sys.stderr)
+
+# ── Filter human-only K2 rows ─────────────────────────────────────────
+filter_human_only_k2 = ~{true="True" false="False" filter_human_only_k2}
+if filter_human_only_k2:
+    n_before = con.execute("SELECT count(*) FROM result").fetchone()[0]
+    con.execute("""
+        DELETE FROM result
+        WHERE K2_TAX_NAME = 'Homo sapiens'
+          AND KALLISTO_DB_ID          IS NULL
+          AND VNP_CALL                IS NULL
+          AND CENTRIFUGER_TAXONOMY_ID IS NULL
+          AND GENOMAD_TAXONOMY        IS NULL
+    """)
+    n_after = con.execute("SELECT count(*) FROM result").fetchone()[0]
+    print(f"  Filtered {n_before - n_after:,} human-only K2 rows ({n_before - n_after:,} → {n_after:,})", file=sys.stderr)
 
 # ── Write output ─────────────────────────────────────────────────────
 con.execute(f"""

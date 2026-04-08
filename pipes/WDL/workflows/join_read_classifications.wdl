@@ -17,6 +17,7 @@ workflow join_read_classifications {
         File?   genomad_virus_summary
         File?   centrifuger_reads
         String  sample_id
+        Boolean filter_human_only_k2 = true
     }
 
     call metagenomics.join_read_classifications as join_reads {
@@ -26,7 +27,8 @@ workflow join_read_classifications {
             vnp_reads             = vnp_reads,
             genomad_virus_summary = genomad_virus_summary,
             centrifuger_reads     = centrifuger_reads,
-            sample_id             = sample_id
+            sample_id             = sample_id,
+            filter_human_only_k2  = filter_human_only_k2
     }
 
     output {
