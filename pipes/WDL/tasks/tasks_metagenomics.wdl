@@ -2845,8 +2845,10 @@ if not any([has_kallisto, has_vnp, has_kraken2, has_genomad, has_centrifuger]):
     sys.exit(1)
 
 con = duckdb.connect()
-con.execute("SET memory_limit='~{machine_mem_gb}gb'")
+con.execute(f"SET memory_limit='{int(~{machine_mem_gb} * 0.8)}gb'")
 con.execute("SET temp_directory='/tmp/duckdb_spill'")
+
+filter_human_only_k2 = ~{true="True" false="False" filter_human_only_k2}
 
 # ── 1. Kallisto summary ──────────────────────────────────────────────
 # Kallisto pseudoaligns each mate independently and emits one row per mate
@@ -3057,6 +3059,16 @@ print(f"  {n_kv:,} rows after Kallisto + VNP full outer join.", file=sys.stderr)
 # READ_IDs are already bare. Plain equi-join now that the kv side is also bare.
 if has_kraken2:
     print(f"Reading Kraken2 reads: {kraken2}", file=sys.stderr)
+    # When filter_human_only_k2 is enabled, drop K2=Homo sapiens rows that have
+    # no Kallisto or VNP hit at load time — before the expensive FULL OUTER JOIN.
+    # Centrifuger runs post-depletion so its reads are by definition non-human;
+    # geNomad only annotates VNP-hit reads (already covered). This pushes the
+    # filter from a DELETE on a 65M-row result table to a WHERE clause that
+    # reduces K2 to ~1.7M rows before any join occurs.
+    if filter_human_only_k2:
+        k2_filter = f"AND NOT (TAX_NAME = 'Homo sapiens' AND READ_ID NOT IN (SELECT READ_ID FROM joined_kv))"
+    else:
+        k2_filter = ""
     con.execute(f"""
         CREATE TABLE k2 AS
         SELECT
@@ -3066,9 +3078,10 @@ if has_kraken2:
             KINGDOM     AS K2_KINGDOM
         FROM {_duckdb_reader(kraken2)}
         WHERE SAMPLE_ID = '{sample_id}'
+        {k2_filter}
     """)
     n_k2 = con.execute("SELECT count(*) FROM k2").fetchone()[0]
-    print(f"  {n_k2:,} Kraken2 reads loaded.", file=sys.stderr)
+    print(f"  {n_k2:,} Kraken2 reads loaded{' (human-only rows pre-filtered)' if filter_human_only_k2 else ''}.", file=sys.stderr)
 else:
     print(f"  Skipping Kraken2 (file missing or empty).", file=sys.stderr)
     con.execute("""
@@ -3182,7 +3195,8 @@ con.execute("DROP TABLE joined_all")
 if has_centrifuger:
     n_orphan = con.execute("""
         SELECT count(*) FROM centrifuger c
-        WHERE c.READ_ID NOT IN (SELECT READ_ID FROM joined_all_c)
+        LEFT JOIN joined_all_c a ON c.READ_ID = a.READ_ID
+        WHERE a.READ_ID IS NULL
     """).fetchone()[0]
     if n_orphan > 0:
         print(f"  WARNING: {n_orphan:,} Centrifuger reads have no match in the joined read set "
@@ -3274,21 +3288,6 @@ for source, col in [("Kallisto", "KALLISTO_CONCORDANCE"), ("VNP", "VNP_CONCORDAN
     if rows:
         breakdown = ", ".join(f"{label}={n:,}" for label, n in rows)
         print(f"  {source} concordance: {breakdown}", file=sys.stderr)
-
-# ── Filter human-only K2 rows ─────────────────────────────────────────
-filter_human_only_k2 = ~{true="True" false="False" filter_human_only_k2}
-if filter_human_only_k2:
-    n_before = con.execute("SELECT count(*) FROM result").fetchone()[0]
-    con.execute("""
-        DELETE FROM result
-        WHERE K2_TAX_NAME = 'Homo sapiens'
-          AND KALLISTO_DB_ID          IS NULL
-          AND VNP_CALL                IS NULL
-          AND CENTRIFUGER_TAXONOMY_ID IS NULL
-          AND GENOMAD_TAXONOMY        IS NULL
-    """)
-    n_after = con.execute("SELECT count(*) FROM result").fetchone()[0]
-    print(f"  Filtered {n_before - n_after:,} human-only K2 rows ({n_before - n_after:,} → {n_after:,})", file=sys.stderr)
 
 # ── Write output ─────────────────────────────────────────────────────
 con.execute(f"""
