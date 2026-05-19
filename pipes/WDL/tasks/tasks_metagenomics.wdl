@@ -967,7 +967,10 @@ task centrifuger {
 
     Int          machine_mem_gb = 240
     Int          cpu            = 8
-    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.11-classify"
+    # Pinned to the feature/centrifuger-integration build; bump to a real
+    # release tag (and remove the skip marker) once viral-ngs cuts one that
+    # contains the `metagenomics centrifuger*` CLI subcommands.
+    String       docker = "quay.io/broadinstitute/viral-ngs:feature-centrifuger-integration-classify" #skip-global-version-pin
   }
 
   Int disk_size = ceil((8 * size(reads_bams, "GB") + 3 * size(centrifuger_db_tgz, "GB") + 400) / 400.0) * 400
