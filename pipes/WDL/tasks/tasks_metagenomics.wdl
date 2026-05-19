@@ -1058,29 +1058,16 @@ task centrifuger {
 
     metagenomics --version | tee VERSION
 
-    # Shadow WDL booleans into shell variables. Flags whose values reference
-    # ${SAMPLE} must be built in shell, not via a WDL true=/false= attribute,
-    # because the WDL spec requires those attribute values to be primitive
-    # literals -- a string containing ${SAMPLE} would be parsed as a
-    # StringExpression (literal + placeholder + literal), which womtool
-    # rejects.
-    EMIT_UNCLASSIFIED=~{true="1" false="" emit_unclassified}
-    EMIT_CLASSIFIED=~{true="1" false="" emit_classified}
-
     for bam in "~{sep='" "' reads_bams}"; do
       SAMPLE="$(basename "$bam" .bam)"
 
-      # Build per-sample optional flags that reference ${SAMPLE} in shell.
-      EXTRA_CLASSIFY_ARGS=()
-      if [ -n "$EMIT_UNCLASSIFIED" ]; then
-        EXTRA_CLASSIFY_ARGS+=("--unclassified_prefix=${SAMPLE}.unclassified")
-      fi
-      if [ -n "$EMIT_CLASSIFIED" ]; then
-        EXTRA_CLASSIFY_ARGS+=("--classified_prefix=${SAMPLE}.classified")
-      fi
-
       # Classify: viral-ngs wrapper handles SamToFastq, paired/single
       # detection, empty-BAM short-circuit, and tmp-file cleanup.
+      # NB: $SAMPLE (no braces) inside true="..." attribute strings is a
+      # literal at the WDL level (placeholder syntax requires ${...}), so
+      # womtool accepts it as a primitive; the shell still expands it
+      # because '.' terminates the bash variable name. Same idiom used at
+      # tasks_demux.wdl:385.
       metagenomics centrifuger \
         "$DB_PREFIX" \
         "$bam" \
@@ -1089,7 +1076,8 @@ task centrifuger {
         ~{"--min_hitlen=" + min_hitlen} \
         ~{"--hitk_factor=" + hitk_factor} \
         ~{true="--merge_readpair" false="" merge_readpair} \
-        "${EXTRA_CLASSIFY_ARGS[@]}" \
+        ~{true="--unclassified_prefix=$SAMPLE.unclassified" false="" emit_unclassified} \
+        ~{true="--classified_prefix=$SAMPLE.classified"     false="" emit_classified} \
         --threads="~{cpu}" \
         --loglevel=DEBUG
 
