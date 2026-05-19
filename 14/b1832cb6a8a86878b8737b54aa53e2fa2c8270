@@ -1,0 +1,19 @@
+pipes/WDL/tasks/tasks_metagenomics.wdl
+  s_be7c1f544dacf2::t_afb14e43e3b022 1061-1069,1073-1081,1092
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "14b1832cb6a8a86878b8737b54aa53e2fa2c8270",
+  "prompts": {},
+  "sessions": {
+    "s_be7c1f544dacf2": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1bf7b1dd2ffeBT201iB0d0orER",
+        "model": "claude-opus-4-7@default"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>"
+    }
+  }
+}
