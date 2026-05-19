@@ -1,0 +1,37 @@
+test/input/WDL/miniwdl-local/test_inputs-classify_centrifuger-local.json
+  s_bd1c531bc86c1e::t_94e304e3c69f88 1-7
+pipes/WDL/workflows/classify_centrifuger.wdl
+  s_8c487b73f947db::t_9f19cbde6edb6a 5,7,13,16-20
+test/input/WDL/test_inputs-classify_centrifuger-local.json
+  s_8c487b73f947db::t_9aa942188be7db 1-7
+.dockstore.yml
+  s_8c487b73f947db::t_c1e8a61d1c4f30 64-66
+test/input/WDL/cromwell-local/test_inputs-classify_centrifuger-local.json
+  s_bd1c531bc86c1e::t_94e304e3c69f88 1-7
+pipes/WDL/tasks/tasks_metagenomics.wdl
+  s_8c487b73f947db::t_57d38b34190fd4 946,950,973,976-977,980-981,1062-1082,1084-1093,1097-1098
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "584c7eb26eae4b13396d8d25e33b8d13639a6684",
+  "prompts": {},
+  "sessions": {
+    "s_8c487b73f947db": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e41eb-0471-70a2-9200-3ab908c428ed",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>"
+    },
+    "s_bd1c531bc86c1e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1bdd96e55ffeCqhQs2qiokZDBz",
+        "model": "claude-opus-4-7@default"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>"
+    }
+  }
+}
