@@ -970,7 +970,7 @@ task centrifuger {
     # Pinned to the feature/centrifuger-integration build; bump to a real
     # release tag (and remove the skip marker) once viral-ngs cuts one that
     # contains the `metagenomics centrifuger*` CLI subcommands.
-    String       docker = "viral-ngs:classify-centrifuger-local" #skip-global-version-pin
+    String       docker = "quay.io/broadinstitute/viral-classify:2.1.33.0" #skip-global-version-pin
   }
 
   String sample_name = basename(reads_bam, ".bam")
