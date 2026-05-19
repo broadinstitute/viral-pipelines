@@ -940,3 +940,168 @@ task kaiju {
     dx_instance_type: "mem3_ssd1_v2_x16"
   }
 }
+
+task centrifuger {
+  meta {
+    description: "Runs Centrifuger taxonomic classification on one or more BAM files. Delegates all plumbing (SamToFastq, paired/single detection, empty-BAM short-circuit, tmp-file cleanup) to the `metagenomics centrifuger` and `metagenomics centrifuger_kreport` CLI commands from viral-ngs. The pre-built index is extracted once and reused across all input BAMs."
+  }
+
+  input {
+    Array[File]+ reads_bams
+    File         centrifuger_db_tgz
+    String       db_name
+
+    # Optional classify-time tuning passed through to `metagenomics centrifuger`
+    Int?         k
+    Int?         min_hitlen
+    Int?         hitk_factor
+    Boolean      merge_readpair    = false
+    Boolean      emit_unclassified = false
+    Boolean      emit_classified   = false
+
+    # Optional kreport tuning passed through to `metagenomics centrifuger_kreport`
+    Boolean      kreport_no_lca     = false
+    Boolean      kreport_show_zeros = false
+    Int?         kreport_min_score
+    Int?         kreport_min_length
+
+    Int          machine_mem_gb = 240
+    Int          cpu            = 8
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.11-classify"
+  }
+
+  Int disk_size = ceil((8 * size(reads_bams, "GB") + 3 * size(centrifuger_db_tgz, "GB") + 400) / 400.0) * 400
+
+  parameter_meta {
+    reads_bams: {
+      description: "Reads in BAM format, one file per sample. The `metagenomics centrifuger` wrapper handles SamToFastq (with Illumina adapter clipping via CLIPPING_ATTRIBUTE=X), paired/single detection (based on R2 vs. singleton size), and empty-BAM short-circuit internally. Sample names are derived from BAM filenames via `basename <bam> .bam`.",
+      patterns: ["*.bam"],
+      category: "required"
+    }
+    centrifuger_db_tgz: {
+      description: "Pre-built Centrifuger index as a compressed tarball. Must contain index files sharing a common prefix (db_name). Extracted to the task working directory at runtime.",
+      patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.zst", "*.tar.bz2"],
+      category: "required"
+    }
+    db_name: {
+      description: "Centrifuger index prefix (the common filename stem of the .1.cfr, .2.cfr, .3.cfr, .4.cfr files inside the tarball).",
+      category: "required"
+    }
+    k: {
+      description: "Report top-k classification results per read (centrifuger -k). Default: tool default.",
+      category: "advanced"
+    }
+    min_hitlen: {
+      description: "Minimum total length of matched segments (centrifuger --min-hitlen). Default: tool default.",
+      category: "advanced"
+    }
+    hitk_factor: {
+      description: "Centrifuger hit-k factor (--hitk-factor). Default: tool default.",
+      category: "advanced"
+    }
+    merge_readpair: {
+      description: "Merge paired reads before classification (centrifuger --merge-readpair).",
+      category: "advanced"
+    }
+    emit_unclassified: {
+      description: "When true, emit unclassified reads via centrifuger --un (one fastq per sample, named <sample>.unclassified*).",
+      category: "advanced"
+    }
+    emit_classified: {
+      description: "When true, emit classified reads via centrifuger --cl (one fastq per sample, named <sample>.classified*).",
+      category: "advanced"
+    }
+    kreport_no_lca: {
+      description: "Pass --no-lca to centrifuger-kreport (do not promote multi-assignment reads to their LCA).",
+      category: "advanced"
+    }
+    kreport_show_zeros: {
+      description: "Pass --show-zeros to centrifuger-kreport (include taxa with zero reads in the report).",
+      category: "advanced"
+    }
+    kreport_min_score: {
+      description: "Minimum score for reads to be counted in the kreport (centrifuger-kreport --min-score).",
+      category: "advanced"
+    }
+    kreport_min_length: {
+      description: "Minimum alignment length for reads to be counted in the kreport (centrifuger-kreport --min-length).",
+      category: "advanced"
+    }
+    machine_mem_gb: {
+      description: "Memory in GB. Default 240 GB sized for NT-scale centrifuger index.",
+      category: "other"
+    }
+    cpu: {
+      description: "Number of CPUs for centrifuger classify (the kreport step is single-threaded). Default 8.",
+      category: "other"
+    }
+    docker: {
+      description: "viral-ngs classify-flavored image. Must include the centrifuger/centrifuger-kreport binaries and the `metagenomics centrifuger*` CLI subcommands.",
+      category: "other"
+    }
+  }
+
+  command <<<
+    set -ex -o pipefail
+
+    # Extract centrifuger index tarball into the task working directory so it
+    # lands on the allocated local-disk LOCAL volume (not /tmp, which may be
+    # on a smaller partition on some backends).
+    DB_DIR=$(mktemp -d -p . --suffix=_centrifuger_db)
+    read_utils extract_tarball \
+      "~{centrifuger_db_tgz}" "$DB_DIR" \
+      --loglevel=DEBUG
+    DB_PREFIX="$DB_DIR/~{db_name}"
+
+    metagenomics --version | tee VERSION
+
+    for bam in "~{sep='" "' reads_bams}"; do
+      SAMPLE="$(basename "$bam" .bam)"
+
+      # Classify: viral-ngs wrapper handles SamToFastq, paired/single
+      # detection, empty-BAM short-circuit, and tmp-file cleanup.
+      metagenomics centrifuger \
+        "$DB_PREFIX" \
+        "$bam" \
+        "${SAMPLE}.centrifuger.tsv" \
+        ~{"--k=" + k} \
+        ~{"--min_hitlen=" + min_hitlen} \
+        ~{"--hitk_factor=" + hitk_factor} \
+        ~{true="--merge_readpair" false="" merge_readpair} \
+        ~{true="--unclassified_prefix=${SAMPLE}.unclassified" false="" emit_unclassified} \
+        ~{true="--classified_prefix=${SAMPLE}.classified"     false="" emit_classified} \
+        --threads="~{cpu}" \
+        --loglevel=DEBUG
+
+      # Kraken2-style hierarchical report from the per-read classification.
+      metagenomics centrifuger_kreport \
+        "$DB_PREFIX" \
+        "${SAMPLE}.centrifuger.tsv" \
+        "${SAMPLE}.centrifuger.kreport" \
+        ~{true="--no_lca" false="" kreport_no_lca} \
+        ~{true="--show_zeros" false="" kreport_show_zeros} \
+        ~{"--min_score=" + kreport_min_score} \
+        ~{"--min_length=" + kreport_min_length} \
+        --loglevel=DEBUG
+    done
+  >>>
+
+  output {
+    Array[File] classification_tsvs = glob("*.centrifuger.tsv")
+    Array[File] kreports            = glob("*.centrifuger.kreport")
+    Array[File] unclassified_reads  = glob("*.unclassified*")
+    Array[File] classified_reads    = glob("*.classified*")
+    String      viralngs_version    = read_string("VERSION")
+  }
+
+  runtime {
+    docker:           docker
+    memory:           "~{machine_mem_gb} GB"
+    cpu:              cpu
+    disks:            "local-disk ~{disk_size} LOCAL"
+    disk:             "~{disk_size} GB" # TES
+    dx_instance_type: "mem3_ssd1_v2_x8"
+    preemptible:      1
+    maxRetries:       2
+  }
+}
