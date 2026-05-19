@@ -1,0 +1,7 @@
+{
+  "classify_centrifuger.centrifuger.reads_bam": "test/input/G5012.3.testreads.bam",
+  "classify_centrifuger.centrifuger.centrifuger_db_tgz": "test/input/centrifuger_db-tinytest.tar.gz",
+  "classify_centrifuger.centrifuger.db_name": "tiny_cfr",
+  "classify_centrifuger.centrifuger.machine_mem_gb": 4,
+  "classify_centrifuger.centrifuger.cpu": 1
+}

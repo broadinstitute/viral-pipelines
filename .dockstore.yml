@@ -61,6 +61,9 @@ workflows:
   - name: classify_kaiju
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/classify_kaiju.wdl
+  - name: classify_centrifuger
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/classify_centrifuger.wdl
   - name: classify_kraken2
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/classify_kraken2.wdl

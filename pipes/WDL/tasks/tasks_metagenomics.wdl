@@ -943,11 +943,11 @@ task kaiju {
 
 task centrifuger {
   meta {
-    description: "Runs Centrifuger taxonomic classification on one or more BAM files. Delegates all plumbing (SamToFastq, paired/single detection, empty-BAM short-circuit, tmp-file cleanup) to the `metagenomics centrifuger` and `metagenomics centrifuger_kreport` CLI commands from viral-ngs. The pre-built index is extracted once and reused across all input BAMs."
+    description: "Runs Centrifuger taxonomic classification on one BAM file. Delegates all plumbing (SamToFastq, paired/single detection, empty-BAM short-circuit, tmp-file cleanup) to the `metagenomics centrifuger` and `metagenomics centrifuger_kreport` CLI commands from viral-ngs."
   }
 
   input {
-    Array[File]+ reads_bams
+    File         reads_bam
     File         centrifuger_db_tgz
     String       db_name
 
@@ -970,14 +970,15 @@ task centrifuger {
     # Pinned to the feature/centrifuger-integration build; bump to a real
     # release tag (and remove the skip marker) once viral-ngs cuts one that
     # contains the `metagenomics centrifuger*` CLI subcommands.
-    String       docker = "quay.io/broadinstitute/viral-ngs:feature-centrifuger-integration-classify" #skip-global-version-pin
+    String       docker = "viral-ngs:classify-centrifuger-local" #skip-global-version-pin
   }
 
-  Int disk_size = ceil((8 * size(reads_bams, "GB") + 3 * size(centrifuger_db_tgz, "GB") + 400) / 400.0) * 400
+  String sample_name = basename(reads_bam, ".bam")
+  Int disk_size = ceil((8 * size(reads_bam, "GB") + 3 * size(centrifuger_db_tgz, "GB") + 400) / 400.0) * 400
 
   parameter_meta {
-    reads_bams: {
-      description: "Reads in BAM format, one file per sample. The `metagenomics centrifuger` wrapper handles SamToFastq (with Illumina adapter clipping via CLIPPING_ATTRIBUTE=X), paired/single detection (based on R2 vs. singleton size), and empty-BAM short-circuit internally. Sample names are derived from BAM filenames via `basename <bam> .bam`.",
+    reads_bam: {
+      description: "Reads in BAM format. The `metagenomics centrifuger` wrapper handles SamToFastq (with Illumina adapter clipping via CLIPPING_ATTRIBUTE=X), paired/single detection (based on R2 vs. singleton size), and empty-BAM short-circuit internally. Sample name is derived from the BAM filename via `basename <bam> .bam`.",
       patterns: ["*.bam"],
       category: "required"
     }
@@ -1058,45 +1059,43 @@ task centrifuger {
 
     metagenomics --version | tee VERSION
 
-    for bam in "~{sep='" "' reads_bams}"; do
-      SAMPLE="$(basename "$bam" .bam)"
+    SAMPLE="~{sample_name}"
 
-      # Classify: viral-ngs wrapper handles SamToFastq, paired/single
-      # detection, empty-BAM short-circuit, and tmp-file cleanup.
-      # NB: $SAMPLE (no braces) inside true="..." attribute strings is a
-      # literal at the WDL level (placeholder syntax requires ${...}), so
-      # womtool accepts it as a primitive; the shell still expands it
-      # because '.' terminates the bash variable name. Same idiom used at
-      # tasks_demux.wdl:385.
-      metagenomics centrifuger \
-        "$DB_PREFIX" \
-        "$bam" \
-        "${SAMPLE}.centrifuger.tsv" \
-        ~{"--k=" + k} \
-        ~{"--min_hitlen=" + min_hitlen} \
-        ~{"--hitk_factor=" + hitk_factor} \
-        ~{true="--merge_readpair" false="" merge_readpair} \
-        ~{true="--unclassified_prefix=$SAMPLE.unclassified" false="" emit_unclassified} \
-        ~{true="--classified_prefix=$SAMPLE.classified"     false="" emit_classified} \
-        --threads="~{cpu}" \
-        --loglevel=DEBUG
+    # Classify: viral-ngs wrapper handles SamToFastq, paired/single
+    # detection, empty-BAM short-circuit, and tmp-file cleanup.
+    # NB: $SAMPLE (no braces) inside true="..." attribute strings is a
+    # literal at the WDL level (placeholder syntax requires ${...}), so
+    # womtool accepts it as a primitive; the shell still expands it
+    # because '.' terminates the bash variable name. Same idiom used at
+    # tasks_demux.wdl:385.
+    metagenomics centrifuger \
+      "$DB_PREFIX" \
+      "~{reads_bam}" \
+      "${SAMPLE}.centrifuger.tsv" \
+      ~{"--k=" + k} \
+      ~{"--min_hitlen=" + min_hitlen} \
+      ~{"--hitk_factor=" + hitk_factor} \
+      ~{true="--merge_readpair" false="" merge_readpair} \
+      ~{true="--unclassified_prefix=$SAMPLE.unclassified" false="" emit_unclassified} \
+      ~{true="--classified_prefix=$SAMPLE.classified"     false="" emit_classified} \
+      --threads="~{cpu}" \
+      --loglevel=DEBUG
 
-      # Kraken2-style hierarchical report from the per-read classification.
-      metagenomics centrifuger_kreport \
-        "$DB_PREFIX" \
-        "${SAMPLE}.centrifuger.tsv" \
-        "${SAMPLE}.centrifuger.kreport" \
-        ~{true="--no_lca" false="" kreport_no_lca} \
-        ~{true="--show_zeros" false="" kreport_show_zeros} \
-        ~{"--min_score=" + kreport_min_score} \
-        ~{"--min_length=" + kreport_min_length} \
-        --loglevel=DEBUG
-    done
+    # Kraken2-style hierarchical report from the per-read classification.
+    metagenomics centrifuger_kreport \
+      "$DB_PREFIX" \
+      "${SAMPLE}.centrifuger.tsv" \
+      "${SAMPLE}.centrifuger.kreport" \
+      ~{true="--no_lca" false="" kreport_no_lca} \
+      ~{true="--show_zeros" false="" kreport_show_zeros} \
+      ~{"--min_score=" + kreport_min_score} \
+      ~{"--min_length=" + kreport_min_length} \
+      --loglevel=DEBUG
   >>>
 
   output {
-    Array[File] classification_tsvs = glob("*.centrifuger.tsv")
-    Array[File] kreports            = glob("*.centrifuger.kreport")
+    File        classification_tsv = "~{sample_name}.centrifuger.tsv"
+    File        kreport            = "~{sample_name}.centrifuger.kreport"
     Array[File] unclassified_reads  = glob("*.unclassified*")
     Array[File] classified_reads    = glob("*.classified*")
     String      viralngs_version    = read_string("VERSION")
