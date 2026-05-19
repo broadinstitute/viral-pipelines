@@ -1,0 +1,23 @@
+pipes/WDL/tasks/tasks_metagenomics.wdl
+  s_be7c1f544dacf2::t_9932b49d7b3a2b 946-1104
+pipes/WDL/workflows/classify_centrifuger_single.wdl
+  s_be7c1f544dacf2::t_5dcd0ea94537b1 5-54
+pipes/WDL/workflows/classify_centrifuger_multi.wdl
+  s_be7c1f544dacf2::t_d5d134ff7f933a 5-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "57066887e22bb663b2458220808f9d447a69a0a0",
+  "prompts": {},
+  "sessions": {
+    "s_be7c1f544dacf2": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1bf7b1dd2ffeBT201iB0d0orER",
+        "model": "claude-opus-4-7@default"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>"
+    }
+  }
+}
