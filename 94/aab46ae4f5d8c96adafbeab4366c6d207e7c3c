@@ -1,0 +1,26 @@
+pipes/WDL/workflows/classify_genomad.wdl
+  s_8c487b73f947db::t_473bb80054bc0d 5,7,17,22,32,47-48,57-59,65-72,76
+  s_8c487b73f947db::t_a86c86a4f44b8a 27
+test/input/WDL/test_inputs-classify_genomad-local.json
+  s_8c487b73f947db::t_a86c86a4f44b8a 3
+  s_8c487b73f947db::t_6a1b4d88cdec76 2
+pipes/WDL/tasks/tasks_metagenomics.wdl
+  s_8c487b73f947db::t_2aeaa51b6c7499 1002-1003,1006,1012,1014,1031
+  s_8c487b73f947db::t_5f0339b8dd421c 967,1020-1025,1040-1046,1048-1062,1099-1100,1113-1115,1129,1136,1148,1154-1162,1168
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.10",
+  "base_commit_sha": "94aab46ae4f5d8c96adafbeab4366c6d207e7c3c",
+  "prompts": {},
+  "sessions": {
+    "s_8c487b73f947db": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e41eb-0471-70a2-9200-3ab908c428ed",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>"
+    }
+  }
+}
