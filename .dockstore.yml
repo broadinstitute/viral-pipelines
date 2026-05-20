@@ -58,6 +58,11 @@ workflows:
   - name: chunk_blast
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/megablast_chunk.wdl
+  - name: classify_genomad
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/classify_genomad.wdl
+    testParameterFiles:
+    - /test/input/WDL/test_inputs-classify_genomad-local.json
   - name: classify_kaiju
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/classify_kaiju.wdl
@@ -153,16 +158,6 @@ workflows:
     primaryDescriptorPath: /pipes/WDL/workflows/genbank_single.wdl
     testParameterFiles:
     - /test/input/WDL/test_inputs-genbank_single-local.json
-  - name: genomad_single
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/genomad_single.wdl
-    testParameterFiles:
-    - /test/input/WDL/test_inputs-genomad_single-local.json
-  - name: genomad_multi
-    subclass: WDL
-    primaryDescriptorPath: /pipes/WDL/workflows/genomad_multi.wdl
-    testParameterFiles:
-    - /test/input/WDL/test_inputs-genomad_multi-local.json
   - name: isnvs_merge_to_vcf
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/isnvs_merge_to_vcf.wdl

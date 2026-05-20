@@ -1,0 +1,4 @@
+{
+  "classify_genomad.assembly_fasta": "test/input/G5012.3.fasta",
+  "classify_genomad.genomad_db_tgz": "https://zenodo.org/records/10594875/files/genomad_db_v1.9.tar.gz"
+}

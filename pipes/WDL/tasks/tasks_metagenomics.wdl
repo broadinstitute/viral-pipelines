@@ -964,7 +964,7 @@ task genomad_end_to_end {
     Boolean cleanup = true
     Int     machine_mem_gb = 32
     Int     cpu = 8
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:feature-genomad-integration"
+    String  docker = "ghcr.io/broadinstitute/viral-ngs:feature-genomad-integration" #skip-global-version-pin
   }
 
   String out_basename = basename(basename(basename(assembly_fasta, '.fasta'), '.fa'), '.fna')
@@ -999,29 +999,36 @@ task genomad_end_to_end {
     set -ex -o pipefail
 
     if [ -z "$TMPDIR" ]; then
-      export TMPDIR=$(pwd)
+      TMPDIR="$(pwd)"
+      export TMPDIR
     fi
     DB_DIR=$(mktemp -d --suffix _db)
-    mkdir -p $DB_DIR/genomad
+    mkdir -p "$DB_DIR"/genomad
 
     metagenomics --version | tee VERSION
 
     # decompress genomad database
     read_utils extract_tarball \
-      "~{genomad_db_tgz}" $DB_DIR/genomad \
+      "~{genomad_db_tgz}" "$DB_DIR"/genomad \
       --loglevel=DEBUG
-    du -hs $DB_DIR/genomad
+    du -hs "$DB_DIR"/genomad
 
     # count sequences in input FASTA
     SEQ_COUNT=$(grep -c '^>' "~{assembly_fasta}" || true)
     echo "Input sequences: $SEQ_COUNT"
+
+    : > "~{out_basename}_virus_summary.tsv"
+    : > "~{out_basename}_plasmid_summary.tsv"
+    : > "~{out_basename}_provirus.tsv"
+    : > "~{out_basename}_virus.fna"
+    : > "~{out_basename}_plasmid.fna"
 
     if [ "$SEQ_COUNT" -gt 0 ]; then
       # run genomad end-to-end
       genomad end-to-end \
         "~{assembly_fasta}" \
         genomad_output \
-        $DB_DIR/genomad/genomad_db \
+        "$DB_DIR"/genomad/genomad_db \
         --threads ~{cpu} \
         ~{if cleanup then '--cleanup' else ''} \
         --splits 8
@@ -1030,13 +1037,29 @@ task genomad_end_to_end {
       # genomad creates: genomad_output/<basename>_summary/<basename>_virus_summary.tsv etc.
       # Copy outputs with sample name prefix to working directory
       GENOMAD_BASENAME=$(basename "~{assembly_fasta}" | sed 's/\.\(fasta\|fa\|fna\)$//')
+      GENOMAD_SUMMARY_DIR="genomad_output/${GENOMAD_BASENAME}_summary"
+      GENOMAD_PROVIRUS_DIR="genomad_output/${GENOMAD_BASENAME}_find_proviruses"
 
-      # Always create output files (genomad creates them, just copy - even if empty with header only)
-      cp "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_virus_summary.tsv" "~{out_basename}_virus_summary.tsv" || touch "~{out_basename}_virus_summary.tsv"
-      cp "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_plasmid_summary.tsv" "~{out_basename}_plasmid_summary.tsv" || touch "~{out_basename}_plasmid_summary.tsv"
-      cp "genomad_output/${GENOMAD_BASENAME}_find_proviruses/${GENOMAD_BASENAME}_provirus.tsv" "~{out_basename}_provirus.tsv" || touch "~{out_basename}_provirus.tsv"
-      cp "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_virus.fna" "~{out_basename}_virus.fna" || touch "~{out_basename}_virus.fna"
-      cp "genomad_output/${GENOMAD_BASENAME}_summary/${GENOMAD_BASENAME}_plasmid.fna" "~{out_basename}_plasmid.fna" || touch "~{out_basename}_plasmid.fna"
+      if [ ! -d "$GENOMAD_SUMMARY_DIR" ]; then
+        echo "Expected geNomad summary directory not found: $GENOMAD_SUMMARY_DIR" >&2
+        exit 1
+      fi
+
+      if [ -f "$GENOMAD_SUMMARY_DIR/${GENOMAD_BASENAME}_virus_summary.tsv" ]; then
+        cp "$GENOMAD_SUMMARY_DIR/${GENOMAD_BASENAME}_virus_summary.tsv" "~{out_basename}_virus_summary.tsv"
+      fi
+      if [ -f "$GENOMAD_SUMMARY_DIR/${GENOMAD_BASENAME}_plasmid_summary.tsv" ]; then
+        cp "$GENOMAD_SUMMARY_DIR/${GENOMAD_BASENAME}_plasmid_summary.tsv" "~{out_basename}_plasmid_summary.tsv"
+      fi
+      if [ -f "$GENOMAD_PROVIRUS_DIR/${GENOMAD_BASENAME}_provirus.tsv" ]; then
+        cp "$GENOMAD_PROVIRUS_DIR/${GENOMAD_BASENAME}_provirus.tsv" "~{out_basename}_provirus.tsv"
+      fi
+      if [ -f "$GENOMAD_SUMMARY_DIR/${GENOMAD_BASENAME}_virus.fna" ]; then
+        cp "$GENOMAD_SUMMARY_DIR/${GENOMAD_BASENAME}_virus.fna" "~{out_basename}_virus.fna"
+      fi
+      if [ -f "$GENOMAD_SUMMARY_DIR/${GENOMAD_BASENAME}_plasmid.fna" ]; then
+        cp "$GENOMAD_SUMMARY_DIR/${GENOMAD_BASENAME}_plasmid.fna" "~{out_basename}_plasmid.fna"
+      fi
     fi
 
     # memory tracking (cgroups v1 and v2 compatible)
@@ -1073,7 +1096,8 @@ task report_genomad_summary {
   input {
     File?  virus_summary_tsv
     File?  plasmid_summary_tsv
-    String docker = "ghcr.io/broadinstitute/viral-ngs:feature-genomad-integration"
+    File?  provirus_summary_tsv
+    String docker = "ghcr.io/broadinstitute/viral-ngs:feature-genomad-integration" #skip-global-version-pin
   }
 
   Int disk_size = 50
@@ -1085,6 +1109,9 @@ task report_genomad_summary {
     }
     plasmid_summary_tsv: {
       description: "Optional plasmid summary TSV from genomad (may be absent if no plasmids found)"
+    }
+    provirus_summary_tsv: {
+      description: "Optional provirus summary TSV from genomad (may be absent if no proviruses found)"
     }
     docker: {
       description: "Docker image with genomad tools"
@@ -1099,14 +1126,14 @@ task report_genomad_summary {
 
     # Process virus summary
     if [ -f "~{default='' virus_summary_tsv}" ] && [ -n "~{default='' virus_summary_tsv}" ]; then
-      VIRUS_COUNT=$(tail -n +2 "~{virus_summary_tsv}" | wc -l | tr -d ' ')
+      VIRUS_COUNT=$(tail -n +2 "~{default='' virus_summary_tsv}" | wc -l | tr -d ' ')
 
       if [ "$VIRUS_COUNT" -gt 0 ]; then
         # Write count to file (only when > 0)
         echo "$VIRUS_COUNT" > TOTAL_VIRUSES
 
         # Sort by virus_score (column 7) descending, then length (column 2) descending for tie-breaking
-        tail -n +2 "~{virus_summary_tsv}" | sort -t$'\t' -k7nr,7 -k2nr,2 | head -1 > TOP_VIRUS_ROW
+        tail -n +2 "~{default='' virus_summary_tsv}" | sort -t$'\t' -k7nr,7 -k2nr,2 | head -1 > TOP_VIRUS_ROW
 
         # Extract and round score (column 7) to 2 decimal places
         printf "%.2f" "$(cut -f7 TOP_VIRUS_ROW)" > TOP_VIRUS_SCORE
@@ -1118,10 +1145,19 @@ task report_genomad_summary {
 
     # Process plasmid summary
     if [ -f "~{default='' plasmid_summary_tsv}" ] && [ -n "~{default='' plasmid_summary_tsv}" ]; then
-      PLASMID_COUNT=$(tail -n +2 "~{plasmid_summary_tsv}" | wc -l | tr -d ' ')
+      PLASMID_COUNT=$(tail -n +2 "~{default='' plasmid_summary_tsv}" | wc -l | tr -d ' ')
 
       if [ "$PLASMID_COUNT" -gt 0 ]; then
         echo "$PLASMID_COUNT" > TOTAL_PLASMIDS
+      fi
+    fi
+
+    # Process provirus summary
+    if [ -f "~{default='' provirus_summary_tsv}" ] && [ -n "~{default='' provirus_summary_tsv}" ]; then
+      PROVIRUS_COUNT=$(tail -n +2 "~{default='' provirus_summary_tsv}" | wc -l | tr -d ' ')
+
+      if [ "$PROVIRUS_COUNT" -gt 0 ]; then
+        echo "$PROVIRUS_COUNT" > TOTAL_PROVIRUSES
       fi
     fi
   >>>
@@ -1129,6 +1165,7 @@ task report_genomad_summary {
   output {
     Array[File] total_viruses_file    = glob("TOTAL_VIRUSES")
     Array[File] total_plasmids_file   = glob("TOTAL_PLASMIDS")
+    Array[File] total_proviruses_file = glob("TOTAL_PROVIRUSES")
     Array[File] top_virus_score_file  = glob("TOP_VIRUS_SCORE")
     String      top_virus_taxonomy    = read_string("TOP_VIRUS_TAXONOMY")
   }
