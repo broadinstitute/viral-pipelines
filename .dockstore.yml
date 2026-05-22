@@ -69,6 +69,9 @@ workflows:
   - name: classify_krakenuniq
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/classify_krakenuniq.wdl
+  - name: classify_virnucpro
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/classify_virnucpro.wdl
   - name: classify_multi
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/classify_multi.wdl

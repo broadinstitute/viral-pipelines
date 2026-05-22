@@ -78,4 +78,11 @@ tools/conda-tools/
 # miniWDL
 default.profraw
 
+# Local Cromwell/GPU runs
+/cromwell-executions/
+/cromwell-workflow-logs/
+/virnucpro-manual-out/
+/pipes/cromwell/cromwell.local-gpu.conf
+/test/input/WDL/cromwell-gpu/
+
 .vscode/

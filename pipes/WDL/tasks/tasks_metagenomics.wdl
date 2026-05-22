@@ -940,3 +940,453 @@ task kaiju {
     dx_instance_type: "mem3_ssd1_v2_x16"
   }
 }
+
+task virnucpro {
+  meta {
+    description: "Runs GPU-accelerated VirNucPro viral nucleotide classification on FASTA sequences."
+  }
+
+  input {
+    File    in_fasta
+
+    Int     expected_length = 500
+    Boolean parallel = false
+    Boolean persistent_models = false
+    Boolean resume = false
+    Boolean v1_fallback = false
+    Boolean v1_attention = false
+    Int?    batch_size
+    Int?    esm_batch_size
+    Int?    dnabert_batch_size
+    String? gpus
+
+    Int     machine_mem_gb = 64
+    Int     cpu = 8
+    String? accelerator_type
+    Int?    accelerator_count
+    String? gpu_type
+    Int?    gpu_count
+    String? vm_size
+    String  docker = "virnucpro-cuda:latest" #skip-global-version-pin
+  }
+
+  String out_basename = basename(basename(basename(in_fasta, ".fasta"), ".fa"), ".fna")
+  Int disk_size = 375
+  Int boot_disk = 50
+  Int disk_size_az = disk_size + boot_disk
+
+  parameter_meta {
+    in_fasta: {
+      description: "Input nucleotide sequences in FASTA format.",
+      patterns: ["*.fasta", "*.fa", "*.fna"],
+      category: "required"
+    }
+    expected_length: {
+      description: "Expected sequence length for the VirNucPro model. Must be 300 or 500.",
+      choices: [300, 500],
+      category: "common"
+    }
+    parallel: {
+      description: "Enable VirNucPro multi-GPU parallel processing.",
+      category: "advanced"
+    }
+    persistent_models: {
+      description: "Keep models resident in GPU memory between stages.",
+      category: "advanced"
+    }
+    resume: {
+      description: "Resume from VirNucPro checkpoints.",
+      category: "advanced"
+    }
+    v1_fallback: {
+      description: "Use VirNucPro v1.0 multi-worker architecture for ESM-2 instead of v2.0 async DataLoader.",
+      category: "advanced"
+    }
+    v1_attention: {
+      description: "Use VirNucPro v1.0-compatible standard attention for ESM-2. Slower, but useful for exact v1 compatibility.",
+      category: "advanced"
+    }
+    batch_size: {
+      description: "VirNucPro prediction batch size.",
+      category: "advanced"
+    }
+    esm_batch_size: {
+      description: "ESM token batch size.",
+      category: "advanced"
+    }
+    dnabert_batch_size: {
+      description: "DNABERT batch size.",
+      category: "advanced"
+    }
+    gpus: {
+      description: "Comma-separated GPU IDs to expose to VirNucPro, for example 0,1. Set gpu_count or accelerator_count consistently when using multiple GPUs.",
+      category: "advanced"
+    }
+    machine_mem_gb: {
+      description: "Memory allocation in GB.",
+      category: "runtime"
+    }
+    cpu: {
+      description: "CPU cores to request and pass to VirNucPro.",
+      category: "runtime"
+    }
+    accelerator_type: {
+      description: "[GCP/PAPIv2] GPU model to request, for example nvidia-tesla-t4.",
+      category: "runtime"
+    }
+    accelerator_count: {
+      description: "[GCP/PAPIv2] Number of GPUs to request.",
+      category: "runtime"
+    }
+    gpu_type: {
+      description: "[Terra] GPU model to request, for example nvidia-tesla-t4.",
+      category: "runtime"
+    }
+    gpu_count: {
+      description: "[Terra] Number of GPUs to request.",
+      category: "runtime"
+    }
+    vm_size: {
+      description: "[TES/Azure] GPU VM size.",
+      category: "runtime"
+    }
+    docker: {
+      description: "Standalone CUDA-enabled VirNucPro Docker image."
+    }
+  }
+
+  command <<<
+    set -euo pipefail
+
+
+    /opt/virnucpro_cli.py --version | tee VERSION
+
+    mkdir -p virnucpro_work/tmp
+
+    # Cromwell sets TMPDIR to a deep execution/tmp.* path. VirNucPro's Python
+    # multiprocessing stack creates transient IPC paths under TMPDIR; with the
+    # full Cromwell path, local GPU runs can leave workers idle after GPU
+    # inference. Keep the backing storage in the mounted execution directory,
+    # but expose it through a short /tmp symlink inside the container.
+    virnucpro_tmp_link="/tmp/virnucpro_tmp_$$"
+    rm -f "$virnucpro_tmp_link"
+    ln -s "$(pwd)/virnucpro_work/tmp" "$virnucpro_tmp_link"
+    export TMPDIR="$virnucpro_tmp_link"
+
+    export PATH="/usr/local/nvidia/bin:${PATH}"
+    if command -v nvidia-smi >/dev/null 2>&1; then
+      nvidia-smi
+    else
+      echo "WARNING: nvidia-smi is not available inside the container; continuing and letting VirNucPro validate CUDA availability." >&2
+    fi
+
+    raw_predictions_tsv="virnucpro_work/raw_predictions.tsv"
+    raw_highestscore_tsv="virnucpro_work/raw_predictions_highestscore.csv"
+    /opt/virnucpro_cli.py \
+      "~{in_fasta}" \
+      "$raw_predictions_tsv" \
+      --expected-length ~{expected_length} \
+      --use-gpu \
+      ~{if parallel then "--parallel" else ""} \
+      ~{if persistent_models then "--persistent-models" else ""} \
+      ~{if resume then "--resume" else ""} \
+      ~{if v1_fallback then "--v1-fallback" else ""} \
+      ~{if v1_attention then "--v1-attention" else ""} \
+      ~{if defined(batch_size) then "--batch-size " + batch_size else ""} \
+      ~{if defined(esm_batch_size) then "--esm-batch-size " + esm_batch_size else ""} \
+      ~{if defined(dnabert_batch_size) then "--dnabert-batch-size " + dnabert_batch_size else ""} \
+      ~{if defined(gpus) then "--gpus " + gpus else ""} \
+      --threads ~{cpu} \
+      --verbose
+
+    if [ ! -s "$raw_predictions_tsv" ]; then
+      echo "VirNucPro did not produce a non-empty predictions file: $raw_predictions_tsv" >&2
+      exit 1
+    fi
+    if [ ! -s "$raw_highestscore_tsv" ]; then
+      echo "VirNucPro did not produce a non-empty highest-score file: $raw_highestscore_tsv" >&2
+      exit 1
+    fi
+
+    python3 - "$raw_predictions_tsv" "~{out_basename}.virnucpro.predictions.tsv" "$raw_highestscore_tsv" "~{out_basename}.virnucpro.highestscore.tsv" <<'PY'
+    import csv
+    import pathlib
+    import sys
+
+    def normalize_table(src, dest):
+        src_path = pathlib.Path(src)
+        dest_path = pathlib.Path(dest)
+        sample = src_path.read_text(errors="replace")[:4096]
+        try:
+            dialect = csv.Sniffer().sniff(sample, delimiters="\t,")
+        except csv.Error:
+            dialect = csv.excel_tab
+
+        with src_path.open(newline="") as in_handle, dest_path.open("w", newline="") as out_handle:
+            reader = csv.reader(in_handle, dialect)
+            writer = csv.writer(out_handle, delimiter="\t", lineterminator="\n")
+            for row in reader:
+                writer.writerow(row)
+
+    normalize_table(sys.argv[1], sys.argv[2])
+    normalize_table(sys.argv[3], sys.argv[4])
+    PY
+
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
+  >>>
+
+  output {
+    File   predictions_tsv   = "~{out_basename}.virnucpro.predictions.tsv"
+    File   highestscore_tsv  = "~{out_basename}.virnucpro.highestscore.tsv"
+    Int    max_ram_gb        = ceil(read_float("MEM_BYTES")/1000000000)
+    String virnucpro_version = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: "~{machine_mem_gb} GB"
+    cpu: cpu
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size_az} GB"
+    vm_size: select_first([vm_size, "Standard_NC6s_v3"])
+    bootDiskSizeGb: boot_disk
+    gpu: true
+    dx_instance_type: "mem2_ssd1_gpu1_x8"
+    acceleratorType: select_first([accelerator_type, "nvidia-tesla-t4"])
+    acceleratorCount: select_first([accelerator_count, gpu_count, 1])
+    gpuType: select_first([gpu_type, "nvidia-tesla-t4"])
+    gpuCount: select_first([gpu_count, accelerator_count, 1])
+    preemptible: 2
+    maxRetries: 2
+  }
+}
+
+task virnucpro_contigs {
+  meta {
+    description: "Summarizes VirNucPro chunk-level highest-score predictions into contig-level calls."
+  }
+
+  input {
+    File   highestscore_tsv
+    String out_basename
+
+    Float  min_viral_prop = 0.1
+    Float  min_nonviral_prop = 0.1
+    Int    min_chunks = 5
+    String id_col = "Modified_ID"
+    String id_pattern = "(NODE_[0-9]+)"
+
+    Int    machine_mem_gb = 4
+    String docker = "viral-ngs:classify-vnp-local" #skip-global-version-pin
+  }
+
+  Int disk_size = 50
+
+  parameter_meta {
+    highestscore_tsv: {
+      description: "VirNucPro highest-score TSV from the virnucpro task.",
+      patterns: ["*.tsv", "*.csv"],
+      category: "required"
+    }
+    out_basename: {
+      description: "Output basename for the contig classification TSV.",
+      category: "required"
+    }
+    min_viral_prop: {
+      description: "Minimum confident viral chunk proportion.",
+      category: "advanced"
+    }
+    min_nonviral_prop: {
+      description: "Minimum confident non-viral chunk proportion.",
+      category: "advanced"
+    }
+    min_chunks: {
+      description: "Minimum chunk count for high/moderate confidence tiers.",
+      category: "advanced"
+    }
+    id_col: {
+      description: "Column containing VirNucPro chunk or contig IDs.",
+      category: "advanced"
+    }
+    id_pattern: {
+      description: "Regex used to extract contig group IDs from id_col.",
+      category: "advanced"
+    }
+    machine_mem_gb: {
+      description: "Memory allocation in GB."
+    }
+    docker: {
+      description: "Docker image with viral-ngs VirNucPro support."
+    }
+  }
+
+  command <<<
+    set -ex -o pipefail
+
+    metagenomics --version | tee VERSION
+
+    metagenomics virnucpro_contigs \
+      "~{highestscore_tsv}" \
+      "~{out_basename}.virnucpro.contigs.tsv" \
+      --minViralProp ~{min_viral_prop} \
+      --minNonviralProp ~{min_nonviral_prop} \
+      --minChunks ~{min_chunks} \
+      --idCol "~{id_col}" \
+      --idPattern "~{id_pattern}" \
+      --loglevel=DEBUG
+  >>>
+
+  output {
+    File   contig_classifications_tsv = "~{out_basename}.virnucpro.contigs.tsv"
+    String viralngs_version           = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: "~{machine_mem_gb} GB"
+    cpu: 1
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
+
+task virnucpro_reads_by_contig {
+  meta {
+    description: "Backports VirNucPro contig-level classifications to reads using augmented PAF alignments."
+  }
+
+  input {
+    File   paf_file
+    File   contig_classifications_tsv
+    String out_basename
+
+    Int    min_mapq = 5
+    Float  min_identity = 90.0
+    Float  min_query_cov = 80.0
+    String? duckdb_memory_limit
+
+    Int    machine_mem_gb = 16
+    Int    cpu = 4
+    Int    disk_size = 250
+    String docker = "viral-ngs:classify-vnp-local" #skip-global-version-pin
+  }
+
+  parameter_meta {
+    paf_file: {
+      description: "PAF alignments from reads to contigs, augmented with percent identity and query coverage as the final two fields.",
+      patterns: ["*.paf", "*.paf.gz", "*.paf.zst", "*.tsv", "*.tsv.gz", "*.tsv.zst"],
+      category: "required"
+    }
+    contig_classifications_tsv: {
+      description: "VirNucPro contig classification TSV from virnucpro_contigs.",
+      patterns: ["*.tsv", "*.tsv.gz", "*.tsv.zst"],
+      category: "required"
+    }
+    out_basename: {
+      description: "Output basename for the read-level VirNucPro classification TSV.",
+      category: "required"
+    }
+    min_mapq: {
+      description: "Minimum mapping quality for a read-contig alignment to be marked mapped_well.",
+      category: "advanced"
+    }
+    min_identity: {
+      description: "Minimum percent identity for a read-contig alignment to be marked mapped_well. Use percent units, e.g. 90.0.",
+      category: "advanced"
+    }
+    min_query_cov: {
+      description: "Minimum query coverage percent for a read-contig alignment to be marked mapped_well. Use percent units, e.g. 80.0.",
+      category: "advanced"
+    }
+    duckdb_memory_limit: {
+      description: "DuckDB memory limit string, e.g. 14GB. Defaults to machine_mem_gb minus 2 GB when machine_mem_gb > 4.",
+      category: "runtime"
+    }
+    machine_mem_gb: {
+      description: "Memory allocation in GB.",
+      category: "runtime"
+    }
+    cpu: {
+      description: "CPU cores to request.",
+      category: "runtime"
+    }
+    disk_size: {
+      description: "Local disk size in GB. DuckDB may spill intermediate joins to this disk.",
+      category: "runtime"
+    }
+    docker: {
+      description: "Docker image with viral-ngs VirNucPro post-processing helpers and DuckDB."
+    }
+  }
+
+  command <<<
+    set -euo pipefail
+
+    if [ -z "${TMPDIR:-}" ]; then
+      TMPDIR="$(pwd)"
+      export TMPDIR
+    fi
+
+    metagenomics --version | tee VERSION
+
+    mkdir -p virnucpro_reads_work
+
+    export PAF_FILE="~{paf_file}"
+    export CONTIG_CLASSIFICATIONS_TSV="~{contig_classifications_tsv}"
+    export OUTPUT_TSV="~{out_basename}.virnucpro.reads.tsv"
+    export DUCKDB_MEMORY_LIMIT="~{default="" duckdb_memory_limit}"
+
+    if [ -z "$DUCKDB_MEMORY_LIMIT" ]; then
+      if [ "~{machine_mem_gb}" -gt 4 ]; then
+        DUCKDB_MEMORY_LIMIT="$((~{machine_mem_gb} - 2))GB"
+      else
+        DUCKDB_MEMORY_LIMIT="~{machine_mem_gb}GB"
+      fi
+      export DUCKDB_MEMORY_LIMIT
+    fi
+
+    python3 <<'PY'
+    import os
+
+    from viral_ngs.classify import virnucpro
+
+    virnucpro.classify_reads_by_contig(
+        paf_file=os.environ["PAF_FILE"],
+        contig_classifications=os.environ["CONTIG_CLASSIFICATIONS_TSV"],
+        output_tsv=os.environ["OUTPUT_TSV"],
+        min_mapq=~{min_mapq},
+        min_identity=~{min_identity},
+        min_query_cov=~{min_query_cov},
+        duckdb_memory_limit=os.environ.get("DUCKDB_MEMORY_LIMIT") or None,
+        work_dir="virnucpro_reads_work",
+    )
+    PY
+
+    if [ ! -s "$OUTPUT_TSV" ]; then
+      echo "VirNucPro read-by-contig helper did not produce a non-empty output file: $OUTPUT_TSV" >&2
+      exit 1
+    fi
+
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
+  >>>
+
+  output {
+    File   read_classifications_tsv = "~{out_basename}.virnucpro.reads.tsv"
+    Int    max_ram_gb               = ceil(read_float("MEM_BYTES")/1000000000)
+    String viralngs_version         = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: "~{machine_mem_gb} GB"
+    cpu: cpu
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB"
+    dx_instance_type: "mem2_ssd1_v2_x4"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
