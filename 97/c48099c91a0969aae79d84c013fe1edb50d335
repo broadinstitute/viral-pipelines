@@ -1,0 +1,26 @@
+github_actions_ci/tests-miniwdl.sh
+  s_8c487b73f947db::t_33083ee6344e72 50,56,64
+  s_8c487b73f947db::t_6b07624399071a 39-49,51-55,57-63,65-80
+pipes/WDL/tasks/tasks_metagenomics.wdl
+  s_8c487b73f947db::t_c7ef51b609a3a3 1073-1076
+  s_8c487b73f947db::t_7cb37c588628d7 946,954-955,971,993
+  s_8c487b73f947db::t_f8db3c148cb70a 1094
+pipes/WDL/workflows/classify_centrifuger.wdl
+  s_8c487b73f947db::t_56e33f63025b69 7,15-18,22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "97c48099c91a0969aae79d84c013fe1edb50d335",
+  "prompts": {},
+  "sessions": {
+    "s_8c487b73f947db": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e41eb-0471-70a2-9200-3ab908c428ed",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>"
+    }
+  }
+}
