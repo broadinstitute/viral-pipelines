@@ -943,7 +943,7 @@ task kaiju {
 
 task centrifuger {
   meta {
-    description: "Runs Centrifuger taxonomic classification on one BAM file. Delegates all plumbing (SamToFastq, paired/single detection, empty-BAM short-circuit, tmp-file cleanup) to the `metagenomics centrifuger` and `metagenomics centrifuger_kreport` CLI commands from viral-ngs."
+    description: "Runs Centrifuger taxonomic classification on one BAM file. Emits the native per-read classification TSV, a Kraken2-style hierarchical kreport, and a Kraken2-compatible classified-read report only when k == 1. Delegates all plumbing (SamToFastq, paired/single detection, empty-BAM short-circuit, tmp-file cleanup) to the `metagenomics centrifuger` and `metagenomics centrifuger_kreport` CLI commands from viral-ngs."
   }
 
   input {
@@ -951,13 +951,11 @@ task centrifuger {
     File         centrifuger_db_tgz
     String       db_name
 
-    # Optional classify-time tuning passed through to `metagenomics centrifuger`
-    Int?         k
+    # Classify-time tuning passed through to `metagenomics centrifuger`
+    Int          k              = 1
     Int?         min_hitlen
     Int?         hitk_factor
     Boolean      merge_readpair    = false
-    Boolean      emit_unclassified = false
-    Boolean      emit_classified   = false
 
     # Optional kreport tuning passed through to `metagenomics centrifuger_kreport`
     Boolean      kreport_no_lca     = false
@@ -970,7 +968,7 @@ task centrifuger {
     # Pinned to the feature/centrifuger-integration build; bump to a real
     # release tag (and remove the skip marker) once viral-ngs cuts one that
     # contains the `metagenomics centrifuger*` CLI subcommands.
-    String       docker = "quay.io/broadinstitute/viral-classify:2.1.33.0" #skip-global-version-pin
+    String       docker = "quay.io/broadinstitute/viral-ngs:feature-centrifuger-integration-classify" #skip-global-version-pin
   }
 
   String sample_name = basename(reads_bam, ".bam")
@@ -992,7 +990,7 @@ task centrifuger {
       category: "required"
     }
     k: {
-      description: "Report top-k classification results per read (centrifuger -k). Default: tool default.",
+      description: "Report top-k classification results per read (centrifuger -k). Default: 1. The optional Kraken2-compatible classified-read output is emitted only when k == 1.",
       category: "advanced"
     }
     min_hitlen: {
@@ -1005,14 +1003,6 @@ task centrifuger {
     }
     merge_readpair: {
       description: "Merge paired reads before classification (centrifuger --merge-readpair).",
-      category: "advanced"
-    }
-    emit_unclassified: {
-      description: "When true, emit unclassified reads via centrifuger --un (one fastq per sample, named <sample>.unclassified*).",
-      category: "advanced"
-    }
-    emit_classified: {
-      description: "When true, emit classified reads via centrifuger --cl (one fastq per sample, named <sample>.classified*).",
       category: "advanced"
     }
     kreport_no_lca: {
@@ -1076,10 +1066,15 @@ task centrifuger {
       ~{"--min_hitlen=" + min_hitlen} \
       ~{"--hitk_factor=" + hitk_factor} \
       ~{true="--merge_readpair" false="" merge_readpair} \
-      ~{true="--unclassified_prefix=$SAMPLE.unclassified" false="" emit_unclassified} \
-      ~{true="--classified_prefix=$SAMPLE.classified"     false="" emit_classified} \
       --threads="~{cpu}" \
       --loglevel=DEBUG
+
+    if [ "~{k}" -eq 1 ]; then
+      metagenomics centrifuger_classification_to_kraken2 \
+        "${SAMPLE}.centrifuger.tsv" \
+        "${SAMPLE}.centrifuger.kraken2.reads.txt.gz" \
+        --loglevel=DEBUG
+    fi
 
     # Kraken2-style hierarchical report from the per-read classification.
     metagenomics centrifuger_kreport \
@@ -1096,8 +1091,7 @@ task centrifuger {
   output {
     File        classification_tsv = "~{sample_name}.centrifuger.tsv"
     File        kreport            = "~{sample_name}.centrifuger.kreport"
-    Array[File] unclassified_reads  = glob("*.unclassified*")
-    Array[File] classified_reads    = glob("*.classified*")
+    Array[File] kraken2_reads_reports = glob("~{sample_name}.centrifuger.kraken2.reads.txt.gz")
     String      viralngs_version    = read_string("VERSION")
   }
 

@@ -36,6 +36,48 @@ for workflow in ../pipes/WDL/workflows/*.wdl; do
 		if [ -f $workflow_name/outputs.json ]; then
 			echo "$workflow_name SUCCESS -- outputs:"
 			cat $workflow_name/outputs.json
+			if [ "$workflow_name" = "classify_centrifuger" ]; then
+				echo "$workflow_name -- validating Kraken2-compatible reads report"
+				kraken2_reads_report=$(jq -r '."classify_centrifuger.kraken2_reads_report" // empty' $workflow_name/outputs.json)
+				if [ -z "$kraken2_reads_report" ]; then
+					echo "classify_centrifuger expected kraken2_reads_report for k=1"
+					exit 1
+				fi
+				if [ ! -s "$kraken2_reads_report" ]; then
+					echo "classify_centrifuger kraken2_reads_report is missing or empty: $kraken2_reads_report"
+					exit 1
+				fi
+				gzip -t "$kraken2_reads_report"
+				gzip -cd "$kraken2_reads_report" | awk -F '\t' '
+					NF != 5 {
+						printf("expected 5 tab-delimited Kraken2 columns at line %d, saw %d\n", NR, NF) > "/dev/stderr"
+						exit 1
+					}
+					$1 != "C" {
+						printf("unexpected Kraken2 status at line %d: %s\n", NR, $1) > "/dev/stderr"
+						exit 1
+					}
+					$4 !~ /^[0-9]+$/ {
+						printf("query length at line %d should be numeric, saw %s\n", NR, $4) > "/dev/stderr"
+						exit 1
+					}
+				}'
+
+				echo "$workflow_name -- validating Kraken2-compatible reads report is absent for k=2"
+				time miniwdl run \
+					--task centrifuger \
+					-d classify_centrifuger-k2/. \
+					--error-json \
+					--verbose \
+					../pipes/WDL/tasks/tasks_metagenomics.wdl \
+					reads_bam=test/input/G5012.3.testreads.bam \
+					centrifuger_db_tgz=test/input/centrifuger_db-tinytest.tar.gz \
+					db_name=tiny_cfr \
+					k=2 \
+					machine_mem_gb=4 \
+					cpu=1
+				jq -e '."centrifuger.kraken2_reads_reports" == []' classify_centrifuger-k2/outputs.json
+			fi
 			if [ -f $expected_output_json ]; then
 				echo "$workflow_name -- validating outputs"
 				touch expected actual
