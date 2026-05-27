@@ -577,6 +577,483 @@ task build_kraken2_db {
   }
 }
 
+task kallisto {
+  meta {
+    description: "Runs Kallisto/kb pseudoalignment classification on one BAM or single FASTQ file."
+  }
+
+  input {
+    File    reads_bam
+    File    kallisto_index
+    File    t2g
+    String? sample_id
+
+    Int     kmer_size = 31
+    String  parity = "single"
+    String  technology = "bulk"
+    Boolean loom = false
+    Boolean protein = false
+
+    Int     machine_mem_gb = 32
+    Int     cpu = 16
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.13-classify"
+  }
+
+  parameter_meta {
+    reads_bam: {
+      description: "Reads to classify. May be unaligned BAM or single FASTQ/FASTQ.GZ.",
+      patterns: ["*.bam", "*.fastq", "*.fq", "*.fastq.gz", "*.fq.gz"],
+      category: "required"
+    }
+    kallisto_index: {
+      description: "Pre-built Kallisto index file.",
+      patterns: ["*.idx", "*.index"],
+      category: "required"
+    }
+    t2g: {
+      description: "Transcript-to-gene mapping file. Two-column TSV with transcript IDs in the first column and collapsed target IDs in the second column.",
+      patterns: ["*.tsv", "*.txt"],
+      category: "required"
+    }
+    sample_id: {
+      description: "Optional sample identifier to stamp into the long-form counts TSV. Defaults to the input reads basename with common BAM/FASTQ extensions removed.",
+      category: "common"
+    }
+    kmer_size: {
+      description: "K-mer size used by the Kallisto index. Must match the value used to build the index. Default 31.",
+      category: "advanced"
+    }
+    parity: {
+      description: "Library parity passed to kb count. Common values are single or paired. Default single.",
+      category: "advanced"
+    }
+    technology: {
+      description: "Technology preset passed to kb count. Default bulk.",
+      category: "advanced"
+    }
+    loom: {
+      description: "Also emit kb-generated Loom output when supported by the runtime image. Default false.",
+      category: "advanced"
+    }
+    protein: {
+      description: "Indicates that the Kallisto index was built from protein sequences. Default false.",
+      category: "advanced"
+    }
+    machine_mem_gb: {
+      description: "Memory allocation in GB.",
+      category: "runtime"
+    }
+    cpu: {
+      description: "Number of CPUs to request and pass to Kallisto/kb.",
+      category: "runtime"
+    }
+    docker: {
+      description: "viral-ngs classify-flavored image containing the refactored `metagenomics kallisto` command.",
+      category: "runtime"
+    }
+  }
+
+  String out_basename = sub(sub(sub(sub(sub(basename(reads_bam), "\\.bam$", ""), "\\.fastq\\.gz$", ""), "\\.fq\\.gz$", ""), "\\.fastq$", ""), "\\.fq$", "")
+  String output_sample_id = select_first([sample_id, out_basename])
+  String count_dir = out_basename + ".kallisto_count"
+  Int disk_size = ceil((8 * size(reads_bam, "GB") + 2 * size(kallisto_index, "GB") + size(t2g, "GB") + 100) / 375.0) * 375
+
+  command <<<
+    set -ex -o pipefail
+
+    if [ -z "${TMPDIR:-}" ]; then
+      TMPDIR=$(pwd)
+      export TMPDIR
+    fi
+
+    metagenomics --version | tee VERSION
+
+    metagenomics kallisto \
+      "~{reads_bam}" \
+      --index "~{kallisto_index}" \
+      --t2g "~{t2g}" \
+      --kmer_len "~{kmer_size}" \
+      --technology "~{technology}" \
+      --parity "~{parity}" \
+      --sample-id "~{output_sample_id}" \
+      ~{true="--loom" false="" loom} \
+      ~{true="--protein" false="" protein} \
+      --out_dir "~{count_dir}" \
+      --threads "~{cpu}" \
+      --loglevel=DEBUG
+
+    tar -c -C "~{count_dir}" . | zstd > "~{out_basename}.kallisto_count.tar.zst"
+
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
+  >>>
+
+  output {
+    File        kallisto_counts_tsv  = "~{count_dir}/counts.tsv"
+    File        kallisto_counts_h5ad = "~{count_dir}/adata.h5ad"
+    File        kallisto_count_tar   = "~{out_basename}.kallisto_count.tar.zst"
+    Array[File] kallisto_loom_files  = glob("~{count_dir}/*.loom")
+    Int         max_ram_gb           = ceil(read_float("MEM_BYTES")/1000000000)
+    String      viralngs_version     = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: "~{machine_mem_gb} GB"
+    cpu: cpu
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
+    dx_instance_type: "mem3_ssd1_v2_x16"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
+
+task build_kallisto_db {
+  meta {
+    description: "Builds a Kallisto index from reference sequences."
+  }
+
+  input {
+    File    reference_sequences
+    String? out_basename
+
+    Boolean protein = false
+    Int     kmer_size = 31
+    String  workflow_type = "standard"
+
+    Int     machine_mem_gb = 32
+    Int     cpu = 16
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.13-classify"
+  }
+
+  parameter_meta {
+    reference_sequences: {
+      description: "FASTA file of reference sequences to index.",
+      patterns: ["*.fasta", "*.fa", "*.fna", "*.fasta.gz", "*.fa.gz", "*.fna.gz"],
+      category: "required"
+    }
+    out_basename: {
+      description: "Output basename for the index. Defaults to the reference FASTA basename.",
+      category: "common"
+    }
+    protein: {
+      description: "Generate an index from amino-acid reference sequences. Default false.",
+      category: "advanced"
+    }
+    kmer_size: {
+      description: "K-mer size for the Kallisto index. Default 31.",
+      category: "advanced"
+    }
+    workflow_type: {
+      description: "Kallisto/kb workflow type. Valid values are standard, nac, kite, or custom. Default standard.",
+      category: "advanced"
+    }
+    machine_mem_gb: {
+      description: "Memory allocation in GB.",
+      category: "runtime"
+    }
+    cpu: {
+      description: "Number of CPUs to request and pass to Kallisto/kb.",
+      category: "runtime"
+    }
+    docker: {
+      description: "viral-ngs classify-flavored image containing the refactored `metagenomics kallisto_build` command.",
+      category: "runtime"
+    }
+  }
+
+  String reference_basename = sub(sub(sub(sub(basename(reference_sequences), "\\.gz$", ""), "\\.fasta$", ""), "\\.fa$", ""), "\\.fna$", "")
+  String output_basename = select_first([out_basename, reference_basename])
+  Int disk_size = ceil((4 * size(reference_sequences, "GB") + 100) / 375.0) * 375
+
+  command <<<
+    set -ex -o pipefail
+
+    if [ -z "${TMPDIR:-}" ]; then
+      TMPDIR=$(pwd)
+      export TMPDIR
+    fi
+
+    metagenomics --version | tee VERSION
+
+    if [[ "~{reference_sequences}" == *.gz ]]; then
+      pigz -dc "~{reference_sequences}" > reference_sequences.fasta
+      REF_FASTA=reference_sequences.fasta
+    else
+      REF_FASTA="~{reference_sequences}"
+    fi
+
+    metagenomics kallisto_build \
+      "$REF_FASTA" \
+      --index "~{output_basename}.kallisto.idx" \
+      --workflow "~{workflow_type}" \
+      --kmer_len "~{kmer_size}" \
+      ~{true="--protein" false="" protein} \
+      --threads "~{cpu}" \
+      --loglevel=DEBUG
+
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
+  >>>
+
+  output {
+    File   kallisto_index  = "~{output_basename}.kallisto.idx"
+    Int    max_ram_gb      = ceil(read_float("MEM_BYTES")/1000000000)
+    String viralngs_version = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: "~{machine_mem_gb} GB"
+    cpu: cpu
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
+    dx_instance_type: "mem3_ssd1_v2_x16"
+    preemptible: 0
+    maxRetries: 1
+  }
+}
+
+task kallisto_extract {
+  meta {
+    description: "Extracts reads that pseudoalign to selected Kallisto target IDs."
+  }
+
+  input {
+    File           reads_bam
+    File           kallisto_index
+    File           t2g
+    String?        sample_id
+    Array[String]? target_ids
+    File?          h5ad_file
+    File?          id_to_taxon_map
+
+    Int            threshold = 1
+    String         taxonomy_level = "highest"
+    Boolean        protein = false
+
+    Int            machine_mem_gb = 32
+    Int            cpu = 16
+    String         docker = "quay.io/broadinstitute/viral-ngs:3.0.13-classify"
+  }
+
+  parameter_meta {
+    reads_bam: {
+      description: "Reads to extract from. May be unaligned BAM or single FASTQ/FASTQ.GZ.",
+      patterns: ["*.bam", "*.fastq", "*.fq", "*.fastq.gz", "*.fq.gz"],
+      category: "required"
+    }
+    kallisto_index: {
+      description: "Kallisto index used to pseudoalign reads.",
+      patterns: ["*.idx", "*.index"],
+      category: "required"
+    }
+    t2g: {
+      description: "Transcript-to-gene mapping file. Two-column TSV with transcript IDs in the first column and collapsed target IDs in the second column.",
+      patterns: ["*.tsv", "*.txt"],
+      category: "required"
+    }
+    sample_id: {
+      description: "Optional sample identifier to stamp into the read-level Kallisto TSV. Defaults to the input reads basename with common BAM/FASTQ extensions removed.",
+      category: "common"
+    }
+    target_ids: {
+      description: "Target transcript or collapsed hit IDs to extract. If omitted, h5ad_file is used to discover targets over threshold.",
+      category: "common"
+    }
+    h5ad_file: {
+      description: "Kallisto count h5ad file used to discover target IDs when target_ids is omitted.",
+      patterns: ["*.h5ad"],
+      category: "common"
+    }
+    id_to_taxon_map: {
+      description: "Optional CSV/TSV mapping Kallisto hit IDs to taxonomy columns. When provided, taxonomy lineage and selected taxonomy name are added to the read-level TSV.",
+      patterns: ["*.csv", "*.tsv", "*.csv.gz", "*.tsv.gz"],
+      category: "common"
+    }
+    threshold: {
+      description: "Minimum count threshold when extracting target IDs from h5ad_file. Default 1.",
+      category: "advanced"
+    }
+    taxonomy_level: {
+      description: "Taxonomy level to report from id_to_taxon_map. Valid values are highest or deepest. Default highest.",
+      category: "advanced"
+    }
+    protein: {
+      description: "Indicates that the Kallisto index was built from protein sequences. Default false.",
+      category: "advanced"
+    }
+    machine_mem_gb: {
+      description: "Memory allocation in GB.",
+      category: "runtime"
+    }
+    cpu: {
+      description: "Number of CPUs to request and pass to Kallisto/kb.",
+      category: "runtime"
+    }
+    docker: {
+      description: "viral-ngs classify-flavored image containing the refactored `metagenomics kallisto_extract` command.",
+      category: "runtime"
+    }
+  }
+
+  String out_basename = sub(sub(sub(sub(sub(basename(reads_bam), "\\.bam$", ""), "\\.fastq\\.gz$", ""), "\\.fq\\.gz$", ""), "\\.fastq$", ""), "\\.fq$", "")
+  String output_sample_id = select_first([sample_id, out_basename])
+  String extract_dir = out_basename + ".kallisto_extract"
+  Int disk_size = ceil((8 * size(reads_bam, "GB") + 2 * size(kallisto_index, "GB") + size(t2g, "GB") + size(h5ad_file, "GB") + size(id_to_taxon_map, "GB") + 100) / 375.0) * 375
+
+  command <<<
+    set -ex -o pipefail
+
+    if [ -z "${TMPDIR:-}" ]; then
+      TMPDIR=$(pwd)
+      export TMPDIR
+    fi
+
+    metagenomics --version | tee VERSION
+
+    TARGET_IDS="~{sep=',' select_first([target_ids, []])}"
+    H5AD_FILE="~{default='' h5ad_file}"
+    ID_TO_TAXON_MAP="~{default='' id_to_taxon_map}"
+    if [ -n "$TARGET_IDS" ]; then
+      TARGET_ARGS=(--targets "$TARGET_IDS")
+    elif [ -n "$H5AD_FILE" ]; then
+      TARGET_ARGS=(--h5ad "$H5AD_FILE" --threshold "~{threshold}")
+    else
+      echo "Either target_ids or h5ad_file must be provided to kallisto_extract." >&2
+      exit 1
+    fi
+    if [ -n "$ID_TO_TAXON_MAP" ]; then
+      TAXONOMY_ARGS=(--id-to-tax-map "$ID_TO_TAXON_MAP")
+    else
+      TAXONOMY_ARGS=()
+    fi
+
+    metagenomics kallisto_extract \
+      "~{reads_bam}" \
+      --index "~{kallisto_index}" \
+      --t2g "~{t2g}" \
+      --out_dir "~{extract_dir}" \
+      ~{true="--protein" false="" protein} \
+      --sample-id "~{output_sample_id}" \
+      --read-hits-tsv "~{extract_dir}/read_hits.tsv" \
+      "${TAXONOMY_ARGS[@]}" \
+      --taxonomy-level "~{taxonomy_level}" \
+      --threads "~{cpu}" \
+      "${TARGET_ARGS[@]}" \
+      --loglevel=DEBUG
+
+    tar -c -C "~{extract_dir}" . | zstd > "~{out_basename}.kallisto_extract.tar.zst"
+
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
+  >>>
+
+  output {
+    File   kallisto_extract_tar = "~{out_basename}.kallisto_extract.tar.zst"
+    File   read_hits_tsv        = "~{extract_dir}/read_hits.tsv"
+    Int    max_ram_gb           = ceil(read_float("MEM_BYTES")/1000000000)
+    String viralngs_version     = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: "~{machine_mem_gb} GB"
+    cpu: cpu
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
+    dx_instance_type: "mem3_ssd1_v2_x16"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
+
+task report_primary_kallisto_taxa {
+  meta {
+    description: "Interprets Kallisto count output and emits the primary contributing hit under a focal taxon."
+  }
+
+  input {
+    File   kallisto_count_tar
+    File?  id_to_taxon_map
+    String focal_taxon = "Viruses"
+
+    Int    machine_mem_gb = 16
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.13-classify"
+  }
+
+  parameter_meta {
+    kallisto_count_tar: {
+      description: "Kallisto count tarball emitted by the kallisto task.",
+      patterns: ["*.tar.zst", "*.tar.gz"],
+      category: "required"
+    }
+    id_to_taxon_map: {
+      description: "Optional CSV mapping Kallisto hit IDs to taxonomy columns.",
+      patterns: ["*.csv", "*.csv.gz"],
+      category: "common"
+    }
+    focal_taxon: {
+      description: "Taxonomic category to summarize. Default Viruses.",
+      category: "common"
+    }
+    machine_mem_gb: {
+      description: "Memory allocation in GB.",
+      category: "runtime"
+    }
+    docker: {
+      description: "viral-ngs classify-flavored image containing the refactored `metagenomics kallisto_top_taxa` command.",
+      category: "runtime"
+    }
+  }
+
+  String count_tar_basename = sub(sub(basename(kallisto_count_tar), "\\.tar\\.zst$", ""), "\\.tar\\.gz$", "")
+  String out_basename = sub(count_tar_basename, "\\.kallisto_count$", "")
+  Int disk_size = ceil((4 * size(kallisto_count_tar, "GB") + size(id_to_taxon_map, "GB") + 100) / 375.0) * 375
+
+  command <<<
+    set -ex -o pipefail
+
+    metagenomics --version | tee VERSION
+
+    metagenomics kallisto_top_taxa \
+      "~{kallisto_count_tar}" \
+      "~{out_basename}.ranked_focal_report.tsv" \
+      ~{"--id-to-tax-map " + id_to_taxon_map} \
+      --target-taxon "~{focal_taxon}" \
+      --loglevel=DEBUG
+
+    head -2 "~{out_basename}.ranked_focal_report.tsv" | tail +2 > TOPROW
+    cut -f 2 TOPROW > NUM_FOCAL
+    cut -f 3 TOPROW > TOP_HIT_ID
+    cut -f 4 TOPROW > TOP_HIT_NAME
+    cut -f 5 TOPROW > TOP_HIT_LOWEST_TAXA_NAME
+    cut -f 6 TOPROW > TOP_HIT_READS
+    cut -f 7 TOPROW > PCT_OF_FOCAL
+  >>>
+
+  output {
+    File   ranked_focal_report     = "~{out_basename}.ranked_focal_report.tsv"
+    String focal_tax_name          = focal_taxon
+    Int    total_focal_reads       = read_int("NUM_FOCAL")
+    String top_hit_id              = read_string("TOP_HIT_ID")
+    String top_hit_name            = read_string("TOP_HIT_NAME")
+    String top_hit_lowest_tax_name = read_string("TOP_HIT_LOWEST_TAXA_NAME")
+    Int    top_hit_reads           = read_int("TOP_HIT_READS")
+    Float  percent_of_focal        = read_float("PCT_OF_FOCAL")
+    String viralngs_version        = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: "~{machine_mem_gb} GB"
+    cpu: 16
+    disks: "local-disk ~{disk_size} LOCAL"
+    disk: "~{disk_size} GB" # TES
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible: 2
+    maxRetries: 2
+  }
+}
+
 task blastx {
   meta {
     description: "Runs BLASTx classification"
