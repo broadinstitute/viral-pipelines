@@ -4,7 +4,7 @@ import "../tasks/tasks_metagenomics.wdl" as metagenomics
 
 workflow classify_kallisto {
     meta {
-        description: "Kallisto/kb pseudoalignment classification of a single BAM or single FASTQ file. Emits long-form counts and a read-level Kallisto TSV for reads extracted from count-derived Kallisto targets."
+        description: "Kallisto/kb pseudoalignment classification of a single BAM or single FASTQ file. Emits long-form counts and read-level Kallisto summary TSV outputs."
         author: "Broad Viral Genomics"
         email:  "viral-ngs@broadinstitute.org"
         allowNestedInputs: true
@@ -46,11 +46,11 @@ workflow classify_kallisto {
             category: "required"
         }
         sample_id: {
-            description: "Optional sample identifier to stamp into Kallisto count and read-level TSV outputs. Defaults to the input reads basename with common BAM/FASTQ extensions removed.",
+            description: "Optional sample identifier to stamp into Kallisto count and summary TSV outputs. Defaults to the input reads basename with common BAM/FASTQ extensions removed.",
             category: "common"
         }
         id_to_taxon_map: {
-            description: "Optional CSV/TSV mapping Kallisto hit IDs to taxonomy columns. When provided, taxonomy lineage and selected taxonomy name are added to the read-level TSV.",
+            description: "Optional CSV/TSV mapping Kallisto hit IDs to taxonomy columns. When provided, taxonomy lineage and selected taxonomy name are added to summary.tsv.",
             patterns: ["*.csv", "*.tsv", "*.csv.gz", "*.tsv.gz"],
             category: "common"
         }
@@ -110,7 +110,7 @@ workflow classify_kallisto {
             docker         = docker
     }
 
-    call metagenomics.kallisto_extract {
+    call metagenomics.kallisto_read_summary {
         input:
             reads_bam      = reads_bam,
             kallisto_index = kallisto_index,
@@ -127,7 +127,7 @@ workflow classify_kallisto {
     }
 
     output {
-        File kallisto_counts_tsv    = kallisto.kallisto_counts_tsv
-        File kallisto_read_hits_tsv = kallisto_extract.read_hits_tsv
+        File kallisto_counts_tsv  = kallisto.kallisto_counts_tsv
+        File kallisto_summary_tsv = kallisto_read_summary.summary_tsv
     }
 }

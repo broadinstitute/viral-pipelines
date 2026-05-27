@@ -682,15 +682,12 @@ task kallisto {
       --threads "~{cpu}" \
       --loglevel=DEBUG
 
-    tar -c -C "~{count_dir}" . | zstd > "~{out_basename}.kallisto_count.tar.zst"
-
     { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
   >>>
 
   output {
     File        kallisto_counts_tsv  = "~{count_dir}/counts.tsv"
     File        kallisto_counts_h5ad = "~{count_dir}/adata.h5ad"
-    File        kallisto_count_tar   = "~{out_basename}.kallisto_count.tar.zst"
     Array[File] kallisto_loom_files  = glob("~{count_dir}/*.loom")
     Int         max_ram_gb           = ceil(read_float("MEM_BYTES")/1000000000)
     String      viralngs_version     = read_string("VERSION")
@@ -813,9 +810,9 @@ task build_kallisto_db {
   }
 }
 
-task kallisto_extract {
+task kallisto_read_summary {
   meta {
-    description: "Extracts reads that pseudoalign to selected Kallisto target IDs."
+    description: "Runs Kallisto extract internally and emits a read-level Kallisto summary TSV."
   }
 
   input {
@@ -853,7 +850,7 @@ task kallisto_extract {
       category: "required"
     }
     sample_id: {
-      description: "Optional sample identifier to stamp into the read-level Kallisto TSV. Defaults to the input reads basename with common BAM/FASTQ extensions removed.",
+      description: "Optional sample identifier to stamp into summary.tsv. Defaults to the input reads basename with common BAM/FASTQ extensions removed.",
       category: "common"
     }
     target_ids: {
@@ -866,7 +863,7 @@ task kallisto_extract {
       category: "common"
     }
     id_to_taxon_map: {
-      description: "Optional CSV/TSV mapping Kallisto hit IDs to taxonomy columns. When provided, taxonomy lineage and selected taxonomy name are added to the read-level TSV.",
+      description: "Optional CSV/TSV mapping Kallisto hit IDs to taxonomy columns. When provided, taxonomy lineage and selected taxonomy name are added to summary.tsv.",
       patterns: ["*.csv", "*.tsv", "*.csv.gz", "*.tsv.gz"],
       category: "common"
     }
@@ -935,21 +932,18 @@ task kallisto_extract {
       --out_dir "~{extract_dir}" \
       ~{true="--protein" false="" protein} \
       --sample-id "~{output_sample_id}" \
-      --read-hits-tsv "~{extract_dir}/read_hits.tsv" \
+      --summary-tsv "~{extract_dir}/summary.tsv" \
       "${TAXONOMY_ARGS[@]}" \
       --taxonomy-level "~{taxonomy_level}" \
       --threads "~{cpu}" \
       "${TARGET_ARGS[@]}" \
       --loglevel=DEBUG
 
-    tar -c -C "~{extract_dir}" . | zstd > "~{out_basename}.kallisto_extract.tar.zst"
-
     { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
   >>>
 
   output {
-    File   kallisto_extract_tar = "~{out_basename}.kallisto_extract.tar.zst"
-    File   read_hits_tsv        = "~{extract_dir}/read_hits.tsv"
+    File   summary_tsv          = "~{extract_dir}/summary.tsv"
     Int    max_ram_gb           = ceil(read_float("MEM_BYTES")/1000000000)
     String viralngs_version     = read_string("VERSION")
   }
@@ -968,11 +962,11 @@ task kallisto_extract {
 
 task report_primary_kallisto_taxa {
   meta {
-    description: "Interprets Kallisto count output and emits the primary contributing hit under a focal taxon."
+    description: "Interprets Kallisto counts TSV output and emits the primary contributing hit under a focal taxon."
   }
 
   input {
-    File   kallisto_count_tar
+    File   kallisto_counts_tsv
     File?  id_to_taxon_map
     String focal_taxon = "Viruses"
 
@@ -981,14 +975,14 @@ task report_primary_kallisto_taxa {
   }
 
   parameter_meta {
-    kallisto_count_tar: {
-      description: "Kallisto count tarball emitted by the kallisto task.",
-      patterns: ["*.tar.zst", "*.tar.gz"],
+    kallisto_counts_tsv: {
+      description: "Long-form Kallisto counts TSV emitted by the kallisto task.",
+      patterns: ["*.tsv", "*.tsv.gz"],
       category: "required"
     }
     id_to_taxon_map: {
-      description: "Optional CSV mapping Kallisto hit IDs to taxonomy columns.",
-      patterns: ["*.csv", "*.csv.gz"],
+      description: "Optional CSV/TSV mapping Kallisto hit IDs to taxonomy columns.",
+      patterns: ["*.csv", "*.tsv", "*.csv.gz", "*.tsv.gz"],
       category: "common"
     }
     focal_taxon: {
@@ -1005,19 +999,25 @@ task report_primary_kallisto_taxa {
     }
   }
 
-  String count_tar_basename = sub(sub(basename(kallisto_count_tar), "\\.tar\\.zst$", ""), "\\.tar\\.gz$", "")
-  String out_basename = sub(count_tar_basename, "\\.kallisto_count$", "")
-  Int disk_size = ceil((4 * size(kallisto_count_tar, "GB") + size(id_to_taxon_map, "GB") + 100) / 375.0) * 375
+  String out_basename = sub(sub(basename(kallisto_counts_tsv), "\\.tsv\\.gz$", ""), "\\.tsv$", "")
+  Int disk_size = ceil((4 * size(kallisto_counts_tsv, "GB") + size(id_to_taxon_map, "GB") + 100) / 375.0) * 375
 
   command <<<
     set -ex -o pipefail
 
     metagenomics --version | tee VERSION
 
+    ID_TO_TAXON_MAP="~{default='' id_to_taxon_map}"
+    if [ -n "$ID_TO_TAXON_MAP" ]; then
+      TAXONOMY_ARGS=(--id-to-tax-map "$ID_TO_TAXON_MAP")
+    else
+      TAXONOMY_ARGS=()
+    fi
+
     metagenomics kallisto_top_taxa \
-      "~{kallisto_count_tar}" \
+      "~{kallisto_counts_tsv}" \
       "~{out_basename}.ranked_focal_report.tsv" \
-      ~{"--id-to-tax-map " + id_to_taxon_map} \
+      "${TAXONOMY_ARGS[@]}" \
       --target-taxon "~{focal_taxon}" \
       --loglevel=DEBUG
 
