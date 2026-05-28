@@ -850,7 +850,7 @@ task kallisto_read_summary {
       category: "required"
     }
     sample_id: {
-      description: "Optional sample identifier to stamp into summary.tsv. Defaults to the input reads basename with common BAM/FASTQ extensions removed.",
+      description: "Optional sample identifier to stamp into the Kallisto summary TSV. Defaults to the input reads basename with common BAM/FASTQ extensions removed.",
       category: "common"
     }
     target_ids: {
@@ -863,7 +863,7 @@ task kallisto_read_summary {
       category: "common"
     }
     id_to_taxon_map: {
-      description: "Optional CSV/TSV mapping Kallisto hit IDs to taxonomy columns. When provided, taxonomy lineage and selected taxonomy name are added to summary.tsv.",
+      description: "Optional CSV/TSV mapping Kallisto hit IDs to taxonomy columns. When provided, taxonomy lineage and selected taxonomy name are added to the Kallisto summary TSV.",
       patterns: ["*.csv", "*.tsv", "*.csv.gz", "*.tsv.gz"],
       category: "common"
     }
@@ -896,6 +896,7 @@ task kallisto_read_summary {
   String out_basename = sub(sub(sub(sub(sub(basename(reads_bam), "\\.bam$", ""), "\\.fastq\\.gz$", ""), "\\.fq\\.gz$", ""), "\\.fastq$", ""), "\\.fq$", "")
   String output_sample_id = select_first([sample_id, out_basename])
   String extract_dir = out_basename + ".kallisto_extract"
+  String summary_tsv_filename = output_sample_id + ".kallisto_summary.tsv"
   Int disk_size = ceil((8 * size(reads_bam, "GB") + 2 * size(kallisto_index, "GB") + size(t2g, "GB") + size(h5ad_file, "GB") + size(id_to_taxon_map, "GB") + 100) / 375.0) * 375
 
   command <<<
@@ -932,18 +933,19 @@ task kallisto_read_summary {
       --out_dir "~{extract_dir}" \
       ~{true="--protein" false="" protein} \
       --sample-id "~{output_sample_id}" \
-      --summary-tsv "~{extract_dir}/summary.tsv" \
       "${TAXONOMY_ARGS[@]}" \
       --taxonomy-level "~{taxonomy_level}" \
       --threads "~{cpu}" \
       "${TARGET_ARGS[@]}" \
       --loglevel=DEBUG
 
+    cp "~{extract_dir}/summary.tsv" "~{summary_tsv_filename}"
+
     { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
   >>>
 
   output {
-    File   summary_tsv          = "~{extract_dir}/summary.tsv"
+    File   summary_tsv          = "~{summary_tsv_filename}"
     Int    max_ram_gb           = ceil(read_float("MEM_BYTES")/1000000000)
     String viralngs_version     = read_string("VERSION")
   }

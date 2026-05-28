@@ -46,11 +46,11 @@ workflow classify_kallisto {
             category: "required"
         }
         sample_id: {
-            description: "Optional sample identifier to stamp into Kallisto count and summary TSV outputs. Defaults to the input reads basename with common BAM/FASTQ extensions removed.",
+            description: "Optional sample identifier to stamp into Kallisto count and summary TSV outputs, and to name the summary output as <sample_id>.kallisto_summary.tsv. Defaults to the input reads basename with common BAM/FASTQ extensions removed.",
             category: "common"
         }
         id_to_taxon_map: {
-            description: "Optional CSV/TSV mapping Kallisto hit IDs to taxonomy columns. When provided, taxonomy lineage and selected taxonomy name are added to summary.tsv.",
+            description: "Optional CSV/TSV mapping Kallisto hit IDs to taxonomy columns. When provided, taxonomy lineage and selected taxonomy name are added to the Kallisto summary TSV.",
             patterns: ["*.csv", "*.tsv", "*.csv.gz", "*.tsv.gz"],
             category: "common"
         }
