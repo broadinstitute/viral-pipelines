@@ -143,13 +143,5 @@ workflow classify_kallisto {
     output {
         File   kallisto_counts_tsv                = kallisto.kallisto_counts_tsv
         File   kallisto_summary_tsv               = kallisto_read_summary.summary_tsv
-        File   kallisto_top_taxa_report           = report_primary_kallisto_taxa.ranked_focal_report
-        String kallisto_focal_taxon_name          = report_primary_kallisto_taxa.focal_tax_name
-        Int    kallisto_focal_total_reads         = report_primary_kallisto_taxa.total_focal_reads
-        String kallisto_top_taxon_id              = report_primary_kallisto_taxa.top_hit_id
-        String kallisto_top_taxon_name            = report_primary_kallisto_taxa.top_hit_name
-        String kallisto_top_taxon_lowest_tax_name = report_primary_kallisto_taxa.top_hit_lowest_tax_name
-        Int    kallisto_top_taxon_num_reads       = report_primary_kallisto_taxa.top_hit_reads
-        Float  kallisto_top_taxon_pct_of_focal    = report_primary_kallisto_taxa.percent_of_focal
     }
 }
