@@ -1,0 +1,21 @@
+pipes/WDL/tasks/tasks_metagenomics.wdl
+  s_46d75e203f701d::t_4ca71e7459fa88 973,976,991-994,1010-1011,1028,1033,1043,1057
+pipes/WDL/workflows/classify_kallisto.wdl
+  s_46d75e203f701d::t_9e116500418dbd 26,82-85,134-142,144-153
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "80700bdc60f28570fee2592aee2b3ec0ef2a56c0",
+  "prompts": {},
+  "sessions": {
+    "s_46d75e203f701d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e6510-ca33-7620-a04e-da2ef0ba1d61",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>"
+    }
+  }
+}
