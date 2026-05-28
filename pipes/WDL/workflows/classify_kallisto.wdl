@@ -23,6 +23,7 @@ workflow classify_kallisto {
         Boolean protein = false
         Int     extract_threshold = 1
         String  taxonomy_level = "highest"
+        String  focal_taxon = "Viruses"
 
         Int     machine_mem_gb = 32
         Int     cpu = 16
@@ -78,6 +79,10 @@ workflow classify_kallisto {
             description: "Taxonomy level to report from id_to_taxon_map. Valid values are highest or deepest. Default highest.",
             category: "advanced"
         }
+        focal_taxon: {
+            description: "Taxonomic category to summarize in the Kallisto top-taxa report. Default Viruses.",
+            category: "common"
+        }
         machine_mem_gb: {
             description: "Memory allocation in GB for both Kallisto count and extract.",
             category: "runtime"
@@ -126,8 +131,25 @@ workflow classify_kallisto {
             docker         = docker
     }
 
+    call metagenomics.report_primary_kallisto_taxa {
+        input:
+            kallisto_counts_tsv = kallisto.kallisto_counts_tsv,
+            id_to_taxon_map     = id_to_taxon_map,
+            sample_id           = resolved_sample_id,
+            focal_taxon         = focal_taxon,
+            docker              = docker
+    }
+
     output {
-        File kallisto_counts_tsv  = kallisto.kallisto_counts_tsv
-        File kallisto_summary_tsv = kallisto_read_summary.summary_tsv
+        File   kallisto_counts_tsv                = kallisto.kallisto_counts_tsv
+        File   kallisto_summary_tsv               = kallisto_read_summary.summary_tsv
+        File   kallisto_top_taxa_report           = report_primary_kallisto_taxa.ranked_focal_report
+        String kallisto_focal_taxon_name          = report_primary_kallisto_taxa.focal_tax_name
+        Int    kallisto_focal_total_reads         = report_primary_kallisto_taxa.total_focal_reads
+        String kallisto_top_taxon_id              = report_primary_kallisto_taxa.top_hit_id
+        String kallisto_top_taxon_name            = report_primary_kallisto_taxa.top_hit_name
+        String kallisto_top_taxon_lowest_tax_name = report_primary_kallisto_taxa.top_hit_lowest_tax_name
+        Int    kallisto_top_taxon_num_reads       = report_primary_kallisto_taxa.top_hit_reads
+        Float  kallisto_top_taxon_pct_of_focal    = report_primary_kallisto_taxa.percent_of_focal
     }
 }

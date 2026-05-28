@@ -970,9 +970,10 @@ task report_primary_kallisto_taxa {
   input {
     File   kallisto_counts_tsv
     File?  id_to_taxon_map
+    String? sample_id
     String focal_taxon = "Viruses"
 
-    Int    machine_mem_gb = 16
+    Int    machine_mem_gb = 4
     String docker = "quay.io/broadinstitute/viral-ngs:3.0.13-classify"
   }
 
@@ -985,6 +986,10 @@ task report_primary_kallisto_taxa {
     id_to_taxon_map: {
       description: "Optional CSV/TSV mapping Kallisto hit IDs to taxonomy columns.",
       patterns: ["*.csv", "*.tsv", "*.csv.gz", "*.tsv.gz"],
+      category: "common"
+    }
+    sample_id: {
+      description: "Optional sample identifier used to name the Kallisto top-taxa report. Defaults to the counts TSV basename.",
       category: "common"
     }
     focal_taxon: {
@@ -1002,6 +1007,8 @@ task report_primary_kallisto_taxa {
   }
 
   String out_basename = sub(sub(basename(kallisto_counts_tsv), "\\.tsv\\.gz$", ""), "\\.tsv$", "")
+  String output_basename = select_first([sample_id, out_basename])
+  String top_taxa_report_filename = output_basename + ".kallisto_top_taxa_report.tsv"
   Int disk_size = ceil((4 * size(kallisto_counts_tsv, "GB") + size(id_to_taxon_map, "GB") + 100) / 375.0) * 375
 
   command <<<
@@ -1018,12 +1025,12 @@ task report_primary_kallisto_taxa {
 
     metagenomics kallisto_top_taxa \
       "~{kallisto_counts_tsv}" \
-      "~{out_basename}.ranked_focal_report.tsv" \
+      "~{top_taxa_report_filename}" \
       "${TAXONOMY_ARGS[@]}" \
       --target-taxon "~{focal_taxon}" \
       --loglevel=DEBUG
 
-    head -2 "~{out_basename}.ranked_focal_report.tsv" | tail +2 > TOPROW
+    head -2 "~{top_taxa_report_filename}" | tail +2 > TOPROW
     cut -f 2 TOPROW > NUM_FOCAL
     cut -f 3 TOPROW > TOP_HIT_ID
     cut -f 4 TOPROW > TOP_HIT_NAME
@@ -1033,7 +1040,7 @@ task report_primary_kallisto_taxa {
   >>>
 
   output {
-    File   ranked_focal_report     = "~{out_basename}.ranked_focal_report.tsv"
+    File   ranked_focal_report     = "~{top_taxa_report_filename}"
     String focal_tax_name          = focal_taxon
     Int    total_focal_reads       = read_int("NUM_FOCAL")
     String top_hit_id              = read_string("TOP_HIT_ID")
@@ -1047,7 +1054,7 @@ task report_primary_kallisto_taxa {
   runtime {
     docker: docker
     memory: "~{machine_mem_gb} GB"
-    cpu: 16
+    cpu: 1
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
