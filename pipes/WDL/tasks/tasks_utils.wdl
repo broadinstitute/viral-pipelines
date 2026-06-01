@@ -1140,10 +1140,14 @@ task s3_copy {
     mkdir -p ~/.aws
     cp "~{aws_credentials}" ~/.aws/credentials
     touch OUT_URIS
-    for f in ~{sep=' ' infiles}; do
-      aws s3 cp "$f" "$S3_PREFIX/"
-      echo "$S3_PREFIX/$(basename "$f")" >> OUT_URIS
-    done
+    INFILES=~{write_lines(infiles)}
+    while IFS= read -r f || [ -n "$f" ]; do
+      # Skip empty or whitespace-only lines
+      if [ -n "$f" ] && [ -n "$(echo "$f" | tr -d '[:space:]')" ]; then
+        aws s3 cp "$f" "$S3_PREFIX/"
+        echo "$S3_PREFIX/$(basename "$f")" >> OUT_URIS
+      fi
+    done < "$INFILES"
   >>>
   output {
     Array[String] out_uris = read_lines("OUT_URIS")

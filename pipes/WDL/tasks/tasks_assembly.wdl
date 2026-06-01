@@ -79,7 +79,7 @@ task assemble {
           ~{'--minContigLen=' + spades_min_contig_len} \
           ~{'--spadesOpts="' + spades_options + '"'} \
           --memLimitGb $mem_in_gb \
-          --outReads=~{sample_name}.subsamp.bam \
+          --outReads="~{sample_name}.subsamp.bam" \
           --loglevel=DEBUG
 
         samtools view -c ~{sample_name}.subsamp.bam | tee subsample_read_count >&2
@@ -601,7 +601,7 @@ task ivar_trim {
             ~{'-q ' + min_quality} \
             ~{'-x ' + primer_offset} \
             -i "~{aligned_bam}" -p trim | tee IVAR_OUT
-          samtools sort -@ $(nproc) -m 1000M -o ~{bam_basename}.trimmed.bam trim.bam
+          samtools sort -@ $(nproc) -m 1000M -o "~{bam_basename}.trimmed.bam" trim.bam
         else
           echo "skipping ivar trim"
           cp "~{aligned_bam}" "~{bam_basename}.trimmed.bam"

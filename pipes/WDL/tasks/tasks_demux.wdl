@@ -368,7 +368,7 @@ task illumina_demux {
       . \
       ~{'--sampleSheet="' + samplesheet + '"'} \
       ~{'--runInfo="' + runinfo + '"'} \
-      ~{'--sequencing_center=' + sequencingCenter} \
+      ~{'--sequencing_center="' + sequencingCenter + '"'} \
       --outMetrics=metrics.txt \
       --commonBarcodes=barcodes.txt \
       ~{'--flowcell=' + flowcell} \

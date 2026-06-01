@@ -191,7 +191,7 @@ task ChunkBlastHits {
         read_utils extract_tarball \
           "~{blast_db_tgz}" . \
           --loglevel=DEBUG
-        export LOG_DIR=~{log_dir_final}
+        export LOG_DIR="~{log_dir_final}"
         echo "Using $(nproc) CPU cores."
         echo "Asked for ~{machine_mem_gb} memory GB"
         #Adding taxidlist input as optional 
