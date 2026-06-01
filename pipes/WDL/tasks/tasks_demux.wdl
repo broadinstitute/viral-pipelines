@@ -239,22 +239,22 @@ task illumina_demux {
     fi
     
     # Parse the lane count & run ID from RunInfo.xml file
-    lane_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@LaneCount)" $RUNINFO_FILE)
+    lane_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@LaneCount)" "$RUNINFO_FILE")
     if [ -z "$lane_count" ]; then
         echo "Could not parse LaneCount from RunInfo.xml. Please check RunInfo.xml is properly formatted"
     fi
 
-    surface_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@SurfaceCount)" $RUNINFO_FILE)
+    surface_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@SurfaceCount)" "$RUNINFO_FILE")
     if [ -z "$surface_count" ]; then
         echo "Could not parse SurfaceCount from RunInfo.xml. Please check RunInfo.xml is properly formatted"
     fi
 
-    swath_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@SwathCount)" $RUNINFO_FILE)
+    swath_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@SwathCount)" "$RUNINFO_FILE")
     if [ -z "$swath_count" ]; then
         echo "Could not parse SwathCount from RunInfo.xml. Please check RunInfo.xml is properly formatted"
     fi
 
-    tile_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@TileCount)" $RUNINFO_FILE)
+    tile_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@TileCount)" "$RUNINFO_FILE")
     if [ -z "$tile_count" ]; then
         echo "Could not parse TileCount from RunInfo.xml. Please check RunInfo.xml is properly formatted"
     fi
@@ -366,9 +366,9 @@ task illumina_demux {
       $FLOWCELL_DIR \
       ~{lane} \
       . \
-      ~{'--sampleSheet=' + samplesheet} \
-      ~{'--runInfo=' + runinfo} \
-      ~{'--sequencing_center=' + sequencingCenter} \
+      ~{'--sampleSheet="' + samplesheet + '"'} \
+      ~{'--runInfo="' + runinfo + '"'} \
+      ~{'--sequencing_center="' + sequencingCenter + '"'} \
       --outMetrics=metrics.txt \
       --commonBarcodes=barcodes.txt \
       ~{'--flowcell=' + flowcell} \
@@ -436,7 +436,7 @@ task illumina_demux {
       ~{'--predemux_trim_r1_3prime '  + inner_barcode_predemux_trim_r1_3prime} \
       ~{'--predemux_trim_r2_5prime '  + inner_barcode_predemux_trim_r2_5prime} \
       ~{'--predemux_trim_r2_3prime '  + inner_barcode_predemux_trim_r2_3prime} \
-      ~{'--sampleSheet=' + samplesheet} \
+      ~{'--sampleSheet="' + samplesheet + '"'} \
       "--runInfo=${RUNINFO_FILE}" \
       --illuminaRunDirectory=$FLOWCELL_DIR \
       $demux_threads \
@@ -843,7 +843,7 @@ task get_illumina_run_metadata {
     illumina --version | tee VERSION
 
     illumina illumina_metadata \
-      --runinfo ~{runinfo_xml} \
+      --runinfo "~{runinfo_xml}" \
       ~{'--sequencing_center ' + sequencing_center} \
       --out_runinfo runinfo.json \
       --loglevel=DEBUG
@@ -969,15 +969,15 @@ task demux_fastqs {
     illumina --version | tee VERSION
 
     illumina splitcode_demux_fastqs \
-      --fastq_r1 ~{fastq_r1} \
-      ~{'--fastq_r2 ' + fastq_r2} \
-      --samplesheet ~{samplesheet} \
-      --runinfo ~{runinfo_xml} \
-      ~{'--sequencing_center ' + sequencingCenter} \
+      --fastq_r1 "~{fastq_r1}" \
+      ~{'--fastq_r2 "' + fastq_r2 + '"'} \
+      --samplesheet "~{samplesheet}" \
+      --runinfo "~{runinfo_xml}" \
+      ~{'--sequencing_center "' + sequencingCenter + '"'} \
       --outdir . \
       --append_run_id \
-      --out_meta_by_sample ~{fastq_basename}-meta_by_sample.json \
-      --out_meta_by_filename ~{fastq_basename}-meta_by_filename.json \
+      --out_meta_by_sample "~{fastq_basename}-meta_by_sample.json" \
+      --out_meta_by_filename "~{fastq_basename}-meta_by_filename.json" \
       --loglevel=DEBUG
 
     # Workaround: create empty JSON files if Python code didn't produce them (zero-read FASTQs)

@@ -71,15 +71,15 @@ task assemble {
         assembly --version | tee VERSION
 
         assembly assemble_spades \
-          ~{reads_unmapped_bam} \
-          ~{trim_clip_db} \
-          ~{sample_name}.assembly1-spades.fasta \
+          "~{reads_unmapped_bam}" \
+          "~{trim_clip_db}" \
+          "~{sample_name}.assembly1-spades.fasta" \
           ~{'--nReads=' + spades_n_reads} \
           ~{true="--alwaysSucceed" false="" always_succeed} \
           ~{'--minContigLen=' + spades_min_contig_len} \
           ~{'--spadesOpts="' + spades_options + '"'} \
           --memLimitGb $mem_in_gb \
-          --outReads=~{sample_name}.subsamp.bam \
+          --outReads="~{sample_name}.subsamp.bam" \
           --loglevel=DEBUG
 
         samtools view -c ~{sample_name}.subsamp.bam | tee subsample_read_count >&2
@@ -595,13 +595,13 @@ task ivar_trim {
         ivar version | head -1 | tee VERSION
         if [ -f "~{trim_coords_bed}" ]; then
           ivar trim -e \
-            ~{'-b ' + trim_coords_bed} \
+            ~{'-b "' + trim_coords_bed + '"'} \
             ~{'-m ' + min_keep_length} \
             ~{'-s ' + sliding_window} \
             ~{'-q ' + min_quality} \
             ~{'-x ' + primer_offset} \
-            -i ~{aligned_bam} -p trim | tee IVAR_OUT
-          samtools sort -@ $(nproc) -m 1000M -o ~{bam_basename}.trimmed.bam trim.bam
+            -i "~{aligned_bam}" -p trim | tee IVAR_OUT
+          samtools sort -@ $(nproc) -m 1000M -o "~{bam_basename}.trimmed.bam" trim.bam
         else
           echo "skipping ivar trim"
           cp "~{aligned_bam}" "~{bam_basename}.trimmed.bam"
@@ -922,16 +922,16 @@ task refine_assembly_with_aligned_reads {
 
         if [ ~{true='true' false='false' mark_duplicates} == "true" ]; then
           read_utils mkdup_picard \
-            ~{reads_aligned_bam} \
+            "~{reads_aligned_bam}" \
             temp_markdup.bam \
             --JVMmemory "$mem_in_mb"m \
             --loglevel=DEBUG
         else
-          ln -s ~{reads_aligned_bam} temp_markdup.bam
+          ln -s "~{reads_aligned_bam}" temp_markdup.bam
         fi
         samtools index -@ $(nproc) temp_markdup.bam temp_markdup.bai
 
-        ln -s ~{reference_fasta} assembly.fasta
+        ln -s "~{reference_fasta}" assembly.fasta
         assembly refine_assembly \
           assembly.fasta \
           temp_markdup.bam \

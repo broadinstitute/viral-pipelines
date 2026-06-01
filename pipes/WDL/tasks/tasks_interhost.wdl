@@ -311,7 +311,7 @@ task beast {
       ~{true="-beagle_double" false="-beagle_single" beagle_double_precision} \
       -beagle_scaling always \
       ~{'-beagle_order ' + beagle_order} \
-      ~{beauti_xml}
+      "~{beauti_xml}"
   >>>
 
   output {

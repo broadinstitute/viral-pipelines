@@ -82,7 +82,7 @@ task polyphonia_detect_cross_contamination {
     fi
 
     polyphonia cross_contamination \
-      --ref ~{reference_fasta} \
+      --ref "~{reference_fasta}" \
       --vcf ~{sep=' ' lofreq_vcfs} \
       --consensus ~{sep=' ' genome_fastas} \
       --read-depths ~{sep=' ' select_first([read_depths, []])} \
@@ -94,7 +94,7 @@ task polyphonia_detect_cross_contamination {
       ~{'--min-matches-proportion ' + min_matches_proportion} \
       ~{'--min-maf ' + min_maf} \
       ~{'--masked-positions ' + masked_positions} \
-      ~{'--masked-positions-file ' + masked_positions_file} \
+      ~{'--masked-positions-file "' + masked_positions_file + '"'} \
       $PLATE_MAPS_INPUT \
       ~{'--plate-size ' + plate_size} \
       ~{'--plate-columns ' + plate_columns} \
@@ -224,8 +224,8 @@ task isnvs_per_sample {
   command <<<
     intrahost --version | tee VERSION
     intrahost vphaser_one_sample \
-        ~{mapped_bam} \
-        ~{assembly_fasta} \
+        "~{mapped_bam}" \
+        "~{assembly_fasta}" \
         vphaser2.~{sample_name}.txt.gz \
         ~{'--vphaserNumThreads=' + threads} \
         ~{true="--removeDoublyMappedReads" false="" removeDoublyMappedReads} \
@@ -286,7 +286,7 @@ task isnvs_vcf {
     echo "snpRefAccessions: $snpRefAccessions"
 
     intrahost merge_to_vcf \
-        ~{reference_fasta} \
+        "~{reference_fasta}" \
         isnvs.vcf.gz \
         $SAMPLES \
         --isnvs ~{sep=' ' vphaser2Calls} \
