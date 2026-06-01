@@ -98,12 +98,12 @@ task lca_megablast {
     command <<<
         #Extract BLAST DB tarball
         read_utils extract_tarball \
-          ~{blast_db_tgz} . \
+          "~{blast_db_tgz}" . \
           --loglevel=DEBUG
-        
-        # Extract taxonomy DB tarball 
+
+        # Extract taxonomy DB tarball
         read_utils extract_tarball \
-          ~{taxonomy_db_tgz} . \
+          "~{taxonomy_db_tgz}" . \
           --loglevel=DEBUG
 
         '''
@@ -189,7 +189,7 @@ task ChunkBlastHits {
     command <<<
         #Extract tarball contents
         read_utils extract_tarball \
-          ~{blast_db_tgz} . \
+          "~{blast_db_tgz}" . \
           --loglevel=DEBUG
         export LOG_DIR=~{log_dir_final}
         echo "Using $(nproc) CPU cores."
@@ -274,12 +274,12 @@ task blastoff {
     command <<<
         #Extract BLAST DB tarball
         read_utils extract_tarball \
-          ~{blast_db_tgz} . \
+          "~{blast_db_tgz}" . \
           --loglevel=DEBUG
 
         # Extract taxonomy DB tarball (includes nodes.dmp)
         read_utils extract_tarball \
-          ~{taxonomy_db_tgz} . \
+          "~{taxonomy_db_tgz}" . \
           --loglevel=DEBUG
         
         export LOG_DIR=~{log_dir_final}
