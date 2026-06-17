@@ -940,3 +940,302 @@ task kaiju {
     dx_instance_type: "mem3_ssd1_v2_x16"
   }
 }
+
+task lucavirus_prepare {
+  meta {
+    description: "Prepares protein FASTA records for LucaVirus classification and emits an empty raw prediction fallback for no-input branches."
+  }
+
+  input {
+    File    input_fasta
+    String? sample_id
+    String  seq_type = "prot"
+
+    Int     machine_mem_gb = 4
+    String  docker = "quay.io/broadinstitute/viral-ngs:feature-lucavirus-classify" #skip-global-version-pin
+  }
+
+  String out_basename = select_first([sample_id, basename(basename(basename(input_fasta, ".fasta"), ".fa"), ".fna")])
+  Int disk_size = 50
+
+  parameter_meta {
+    input_fasta: {
+      description: "Amino-acid/protein FASTA containing sequences to score with LucaVirus. Nucleotide contigs must be translated or ORF-called upstream.",
+      patterns: ["*.fasta", "*.fa", "*.fna", "*.faa"],
+      category: "required"
+    }
+    sample_id: {
+      description: "Optional sample identifier used as the output filename prefix. Defaults to the input FASTA basename.",
+      category: "common"
+    }
+    seq_type: {
+      description: "LucaVirus sequence type. This first implementation supports only 'prot'.",
+      choices: ["prot"],
+      category: "advanced"
+    }
+    machine_mem_gb: {
+      description: "Memory allocation in GB.",
+      category: "runtime"
+    }
+    docker: {
+      description: "viral-ngs classify image containing the lucavirus_prepare, lucavirus_empty_predictions, and lucavirus_normalize commands.",
+      category: "runtime"
+    }
+  }
+
+  command <<<
+    set -e -o pipefail
+
+    metagenomics --version | tee VERSION
+
+    metagenomics lucavirus_prepare \
+      "~{input_fasta}" \
+      "~{out_basename}.lucavirus_input.csv" \
+      "~{out_basename}.lucavirus_prepare_stats.tsv" \
+      --seq-type "~{seq_type}" \
+      --loglevel=DEBUG
+
+    tail -n +2 "~{out_basename}.lucavirus_prepare_stats.tsv" | cut -f 1 > N_SEQUENCES
+    tail -n +2 "~{out_basename}.lucavirus_prepare_stats.tsv" | cut -f 2 > HAS_INPUT
+
+    metagenomics lucavirus_empty_predictions \
+      "~{out_basename}.raw.lucavirus.empty.tsv" \
+      --loglevel=DEBUG
+  >>>
+
+  output {
+    String  output_basename          = out_basename
+    File    lucavirus_input_csv      = "~{out_basename}.lucavirus_input.csv"
+    File    prepare_stats_tsv        = "~{out_basename}.lucavirus_prepare_stats.tsv"
+    File    empty_raw_predictions_tsv = "~{out_basename}.raw.lucavirus.empty.tsv"
+    Int     n_sequences              = read_int("N_SEQUENCES")
+    Boolean has_lucavirus_input      = read_boolean("HAS_INPUT")
+    String  viralngs_version         = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: "~{machine_mem_gb} GB"
+    cpu: 1
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible: 2
+  }
+}
+
+task lucavirus {
+  meta {
+    description: "Runs GPU-accelerated LucaVirus protein sequence classification for one task profile."
+  }
+
+  input {
+    File    lucavirus_input_csv
+    String  output_basename
+    String  task_profile = "rdrp"
+    Boolean use_gpu = true
+    Int     gpu_id = 0
+
+    Int     machine_mem_gb = 64
+    Int     cpu = 8
+    String? accelerator_type
+    Int?    accelerator_count
+    String? gpu_type
+    Int?    gpu_count
+    String? vm_size
+    Int     boot_disk_size_gb = 100
+    Int     disk_size_gb = 50
+    Int     preemptible_attempts = 0
+    String  docker = "ghcr.io/broadinstitute/lucavirus-cuda:v1.0"
+  }
+
+  Int disk_size_total = disk_size_gb + boot_disk_size_gb
+
+  parameter_meta {
+    lucavirus_input_csv: {
+      description: "Prepared LucaVirus CSV from lucavirus_prepare with seq_id, seq_type, and seq columns.",
+      patterns: ["*.csv"],
+      category: "required"
+    }
+    output_basename: {
+      description: "Output filename prefix, normally emitted by lucavirus_prepare.",
+      category: "required"
+    }
+    task_profile: {
+      description: "Named LucaVirus task profile to run.",
+      choices: ["rdrp", "viral_capsid", "virus_ec4"],
+      category: "common"
+    }
+    use_gpu: {
+      description: "Require CUDA and pass --use-gpu. Setting false passes --no-gpu but still provisions a GPU VM under this runtime block.",
+      category: "advanced"
+    }
+    gpu_id: {
+      description: "GPU index to pass to lucavirus-cuda.",
+      category: "advanced"
+    }
+    machine_mem_gb: {
+      description: "Memory allocation in GB.",
+      category: "runtime"
+    }
+    cpu: {
+      description: "CPU cores to request.",
+      category: "runtime"
+    }
+    accelerator_type: {
+      description: "[GCP/PAPIv2] GPU model to request, for example nvidia-tesla-t4.",
+      category: "runtime"
+    }
+    accelerator_count: {
+      description: "[GCP/PAPIv2] Number of GPUs to request.",
+      category: "runtime"
+    }
+    gpu_type: {
+      description: "[Terra] GPU model to request, for example nvidia-tesla-t4.",
+      category: "runtime"
+    }
+    gpu_count: {
+      description: "[Terra] Number of GPUs to request.",
+      category: "runtime"
+    }
+    vm_size: {
+      description: "[TES/Azure] GPU VM size.",
+      category: "runtime"
+    }
+    boot_disk_size_gb: {
+      description: "Boot disk size in GB. LucaVirus images bundle model assets and may need a larger boot disk than small classify tasks.",
+      category: "runtime"
+    }
+    disk_size_gb: {
+      description: "Local working disk size in GB.",
+      category: "runtime"
+    }
+    preemptible_attempts: {
+      description: "Number of preemptible attempts. Default 0 because LucaVirus has no checkpoint/resume behavior.",
+      category: "runtime"
+    }
+    docker: {
+      description: "Standalone CUDA-enabled LucaVirus Docker image with bundled assets.",
+      category: "runtime"
+    }
+  }
+
+  command <<<
+    set -euo pipefail
+
+    /opt/lucavirus_cli.py --version | tee VERSION
+
+    export PATH="/usr/local/nvidia/bin:${PATH}"
+    if command -v nvidia-smi >/dev/null 2>&1; then
+      nvidia-smi
+    else
+      echo "WARNING: nvidia-smi is not available inside the container; letting LucaVirus validate CUDA availability." >&2
+    fi
+
+    /opt/lucavirus_cli.py \
+      "~{lucavirus_input_csv}" \
+      "~{output_basename}.raw.lucavirus.tsv" \
+      --task-profile "~{task_profile}" \
+      --gpu-id "~{gpu_id}" \
+      ~{true='--use-gpu' false='--no-gpu' use_gpu} \
+      --verbose
+
+    test -s "~{output_basename}.raw.lucavirus.tsv"
+
+    { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi; } > MEM_BYTES
+  >>>
+
+  output {
+    File   raw_predictions_tsv = "~{output_basename}.raw.lucavirus.tsv"
+    Int    max_ram_gb          = ceil(read_float("MEM_BYTES")/1000000000)
+    String lucavirus_version   = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: "~{machine_mem_gb} GB"
+    cpu: cpu
+    disks: "local-disk ~{disk_size_gb} LOCAL"
+    disk: "~{disk_size_total} GB"
+    bootDiskSizeGb: boot_disk_size_gb
+    gpu: true
+    acceleratorType: select_first([accelerator_type, "nvidia-tesla-t4"])
+    acceleratorCount: select_first([accelerator_count, gpu_count, 1])
+    gpuType: select_first([gpu_type, "nvidia-tesla-t4"])
+    gpuCount: select_first([gpu_count, accelerator_count, 1])
+    nvidiaDriverVersion: "410.79"
+    vm_size: select_first([vm_size, "Standard_NC6s_v3"])
+    dx_instance_type: "mem2_ssd1_gpu1_x8"
+    preemptible: preemptible_attempts
+    maxRetries: 2
+  }
+}
+
+task lucavirus_normalize {
+  meta {
+    description: "Validates raw LucaVirus output and emits the durable normalized LucaVirus TSV."
+  }
+
+  input {
+    File   raw_predictions_tsv
+    String output_basename
+    String task_profile = "rdrp"
+
+    Int    machine_mem_gb = 4
+    String docker = "quay.io/broadinstitute/viral-ngs:feature-lucavirus-classify" #skip-global-version-pin
+  }
+
+  Int disk_size = 50
+
+  parameter_meta {
+    raw_predictions_tsv: {
+      description: "Raw LucaVirus output TSV from lucavirus-cuda, or a header-only fallback TSV from lucavirus_prepare.",
+      patterns: ["*.tsv"],
+      category: "required"
+    }
+    output_basename: {
+      description: "Output filename prefix, normally emitted by lucavirus_prepare.",
+      category: "required"
+    }
+    task_profile: {
+      description: "Named LucaVirus task profile used to generate the raw TSV.",
+      choices: ["rdrp", "viral_capsid", "virus_ec4"],
+      category: "common"
+    }
+    machine_mem_gb: {
+      description: "Memory allocation in GB.",
+      category: "runtime"
+    }
+    docker: {
+      description: "viral-ngs classify image containing lucavirus_normalize.",
+      category: "runtime"
+    }
+  }
+
+  command <<<
+    set -e -o pipefail
+
+    metagenomics --version | tee VERSION
+
+    metagenomics lucavirus_normalize \
+      "~{raw_predictions_tsv}" \
+      "~{output_basename}.lucavirus.tsv" \
+      --task-profile "~{task_profile}" \
+      --loglevel=DEBUG
+  >>>
+
+  output {
+    File   predictions_tsv  = "~{output_basename}.lucavirus.tsv"
+    String viralngs_version = read_string("VERSION")
+  }
+
+  runtime {
+    docker: docker
+    memory: "~{machine_mem_gb} GB"
+    cpu: 1
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB"
+    dx_instance_type: "mem1_ssd1_v2_x2"
+    preemptible: 2
+  }
+}
