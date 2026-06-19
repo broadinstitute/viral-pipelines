@@ -1,0 +1,71 @@
+pipes/WDL/workflows/classify_lucavirus.wdl
+  s_7973d23f5a2b96::t_ffb2cd246a3af1 38
+test/input/WDL/miniwdl-local/test_outputs-classify_lucavirus-local.json
+  s_7973d23f5a2b96::t_f57d75838b7607 1-3
+.gitignore
+  s_935b1ef10c8e1b::t_ea25f2fc7fe8c5 81-87
+test/input/WDL/miniwdl-local/test_inputs-classify_lucavirus-local.json
+  s_7973d23f5a2b96::t_f57d75838b7607 1-7
+pipes/cromwell/cromwell.local-gpu.conf
+  s_7973d23f5a2b96::t_420eee2922e4b6 1-55,57-100
+test/input/lucavirus_capsid_panel/metadata.tsv
+  s_7973d23f5a2b96::t_4f51993d939639 1-17
+test/input/WDL/cromwell-gpu/test_inputs-classify_lucavirus-local_gpu.json
+  s_7973d23f5a2b96::t_f1d5479aebaf72 1-14
+test/input/lucavirus_capsid_panel/README.md
+  s_7973d23f5a2b96::t_4f51993d939639 1-28
+test/input/WDL/cromwell-gpu/test_inputs-classify_lucavirus-capsid_panel-local_gpu.json
+  s_7973d23f5a2b96::t_4f51993d939639 1-14
+pipes/WDL/tasks/tasks_metagenomics.wdl
+  s_7973d23f5a2b96::t_9e89cfb339df8e 1135
+  s_7973d23f5a2b96::t_ffb2cd246a3af1 964
+LUCAVIRUS_WDL_INTEGRATION_PLAN.md
+  s_8c487b73f947db::t_e221c3d0a396cb 189-190,194-195,198,205-211,216
+  s_8c487b73f947db::t_6fc26b65f95157 8,20,54-104
+  s_8c487b73f947db::t_9601e05f2d7a9e 174-179
+  s_8c487b73f947db::t_f464ab062a4b1c 1-6,9-10,12-14,16,18,21-22,27,29-35,45,105-112,115-116,121-134,136,138-144,146-147,149-150,152-158,160-164,173,181-188,191-193,196,200-203,213,215,220-227,247,249,252-268,270-278,284-291,293-299,301-302,304-307,309,316-324,333,335-336,339-349,354-360,382-397,399-409,412-420,422-429,438-439,442,444,451,455,457-458,461-462,464,467-468,471,474,492,495-502,505-507,509-512,514-518,529-530,585-587,589-591
+  s_8c487b73f947db::t_7be7d14d3375c3 7,11,15,17,19,23-26,28,36-39,43-44,46-49,51-53,113-114,120,135,137,145,148,151,159,165-172,180,197,199,204,212,214,217-219,228-244,246,248,250-251,279-283,292,300,303,308,310-314,325-332,334,337-338,350-353,361-371,373-381,398,410-411,421,430-437,440-441,443,445-446,448-450,452-454,456,459-460,463,465-466,469-470,472,475-491,493-494,503-504,508,519-523,526,588,592
+  s_7973d23f5a2b96::t_0880a6cb36b640 524-525,527-528,531-544,551-555,559,564
+  s_7973d23f5a2b96::t_2e49311bbc5444 545-550
+  s_8c487b73f947db::t_9ac92e44b35217 565-571,575-577
+  s_7973d23f5a2b96::t_cdc0f8c7ec04c0 572-573,578-579
+  s_7973d23f5a2b96::t_daf3e1dba2f0e5 560-563
+  s_7973d23f5a2b96::t_f504cecee7c233 574
+  s_7973d23f5a2b96::t_db7f0a7899eaf6 556-558,580-584
+  s_7973d23f5a2b96::t_43673419edcc19 40-42,117-119,269,447
+  s_8c487b73f947db::t_20216dc5e956ab 50,245,315,372,473,513
+test/input/lucavirus.gpu-smoke.protein.fasta
+  s_7973d23f5a2b96::t_f1d5479aebaf72 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "fd477d2c76d4a14144cc26daea4de50340bc10b6",
+  "prompts": {},
+  "sessions": {
+    "s_7973d23f5a2b96": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ed62e-c7ae-7f23-91f8-d6174dd3a467",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>"
+    },
+    "s_8c487b73f947db": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e41eb-0471-70a2-9200-3ab908c428ed",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>"
+    },
+    "s_935b1ef10c8e1b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019edd70-692e-7050-95c7-2934d735201e",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>"
+    }
+  }
+}
