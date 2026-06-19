@@ -961,7 +961,7 @@ task lucavirus_prepare {
   parameter_meta {
     input_fasta: {
       description: "Amino-acid/protein FASTA containing sequences to score with LucaVirus. Nucleotide contigs must be translated or ORF-called upstream.",
-      patterns: ["*.fasta", "*.fa", "*.fna", "*.faa"],
+      patterns: ["*.fasta", "*.fa", "*.faa"],
       category: "required"
     }
     sample_id: {
@@ -1033,7 +1033,6 @@ task lucavirus {
     File    lucavirus_input_csv
     String  output_basename
     String  task_profile = "rdrp"
-    Boolean use_gpu = true
     Int     gpu_id = 0
 
     Int     machine_mem_gb = 64
@@ -1065,10 +1064,6 @@ task lucavirus {
       description: "Named LucaVirus task profile to run.",
       choices: ["rdrp", "viral_capsid", "virus_ec4"],
       category: "common"
-    }
-    use_gpu: {
-      description: "Require CUDA and pass --use-gpu. Setting false passes --no-gpu but still provisions a GPU VM under this runtime block.",
-      category: "advanced"
     }
     gpu_id: {
       description: "GPU index to pass to lucavirus-cuda.",
@@ -1137,7 +1132,7 @@ task lucavirus {
       "~{output_basename}.raw.lucavirus.tsv" \
       --task-profile "~{task_profile}" \
       --gpu-id "~{gpu_id}" \
-      ~{true='--use-gpu' false='--no-gpu' use_gpu} \
+      --use-gpu \
       --verbose
 
     test -s "~{output_basename}.raw.lucavirus.tsv"

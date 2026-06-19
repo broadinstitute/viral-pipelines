@@ -14,7 +14,6 @@ workflow classify_lucavirus {
         File    input_fasta
         String? sample_id
         String  task_profile = "rdrp"
-        Boolean use_gpu = true
         Int     gpu_id = 0
 
         Int     helper_machine_mem_gb = 4
@@ -36,7 +35,7 @@ workflow classify_lucavirus {
     parameter_meta {
         input_fasta: {
             description: "Amino-acid/protein FASTA containing sequences to score with LucaVirus. Nucleotide contigs must be translated or ORF-called upstream.",
-            patterns: ["*.fasta", "*.fa", "*.fna", "*.faa"],
+            patterns: ["*.fasta", "*.fa", "*.faa"],
             category: "required"
         }
         sample_id: {
@@ -47,10 +46,6 @@ workflow classify_lucavirus {
             description: "Named LucaVirus task profile to run.",
             choices: ["rdrp", "viral_capsid", "virus_ec4"],
             category: "common"
-        }
-        use_gpu: {
-            description: "Require CUDA and pass --use-gpu. Setting false passes --no-gpu but still provisions a GPU VM under this workflow runtime.",
-            category: "advanced"
         }
         gpu_id: {
             description: "GPU index to pass to lucavirus-cuda.",
@@ -124,7 +119,6 @@ workflow classify_lucavirus {
                 lucavirus_input_csv  = lucavirus_prepare.lucavirus_input_csv,
                 output_basename      = lucavirus_prepare.output_basename,
                 task_profile         = task_profile,
-                use_gpu              = use_gpu,
                 gpu_id               = gpu_id,
                 machine_mem_gb       = machine_mem_gb,
                 cpu                  = cpu,

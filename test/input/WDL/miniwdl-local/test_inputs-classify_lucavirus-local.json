@@ -1,0 +1,7 @@
+{
+  "classify_lucavirus.input_fasta": "test/input/lucavirus.empty.protein.fasta",
+  "classify_lucavirus.sample_id": "lucavirus_empty",
+  "classify_lucavirus.task_profile": "rdrp",
+  "classify_lucavirus.viralngs_docker": "quay.io/broadinstitute/viral-ngs:feature-lucavirus-classify",
+  "classify_lucavirus.lucavirus_docker": "ghcr.io/broadinstitute/lucavirus-cuda:v1.0"
+}

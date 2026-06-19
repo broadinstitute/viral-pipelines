@@ -78,4 +78,10 @@ tools/conda-tools/
 # miniWDL
 default.profraw
 
+# Local Cromwell run artifacts
+/cromwell-executions/
+/_LAST
+/*.cromwell.out
+/*.metadata.json
+
 .vscode/

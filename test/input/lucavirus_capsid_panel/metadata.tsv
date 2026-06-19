@@ -1,0 +1,17 @@
+accession	category	expected_for_viral_capsid	entry_name	protein_name	organism	length	source_url
+O56129	capsid_positive	positive	CAPSD_PCV2	Capsid protein	Porcine circovirus 2	233	https://www.uniprot.org/uniprotkb/O56129
+P03107	capsid_positive	positive	VL2_HPV16	Minor capsid protein L2	Human papillomavirus type 16	473	https://www.uniprot.org/uniprotkb/P03107
+P03607	capsid_positive	positive	CAPSD_SCPMV	Capsid protein	"Southern cowpea mosaic virus"	279	https://www.uniprot.org/uniprotkb/P03607
+P17455	capsid_positive	positive	CAPSD_PAVCD	Capsid protein VP1	Canine parvovirus type 2 isolate CPV-d	727	https://www.uniprot.org/uniprotkb/P17455
+Q83884	capsid_positive	positive	CAPSD_NVN68	Capsid protein VP1	Norovirus Norwalk strain	530	https://www.uniprot.org/uniprotkb/Q83884
+O71189	viral_non_capsid	negative_control	R1AB_GLRV3	Replicase polyprotein 1ab	Grapevine leafroll-associated virus 3 isolate NY1	2772	https://www.uniprot.org/uniprotkb/O71189
+P14350	viral_non_capsid	negative_control	POL_FOAMV	Pro-Pol polyprotein	Human spumaretrovirus	1143	https://www.uniprot.org/uniprotkb/P14350
+P31822	viral_non_capsid	negative_control	POL_FIVT2	Pol polyprotein	Feline immunodeficiency virus isolate TM2	1124	https://www.uniprot.org/uniprotkb/P31822
+Q03495	viral_non_capsid	negative_control	POLN_HEVME	Non-structural polyprotein pORF1	Hepatitis E virus genotype 2 isolate Human/Mexico	1691	https://www.uniprot.org/uniprotkb/Q03495
+Q64962	viral_non_capsid	negative_control	RDRP_ASPVP	RNA replication polyprotein	Apple stem pitting virus isolate PA66	2183	https://www.uniprot.org/uniprotkb/Q64962
+P00330	nonviral	negative_control	ADH1_YEAST	Alcohol dehydrogenase 1	Saccharomyces cerevisiae S288c	348	https://www.uniprot.org/uniprotkb/P00330
+P00561	nonviral	negative_control	AK1H_ECOLI	Bifunctional aspartokinase/homoserine dehydrogenase 1	Escherichia coli K12	820	https://www.uniprot.org/uniprotkb/P00561
+P0A7V8	nonviral	negative_control	RS4_ECOLI	Small ribosomal subunit protein uS4	Escherichia coli K12	206	https://www.uniprot.org/uniprotkb/P0A7V8
+P60709	nonviral	negative_control	ACTB_HUMAN	Actin cytoplasmic 1	Homo sapiens	375	https://www.uniprot.org/uniprotkb/P60709
+P68871	nonviral	negative_control	HBB_HUMAN	Hemoglobin subunit beta	Homo sapiens	147	https://www.uniprot.org/uniprotkb/P68871
+P69905	nonviral	negative_control	HBA_HUMAN	Hemoglobin subunit alpha	Homo sapiens	142	https://www.uniprot.org/uniprotkb/P69905
