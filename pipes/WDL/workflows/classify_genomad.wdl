@@ -67,6 +67,7 @@ workflow classify_genomad {
         File   genomad_provirus_summary_tsv  = genomad_end_to_end.provirus_summary
         File   genomad_virus_fasta           = genomad_end_to_end.virus_fasta
         File   genomad_plasmid_fasta         = genomad_end_to_end.plasmid_fasta
+        File   genomad_proteins_faa          = genomad_end_to_end.proteins_faa
 
         Int    genomad_max_ram_gb            = genomad_end_to_end.max_ram_gb
         String viral_classify_version        = genomad_end_to_end.viralngs_version

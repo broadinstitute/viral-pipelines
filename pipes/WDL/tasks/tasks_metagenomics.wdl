@@ -1010,6 +1010,7 @@ task genomad_end_to_end {
     : > "~{out_basename}_provirus.tsv"
     : > "~{out_basename}_virus.fna"
     : > "~{out_basename}_plasmid.fna"
+    : > "~{out_basename}_proteins.faa"
 
     if [ "$SEQ_COUNT" -gt 0 ]; then
       # run genomad end-to-end
@@ -1025,6 +1026,7 @@ task genomad_end_to_end {
       # genomad creates: genomad_output/<basename>_summary/<basename>_virus_summary.tsv etc.
       # Copy outputs with sample name prefix to working directory
       GENOMAD_BASENAME=$(basename "~{assembly_fasta}" | sed 's/\.\(fasta\|fa\|fna\)$//')
+      GENOMAD_ANNOTATE_DIR="genomad_output/${GENOMAD_BASENAME}_annotate"
       GENOMAD_SUMMARY_DIR="genomad_output/${GENOMAD_BASENAME}_summary"
       GENOMAD_PROVIRUS_DIR="genomad_output/${GENOMAD_BASENAME}_find_proviruses"
 
@@ -1048,6 +1050,9 @@ task genomad_end_to_end {
       if [ -f "$GENOMAD_SUMMARY_DIR/${GENOMAD_BASENAME}_plasmid.fna" ]; then
         cp "$GENOMAD_SUMMARY_DIR/${GENOMAD_BASENAME}_plasmid.fna" "~{out_basename}_plasmid.fna"
       fi
+      if [ -f "$GENOMAD_ANNOTATE_DIR/${GENOMAD_BASENAME}_proteins.faa" ]; then
+        cp "$GENOMAD_ANNOTATE_DIR/${GENOMAD_BASENAME}_proteins.faa" "~{out_basename}_proteins.faa"
+      fi
     fi
 
     # memory tracking (cgroups v1 and v2 compatible)
@@ -1060,6 +1065,7 @@ task genomad_end_to_end {
     File   provirus_summary = "~{out_basename}_provirus.tsv"
     File   virus_fasta = "~{out_basename}_virus.fna"
     File   plasmid_fasta = "~{out_basename}_plasmid.fna"
+    File   proteins_faa = "~{out_basename}_proteins.faa"
     Int    max_ram_gb = ceil(read_float("MEM_BYTES")/1000000000)
     String viralngs_version = read_string("VERSION")
   }
