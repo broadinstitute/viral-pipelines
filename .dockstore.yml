@@ -69,6 +69,11 @@ workflows:
   - name: classify_krakenuniq
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/classify_krakenuniq.wdl
+  - name: classify_lucavirus
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/classify_lucavirus.wdl
+    testParameterFiles:
+    - /test/input/WDL/miniwdl-local/test_inputs-classify_lucavirus-local.json
   - name: classify_multi
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/classify_multi.wdl
