@@ -950,6 +950,7 @@ task lucavirus_prepare {
     File    input_fasta
     String? sample_id
     String  seq_type = "prot"
+    Int?    min_sequence_length
 
     Int     machine_mem_gb = 4
     String  docker = "quay.io/broadinstitute/viral-ngs:feature-lucavirus-classify" #skip-global-version-pin
@@ -973,6 +974,10 @@ task lucavirus_prepare {
       choices: ["prot"],
       category: "advanced"
     }
+    min_sequence_length: {
+      description: "Optional minimum sequence length to keep before LucaVirus scoring. Records shorter than this value are omitted during preparation; if all records are filtered, the GPU task is skipped.",
+      category: "common"
+    }
     machine_mem_gb: {
       description: "Memory allocation in GB.",
       category: "runtime"
@@ -993,6 +998,7 @@ task lucavirus_prepare {
       "~{out_basename}.lucavirus_input.csv" \
       "~{out_basename}.lucavirus_prepare_stats.tsv" \
       --seq-type "~{seq_type}" \
+      ~{if defined(min_sequence_length) then "--min-length " + min_sequence_length else ""} \
       --loglevel=DEBUG
 
     tail -n +2 "~{out_basename}.lucavirus_prepare_stats.tsv" | cut -f 1 > N_SEQUENCES

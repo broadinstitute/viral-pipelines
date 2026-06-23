@@ -15,6 +15,7 @@ workflow classify_lucavirus {
         String? sample_id
         String  task_profile = "rdrp"
         Int     gpu_id = 0
+        Int?    min_sequence_length
 
         Int     helper_machine_mem_gb = 4
         String  viralngs_docker = "quay.io/broadinstitute/viral-ngs:feature-lucavirus-classify"
@@ -46,6 +47,10 @@ workflow classify_lucavirus {
         task_profile: {
             description: "Named LucaVirus task profile to run.",
             choices: ["rdrp", "viral_capsid", "virus_ec4"],
+            category: "common"
+        }
+        min_sequence_length: {
+            description: "Optional minimum sequence length to keep before LucaVirus scoring. Records shorter than this value are omitted during preparation; if all records are filtered, the GPU task is skipped.",
             category: "common"
         }
         gpu_id: {
@@ -112,10 +117,11 @@ workflow classify_lucavirus {
 
     call metagenomics.lucavirus_prepare {
         input:
-            input_fasta    = input_fasta,
-            sample_id      = sample_id,
-            machine_mem_gb = helper_machine_mem_gb,
-            docker         = viralngs_docker
+            input_fasta          = input_fasta,
+            sample_id            = sample_id,
+            min_sequence_length  = min_sequence_length,
+            machine_mem_gb       = helper_machine_mem_gb,
+            docker               = viralngs_docker
     }
 
     if (lucavirus_prepare.has_lucavirus_input) {
