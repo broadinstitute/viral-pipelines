@@ -1041,7 +1041,7 @@ task lucavirus {
     Int?    accelerator_count
     String? gpu_type
     Int?    gpu_count
-    String? predefined_machine_type
+    String  predefined_machine_type = ""
     String? vm_size
     Int     boot_disk_size_gb = 100
     Int     disk_size_gb = 50
@@ -1095,7 +1095,7 @@ task lucavirus {
       category: "runtime"
     }
     predefined_machine_type: {
-      description: "[GCP/Terra] Optional exact GCP machine type to request. Required for A100 40GB GPUs; use a2-highgpu-1g for one nvidia-tesla-a100.",
+      description: "[GCP/Terra] Exact GCP machine type to request. Use a2-highgpu-1g for one nvidia-tesla-a100, or leave empty to let the backend choose.",
       category: "runtime"
     }
     vm_size: {

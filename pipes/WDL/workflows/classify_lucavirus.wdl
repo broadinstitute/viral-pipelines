@@ -26,7 +26,7 @@ workflow classify_lucavirus {
         Int?    accelerator_count
         String? gpu_type
         Int?    gpu_count
-        String? predefined_machine_type
+        String  predefined_machine_type = ""
         String? vm_size
         Int     boot_disk_size_gb = 100
         Int     disk_size_gb = 50
