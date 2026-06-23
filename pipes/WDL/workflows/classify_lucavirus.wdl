@@ -26,6 +26,7 @@ workflow classify_lucavirus {
         Int?    accelerator_count
         String? gpu_type
         Int?    gpu_count
+        String? predefined_machine_type
         String? vm_size
         Int     boot_disk_size_gb = 100
         Int     disk_size_gb = 50
@@ -87,6 +88,10 @@ workflow classify_lucavirus {
             description: "[Terra] Number of GPUs to request.",
             category: "runtime"
         }
+        predefined_machine_type: {
+            description: "[GCP/Terra] Optional exact GCP machine type to request. Required for A100 40GB GPUs; use a2-highgpu-1g for one nvidia-tesla-a100.",
+            category: "runtime"
+        }
         vm_size: {
             description: "[TES/Azure] GPU VM size.",
             category: "runtime"
@@ -127,6 +132,7 @@ workflow classify_lucavirus {
                 accelerator_count    = accelerator_count,
                 gpu_type             = gpu_type,
                 gpu_count            = gpu_count,
+                predefined_machine_type = predefined_machine_type,
                 vm_size              = vm_size,
                 boot_disk_size_gb    = boot_disk_size_gb,
                 disk_size_gb         = disk_size_gb,

@@ -1041,6 +1041,7 @@ task lucavirus {
     Int?    accelerator_count
     String? gpu_type
     Int?    gpu_count
+    String? predefined_machine_type
     String? vm_size
     Int     boot_disk_size_gb = 100
     Int     disk_size_gb = 50
@@ -1091,6 +1092,10 @@ task lucavirus {
     }
     gpu_count: {
       description: "[Terra] Number of GPUs to request.",
+      category: "runtime"
+    }
+    predefined_machine_type: {
+      description: "[GCP/Terra] Optional exact GCP machine type to request. Required for A100 40GB GPUs; use a2-highgpu-1g for one nvidia-tesla-a100.",
       category: "runtime"
     }
     vm_size: {
@@ -1158,7 +1163,7 @@ task lucavirus {
     acceleratorCount: select_first([accelerator_count, gpu_count, 1])
     gpuType: select_first([gpu_type, "nvidia-tesla-t4"])
     gpuCount: select_first([gpu_count, accelerator_count, 1])
-    nvidiaDriverVersion: "410.79"
+    predefinedMachineType: predefined_machine_type
     vm_size: select_first([vm_size, "Standard_NC6s_v3"])
     dx_instance_type: "mem2_ssd1_gpu1_x8"
     preemptible: preemptible_attempts
