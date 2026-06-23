@@ -1,0 +1,21 @@
+pipes/WDL/tasks/tasks_metagenomics.wdl
+  s_47475b1ce8316f::t_b8c8f0aab0746a 1044,1098
+pipes/WDL/workflows/classify_lucavirus.wdl
+  s_47475b1ce8316f::t_2e40dc87a51fc0 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "e00517177d23674b3613a97bd3672bc2b601ca99",
+  "prompts": {},
+  "sessions": {
+    "s_47475b1ce8316f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019eeffd-aa2c-7971-bcd4-739a3698c07b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Cesar Arze <cesar.arze@gmail.com>"
+    }
+  }
+}
