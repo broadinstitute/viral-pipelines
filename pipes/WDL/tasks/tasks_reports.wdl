@@ -15,7 +15,7 @@ task alignment_metrics {
     Int    max_amplicons=500
 
     Int    machine_mem_gb=16
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
 
   String out_basename = basename(aligned_bam, ".bam")
@@ -118,7 +118,6 @@ task alignment_metrics {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x4"
-    maxRetries: 2
   }
 }
 
@@ -143,7 +142,7 @@ task plot_coverage {
     String? plotXLimits # of the form "min max" (ints, space between)
     String? plotYLimits # of the form "min max" (ints, space between)
 
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
 
   Int disk_size = 375
@@ -217,8 +216,6 @@ task plot_coverage {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
-    preemptible: 1
-    maxRetries: 2
   }
 }
 
@@ -229,7 +226,7 @@ task merge_coverage_per_position {
 
     String       out_report_name = "coverage_report.csv"
     Int          disk_size = 100
-    String       docker = "quay.io/broadinstitute/py3-bio:0.1.3"
+    String       docker = "quay.io/broadinstitute/py3-bio:0.1.11"
   }
 
   command <<<
@@ -280,7 +277,6 @@ task merge_coverage_per_position {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x4"
-    maxRetries: 2
   }
 }
 
@@ -290,7 +286,7 @@ task coverage_report {
     Array[File]  mapped_bam_idx = []  # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name = "coverage_report.txt"
 
-    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
 
   Int disk_size = 375
@@ -323,7 +319,6 @@ task coverage_report {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x4"
-    maxRetries: 2
   }
 }
 
@@ -357,7 +352,6 @@ task assembly_bases {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
     }
 }
 
@@ -365,7 +359,7 @@ task fastqc {
   input {
     File   reads_bam
 
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
   parameter_meta {
     reads_bam:{ 
@@ -397,7 +391,6 @@ task fastqc {
     disks: "local-disk ~{disk_size} SSD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -409,7 +402,7 @@ task align_and_count {
 
     Int?   cpu
     Int?   machine_mem_gb
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
@@ -515,7 +508,6 @@ task align_and_count {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
-    maxRetries: 2
   }
 }
 
@@ -525,7 +517,7 @@ task align_and_count_summary {
 
     String       output_prefix = "count_summary"
 
-    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
 
   Int disk_size = 100
@@ -549,7 +541,6 @@ task align_and_count_summary {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -560,7 +551,7 @@ task aggregate_metagenomics_reports {
     String       aggregate_taxlevel_focus                 = "species"
     Int          aggregate_top_N_hits                     = 5
 
-    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.17-classify"
   }
 
   parameter_meta {
@@ -599,7 +590,6 @@ task aggregate_metagenomics_reports {
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
     preemptible: 0
-    maxRetries: 2
   }
 }
 
@@ -711,7 +701,6 @@ task MultiQC {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -731,7 +720,7 @@ task multiqc_from_bams {
     File?          config
     String?        config_yaml
 
-    String         docker = "ghcr.io/broadinstitute/read-qc-tools:1.0.1"
+    String         docker = "ghcr.io/broadinstitute/read-qc-tools:1.1.2"
 
     Int?           cpu              # Override auto-scaled CPU (default: 2*num_bams, capped 4-32)
     Int?           machine_mem_gb   # Override auto-scaled memory (default: 2*cpu GB)
@@ -903,7 +892,6 @@ task multiqc_from_bams {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
-    maxRetries: 2
   }
 }
 
@@ -913,7 +901,7 @@ task compare_two_genomes {
     File   genome_two
     String out_basename
 
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-assemble"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.17-assemble"
   }
 
   Int disk_size = 50
@@ -944,7 +932,6 @@ task compare_two_genomes {
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 1
-    maxRetries: 2
   }
 }
 

@@ -131,7 +131,6 @@ task krakenuniq {
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x48"
     preemptible: 0
-    maxRetries: 2
   }
 }
 
@@ -201,7 +200,6 @@ task build_krakenuniq_db {
     cpu: 32
     dx_instance_type: "mem3_ssd1_v2_x32"
     preemptible: 0
-    maxRetries: 2
   }
 }
 
@@ -218,7 +216,7 @@ task kraken2 {
     Int?   min_base_qual
 
     Int    machine_mem_gb = 90
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.17-classify"
   }
 
   parameter_meta {
@@ -338,8 +336,7 @@ task kraken2 {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem3_ssd1_v2_x8"
-    preemptible: 2
-    maxRetries: 2
+    preemptible: 3
   }
 }
 
@@ -351,7 +348,7 @@ task report_primary_kraken_taxa {
     File          kraken_summary_report
     String        focal_taxon = "Viruses"
 
-    String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
+    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.17-classify"
   }
   String out_basename = basename(kraken_summary_report, '.txt')
   Int disk_size = 50
@@ -387,8 +384,6 @@ task report_primary_kraken_taxa {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
-    preemptible: 2
-    maxRetries: 2
   }
 }
 
@@ -402,7 +397,7 @@ task filter_refs_to_found_taxa {
     File          taxdump_tgz
     Int           min_read_count = 100
 
-    String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
+    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.17-classify"
   }
   String ref_basename = basename(taxid_to_ref_accessions_tsv, '.tsv')
   String hits_basename = basename(focal_report_tsv, '.tsv')
@@ -427,7 +422,6 @@ task filter_refs_to_found_taxa {
     disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
-    maxRetries: 2
   }
 }
 
@@ -453,7 +447,7 @@ task build_kraken2_db {
     Int?          zstd_compression_level
 
     Int           machine_mem_gb = 100
-    String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
+    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.17-classify"
   }
 
   Int disk_size = 750
@@ -580,7 +574,6 @@ task build_kraken2_db {
     cpu: 16
     dx_instance_type: "mem3_ssd1_v2_x16"
     preemptible: 0
-    maxRetries: 2
   }
 }
 
@@ -595,7 +588,7 @@ task blastx {
     File   krona_taxonomy_db_tgz
 
     Int    machine_mem_gb = 8
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.17-classify"
   }
 
   parameter_meta {
@@ -668,7 +661,6 @@ task blastx {
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x36"
     preemptible: 1
-    maxRetries: 2
   }
 }
 
@@ -685,7 +677,7 @@ task krona {
     Int?         magnitude_column
 
     Int          machine_mem_gb = 3
-    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.17-classify"
   }
 
   Int disk_size = 50
@@ -742,7 +734,6 @@ task krona {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -775,7 +766,6 @@ task krona_merge {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -792,7 +782,7 @@ task filter_bam_to_taxa {
     String         out_filename_suffix = "filtered"
 
     Int            machine_mem_gb = 8
-    String         docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
+    String         docker = "quay.io/broadinstitute/viral-ngs:3.0.17-classify"
   }
 
   String out_basename = basename(classified_bam, ".bam") + "." + out_filename_suffix
@@ -872,8 +862,7 @@ task filter_bam_to_taxa {
     disk: "~{disk_size} GB" # TES
     cpu: 8
     dx_instance_type: "mem1_ssd1_v2_x8"
-    preemptible: 1
-    maxRetries: 2
+    preemptible: 3
   }
 }
 
@@ -885,7 +874,7 @@ task kaiju {
     File   krona_taxonomy_db_tgz  # taxonomy/taxonomy.tab
 
     Int    machine_mem_gb = 100
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.17-classify"
   }
 
   String   input_basename = basename(reads_unmapped_bam, ".bam")
@@ -949,6 +938,5 @@ task kaiju {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x16"
-    maxRetries: 2
   }
 }

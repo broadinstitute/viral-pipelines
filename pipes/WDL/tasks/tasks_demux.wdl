@@ -6,7 +6,7 @@ task merge_tarballs {
     String       out_filename
 
     Int?         machine_mem_gb
-    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
 
   Int disk_size = 2625
@@ -37,7 +37,6 @@ task merge_tarballs {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x16"
-    maxRetries: 2
     preemptible: 0
   }
 }
@@ -91,7 +90,6 @@ task samplesheet_rename_ids {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -99,7 +97,7 @@ task revcomp_i5 {
   input {
     File    old_sheet
     Boolean revcomp=true
-    String  docker = "quay.io/broadinstitute/py3-bio:0.1.3"
+    String  docker = "quay.io/broadinstitute/py3-bio:0.1.11"
   }
   String new_base = basename(basename(old_sheet, '.txt'), '.tsv')
   Int disk_size = 50
@@ -136,7 +134,6 @@ task revcomp_i5 {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -182,7 +179,7 @@ task illumina_demux {
     Int?    machine_mem_gb
     # Note: GCP local SSDs must be allocated in pairs (2, 4, 8, 16, 24 × 375GB), so use 3000 (8 SSDs) instead of 2625 (7 SSDs)
     Int     disk_size = 3000
-    String  docker    = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String  docker    = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
 
   parameter_meta {
@@ -242,22 +239,22 @@ task illumina_demux {
     fi
     
     # Parse the lane count & run ID from RunInfo.xml file
-    lane_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@LaneCount)" $RUNINFO_FILE)
+    lane_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@LaneCount)" "$RUNINFO_FILE")
     if [ -z "$lane_count" ]; then
         echo "Could not parse LaneCount from RunInfo.xml. Please check RunInfo.xml is properly formatted"
     fi
 
-    surface_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@SurfaceCount)" $RUNINFO_FILE)
+    surface_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@SurfaceCount)" "$RUNINFO_FILE")
     if [ -z "$surface_count" ]; then
         echo "Could not parse SurfaceCount from RunInfo.xml. Please check RunInfo.xml is properly formatted"
     fi
 
-    swath_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@SwathCount)" $RUNINFO_FILE)
+    swath_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@SwathCount)" "$RUNINFO_FILE")
     if [ -z "$swath_count" ]; then
         echo "Could not parse SwathCount from RunInfo.xml. Please check RunInfo.xml is properly formatted"
     fi
 
-    tile_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@TileCount)" $RUNINFO_FILE)
+    tile_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@TileCount)" "$RUNINFO_FILE")
     if [ -z "$tile_count" ]; then
         echo "Could not parse TileCount from RunInfo.xml. Please check RunInfo.xml is properly formatted"
     fi
@@ -346,7 +343,7 @@ task illumina_demux {
     # the presence of a barcode_3 column with values in at least some of the rows.
     # We can lean on a Python call out to the SampleSheet class in illumina for this.
     collapse_duplicated_barcodes="false"
-    sample_sheet_barcode_collapse_potential=$(python -c 'import os; import illumina as il; ss=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=False); ssc=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=True); print("sheet_collapse_possible_true") if len(ss.get_rows())!=len(ssc.get_rows()) else print("sheet_collapse_possible_false")')
+    sample_sheet_barcode_collapse_potential=$(python -c 'import os; import viral_ngs.illumina as il; ss=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=False); ssc=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=True); print("sheet_collapse_possible_true") if len(ss.get_rows())!=len(ssc.get_rows()) else print("sheet_collapse_possible_false")')
     if [[ "$sample_sheet_barcode_collapse_potential" == "sheet_collapse_possible_true" ]]; then
       collapse_duplicated_barcodes="true"
       collapsed_barcodes_output_samplesheet_arg="--collapse_duplicated_barcodes=barcodes_if_collapsed.tsv"
@@ -359,7 +356,7 @@ task illumina_demux {
 
     # dump sample names from input sample sheet 'sample' col to sample_names.txt
     sample_names_expected_from_samplesheet_list_txt="sample_names.txt"
-    python -c 'import os; import illumina as il; ss=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=False); sample_name_list=[r["sample"]+"\n" for r in ss.get_rows()]; f=open("'${sample_names_expected_from_samplesheet_list_txt}'", "w"); f.writelines(sample_name_list); f.close()'
+    python -c 'import os; import viral_ngs.illumina as il; ss=il.SampleSheet(os.path.realpath("~{samplesheet}"),allow_non_unique=True, collapse_duplicates=False); sample_name_list=[r["sample"]+"\n" for r in ss.get_rows()]; f=open("'${sample_names_expected_from_samplesheet_list_txt}'", "w"); f.writelines(sample_name_list); f.close()'
     
     cols_to_revcomp="~{sep=' ' select_first([barcode_columns_to_rev_comp,[default_revcomp_barcode_column]])}"
 
@@ -369,9 +366,9 @@ task illumina_demux {
       $FLOWCELL_DIR \
       ~{lane} \
       . \
-      ~{'--sampleSheet=' + samplesheet} \
-      ~{'--runInfo=' + runinfo} \
-      ~{'--sequencing_center=' + sequencingCenter} \
+      ~{'--sampleSheet="' + samplesheet + '"'} \
+      ~{'--runInfo="' + runinfo + '"'} \
+      ~{'--sequencing_center="' + sequencingCenter + '"'} \
       --outMetrics=metrics.txt \
       --commonBarcodes=barcodes.txt \
       ~{'--flowcell=' + flowcell} \
@@ -439,7 +436,7 @@ task illumina_demux {
       ~{'--predemux_trim_r1_3prime '  + inner_barcode_predemux_trim_r1_3prime} \
       ~{'--predemux_trim_r2_5prime '  + inner_barcode_predemux_trim_r2_5prime} \
       ~{'--predemux_trim_r2_3prime '  + inner_barcode_predemux_trim_r2_3prime} \
-      ~{'--sampleSheet=' + samplesheet} \
+      ~{'--sampleSheet="' + samplesheet + '"'} \
       "--runInfo=${RUNINFO_FILE}" \
       --illuminaRunDirectory=$FLOWCELL_DIR \
       $demux_threads \
@@ -655,7 +652,6 @@ task illumina_demux {
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem3_ssd2_v2_x32"
     dx_timeout: "20H"
-    maxRetries: 1
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
   }
 }
@@ -689,7 +685,6 @@ task map_map_setdefault {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -721,7 +716,6 @@ task merge_maps {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -810,7 +804,6 @@ task group_fastq_pairs {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -824,7 +817,7 @@ task get_illumina_run_metadata {
     String? sequencing_center
 
     Int?   machine_mem_gb
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
 
   parameter_meta {
@@ -850,7 +843,7 @@ task get_illumina_run_metadata {
     illumina --version | tee VERSION
 
     illumina illumina_metadata \
-      --runinfo ~{runinfo_xml} \
+      --runinfo "~{runinfo_xml}" \
       ~{'--sequencing_center ' + sequencing_center} \
       --out_runinfo runinfo.json \
       --loglevel=DEBUG
@@ -869,7 +862,6 @@ task get_illumina_run_metadata {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -928,7 +920,7 @@ task demux_fastqs {
     Int?    machine_mem_gb
     Int     max_cpu = 32       # Maximum CPU cap for autoscaling (use 16 for 2-barcode, 64 for 3-barcode)
     Int     disk_size = 750
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
 
   # Calculate total input size for autoscaling
@@ -977,15 +969,15 @@ task demux_fastqs {
     illumina --version | tee VERSION
 
     illumina splitcode_demux_fastqs \
-      --fastq_r1 ~{fastq_r1} \
-      ~{'--fastq_r2 ' + fastq_r2} \
-      --samplesheet ~{samplesheet} \
-      --runinfo ~{runinfo_xml} \
-      ~{'--sequencing_center ' + sequencingCenter} \
+      --fastq_r1 "~{fastq_r1}" \
+      ~{'--fastq_r2 "' + fastq_r2 + '"'} \
+      --samplesheet "~{samplesheet}" \
+      --runinfo "~{runinfo_xml}" \
+      ~{'--sequencing_center "' + sequencingCenter + '"'} \
       --outdir . \
       --append_run_id \
-      --out_meta_by_sample ~{fastq_basename}-meta_by_sample.json \
-      --out_meta_by_filename ~{fastq_basename}-meta_by_filename.json \
+      --out_meta_by_sample "~{fastq_basename}-meta_by_sample.json" \
+      --out_meta_by_filename "~{fastq_basename}-meta_by_filename.json" \
       --loglevel=DEBUG
 
     # Workaround: create empty JSON files if Python code didn't produce them (zero-read FASTQs)
@@ -1043,7 +1035,6 @@ task demux_fastqs {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x16"
-    maxRetries: 2
     preemptible: 0  # this is the very first operation before scatter, so let's get it done quickly & reliably
   }
 }
@@ -1057,7 +1048,7 @@ task merge_demux_metrics {
   input {
     Array[File]+ metrics_files
     String       output_filename = "merged_demux_metrics.txt"
-    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
 
   parameter_meta {
@@ -1092,7 +1083,6 @@ task merge_demux_metrics {
     disks: "local-disk 50 HDD"
     disk: "50 GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -1160,6 +1150,5 @@ task merge_sample_metadata {
     disks: "local-disk 50 HDD"
     disk: "50 GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }

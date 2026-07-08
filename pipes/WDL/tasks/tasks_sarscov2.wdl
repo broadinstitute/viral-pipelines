@@ -10,7 +10,7 @@ task pangolin_one_sample {
         Float?  max_ambig
         String? analysis_mode
         Boolean update_dbs_now=false
-        String  docker = "quay.io/staphb/pangolin:4.3.3-pdata-1.36"
+        String  docker = "quay.io/staphb/pangolin:4.4-pdata-1.38"
     }
     String basename = basename(genome_fasta, ".fasta")
     Int disk_size = 50
@@ -93,7 +93,7 @@ task pangolin_many_samples {
         String?      analysis_mode
         Boolean      update_dbs_now=false
         String       basename
-        String       docker = "quay.io/staphb/pangolin:4.3.3-pdata-1.36"
+        String       docker = "quay.io/staphb/pangolin:4.4-pdata-1.38"
     }
     Int disk_size = 100
     command <<<
@@ -254,7 +254,7 @@ task sc2_meta_final {
 
         File?         filter_to_ids
 
-        String        docker = "quay.io/broadinstitute/py3-bio:0.1.3"
+        String        docker = "quay.io/broadinstitute/py3-bio:0.1.11"
     }
     String out_basename = basename(basename(assembly_stats_tsv, '.txt'), '.tsv')
     Int disk_size = 50
@@ -404,7 +404,7 @@ task crsp_meta_etl {
         String        allowed_purposes = '["Baseline surveillance (random sampling)", "Targeted surveillance (non-random sampling)", "Screening for Variants of Concern (VOC)", "Longitudinal surveillance (repeat sampling of individuals)", "Vaccine escape surveillance", "Cluster/Outbreak investigation"]'
         String        sequencing_lab_prefix = 'CDCBI'
 
-        String        docker = "quay.io/broadinstitute/py3-bio:0.1.3"
+        String        docker = "quay.io/broadinstitute/py3-bio:0.1.11"
     }
     String out_basename = basename(basename(basename(sample_meta_crsp, '.txt'), '.tsv'), '.metadata')
     Int disk_size = 50

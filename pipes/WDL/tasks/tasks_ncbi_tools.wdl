@@ -9,7 +9,7 @@ task Fetch_SRA_to_BAM {
         String? email_address
         String? ncbi_api_key
         Int?    machine_mem_gb
-        String  docker = "quay.io/broadinstitute/ncbi-tools:2.11.1"
+        String  docker = "quay.io/broadinstitute/ncbi-tools:2.13.1"
     }
     Int disk_size = 750
     meta {
@@ -158,7 +158,7 @@ task Fetch_SRA_to_BAM {
 task fetch_genbank_metadata {
     input {
         String  genbank_accession
-        String  docker = "quay.io/broadinstitute/ncbi-tools:2.11.1"
+        String  docker = "quay.io/broadinstitute/ncbi-tools:2.13.1"
     }
     Int disk_size = 50
     command <<<
@@ -181,7 +181,6 @@ task fetch_genbank_metadata {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
         docker:  docker
-        maxRetries: 2
     }
 }
 
@@ -190,7 +189,7 @@ task biosample_tsv_filter_preexisting {
         File           meta_submit_tsv
 
         String         out_basename = "biosample_attributes"
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.11.1"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.13.1"
     }
     Int disk_size = 50
     meta {
@@ -252,7 +251,7 @@ task fetch_biosamples {
         Array[String]  biosample_ids
 
         String         out_basename = "biosample_attributes"
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.11.1"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.13.1"
     }
     Int disk_size = 50
     meta {
@@ -288,7 +287,7 @@ task ncbi_sftp_upload {
 
         String         wait_for="1"  # all, disabled, some number
 
-        String         docker = "quay.io/broadinstitute/ncbi-tools:2.11.1"
+        String         docker = "quay.io/broadinstitute/ncbi-tools:2.13.1"
     }
     Int disk_size = 100
     command <<<
@@ -334,7 +333,7 @@ task sra_tsv_to_xml {
         String   bioproject
         String   data_bucket_uri
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.11.1"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.13.1"
     }
     Int disk_size = 50
     command <<<
@@ -362,7 +361,6 @@ task sra_tsv_to_xml {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
-        maxRetries: 2
     }
 }
 
@@ -371,7 +369,7 @@ task biosample_submit_tsv_to_xml {
         File     meta_submit_tsv
         File     config_js
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.11.1"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.13.1"
     }
     Int disk_size = 50
     meta {
@@ -399,7 +397,6 @@ task biosample_submit_tsv_to_xml {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
-        maxRetries: 2
     }
 }
 
@@ -409,7 +406,7 @@ task biosample_submit_tsv_ftp_upload {
         File     config_js
         String   target_path
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.11.1"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.13.1"
     }
     String base=basename(meta_submit_tsv, '.tsv')
     Int disk_size = 100    
@@ -449,7 +446,7 @@ task biosample_xml_response_to_tsv {
         File     meta_submit_tsv
         File     ncbi_report_xml
 
-        String   docker = "quay.io/broadinstitute/ncbi-tools:2.11.1"
+        String   docker = "quay.io/broadinstitute/ncbi-tools:2.13.1"
     }
     String out_name = "~{basename(meta_submit_tsv, '.tsv')}-attributes.tsv"
     Int disk_size = 100
@@ -478,7 +475,6 @@ task biosample_xml_response_to_tsv {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem2_ssd1_v2_x2"
         docker:  docker
-        maxRetries: 2
     }
 }
 
@@ -569,7 +565,6 @@ task group_sra_bams_by_biosample {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 

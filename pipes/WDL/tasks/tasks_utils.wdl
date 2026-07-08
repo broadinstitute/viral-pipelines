@@ -20,7 +20,6 @@ task concatenate {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
     }
     output {
         File combined = "~{output_name}"
@@ -52,7 +51,7 @@ task unpack_archive_to_bucket_path {
         # execution and resource requirements
         Int    disk_size      = ceil(3.0 * size(input_archive_files[0], "GB")) + 50
         Int    machine_mem_gb = 8
-        String docker         = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+        String docker         = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
     }
 
     parameter_meta {
@@ -212,7 +211,6 @@ task unpack_archive_to_bucket_path {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x16"
         preemptible: 0
-        maxRetries: 1
     }
 
     output {
@@ -295,13 +293,12 @@ task zcat {
         { if [ -f /sys/fs/cgroup/memory.peak ]; then cat /sys/fs/cgroup/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.peak ]; then cat /sys/fs/cgroup/memory/memory.peak; elif [ -f /sys/fs/cgroup/memory/memory.max_usage_in_bytes ]; then cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes; else echo "0"; fi } > MEM_BYTES
     >>>
     runtime {
-        docker: "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+        docker: "quay.io/broadinstitute/viral-ngs:3.0.17-core"
         memory: "1 GB"
         cpu:    cpus
         disks: "local-disk ~{disk_size} LOCAL"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
     }
     output {
         File    combined     = "${output_name}"
@@ -332,7 +329,6 @@ task sed {
         disks: "local-disk ~{disk_size} LOCAL"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
     }
     output {
         File outfile = "~{outfilename}"
@@ -354,14 +350,12 @@ task tar_extract {
         tar -xv ~{tar_opts} -f "~{tar_file}"
     >>>
     runtime {
-        docker: "ghcr.io/broadinstitute/viral-ngs:3.0.4-baseimage"
+        docker: "quay.io/broadinstitute/viral-ngs:3.0.17-baseimage"
         memory: "2 GB"
-        cpu:    1
-        disks: "local-disk ~{disk_size} LOCAL"
+        cpu:    2
+        disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
-        preemptible: 1
     }
     output {
         Array[File] files = glob("unpack/*")
@@ -520,7 +514,7 @@ task download_from_url {
         printf "Downloaded file size (bytes): " && stat --format=%s  "~{download_subdir_local}/${downloaded_file_name}" | tee SIZE_OF_DOWNLOADED_FILE_BYTES
     >>>
     runtime {
-        docker: "ghcr.io/broadinstitute/viral-ngs:3.0.4-baseimage"
+        docker: "quay.io/broadinstitute/viral-ngs:3.0.17-baseimage"
         memory: "2 GB"
         cpu:    1
         disks: "local-disk ~{disk_size} LOCAL"
@@ -546,7 +540,7 @@ task sanitize_fasta_headers {
     File   in_fasta
     String out_filename = "~{basename(in_fasta, '.fasta')}-sanitized.fasta"
   }
-  String docker = "quay.io/broadinstitute/py3-bio:0.1.3"
+  String docker = "quay.io/broadinstitute/py3-bio:0.1.11"
   Int    disk_size = 375
   command <<<
     python3<<CODE
@@ -571,7 +565,6 @@ task sanitize_fasta_headers {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 1
   }
 }
 
@@ -594,7 +587,6 @@ task fasta_to_ids {
         disks: "local-disk ~{disk_size} LOCAL"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
     }
     output {
         File ids_txt = "~{basename}.txt"
@@ -607,7 +599,7 @@ task md5sum {
   }
   Int disk_size = 100
   command <<<
-    md5sum ~{in_file} | cut -f 1 -d ' ' | tee MD5
+    md5sum "~{in_file}" | cut -f 1 -d ' ' | tee MD5
   >>>
   output {
     String md5 = read_string("MD5")
@@ -619,7 +611,6 @@ task md5sum {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -649,7 +640,6 @@ task json_dict_to_tsv {
     memory: "1 GB"
     cpu: 1
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -693,7 +683,6 @@ task fetch_row_from_tsv {
     disk: "~{disk_size} GB" # TES
     disks: "local-disk 50 HDD"
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -733,7 +722,6 @@ task fetch_col_from_tsv {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -859,11 +847,10 @@ task tsv_join {
   runtime {
     memory: "~{machine_mem_gb} GB"
     cpu: 4
-    docker: "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    docker: "quay.io/broadinstitute/viral-ngs:3.0.17-core"
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
-    maxRetries: 2
   }
 }
 
@@ -899,7 +886,6 @@ task tsv_to_csv {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -912,7 +898,7 @@ task tsv_drop_cols {
         File          in_tsv
         Array[String] drop_cols
         String        out_filename = basename(in_tsv, '.tsv') + ".drop.tsv"
-        String        docker = "quay.io/broadinstitute/py3-bio:0.1.3"
+        String        docker = "quay.io/broadinstitute/py3-bio:0.1.11"
     }
     Int disk_size = 50
     command <<<
@@ -934,7 +920,6 @@ task tsv_drop_cols {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
     }
     output {
         File out_tsv = "~{out_filename}"
@@ -946,7 +931,7 @@ task tsv_stack {
   input {
     Array[File]+ input_tsvs
     String       out_basename
-    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
 
   Int disk_size = 50
@@ -969,7 +954,6 @@ task tsv_stack {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -998,7 +982,6 @@ task cat_except_headers {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 task make_empty_file {
@@ -1019,7 +1002,6 @@ task make_empty_file {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -1042,7 +1024,6 @@ task rename_file {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -1062,7 +1043,6 @@ task raise {
     disks:  "local-disk 30 HDD"
     disk: "30 GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -1092,7 +1072,6 @@ task unique_strings {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -1114,7 +1093,6 @@ task unique_arrays {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -1136,7 +1114,7 @@ task today {
   runtime {
     memory: "1 GB"
     cpu: 1
-    docker: "ghcr.io/broadinstitute/viral-ngs:3.0.4-baseimage"
+    docker: "quay.io/broadinstitute/viral-ngs:3.0.17-baseimage"
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
@@ -1160,23 +1138,26 @@ task s3_copy {
     set -e
     S3_PREFIX=$(echo "~{s3_uri_prefix}" | sed 's|/*$||')
     mkdir -p ~/.aws
-    cp ~{aws_credentials} ~/.aws/credentials
+    cp "~{aws_credentials}" ~/.aws/credentials
     touch OUT_URIS
-    for f in ~{sep=' ' infiles}; do
-      aws s3 cp $f $S3_PREFIX/
-      echo "$S3_PREFIX/$(basename $f)" >> OUT_URIS
-    done
+    INFILES=~{write_lines(infiles)}
+    while IFS= read -r f || [ -n "$f" ]; do
+      # Skip empty or whitespace-only lines
+      if [ -n "$f" ] && [ -n "$(echo "$f" | tr -d '[:space:]')" ]; then
+        aws s3 cp "$f" "$S3_PREFIX/"
+        echo "$S3_PREFIX/$(basename "$f")" >> OUT_URIS
+      fi
+    done < "$INFILES"
   >>>
   output {
     Array[String] out_uris = read_lines("OUT_URIS")
   }
   runtime {
-    docker: "ghcr.io/broadinstitute/viral-ngs:3.0.4-baseimage"
+    docker: "quay.io/broadinstitute/viral-ngs:3.0.17-baseimage"
     memory: "2 GB"
     cpu: cpus
     disks: "local-disk ~{disk_gb} SSD"
     disk: "~{disk_gb} GB" # TES
-    maxRetries: 2
   }
 }
 
@@ -1205,7 +1186,6 @@ task string_split {
     cpu: 1
     disks: "local-disk 50 SSD"
     disk: "50 GB" # TES
-    maxRetries: 2
   }
 }
 
@@ -1217,7 +1197,7 @@ task filter_sequences_by_length {
         File   sequences_fasta
         Int    min_non_N = 1
 
-        String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+        String docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
         Int    disk_size = 750
     }
     parameter_meta {
@@ -1261,7 +1241,6 @@ task filter_sequences_by_length {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
     }
     output {
         File filtered_fasta    = out_fname
@@ -1294,6 +1273,5 @@ task pair_files_by_basename {
     disks:  "local-disk ~{disk_gb} HDD"
     disk: "~{disk_gb} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }

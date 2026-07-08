@@ -15,7 +15,7 @@ task trim_rmdup_subsamp {
         Int cpu            = 16
         Int disk_size_gb   = 100 
 
-        String docker      = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+        String docker      = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
     }
 
     parameter_meta {
@@ -75,7 +75,7 @@ task lca_megablast {
         Int     cpu            = 16
         Int     disk_size_gb   = 300
 
-        String  docker         = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
+        String  docker         = "quay.io/broadinstitute/viral-ngs:3.0.17-classify"
     }
     parameter_meta {
         trimmed_fasta: {
@@ -98,12 +98,12 @@ task lca_megablast {
     command <<<
         #Extract BLAST DB tarball
         read_utils extract_tarball \
-          ~{blast_db_tgz} . \
+          "~{blast_db_tgz}" . \
           --loglevel=DEBUG
-        
-        # Extract taxonomy DB tarball 
+
+        # Extract taxonomy DB tarball
         read_utils extract_tarball \
-          ~{taxonomy_db_tgz} . \
+          "~{taxonomy_db_tgz}" . \
           --loglevel=DEBUG
 
         '''
@@ -189,9 +189,9 @@ task ChunkBlastHits {
     command <<<
         #Extract tarball contents
         read_utils extract_tarball \
-          ~{blast_db_tgz} . \
+          "~{blast_db_tgz}" . \
           --loglevel=DEBUG
-        export LOG_DIR=~{log_dir_final}
+        export LOG_DIR="~{log_dir_final}"
         echo "Using $(nproc) CPU cores."
         echo "Asked for ~{machine_mem_gb} memory GB"
         #Adding taxidlist input as optional 
@@ -274,12 +274,12 @@ task blastoff {
     command <<<
         #Extract BLAST DB tarball
         read_utils extract_tarball \
-          ~{blast_db_tgz} . \
+          "~{blast_db_tgz}" . \
           --loglevel=DEBUG
 
         # Extract taxonomy DB tarball (includes nodes.dmp)
         read_utils extract_tarball \
-          ~{taxonomy_db_tgz} . \
+          "~{taxonomy_db_tgz}" . \
           --loglevel=DEBUG
         
         export LOG_DIR=~{log_dir_final}

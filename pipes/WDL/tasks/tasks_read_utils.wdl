@@ -22,7 +22,6 @@ task max {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -77,14 +76,13 @@ task group_bams_by_sample {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
 task get_bam_samplename {
   input {
     File    bam
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
   Int   disk_size = round(size(bam, "GB")) + 50
   command <<<
@@ -100,7 +98,6 @@ task get_bam_samplename {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
   output {
     String sample_name = read_string("SAMPLE_NAME")
@@ -111,7 +108,7 @@ task get_sample_meta {
   input {
     Array[File] samplesheets_extended
 
-    String      docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String      docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
   Int disk_size = 50
   command <<<
@@ -156,7 +153,6 @@ task get_sample_meta {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -172,7 +168,7 @@ task merge_and_reheader_bams {
       File?        reheader_table
       String       out_basename = basename(in_bams[0], ".bam")
 
-      String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+      String       docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
       Int          disk_size = 750
       Int          machine_mem_gb = 8
     }
@@ -229,7 +225,6 @@ task merge_and_reheader_bams {
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd2_v2_x4"
         preemptible: 0
-        maxRetries: 1
     }
 }
 
@@ -244,7 +239,7 @@ task rmdup_ubam {
 
     Int     max_reads = 100000000
     Int?    machine_mem_gb
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
 
   # Memory autoscaling: M-Vicuna loads reads into memory for deduplication.
@@ -311,7 +306,6 @@ task rmdup_ubam {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x2"
-    maxRetries: 2
   }
 }
 
@@ -331,7 +325,7 @@ task bbnorm_bam {
 
     Int?    machine_mem_gb
     Int?    cpu
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
 
   # Memory autoscaling: BBNorm uses Java and loads kmer data structures into memory.
@@ -416,7 +410,6 @@ task bbnorm_bam {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem2_ssd1_v2_x8"
-    maxRetries: 2
   }
 }
 
@@ -433,7 +426,7 @@ task downsample_bams {
     Boolean      deduplicateAfter = false
 
     Int?         machine_mem_gb
-    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
 
   Int disk_size = 750
@@ -500,7 +493,7 @@ task FastqToUBAM {
     Int     cpus = 2
     Int     mem_gb = 4
     Int     disk_size = 750
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
   parameter_meta {
     fastq_1: { description: "Unaligned read1 file in fastq format", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }
@@ -542,7 +535,6 @@ task FastqToUBAM {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
   output {
     File unmapped_bam = "~{sample_name}.bam"
@@ -554,7 +546,7 @@ task read_depths {
     File      aligned_bam
 
     String    out_basename = basename(aligned_bam, '.bam')
-    String    docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String    docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
   Int disk_size = 200
   command <<<
@@ -573,6 +565,5 @@ task read_depths {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }

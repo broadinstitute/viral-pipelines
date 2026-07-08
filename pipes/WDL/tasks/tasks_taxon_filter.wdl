@@ -15,7 +15,7 @@ task deplete_taxa {
 
     Int?         cpu
     Int?         machine_mem_gb
-    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.17-classify"
   }
 
   # Autoscale CPU based on input size: 8 CPUs for ~1M reads (0.15 GB), 96 CPUs for ~100M reads (15 GB)
@@ -128,7 +128,6 @@ task deplete_taxa {
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
     preemptible: preemptible_tries
-    maxRetries: 1
   }
 }
 
@@ -143,7 +142,7 @@ task filter_to_taxon {
     String   neg_control_prefixes_space_separated = "neg water NTC"
 
     Int      machine_mem_gb = 15
-    String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
+    String   docker = "quay.io/broadinstitute/viral-ngs:3.0.17-classify"
   }
 
   # do this in two steps in case the input doesn't actually have "cleaned" in the name
@@ -189,7 +188,6 @@ task filter_to_taxon {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
-    maxRetries: 2
   }
 }
 
@@ -198,7 +196,7 @@ task build_lastal_db {
     File   sequences_fasta
 
     Int    machine_mem_gb = 7
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-classify"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.17-classify"
   }
 
   String db_name = basename(sequences_fasta, ".fasta")
@@ -226,7 +224,6 @@ task build_lastal_db {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
-    maxRetries: 2
   }
 }
 
@@ -237,7 +234,7 @@ task merge_one_per_sample {
     Boolean      rmdup = false
 
     Int          machine_mem_gb = 7
-    String       docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
 
   Int disk_size = 750
@@ -277,6 +274,5 @@ task merge_one_per_sample {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd2_v2_x4"
-    maxRetries: 2
   }
 }

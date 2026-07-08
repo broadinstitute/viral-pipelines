@@ -24,16 +24,15 @@ task gcs_copy {
     File logs = stdout()
   }
   runtime {
-    docker: "ghcr.io/broadinstitute/viral-ngs:3.0.4-baseimage"
+    docker: "quay.io/broadinstitute/viral-ngs:3.0.17-baseimage"
     memory: "1 GB"
     cpu: 1
-    maxRetries: 1
   }
 }
 
 task check_terra_env {
   input {
-    String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.17-baseimage"
   }
   meta {
     description: "task for inspection of backend to determine whether the task is running on Terra and/or GCP"
@@ -285,7 +284,7 @@ task check_terra_env {
     docker: docker
     memory: "1 GB"
     cpu: 1
-    maxRetries: 1
+    maxRetries: 2
   }
 }
 
@@ -330,7 +329,7 @@ task upload_entities_tsv {
     String        terra_project
     File          tsv_file
 
-    String        docker = "schaluvadi/pathogen-genomic-surveillance:api-wdl"
+    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.17-baseimage"
   }
   meta {
     volatile: true
@@ -369,7 +368,7 @@ task download_entities_tsv {
     String  outname = "~{terra_project}-~{workspace_name}-~{table_name}.tsv"
     String? nop_input_string # this does absolutely nothing, except that it allows an optional mechanism for you to block execution of this step upon the completion of another task in your workflow
 
-    String  docker = "schaluvadi/pathogen-genomic-surveillance:api-wdl"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.17-baseimage"
   }
 
   meta {
@@ -440,7 +439,7 @@ task create_or_update_sample_tables {
     String  sample_table_name  = "sample"
     String  library_table_name = "library"
 
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
   }
 
   meta {
@@ -453,16 +452,21 @@ task create_or_update_sample_tables {
     flowcell_data_id  = '~{flowcell_run_id}'
     workspace_project = '~{workspace_namespace}'
     workspace_name    = '~{workspace_name}'
-    lib_col_name      = "entity:~{library_table_name}_id"
 
     # import required packages
     import sys
     import collections
     import json
     import csv
+    import re
     import pandas as pd
     import numpy as np
     from firecloud import api as fapi
+
+    # sanitize table names to conform to Terra naming requirements (alphanumeric, underscores, dashes only)
+    sample_table_name = re.sub(r'[^a-zA-Z0-9_-]', '_', '~{sample_table_name}')
+    library_table_name = re.sub(r'[^a-zA-Z0-9_-]', '_', '~{library_table_name}')
+    lib_col_name = f"entity:{library_table_name}_id"
 
     print(workspace_project + "\n" + workspace_name)
 
@@ -548,8 +552,8 @@ task create_or_update_sample_tables {
             outrow[table_name + "_id"] = row['name']
             rows.append(outrow)
         return (headers, rows)
-    header, rows = get_entities_to_table(workspace_project, workspace_name, "~{sample_table_name}")
-    df_sample = pd.DataFrame.from_records(rows, columns=header, index="~{sample_table_name}_id")
+    header, rows = get_entities_to_table(workspace_project, workspace_name, sample_table_name)
+    df_sample = pd.DataFrame.from_records(rows, columns=header, index=sample_table_name + "_id")
     print(df_sample.index)
 
     # create tsv to populate sample table with new sample->library mappings
@@ -566,7 +570,7 @@ task create_or_update_sample_tables {
 
     sample_fname = 'sample_membership.tsv'
     with open(sample_fname, 'wt') as outf:
-        outf.write('entity:~{sample_table_name}_id\tlibraries\n')
+        outf.write(f'entity:{sample_table_name}_id\tlibraries\n')
         merged_sample_ids = set()
         for sample_id, libraries in sample_to_libraries.items():
             if sample_id in df_sample.index and "libraries" in df_sample.columns and test_non_empty_value(df_sample.libraries[sample_id]):
@@ -576,7 +580,7 @@ task create_or_update_sample_tables {
                 print (f"\tsample {sample_id} pre-exists in Terra table, merging old members {already_associated_libraries} with new members {libraries}")
                 merged_sample_ids.add(sample_id)
 
-            outf.write(f'{sample_id}\t{json.dumps([{"entityType":"~{library_table_name}","entityName":library_name} for library_name in libraries])}\n')
+            outf.write(f'{sample_id}\t{json.dumps([{"entityType":library_table_name,"entityName":library_name} for library_name in libraries])}\n')
     print(f"wrote {len(sample_to_libraries)} samples to {sample_fname} where {len(merged_sample_ids)} samples were already in the Terra table")
 
     # write everything to the Terra table! -- TO DO: move this to separate task
@@ -613,7 +617,7 @@ task find_illumina_files_in_directory {
     String  illumina_dir
     String? fastq_dir
     Int?    lane
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-baseimage"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.17-baseimage"
   }
   parameter_meta {
     illumina_dir: {
@@ -779,6 +783,5 @@ task find_illumina_files_in_directory {
     disks: "local-disk ~{disk_size} HDD"
     disk: "~{disk_size} GB"
     dx_instance_type: "mem1_ssd1_v2_x2"
-    maxRetries: 2
   }
 }

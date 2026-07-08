@@ -16,7 +16,7 @@ task assemble {
       
       Int?     machine_mem_gb
       Int?     cpu
-      String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-assemble"
+      String   docker = "quay.io/broadinstitute/viral-ngs:3.0.17-assemble"
     }
     parameter_meta{
       reads_unmapped_bam: {
@@ -71,15 +71,15 @@ task assemble {
         assembly --version | tee VERSION
 
         assembly assemble_spades \
-          ~{reads_unmapped_bam} \
-          ~{trim_clip_db} \
-          ~{sample_name}.assembly1-spades.fasta \
+          "~{reads_unmapped_bam}" \
+          "~{trim_clip_db}" \
+          "~{sample_name}.assembly1-spades.fasta" \
           ~{'--nReads=' + spades_n_reads} \
           ~{true="--alwaysSucceed" false="" always_succeed} \
           ~{'--minContigLen=' + spades_min_contig_len} \
           ~{'--spadesOpts="' + spades_options + '"'} \
           --memLimitGb $mem_in_gb \
-          --outReads=~{sample_name}.subsamp.bam \
+          --outReads="~{sample_name}.subsamp.bam" \
           --loglevel=DEBUG
 
         samtools view -c ~{sample_name}.subsamp.bam | tee subsample_read_count >&2
@@ -107,7 +107,6 @@ task assemble {
         disks: "local-disk ~{disk_size} SSD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
-        maxRetries: 2
     }
 
 }
@@ -125,7 +124,7 @@ task select_references {
     Int?          skani_c
     Int?          skani_n
 
-    String        docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-assemble"
+    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.17-assemble"
     Int           machine_mem_gb = 4
     Int           cpu = 2
     Int           disk_size = 100
@@ -197,8 +196,7 @@ task select_references {
     disks: "local-disk ~{disk_size} SSD"
     disk: "~{disk_size} GB" # TESs
     dx_instance_type: "mem1_ssd1_v2_x2"
-    preemptible: 2
-    maxRetries: 2
+    preemptible: 3
   }
 }
 
@@ -225,7 +223,7 @@ task scaffold {
       Float?       scaffold_min_pct_contig_aligned
 
       Int?         machine_mem_gb
-      String       docker="ghcr.io/broadinstitute/viral-ngs:3.0.4-assemble"
+      String       docker="quay.io/broadinstitute/viral-ngs:3.0.17-assemble"
 
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
@@ -461,7 +459,6 @@ task scaffold {
         disks: "local-disk ~{disk_size} SSD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
-        maxRetries: 2
     }
 }
 
@@ -478,7 +475,7 @@ task skani_triangle {
     Int     compression_factor = 10
     Int     min_aligned_frac = 15
 
-    String  docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-assemble"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.17-assemble"
     Int     machine_mem_gb = 8
     Int     cpu = 4
     Int     disk_size = 100
@@ -547,7 +544,6 @@ task skani_triangle {
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
     preemptible: 2
-    maxRetries: 2
   }
 }
 
@@ -599,13 +595,13 @@ task ivar_trim {
         ivar version | head -1 | tee VERSION
         if [ -f "~{trim_coords_bed}" ]; then
           ivar trim -e \
-            ~{'-b ' + trim_coords_bed} \
+            ~{'-b "' + trim_coords_bed + '"'} \
             ~{'-m ' + min_keep_length} \
             ~{'-s ' + sliding_window} \
             ~{'-q ' + min_quality} \
             ~{'-x ' + primer_offset} \
-            -i ~{aligned_bam} -p trim | tee IVAR_OUT
-          samtools sort -@ $(nproc) -m 1000M -o ~{bam_basename}.trimmed.bam trim.bam
+            -i "~{aligned_bam}" -p trim | tee IVAR_OUT
+          samtools sort -@ $(nproc) -m 1000M -o "~{bam_basename}.trimmed.bam" trim.bam
         else
           echo "skipping ivar trim"
           cp "~{aligned_bam}" "~{bam_basename}.trimmed.bam"
@@ -630,7 +626,6 @@ task ivar_trim {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x4"
-        maxRetries: 2
     }
 }
 
@@ -641,7 +636,7 @@ task ivar_trim_stats {
       String out_basename = "ivar_trim_stats"
       String flowcell = ""
 
-      String docker = "quay.io/broadinstitute/py3-bio:0.1.3"
+      String docker = "quay.io/broadinstitute/py3-bio:0.1.11"
     }
     parameter_meta {
       ivar_trim_stats_tsv: {
@@ -696,7 +691,6 @@ task ivar_trim_stats {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB"
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
     }
 }
 
@@ -721,7 +715,7 @@ task align_reads {
 
     Int?     cpu
     Int?     machine_mem_gb
-    String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+    String   docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
 
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
   }
@@ -729,10 +723,6 @@ task align_reads {
   # Note: GCP local SSDs must be allocated in pairs (2, 4, 8, 16, 24 × 375GB), so we round to 750GB multiples.
   # 7x input BAM to account for bbnorm preprocessing temp file
   Int disk_size = ceil((7 * size(reads_unmapped_bam, "GB") + 2 * size(reference_fasta, "GB") + 100) / 750.0) * 750
-
-  # Skip indel realignment for large BAMs (>1GB) to save runtime
-  Float   reads_bam_size_gb = size(reads_unmapped_bam, "GB")
-  Boolean skip_realign = reads_bam_size_gb >= 1.0
 
   # bbnorm preprocessing: max output reads is half the downsample threshold
   Int bbnorm_max_output_reads = read_count_downsample_threshold / 2
@@ -814,7 +804,6 @@ task align_reads {
         --aligner ~{aligner} \
         ~{'--aligner_options "' + aligner_options + '"'} \
         ~{true='--skipMarkDupes' false="" skip_mark_dupes} \
-        ~{true='--skipRealign' false="" skip_realign} \
         --JVMmemory "$mem_in_mb"m \
         ~{"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
         --loglevel=DEBUG
@@ -869,8 +858,7 @@ task align_reads {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x8"
-    preemptible: 1
-    maxRetries: 2
+    preemptible: 3
   }
 }
 
@@ -888,9 +876,10 @@ task refine_assembly_with_aligned_reads {
       Boolean  mark_duplicates = false
       Float    major_cutoff = 0.5
       Int      min_coverage = 3
+      Int?     max_coverage = 4000
 
       Int      machine_mem_gb = 8
-      String   docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-assemble"
+      String   docker = "quay.io/broadinstitute/viral-ngs:3.0.17-assemble"
     }
 
     Int disk_size = 375
@@ -915,7 +904,11 @@ task refine_assembly_with_aligned_reads {
       }
       min_coverage: {
         description: "Minimum read coverage required to call a position unambiguous.",
-        category: "advanaced"
+        category: "advanced"
+      }
+      max_coverage: {
+        description: "If specified, 'rasusa aln' will be used to downsample alignments at any genomic position that exceeds this level of coverage prior to variant calling. Recommended for any highly 'spiky' coverage samples (e.g. tiled amplicon sequencing).",
+        category: "advanced"
       }
     }
 
@@ -929,16 +922,16 @@ task refine_assembly_with_aligned_reads {
 
         if [ ~{true='true' false='false' mark_duplicates} == "true" ]; then
           read_utils mkdup_picard \
-            ~{reads_aligned_bam} \
+            "~{reads_aligned_bam}" \
             temp_markdup.bam \
             --JVMmemory "$mem_in_mb"m \
             --loglevel=DEBUG
         else
-          ln -s ~{reads_aligned_bam} temp_markdup.bam
+          ln -s "~{reads_aligned_bam}" temp_markdup.bam
         fi
         samtools index -@ $(nproc) temp_markdup.bam temp_markdup.bai
 
-        ln -s ~{reference_fasta} assembly.fasta
+        ln -s "~{reference_fasta}" assembly.fasta
         assembly refine_assembly \
           assembly.fasta \
           temp_markdup.bam \
@@ -947,6 +940,7 @@ task refine_assembly_with_aligned_reads {
           --outVcf "~{out_basename}.sites.vcf.gz" \
           --min_coverage ~{min_coverage} \
           --major_cutoff ~{major_cutoff} \
+          ~{'--max_coverage ' + max_coverage} \
           --JVMmemory "$mem_in_mb"m \
           --loglevel=DEBUG
 
@@ -1011,7 +1005,6 @@ task refine_assembly_with_aligned_reads {
         disks: "local-disk ~{disk_size} SSD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x8"
-        maxRetries: 2
     }
 }
 
@@ -1027,7 +1020,8 @@ task run_discordance {
       String out_basename = "run"
       Int    min_coverage = 4
 
-      String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-core"
+      Int    machine_mem_gb = 4
+      String docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
     }
     parameter_meta {
       reads_aligned_bam: {
@@ -1127,13 +1121,11 @@ task run_discordance {
 
     runtime {
         docker: docker
-        memory: "3 GB"
+        memory: "~{machine_mem_gb} GB"
         cpu: 2
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        preemptible: 1
-        maxRetries: 2
     }
 }
 
@@ -1245,7 +1237,6 @@ task filter_bad_ntc_batches {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
     }
     output {
         File           seqids_kept      = "seqids.filtered.txt"
@@ -1276,7 +1267,7 @@ task wgsim {
         Int?   random_seed
 
         Int    machine_mem_gb = 7
-        String docker = "ghcr.io/broadinstitute/viral-ngs:3.0.4-assemble"
+        String docker = "quay.io/broadinstitute/viral-ngs:3.0.17-assemble"
     }
 
     parameter_meta {
@@ -1356,6 +1347,5 @@ task wgsim {
         disks: "local-disk ~{disk_size} HDD"
         disk: "~{disk_size} GB" # TES
         dx_instance_type: "mem1_ssd1_v2_x2"
-        maxRetries: 2
     }
 }
