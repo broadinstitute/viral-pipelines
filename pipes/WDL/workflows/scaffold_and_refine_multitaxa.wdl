@@ -157,7 +157,7 @@ workflow scaffold_and_refine_multitaxa {
     if (length(select_all(stat_by_taxon)) == 0) {
         call utils.concatenate as assembly_stats_empty {
             input:
-                infiles     = [write_tsv([assembly_header])],
+                infiles     = [write_tsv([if length(stats_by_taxon) > 0 then keys(stats_by_taxon[0]) else assembly_header])],
                 output_name = "assembly_metadata-~{sample_id}.tsv"
         }
     }
