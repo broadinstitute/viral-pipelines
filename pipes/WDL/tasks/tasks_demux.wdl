@@ -914,6 +914,14 @@ task demux_fastqs {
     File   samplesheet
     File   runinfo_xml
 
+    # --- inner-barcode trim knobs (mirror task illumina_demux's splitcode pathway) ---
+    Int     inner_barcode_trim_r1_right_of_barcode = 10
+    Int     inner_barcode_predemux_trim_r1_3prime  = 18
+    Int     inner_barcode_predemux_trim_r2_5prime  = 18
+    Int     inner_barcode_predemux_trim_r2_3prime  = 18
+    Int?    inner_barcode_predemux_trim_r1_5prime     # unset by illumina_demux; exposed for override
+    Int?    inner_barcode_trim_r2_left_of_barcode     # unset by illumina_demux; exposed for override
+
     String? sequencingCenter
 
     Int?    cpu
@@ -954,6 +962,30 @@ task demux_fastqs {
       description: "Illumina RunInfo.xml file. NOTE: run_date and flowcell_id are extracted from this file and cannot be overridden due to viral-core limitations. Feature request needed to expose these as CLI parameters.",
       category: "required"
     }
+    inner_barcode_trim_r1_right_of_barcode: {
+      description: "Additional bp to trim from R1 immediately after the inner barcode. Mirrors task illumina_demux's --trim_r1_right_of_barcode.",
+      category: "advanced"
+    }
+    inner_barcode_predemux_trim_r1_3prime: {
+      description: "Bp to trim from R1's 3' end before inner-barcode demux. Mirrors task illumina_demux's --predemux_trim_r1_3prime.",
+      category: "advanced"
+    }
+    inner_barcode_predemux_trim_r2_5prime: {
+      description: "Bp to trim from R2's 5' end before inner-barcode demux. Mirrors task illumina_demux's --predemux_trim_r2_5prime.",
+      category: "advanced"
+    }
+    inner_barcode_predemux_trim_r2_3prime: {
+      description: "Bp to trim from R2's 3' end before inner-barcode demux. Mirrors task illumina_demux's --predemux_trim_r2_3prime.",
+      category: "advanced"
+    }
+    inner_barcode_predemux_trim_r1_5prime: {
+      description: "Bp to trim from R1's 5' end before inner-barcode demux. Not set by task illumina_demux; unset here by default (no trim applied).",
+      category: "advanced"
+    }
+    inner_barcode_trim_r2_left_of_barcode: {
+      description: "Additional bp to trim from R2 immediately before the inner barcode. Not set by task illumina_demux; unset here by default (no trim applied).",
+      category: "advanced"
+    }
   }
 
   # Derive base name from fastq_r1 for output file naming
@@ -974,6 +1006,12 @@ task demux_fastqs {
       --samplesheet "~{samplesheet}" \
       --runinfo "~{runinfo_xml}" \
       ~{'--sequencing_center "' + sequencingCenter + '"'} \
+      ~{'--trim_r1_right_of_barcode ' + inner_barcode_trim_r1_right_of_barcode} \
+      ~{'--predemux_trim_r1_3prime '  + inner_barcode_predemux_trim_r1_3prime} \
+      ~{'--predemux_trim_r2_5prime '  + inner_barcode_predemux_trim_r2_5prime} \
+      ~{'--predemux_trim_r2_3prime '  + inner_barcode_predemux_trim_r2_3prime} \
+      ~{'--predemux_trim_r1_5prime '  + inner_barcode_predemux_trim_r1_5prime} \
+      ~{'--trim_r2_left_of_barcode '  + inner_barcode_trim_r2_left_of_barcode} \
       --outdir . \
       --append_run_id \
       --out_meta_by_sample "~{fastq_basename}-meta_by_sample.json" \
