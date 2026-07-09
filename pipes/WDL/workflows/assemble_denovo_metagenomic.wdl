@@ -267,8 +267,8 @@ workflow assemble_denovo_metagenomic {
         }
 
         if(assembly_length_unambiguous > min_scaffold_unambig) {
-            scatter(h in assembly_header) {
-                String stat_by_taxon = stats_by_taxon[h]
+            scatter(k in keys(stats_by_taxon)) {
+                String stat_by_taxon = stats_by_taxon[k]
             }
         }
     }
@@ -277,14 +277,14 @@ workflow assemble_denovo_metagenomic {
     if (length(select_all(stat_by_taxon)) > 0) {
         call utils.concatenate as assembly_stats_non_empty {
             input:
-                infiles     = [write_tsv([assembly_header]), write_tsv(select_all(stat_by_taxon))],
+                infiles     = [write_tsv([keys(stats_by_taxon[0])]), write_tsv(select_all(stat_by_taxon))],
                 output_name = "assembly_metadata-~{sample_id}.tsv"
         }
     }
     if (length(select_all(stat_by_taxon)) == 0) {
         call utils.concatenate as assembly_stats_empty {
             input:
-                infiles     = [write_tsv([assembly_header])],
+                infiles     = [write_tsv([if length(stats_by_taxon) > 0 then keys(stats_by_taxon[0]) else assembly_header])],
                 output_name = "assembly_metadata-~{sample_id}.tsv"
         }
     }

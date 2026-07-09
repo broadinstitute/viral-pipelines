@@ -205,8 +205,8 @@ workflow demux_deplete {
                 raw_reads_unaligned_bams     = flatten(illumina_demux.raw_reads_unaligned_bams),
                 cleaned_reads_unaligned_bams = select_all(cleaned_bam_passing),
                 meta_by_filename_json        = meta_filename.merged_json,
-                read_counts_raw_json         = write_json(count_raw),
-                read_counts_cleaned_json     = write_json(count_cleaned)
+                read_counts_raw_json         = write_json(as_map(count_raw)),
+                read_counts_cleaned_json     = write_json(as_map(count_cleaned))
             }
         }
     }
