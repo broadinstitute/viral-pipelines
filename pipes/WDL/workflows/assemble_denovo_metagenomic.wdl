@@ -267,7 +267,9 @@ workflow assemble_denovo_metagenomic {
         }
 
         if(assembly_length_unambiguous > min_scaffold_unambig) {
-            Array[String] stat_by_taxon = unzip(as_pairs(stats_by_taxon)).right
+            scatter(k in keys(stats_by_taxon)) {
+                String stat_by_taxon = stats_by_taxon[k]
+            }
         }
     }
 
