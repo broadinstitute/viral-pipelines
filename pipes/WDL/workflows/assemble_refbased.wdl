@@ -104,7 +104,7 @@ workflow assemble_refbased {
             'trim_percent': "~{ivar_trim.primer_trimmed_read_percent}",
             'trim_count':   "~{ivar_trim.primer_trimmed_read_count}"
         }
-        Array[String] ivar_stats_row = [ivar_stats['file'], ivar_stats['trim_percent'], ivar_stats['trim_count']]
+        Array[String] ivar_stats_row = unzip(as_pairs(ivar_stats)).right
     }
 
     if(length(reads_unmapped_bams)>1) {
