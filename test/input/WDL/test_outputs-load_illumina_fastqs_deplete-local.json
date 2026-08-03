@@ -14,5 +14,8 @@
     "tile_count": "6",
     "total_tile_count": "12"
   },
-  "load_illumina_fastqs_deplete.read_counts_raw": [200, 150, 100, 0, 160]
+  "load_illumina_fastqs_deplete.read_counts_raw": [200, 150, 100, 0, 160],
+  "load_illumina_fastqs_deplete.has_barcode2": true,
+  "load_illumina_fastqs_deplete.has_barcode3": true,
+  "load_illumina_fastqs_deplete.has_sra_metadata": false
 }

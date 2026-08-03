@@ -865,9 +865,9 @@ task get_illumina_run_metadata {
   }
 }
 
-task check_for_barcode3 {
+task validate_samplesheet {
   meta {
-    description: "Check if any sample in the samplesheet has a non-empty barcode_3 value. Used to determine resource allocation for demultiplexing."
+    description: "Enforce the viral-pipelines samplesheet schema and report which optional column groups are present. Fails fast -- before the demux scatter provisions any large VMs -- if a required column is missing or blank. Also reports barcode_2 / barcode_3 / SRA column presence, used to determine resource allocation for demultiplexing."
   }
 
   input {
@@ -875,25 +875,114 @@ task check_for_barcode3 {
     String docker = "python:slim"
   }
 
+  parameter_meta {
+    samplesheet: {
+      description: "Tab-delimited samplesheet. viral-pipelines requires a non-empty 'sample', 'library_id_per_sample', and 'barcode_1' on every row; this is deliberately stricter than viral-ngs, which requires only 'sample' and 'barcode_1'. 'barcode_2' (dual index) is optional but all-or-nothing across rows, and is reported as has_barcode2. 'barcode_3' (inner/inline index) is optional and may be set on some rows but not others; it is reported as has_barcode3. The four SRA columns (library_strategy, library_source, library_selection, design_description) are optional and reported as has_sra_metadata.",
+      category: "required"
+    }
+  }
+
   command <<<
+    set -e -o pipefail
     python3 << 'CODE'
     import csv
+    import sys
 
-    has_barcode3 = False
+    # ---- why this is stricter than viral-ngs ----
+    # viral-ngs' SampleSheet hard-requires only 'sample' and 'barcode_1'. It treats
+    # 'library_id_per_sample' as optional and silently falls back to the bare sample
+    # name when it is absent or blank. That is a reasonable contract for a demux
+    # library, but viral-pipelines cannot live with it: we build library identifiers
+    # ("{sample}.l{library_id_per_sample}"), SRA submission rows (tasks_ncbi.wdl
+    # sra_meta_prep) and Terra data-table columns (tasks_terra.wdl) out of that
+    # column. When it is missing, a run does not fail -- it silently emits malformed
+    # library names like "SAMPLE.l.FLOWCELL.LANE" and blank SRA cells, which is far
+    # worse than a crash. So we enforce our own tabular schema here, for pennies,
+    # before the scatter provisions any large VMs.
+    # Do NOT relax this back toward viral-ngs' contract.
+    REQUIRED = ['sample', 'library_id_per_sample', 'barcode_1']
+
+    # Near-miss header names, mapped to the canonical name they were probably meant
+    # to be. Used only to add a hint to the error message.
+    ALIASES = {
+        'library_id':  'library_id_per_sample',
+        'library':     'library_id_per_sample',
+        'lib_id':      'library_id_per_sample',
+        'libraryid':   'library_id_per_sample',
+        'sample_name': 'sample',
+        'sample_id':   'sample',
+        'barcode1':    'barcode_1',
+    }
+
+    SRA_COLS = ['library_strategy', 'library_source', 'library_selection', 'design_description']
+
+    def fail(*lines):
+        for line in lines:
+            print(line, file=sys.stderr)
+        sys.exit(1)
+
     with open('~{samplesheet}', 'r') as f:
         reader = csv.DictReader(f, delimiter='\t')
-        for row in reader:
-            if row.get('barcode_3', '').strip():
-                has_barcode3 = True
-                break
+        header = reader.fieldnames or []
 
-    with open('has_barcode3.txt', 'w') as out:
-        out.write('true' if has_barcode3 else 'false')
+        missing = [c for c in REQUIRED if c not in header]
+        if missing:
+            msg = [
+                "ERROR: samplesheet is missing required column(s): %s" % ', '.join(missing),
+                "",
+                "  expected (required): %s" % ', '.join(REQUIRED),
+                "  actual (found):      %s" % (', '.join(header) if header else '(no header row)'),
+            ]
+            for found in header:
+                canonical = ALIASES.get(found.strip().lower())
+                if canonical and canonical in missing:
+                    msg += ["", "  hint: found '%s' - did you mean '%s'?" % (found, canonical)]
+            fail(*msg)
+
+        # One streaming pass: per-row required values, plus optional column groups.
+        blanks = []
+        n_rows = 0
+        n_barcode2 = 0
+        has_barcode3 = False
+        for row in reader:
+            n_rows += 1
+            for col in REQUIRED:
+                if not (row.get(col) or '').strip():
+                    blanks.append((n_rows, row.get('sample') or '?', col))
+            if (row.get('barcode_2') or '').strip():
+                n_barcode2 += 1
+            if (row.get('barcode_3') or '').strip():
+                has_barcode3 = True
+
+    if blanks:
+        fail("ERROR: samplesheet has empty required value(s):",
+             *["  row %d (sample=%s): %s is empty" % b for b in blanks])
+
+    if not n_rows:
+        fail("ERROR: samplesheet has a valid header but no data rows.")
+
+    # barcode_2 is all-or-nothing: viral-ngs sets indexes=2 only when every row has
+    # it, and raises "inconsistent single/double barcoding" on a mixture. Catching it
+    # here costs a penny container instead of a large demux VM.
+    if n_barcode2 and n_barcode2 != n_rows:
+        fail("ERROR: inconsistent single/double barcoding: %d of %d rows have a non-empty barcode_2." % (n_barcode2, n_rows),
+             "  barcode_2 must be populated for every sample, or omitted entirely.")
+
+    outputs = {
+        'has_barcode2.txt':     n_barcode2 == n_rows,
+        'has_barcode3.txt':     has_barcode3,
+        'has_sra_metadata.txt': all(c in header for c in SRA_COLS),
+    }
+    for filename, value in outputs.items():
+        with open(filename, 'w') as out:
+            out.write('true' if value else 'false')
     CODE
   >>>
 
   output {
-    Boolean has_barcode3 = read_boolean("has_barcode3.txt")
+    Boolean has_barcode2     = read_boolean("has_barcode2.txt")
+    Boolean has_barcode3     = read_boolean("has_barcode3.txt")
+    Boolean has_sra_metadata = read_boolean("has_sra_metadata.txt")
   }
 
   runtime {

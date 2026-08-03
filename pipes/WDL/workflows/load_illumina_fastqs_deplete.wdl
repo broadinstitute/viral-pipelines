@@ -46,6 +46,13 @@ workflow load_illumina_fastqs_deplete {
     Boolean      run_fastqc = true   # Run FastQC/MultiQC reports (can be disabled for speed)
   }
 
+  parameter_meta {
+    samplesheet: {
+      description: "Tab-delimited samplesheet. Every row must have a non-empty 'sample', 'library_id_per_sample', and 'barcode_1'; the workflow fails immediately if any is missing or blank. 'barcode_2' (dual index) is optional but must be populated for every sample or omitted entirely. 'barcode_3' (inner/inline index) is optional and may be set on a subset of rows, which selects splitcode demultiplexing for those samples. The four SRA columns (library_strategy, library_source, library_selection, design_description) are optional; their presence is reported as the has_sra_metadata output, and they are only consumed when biosample_map_tsvs is non-empty.",
+      category: "required"
+    }
+  }
+
   # Step 1: Rename samples in samplesheet (if sample_rename_map provided)
   call demux.samplesheet_rename_ids {
     input:
@@ -65,8 +72,9 @@ workflow load_illumina_fastqs_deplete {
       runinfo_xml = runinfo_xml
   }
 
-  # Step 3b: Check if samplesheet has barcode_3 (determines demux CPU allocation)
-  call demux.check_for_barcode3 {
+  # Step 3b: Enforce the samplesheet schema before the scatter, and check for
+  # barcode_3 (determines demux CPU allocation)
+  call demux.validate_samplesheet {
     input:
       samplesheet = samplesheet_rename_ids.new_sheet
   }
@@ -81,7 +89,7 @@ workflow load_illumina_fastqs_deplete {
         fastq_r2    = if length(fastq_pair) > 1 then fastq_pair[1] else null_file,
         samplesheet = samplesheet_rename_ids.new_sheet,
         runinfo_xml = runinfo_xml,
-        max_cpu     = if check_for_barcode3.has_barcode3 then demux_max_cpu_splitcode else demux_max_cpu_no_splitcode
+        max_cpu     = if validate_samplesheet.has_barcode3 then demux_max_cpu_splitcode else demux_max_cpu_no_splitcode
     }
   }
 
@@ -271,6 +279,11 @@ workflow load_illumina_fastqs_deplete {
 
     # Spike-in outputs
     File? spikein_counts = spike_summary.count_summary
+
+    # Samplesheet shape, as observed by validate_samplesheet
+    Boolean has_barcode2     = validate_samplesheet.has_barcode2
+    Boolean has_barcode3     = validate_samplesheet.has_barcode3
+    Boolean has_sra_metadata = validate_samplesheet.has_sra_metadata
 
     # Run info
     Map[String,String] run_info      = get_illumina_run_metadata.run_info
