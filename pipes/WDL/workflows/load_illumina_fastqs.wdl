@@ -24,6 +24,13 @@ workflow load_illumina_fastqs {
     Boolean     run_fastqc = true   # Run FastQC/MultiQC reports (can be disabled for speed)
   }
 
+  parameter_meta {
+    samplesheet: {
+      description: "Tab-delimited samplesheet. Every row must have a non-empty 'sample', 'library_id_per_sample', and 'barcode_1'; the workflow fails immediately if any is missing or blank. 'barcode_2' (dual index) is optional but must be populated for every sample or omitted entirely. 'barcode_3' (inner/inline index) is optional and may be set on a subset of rows, which selects splitcode demultiplexing for those samples. The four SRA columns (library_strategy, library_source, library_selection, design_description) are optional; their presence is reported as the has_sra_metadata output.",
+      category: "required"
+    }
+  }
+
   # Step 1: Group FASTQs into R1/R2 pairs (convert Files to Strings to avoid localization)
   call demux.group_fastq_pairs {
     input:
@@ -36,8 +43,9 @@ workflow load_illumina_fastqs {
       runinfo_xml = runinfo_xml
   }
 
-  # Step 2b: Check if samplesheet has barcode_3 (determines demux CPU allocation)
-  call demux.check_for_barcode3 {
+  # Step 2b: Enforce the samplesheet schema before the scatter, and check for
+  # barcode_3 (determines demux CPU allocation)
+  call demux.validate_samplesheet {
     input:
       samplesheet = samplesheet
   }
@@ -55,7 +63,7 @@ workflow load_illumina_fastqs {
         fastq_r2    = if length(fastq_pair) > 1 then fastq_pair[1] else null_file,
         samplesheet = samplesheet,
         runinfo_xml = runinfo_xml,
-        max_cpu     = if check_for_barcode3.has_barcode3 then demux_max_cpu_splitcode else demux_max_cpu_no_splitcode
+        max_cpu     = if validate_samplesheet.has_barcode3 then demux_max_cpu_splitcode else demux_max_cpu_no_splitcode
     }
   }
 
@@ -105,6 +113,11 @@ workflow load_illumina_fastqs {
 
     # Run info as Map (simple Map is supported)
     Map[String,String] run_info  = get_illumina_run_metadata.run_info
+
+    # Samplesheet shape, as observed by validate_samplesheet
+    Boolean has_barcode2     = validate_samplesheet.has_barcode2
+    Boolean has_barcode3     = validate_samplesheet.has_barcode3
+    Boolean has_sra_metadata = validate_samplesheet.has_sra_metadata
 
     String viralngs_version = get_illumina_run_metadata.viralngs_version
   }

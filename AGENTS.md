@@ -278,8 +278,28 @@ Some workflow failures have errors that aren't visible in standard stderr logs. 
 - Preemption before task execution started
 - Network connectivity issues during container setup
 
+**First, rule out a missing output file.** The signature "Batch reports exit code 0
+but the task is marked failed" is more often *not* an infrastructure problem. If the
+call directory's `rc` file contains `0`, the command script succeeded and a
+**required** output file was simply never created, so delocalization failed. Check
+this before reaching for Batch logs:
+
+1. Read `rc` in the call directory. If it is `0`, this is the delocalization case.
+2. Read `gcs_delocalization.sh` in the same directory for the list of outputs and
+   their `required`/`optional` flags.
+3. List the call directory and diff it against that list. Delocalization runs in
+   parallel and aborts partway, so several files may be absent — the *unproduced*
+   one is the cause, the rest are collateral.
+4. Then grep stderr for a swallowed warning about that file. viral-ngs tools
+   sometimes log `WARNING - Failed to generate ... / Continuing with ...` and exit 0,
+   which leaves a required output missing with no error anywhere near the end of the
+   log.
+
+Tasks whose outputs are only produced on a best-effort path should declare them
+`File?` or `touch` a fallback in the command block.
+
 **Signs you need Batch logs instead of stderr:**
-- Batch reports exit code 0 (success) but task is marked as failed ("GCP Batch task exited with Success(0)")
+- Batch reports exit code 0 (success) but task is marked as failed ("GCP Batch task exited with Success(0)") — **but check `rc` first, see above**
 - Error message says "The job was stopped before the command finished"
 - stderr is empty or very short
 - Error message says "Executor error" without details
