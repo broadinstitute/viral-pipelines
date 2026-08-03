@@ -15,7 +15,7 @@ task alignment_metrics {
     Int    max_amplicons=500
 
     Int    machine_mem_gb=16
-    String docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.19-core"
   }
 
   String out_basename = basename(aligned_bam, ".bam")
@@ -142,7 +142,7 @@ task plot_coverage {
     String? plotXLimits # of the form "min max" (ints, space between)
     String? plotYLimits # of the form "min max" (ints, space between)
 
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.19-core"
   }
 
   Int disk_size = 375
@@ -226,7 +226,7 @@ task merge_coverage_per_position {
 
     String       out_report_name = "coverage_report.csv"
     Int          disk_size = 100
-    String       docker = "quay.io/broadinstitute/py3-bio:0.1.11"
+    String       docker = "quay.io/broadinstitute/py3-bio:0.1.12"
   }
 
   command <<<
@@ -286,7 +286,7 @@ task coverage_report {
     Array[File]  mapped_bam_idx = []  # optional.. speeds it up if you provide it, otherwise we auto-index
     String       out_report_name = "coverage_report.txt"
 
-    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.19-core"
   }
 
   Int disk_size = 375
@@ -359,7 +359,7 @@ task fastqc {
   input {
     File   reads_bam
 
-    String docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.19-core"
   }
   parameter_meta {
     reads_bam:{ 
@@ -402,7 +402,7 @@ task align_and_count {
 
     Int?   cpu
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.19-core"
   }
 
   String  reads_basename=basename(reads_bam, ".bam")
@@ -517,7 +517,7 @@ task align_and_count_summary {
 
     String       output_prefix = "count_summary"
 
-    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.17-core"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.19-core"
   }
 
   Int disk_size = 100
@@ -551,7 +551,7 @@ task aggregate_metagenomics_reports {
     String       aggregate_taxlevel_focus                 = "species"
     Int          aggregate_top_N_hits                     = 5
 
-    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.17-classify"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.19-classify"
   }
 
   parameter_meta {
@@ -720,7 +720,7 @@ task multiqc_from_bams {
     File?          config
     String?        config_yaml
 
-    String         docker = "ghcr.io/broadinstitute/read-qc-tools:1.1.2"
+    String         docker = "ghcr.io/broadinstitute/read-qc-tools:1.1.3"
 
     Int?           cpu              # Override auto-scaled CPU (default: 2*num_bams, capped 4-32)
     Int?           machine_mem_gb   # Override auto-scaled memory (default: 2*cpu GB)
@@ -901,7 +901,7 @@ task compare_two_genomes {
     File   genome_two
     String out_basename
 
-    String docker = "quay.io/broadinstitute/viral-ngs:3.0.17-assemble"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.19-assemble"
   }
 
   Int disk_size = 50
