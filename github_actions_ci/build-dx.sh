@@ -16,6 +16,10 @@ dx select $DX_PROJECT
 
 # compile with dxCompiler
 COMPILE_SUCCESS="dxCompiler-compile_all-success.txt"
+DX_COMPILER_PARALLELISM="${DX_COMPILER_PARALLELISM:-4}"
+DX_COMPILER_TIMEOUT="${DX_COMPILER_TIMEOUT:-15m}"
+echo "dxCompiler executable creation parallelism: $DX_COMPILER_PARALLELISM"
+echo "dxCompiler per-workflow timeout: $DX_COMPILER_TIMEOUT"
 touch $COMPILE_SUCCESS
 for workflow in pipes/WDL/workflows/*.wdl; do
   if [ -n "$(grep DX_SKIP_WORKFLOW $workflow)" ]; then
@@ -26,25 +30,32 @@ for workflow in pipes/WDL/workflows/*.wdl; do
 
     defaults_json="pipes/dnax/dx-defaults-$workflow_name.json"
     if [ -f "$defaults_json" ]; then
-      CMD_DEFAULTS="-defaults $defaults_json"
+      CMD_DEFAULTS=(-defaults "$defaults_json")
     else
-      CMD_DEFAULTS=""
+      CMD_DEFAULTS=()
     fi
 
     extras_json="pipes/dnax/dx-extras.json"
-    CMD_DEFAULTS+=" -extras $extras_json"
+    CMD_DEFAULTS+=(-extras "$extras_json")
 
-	  dx_id=$(java -jar dxCompiler.jar compile \
-      $workflow $CMD_DEFAULTS -f -verbose \
-      -leaveWorkflowsOpen \
-      -imports pipes/WDL/tasks/ \
-      -project $DX_PROJECT \
-      -destination /build/$VERSION/$workflow_name)
-    if [ $? -eq 0 ]; then
-        echo "Succeeded: $workflow_name = $dx_id"
+    compile_start=$SECONDS
+    if dx_id=$(timeout --signal=TERM --kill-after=30s "$DX_COMPILER_TIMEOUT" \
+      java -jar dxCompiler.jar compile \
+        "$workflow" "${CMD_DEFAULTS[@]}" -f \
+        -executableCreationParallelism "$DX_COMPILER_PARALLELISM" \
+        -leaveWorkflowsOpen \
+        -imports pipes/WDL/tasks/ \
+        -project "$DX_PROJECT" \
+        -destination "/build/$VERSION/$workflow_name"); then
+        echo "Succeeded in $((SECONDS - compile_start))s: $workflow_name = $dx_id"
     else
-        echo "Failed to build: $workflow_name"
-        exit $?
+        compile_status=$?
+        if [ "$compile_status" -eq 124 ]; then
+          echo "Timed out after $((SECONDS - compile_start))s building: $workflow_name"
+        else
+          echo "Failed after $((SECONDS - compile_start))s building: $workflow_name (exit $compile_status)"
+        fi
+        exit "$compile_status"
     fi
     echo -e "$workflow_name\t$dx_id" >> $COMPILE_SUCCESS
   fi
