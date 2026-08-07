@@ -25,6 +25,13 @@ REPO_PATH="$(realpath "$SCRIPTPATH/../")"
 # set MODULE_VERSIONS with default value of "$(realpath "$SCRIPTPATH/../docker-versions.txt")", assumed to be located one level above this script
 MODULE_VERSIONS="${MODULE_VERSIONS:-"${REPO_PATH}/docker-versions.txt"}"
 
+# fail loudly on a missing versions file: without this the read loop below silently
+# checks nothing and the script still exits 0, disabling version pinning in CI
+if [ ! -f "${MODULE_VERSIONS}" ]; then
+    echo "ERROR: docker versions file not found: ${MODULE_VERSIONS}" >&2
+    exit 1
+fi
+
 echo "Checking wdl container versions against ${MODULE_VERSIONS}"
 
 # this is the newer script that simply validates existing version strings
