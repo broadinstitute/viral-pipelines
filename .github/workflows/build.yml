@@ -26,7 +26,7 @@ env:
   DOCKER_REGISTRY: "quay.io"
   DOCKER_REPO_PROD: "quay.io/broadinstitute/viral-pipelines"
   DOCKER_REPO_DEV: "quay.io/broadinstitute/viral-pipelines-dev"
-  MODULE_VERSIONS: "requirements-modules.txt"
+  MODULE_VERSIONS: "docker-versions.txt"
 
   # TravisCI variables described here:
   #   https://docs.travis-ci.com/user/environment-variables/
