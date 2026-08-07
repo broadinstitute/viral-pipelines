@@ -22,7 +22,8 @@ viral-pipelines is a collection of WDL (Workflow Description Language) workflows
 - `test/input/` - Test data and input JSON files
 - `github_actions_ci/` - CI/CD scripts for validation and testing
 - `docs/` - Sphinx documentation (published to ReadTheDocs)
-- `requirements-modules.txt` - Docker image versions for all dependencies
+- `docker-versions.txt` - Docker image versions for all dependencies
+  (deliberately not named `requirements*.txt`, which Dependabot's pip parser claims by glob)
 - `.dockstore.yml` - Dockstore registry configuration
 
 ## Development Commands
@@ -80,15 +81,19 @@ github_actions_ci/build-docs.sh
 
 ### Docker Image Management
 
-The `requirements-modules.txt` file specifies exact Docker image versions for all dependencies. When updating task files:
+The `docker-versions.txt` file specifies exact Docker image versions for all dependencies. To bump a
+version, edit `docker-versions.txt`, then update the matching `docker = "..."` defaults in
+`pipes/WDL/tasks/*.wdl` by hand — preserving any flavor suffix (e.g. `viral-ngs:3.0.20-core`) — and
+validate:
 
 ```bash
-# Check if WDL runtime Docker versions match requirements-modules.txt
+# Validate that WDL runtime Docker versions match docker-versions.txt
 github_actions_ci/check-wdl-runtimes.sh
-
-# Update versions in WDL files to match requirements-modules.txt
-github_actions_ci/version-wdl-runtimes.sh
 ```
+
+There is no bulk-update script. `version-wdl-runtimes.sh` was removed in `a6c39b94` because it stripped
+flavor suffixes during bulk rewrites. Pins that intentionally diverge from the global version are
+annotated with `#skip-global-version-pin` (see `tasks_metagenomics.wdl`, `tasks_megablast.wdl`).
 
 ## Git Practices
 
@@ -191,7 +196,7 @@ Flavored images include:
 - `viral-ngs:{version}-phylo` - Phylogenetics tools (Augur, etc.)
 - `ncbi-tools` - NCBI submission tools (separate image on quay.io)
 
-Image versions are pinned in `requirements-modules.txt` and must be kept in sync with WDL files.
+Image versions are pinned in `docker-versions.txt` and must be kept in sync with WDL files.
 
 ## Dockstore Integration
 
