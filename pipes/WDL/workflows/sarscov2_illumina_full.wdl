@@ -36,6 +36,12 @@ workflow sarscov2_illumina_full {
           description: "A post-submission attributes file from NCBI BioSample, which is available at https://submit.ncbi.nlm.nih.gov/subs/ and clicking on 'Download attributes file with BioSample accessions'. The 'sample_name' column must match the external_ids used in sample_rename_map (or internal ids if sample_rename_map is omitted).",
           patterns: ["*.txt", "*.tsv"]
         }
+        vadr_opts: {
+          description: "Command line options passed to NCBI's VADR v-annotate.pl for annotation and QC."
+        }
+        vadr_model_tar_url: {
+          description: "URL of the VADR model library (gzipped tarball) to annotate against. Defaults to NCBI's SARS-CoV-2 1.3-2 library; the staphb/vadr image no longer bundles any models."
+        }
     }
 
     input {
@@ -50,6 +56,8 @@ workflow sarscov2_illumina_full {
 
         Int           min_genome_bases = 24000
         Int           max_vadr_alerts = 0
+        String        vadr_opts = "--glsearch -s -r --nomisc --mkey sarscov2 --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn"
+        String        vadr_model_tar_url = "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/sarscov2/1.3-2/vadr-models-sarscov2-1.3-2.tar.gz"
         Int           ntc_max_unambig = 3000
         Int?          min_genome_coverage
 
@@ -65,6 +73,15 @@ workflow sarscov2_illumina_full {
     }
     Int     taxid         = 2697049
     String  gisaid_prefix = 'hCoV-19/'
+
+    # VADR models are no longer bundled in the staphb/vadr docker image, so fetch them once
+    # here rather than once per assembly
+    call utils.download_from_url as vadr_models {
+        input:
+            url_to_download     = vadr_model_tar_url,
+            request_max_retries = 3,
+            disk_size           = 10
+    }
 
     # Broad production pipeline only: metadata ETL and NCBI BioSample registration
     if(length(biosample_attributes) == 0) {
@@ -158,7 +175,8 @@ workflow sarscov2_illumina_full {
             call ncbi.vadr {
               input:
                 genome_fasta = assemble_refbased.assembly_fasta,
-                vadr_opts = "--glsearch -s -r --nomisc --mkey sarscov2 --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn",
+                vadr_opts = vadr_opts,
+                vadr_model_tar = vadr_models.downloaded_response_file,
                 minlen = 50,
                 maxlen = 30000
             }
