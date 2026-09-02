@@ -41,6 +41,9 @@ workflow metagenomic_denovo {
     File?         spikein_db
 
     File          trim_clip_db
+
+    Int           min_reads_for_rmdup    =  5000000
+    Int           max_reads_for_assembly = 10000000
   }
 
   parameter_meta {
@@ -88,6 +91,12 @@ workflow metagenomic_denovo {
     ncbi_taxdump_tgz: {
       description: "An NCBI taxdump.tar.gz file that contains, at the minimum, a nodes.dmp and names.dmp file.",
       patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+    }
+    min_reads_for_rmdup: {
+      description: "Read sets smaller than this skip kmer-depth normalization and are passed to assembly unchanged."
+    }
+    max_reads_for_assembly: {
+      description: "Cap on read pairs passed to de novo assembly. If normalization leaves more than this, the read set is randomly downsampled to this count."
     }
   }
 
@@ -168,16 +177,18 @@ workflow metagenomic_denovo {
       input: reads_bam = taxfiltered_bam
   }
 
-  # alignment-free duplicate removal
-  call read_utils.rmdup_ubam {
+  # kmer-depth normalization of the assembly input read set
+  call read_utils.bbnorm_bam {
     input:
-      reads_unmapped_bam = taxfiltered_bam
+      reads_bam        = taxfiltered_bam,
+      min_input_reads  = min_reads_for_rmdup,
+      max_output_reads = max_reads_for_assembly
   }
 
-  # denovo assembly (with taxfiltered/rmdup reads)
+  # denovo assembly (with taxfiltered/normalized reads)
   call assembly.assemble {
     input:
-      reads_unmapped_bam = rmdup_ubam.dedup_bam,
+      reads_unmapped_bam = bbnorm_bam.bbnorm_bam,
       trim_clip_db       = trim_clip_db,
       always_succeed     = true,
       sample_name        = sample_name
@@ -215,13 +226,13 @@ workflow metagenomic_denovo {
     File    raw_unmapped_bam                      = reads_bam
     File    depleted_bam                          = dehosted_bam
     File    taxfilt_bam                           = taxfiltered_bam
-    File    dedup_bam                             = rmdup_ubam.dedup_bam
+    File    reads_assembly_input_ubam             = bbnorm_bam.bbnorm_bam
     File    denovo_in_bam                         = assemble.subsampBam
         
     Int     read_counts_raw                       = deplete_k2.classified_taxonomic_filter_read_count_pre
     Int     read_counts_depleted                  = select_first([deplete_taxa.depletion_read_count_post, deplete_k2.classified_taxonomic_filter_read_count_post])
     Int     read_counts_taxfilt                   = select_first([filter_to_taxon.filter_read_count_post, filter_acellular.classified_taxonomic_filter_read_count_post])
-    Int     read_counts_dedup                     = rmdup_ubam.dedup_read_count_post
+    Int     read_counts_assembly_input            = bbnorm_bam.bbnorm_read_count_post
     Int     read_counts_denovo_in                 = assemble.subsample_read_count
 
     File    raw_fastqc                            = fastqc_raw.fastqc_html

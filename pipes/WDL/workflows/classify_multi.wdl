@@ -22,6 +22,9 @@ workflow classify_multi {
 
         File kraken2_db_tgz
         File krona_taxonomy_db_kraken2_tgz
+
+        Int min_reads_for_rmdup    =  5000000
+        Int max_reads_for_assembly = 10000000
     }
 
     parameter_meta {
@@ -48,6 +51,12 @@ workflow classify_multi {
         ncbi_taxdump_tgz: {
           description: "An NCBI taxdump.tar.gz file that contains, at the minimum, a nodes.dmp and names.dmp file.",
           patterns: ["*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
+        }
+        min_reads_for_rmdup: {
+          description: "Read sets smaller than this skip kmer-depth normalization and are passed to assembly unchanged."
+        }
+        max_reads_for_assembly: {
+          description: "Cap on read pairs passed to de novo assembly. If normalization leaves more than this, the read set is randomly downsampled to this count."
         }
     }
 
@@ -88,13 +97,15 @@ workflow classify_multi {
     }
 
     scatter(clean_reads in filter_acellular.bam_filtered_to_taxa) {
-        call read_utils.rmdup_ubam {
+        call read_utils.bbnorm_bam {
            input:
-                reads_unmapped_bam = clean_reads
+                reads_bam        = clean_reads,
+                min_input_reads  = min_reads_for_rmdup,
+                max_output_reads = max_reads_for_assembly
         }
         call assembly.assemble as spades {
             input:
-                reads_unmapped_bam = rmdup_ubam.dedup_bam,
+                reads_unmapped_bam = bbnorm_bam.bbnorm_bam,
                 trim_clip_db       = trim_clip_db,
                 always_succeed     = true
         }
@@ -112,10 +123,10 @@ workflow classify_multi {
             out_basename = "multiqc-cleaned"
     }
 
-    call reports.multiqc_from_bams as multiqc_dedup {
+    call reports.multiqc_from_bams as multiqc_assembly_input {
         input:
-            input_bams   = rmdup_ubam.dedup_bam,
-            out_basename = "multiqc-dedup"
+            input_bams   = bbnorm_bam.bbnorm_bam,
+            out_basename = "multiqc-assembly-input"
     }
 
     call reports.align_and_count_summary as spike_summary {
@@ -138,17 +149,17 @@ workflow classify_multi {
 
     output {
         Array[File] cleaned_reads_unaligned_bams    = deplete.bam_filtered_to_taxa
-        Array[File] deduplicated_reads_unaligned    = rmdup_ubam.dedup_bam
+        Array[File] reads_assembly_input_ubams      = bbnorm_bam.bbnorm_bam
         Array[File] contigs_fastas                  = spades.contigs_fasta
         
         Array[Int]  read_counts_raw                 = deplete.classified_taxonomic_filter_read_count_pre
         Array[Int]  read_counts_depleted            = deplete.classified_taxonomic_filter_read_count_post
-        Array[Int]  read_counts_dedup               = rmdup_ubam.dedup_read_count_post
+        Array[Int]  read_counts_assembly_input      = bbnorm_bam.bbnorm_read_count_post
         Array[Int]  read_counts_prespades_subsample = spades.subsample_read_count
         
         File        multiqc_report_raw              = multiqc_raw.multiqc_report
         File        multiqc_report_cleaned          = multiqc_cleaned.multiqc_report
-        File        multiqc_report_dedup            = multiqc_dedup.multiqc_report
+        File        multiqc_report_assembly_input   = multiqc_assembly_input.multiqc_report
         File        spikein_counts                  = spike_summary.count_summary
         File        kraken2_merged_krona            = krona_merge_kraken2.krona_report_html
         File        kraken2_summary                 = metag_summary_report.krakenuniq_aggregate_taxlevel_summary

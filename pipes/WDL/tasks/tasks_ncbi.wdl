@@ -1558,7 +1558,7 @@ task vadr {
     String? vadr_model_tar_subdir
 
     String out_basename = basename(genome_fasta, '.fasta')
-    String docker = "mirror.gcr.io/staphb/vadr:1.6.4"
+    String docker = "mirror.gcr.io/staphb/vadr:1.7"
     Int    mem_size = 16  # the RSV model in particular seems to consume 15GB RAM
     Int    cpus = 4
   }
@@ -1578,6 +1578,14 @@ task vadr {
       VADR_MODEL_DIR="vadr-models/~{default='' vadr_model_tar_subdir}"
     else
       VADR_MODEL_DIR="vadr-models"
+    fi
+
+    # the models baked into the staphb image have come and gone across releases, so make an
+    # empty model directory a loud failure here rather than a confusing v-annotate.pl error
+    if ! ls "$VADR_MODEL_DIR"/*.minfo >/dev/null 2>&1; then
+      echo "ERROR: no VADR model info files (*.minfo) found in $VADR_MODEL_DIR" >&2
+      echo "       pass vadr_model_tar (and vadr_model_tar_subdir if the tarball is nested)" >&2
+      exit 1
     fi
 
     # remove terminal ambiguous nucleotides
