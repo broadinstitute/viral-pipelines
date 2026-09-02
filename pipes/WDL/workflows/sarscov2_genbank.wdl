@@ -26,6 +26,8 @@ workflow sarscov2_genbank {
 
         Int           min_genome_bases = 15000
         Int           max_vadr_alerts = 0
+        String        vadr_opts = "--glsearch -s -r --nomisc --mkey sarscov2 --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn"
+        String        vadr_model_tar_url = "https://ftp.ncbi.nlm.nih.gov/pub/nawrocki/vadr-models/sarscov2/1.3-2/vadr-models-sarscov2-1.3-2.tar.gz"
 
         Int           taxid = 2697049
         String        gisaid_prefix = 'hCoV-19/'
@@ -54,6 +56,21 @@ workflow sarscov2_genbank {
           description: "A four column tab text file with one row per sequence and the following header columns: SeqID, Assembly Method, Coverage, Sequencing Technology",
           patterns: ["*.txt", "*.tsv"]
         }
+        vadr_opts: {
+          description: "Command line options passed to NCBI's VADR v-annotate.pl for annotation and QC."
+        }
+        vadr_model_tar_url: {
+          description: "URL of the VADR model library (gzipped tarball) to annotate against. Defaults to NCBI's SARS-CoV-2 1.3-2 library; the staphb/vadr image no longer bundles any models."
+        }
+    }
+
+    # VADR models are no longer bundled in the staphb/vadr docker image, so fetch them once
+    # here rather than once per assembly
+    call utils.download_from_url as vadr_models {
+        input:
+            url_to_download     = vadr_model_tar_url,
+            request_max_retries = 3,
+            disk_size           = 10
     }
 
     scatter(assembly in assemblies_fasta) {
@@ -73,7 +90,8 @@ workflow sarscov2_genbank {
         call ncbi.vadr {
           input:
             genome_fasta = renamed_assembly,
-            vadr_opts = "--glsearch -s -r --nomisc --mkey sarscov2 --lowsim5seq 6 --lowsim3seq 6 --alt_fail lowscore,insertnn,deletinn",
+            vadr_opts = vadr_opts,
+            vadr_model_tar = vadr_models.downloaded_response_file,
             minlen = 50,
             maxlen = 30000
         }
