@@ -242,6 +242,8 @@ workflows:
   - name: sarscov2_nextclade_multi
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_nextclade_multi.wdl
+    testParameterFiles:
+    - /test/input/WDL/miniwdl-local/test_inputs-sarscov2_nextclade_multi-local.json
   - name: sarscov2_nextstrain
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/sarscov2_nextstrain.wdl
