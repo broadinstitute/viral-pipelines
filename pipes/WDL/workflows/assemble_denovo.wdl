@@ -27,12 +27,15 @@ workflow assemble_denovo {
     File?        filter_to_taxon_db
     File         trim_clip_db
 
+    Int          min_reads_for_rmdup    =  5000000
+    Int          max_reads_for_assembly = 10000000
+
     String       out_basename = basename(basename(reads_unmapped_bams[0], ".bam"), ".cleaned")
     String?      sample_original_name
   }
 
   parameter_meta {
-    raw_reads_unmapped_bams: { description: "unaligned reads in BAM format", patterns: ["*.bam"] }
+    reads_unmapped_bams: { description: "unaligned reads in BAM format", patterns: ["*.bam"] }
     deplete_bmtaggerDbs: {
        description: "Optional list of databases to use for bmtagger-based depletion. Sequences in fasta format will be indexed on the fly, pre-bmtagger-indexed databases may be provided as tarballs.",
        patterns: ["*.fasta", "*.fasta.gz", "*.tar.gz", "*.tar.lz4", "*.tar.bz2", "*.tar.zst"]
@@ -52,6 +55,12 @@ workflow assemble_denovo {
     reference_genome_fasta: {
       description: "After denovo assembly, large contigs are scaffolded against a reference genome to determine orientation and to join contigs together, before further polishing by reads. You must supply at least one reference genome (all segments/chromomes in a single fasta file). If more than one reference is provided, contigs will be scaffolded against all of them and the one with the most complete assembly will be chosen for downstream polishing.",
       patterns: ["*.fasta"]
+    }
+    min_reads_for_rmdup: {
+      description: "Read sets smaller than this skip kmer-depth normalization and are passed to assembly unchanged."
+    }
+    max_reads_for_assembly: {
+      description: "Cap on read pairs passed to de novo assembly. If normalization leaves more than this, the read set is randomly downsampled to this count."
     }
     out_basename: { description: "a filename-friendly basename for output files" }
     sample_original_name: { description: "a (possibly filename-unfriendly) sample name for fasta and bam headers" }
@@ -92,20 +101,9 @@ workflow assemble_denovo {
       }
     }
     File reads_taxfilt_bams = select_first([filter_to_taxon.taxfilt_bam, reads_depleted_bams])
-
-    # alignment-free PCR duplicate removal
-    call read_utils.rmdup_ubam {
-      input:
-        reads_unmapped_bam = reads_taxfilt_bams
-    }
   }
 
   # merge all reads into single file
-  call read_utils.merge_and_reheader_bams as merge_dedup_reads {
-      input:
-          in_bams      = rmdup_ubam.dedup_bam,
-          out_basename = out_basename
-  }
   call read_utils.merge_and_reheader_bams as merge_cleaned_reads {
       input:
           in_bams      = reads_depleted_bams,
@@ -117,10 +115,18 @@ workflow assemble_denovo {
           out_basename = out_basename
   }
 
+  # kmer-depth normalization of the assembly input read set
+  call read_utils.bbnorm_bam {
+    input:
+      reads_bam        = merge_taxfilt_reads.out_bam,
+      min_input_reads  = min_reads_for_rmdup,
+      max_output_reads = max_reads_for_assembly
+  }
+
   # denovo assembly pipeline below
   call assembly.assemble {
     input:
-      reads_unmapped_bam = merge_dedup_reads.out_bam,
+      reads_unmapped_bam = bbnorm_bam.bbnorm_bam,
       trim_clip_db       = trim_clip_db,
       always_succeed     = true,
       sample_name        = out_basename
@@ -129,7 +135,7 @@ workflow assemble_denovo {
   call assembly.scaffold {
     input:
       contigs_fasta           = assemble.contigs_fasta,
-      reads_bam               = merge_dedup_reads.out_bam,
+      reads_bam               = bbnorm_bam.bbnorm_bam,
       reference_genome_fasta  = reference_genome_fasta
   }
 
@@ -163,8 +169,8 @@ workflow assemble_denovo {
     File    taxfilt_bam                           = merge_taxfilt_reads.out_bam
     Int     filter_read_count_post                = merge_taxfilt_reads.read_count
     
-    File    dedup_bam                             = merge_dedup_reads.out_bam
-    Int     dedup_read_count_post                 = merge_dedup_reads.read_count
+    File    reads_assembly_input_ubam             = bbnorm_bam.bbnorm_bam
+    Int     read_counts_assembly_input            = bbnorm_bam.bbnorm_read_count_post
     
     File    contigs_fasta                         = assemble.contigs_fasta
     File    subsampBam                            = assemble.subsampBam

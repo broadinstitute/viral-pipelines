@@ -1,7 +1,7 @@
 version 1.1
 
 task deplete_taxa {
-  meta { description: "Runs a full human read depletion pipeline and removes PCR duplicates. Input database files (minimapDbs, bmtaggerDbs, blastDbs, bwaDbs) may be any combination of: .fasta, .fasta.gz, or tarred up indexed fastas (using the software's indexing method) as .tar.gz, .tar.bz2, .tar.lz4, or .tar.zst." }
+  meta { description: "Runs a full human read depletion pipeline. Input database files (minimapDbs, bmtaggerDbs, blastDbs, bwaDbs) may be any combination of: .fasta, .fasta.gz, or tarred up indexed fastas (using the software's indexing method) as .tar.gz, .tar.bz2, .tar.lz4, or .tar.zst." }
 
   input {
     File         raw_reads_unmapped_bam
@@ -224,55 +224,5 @@ task build_lastal_db {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem1_ssd1_v2_x4"
-  }
-}
-
-task merge_one_per_sample {
-  input {
-    String       out_bam_basename
-    Array[File]+ inputBams
-    Boolean      rmdup = false
-
-    Int          machine_mem_gb = 7
-    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.20-core"
-  }
-
-  Int disk_size = 750
-
-  command <<<
-    set -ex -o pipefail
-    read_utils --version | tee VERSION
-
-    # find 90% memory
-    mem_in_mb=~(/opt/viral-ngs/scripts/calc_mem.py mb 90)
-
-    read_utils merge_bams \
-      "~{sep=' ' inputBams}" \
-      "~{out_bam_basename}.bam" \
-      --picardOptions SORT_ORDER=queryname \
-      --JVMmemory "$mem_in_mb"m \
-      --loglevel=DEBUG
-
-    if [[ "~{rmdup}" == "true" ]]; then
-      mv "~{out_bam_basename}.bam" tmp.bam
-      read_utils rmdup_mvicuna_bam \
-        tmp.bam \
-        "~{out_bam_basename}.bam" \
-        --loglevel=DEBUG
-    fi
-  >>>
-
-  output {
-    File   mergedBam        = "~{out_bam_basename}.bam"
-    String viralngs_version = read_string("VERSION")
-  }
-
-  runtime{
-    memory: "~{machine_mem_gb} GB"
-    cpu: 4
-    docker: docker
-    disks: "local-disk ~{disk_size} LOCAL"
-    disk: "~{disk_size} GB" # TES
-    dx_instance_type: "mem1_ssd2_v2_x4"
   }
 }
