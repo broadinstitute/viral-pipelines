@@ -384,7 +384,7 @@ task trimal_clean_msa {
     File   in_aligned_fasta
 
     Int?   machine_mem_gb
-    String docker = "quay.io/biocontainers/trimal:1.4.1--h6bb024c_3"
+    String docker = "quay.io/biocontainers/trimal:1.5.1--h9948957_0"
 
     String input_basename = basename(basename(in_aligned_fasta, ".fasta"), ".fa")
   }
