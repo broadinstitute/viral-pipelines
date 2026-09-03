@@ -1227,7 +1227,7 @@ task snp_sites {
     input {
         File    msa_fasta
         Boolean allow_wildcard_bases = true
-        String  docker = "quay.io/biocontainers/snp-sites:2.5.1--hed695b0_0"
+        String  docker = "quay.io/biocontainers/snp-sites:2.5.1--h577a1d6_7"
         Int     disk_size = 750
     }
     String out_basename = basename(msa_fasta, ".fasta")
