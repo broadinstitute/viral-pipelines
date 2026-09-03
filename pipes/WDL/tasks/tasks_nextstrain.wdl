@@ -496,7 +496,16 @@ task nextstrain_build_subsample {
         File?  drop_list
 
         Int    machine_mem_gb = 50
-        String docker = "docker.io/nextstrain/base:build-20240318T173028Z"
+        # NOTE: deliberately pinned to the older 2024 image, unlike every other task in this file.
+        # This task executes the ncov snakemake workflow at nextstrain_ncov_repo_commit (2021-10-06),
+        # which cannot run under the snakemake 9 shipped in newer nextstrain/base images: ncov's
+        # workflow/snakemake_rules/remote_files.smk uses the snakemake.remote.* RemoteProvider API
+        # that snakemake 8 removed, and Snakefile include:s it at parse time. Snakemake 8 also
+        # dropped --stats, which the profile config below sets. Bumping the image therefore also
+        # requires bumping the ncov pin, and current ncov master has deleted the my_profiles/ dir
+        # this task writes into and changed the pre-masked input contract from
+        # results/masked_{origin}.fasta.xz to results/{build_name}/masked.fasta.
+        String docker                      = "docker.io/nextstrain/base:build-20240318T173028Z" #skip-global-version-pin
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
         Int    disk_size = 750
     }
@@ -639,7 +648,7 @@ task nextstrain_build_subsample {
 task nextstrain_ncov_defaults {
     input {
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
-        String docker                      = "docker.io/nextstrain/base:build-20240318T173028Z"
+        String docker                      = "docker.io/nextstrain/base:build-20260819T223854Z"
         Int    disk_size = 50
     }
     command <<<
@@ -676,7 +685,7 @@ task nextstrain_deduplicate_sequences {
         Boolean error_on_seq_diff = false
 
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
-        String docker                      = "docker.io/nextstrain/base:build-20240318T173028Z"
+        String docker                      = "docker.io/nextstrain/base:build-20260819T223854Z"
         Int disk_size = 750
     }
 
@@ -729,7 +738,7 @@ task nextstrain_ncov_sanitize_gisaid_data {
         String? prefix_to_strip
 
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
-        String docker                      = "docker.io/nextstrain/base:build-20240318T173028Z"
+        String docker                      = "docker.io/nextstrain/base:build-20260819T223854Z"
         Int    disk_size = 750
     }
 
@@ -804,7 +813,7 @@ task filter_subsample_sequences {
         Array[String]? exclude_where
         Array[String]? include_where
 
-        String         docker = "docker.io/nextstrain/base:build-20240318T173028Z"
+        String         docker = "docker.io/nextstrain/base:build-20260819T223854Z"
         Int            disk_size = 750
     }
     parameter_meta {
@@ -842,14 +851,14 @@ task filter_subsample_sequences {
             ~{"--min-date " + min_date} \
             ~{"--max-date " + max_date} \
             ~{"--min-length " + min_length} \
-            ~{true="--non-nucleotide " false=""  non_nucleotide} \
+            ~{true="--exclude-invalid " false=""  non_nucleotide} \
             ~{"--exclude " + exclude} \
             ~{"--include " + include} \
             ~{"--priority " + priority} \
             ~{"--sequences-per-group " + sequences_per_group} \
             ~{"--group-by " + group_by} \
             ~{"--subsample-seed " + subsample_seed} \
-            --output "~{out_fname}" | tee STDOUT
+            --output-sequences "~{out_fname}" 2>&1 | tee STDOUT
         set +o pipefail
 
         #cat ~{sequences_fasta} | grep \> | wc -l > IN_COUNT
@@ -1185,7 +1194,7 @@ task augur_mafft_align {
         Boolean fill_gaps = true
         Boolean remove_reference = true
 
-        String  docker = "docker.io/nextstrain/base:build-20240318T173028Z"
+        String  docker = "docker.io/nextstrain/base:build-20260819T223854Z"
         Int     disk_size = 750
         Int     mem_size = 180
         Int     cpus = 64
@@ -1258,7 +1267,7 @@ task augur_mask_sites {
         File   sequences
         File?  mask_bed
 
-        String docker = "docker.io/nextstrain/base:build-20240318T173028Z"
+        String docker = "docker.io/nextstrain/base:build-20260819T223854Z"
         Int    disk_size = 750
     }
     parameter_meta {
@@ -1316,7 +1325,7 @@ task draft_augur_tree {
 
         Int     cpus = 64
         Int     machine_mem_gb = 32
-        String  docker = "docker.io/nextstrain/base:build-20240318T173028Z"
+        String  docker = "docker.io/nextstrain/base:build-20260819T223854Z"
         Int     disk_size = 1250
     }
     parameter_meta {
@@ -1385,7 +1394,7 @@ task refine_augur_tree {
         String?  divergence_units = "mutations"
         File?    vcf_reference
 
-        String   docker = "docker.io/nextstrain/base:build-20240318T173028Z"
+        String   docker = "docker.io/nextstrain/base:build-20260819T223854Z"
         Int      disk_size = 750
         Int      machine_mem_gb = 75
     }
@@ -1458,7 +1467,7 @@ task ancestral_traits {
         Float?        sampling_bias_correction
 
         Int           machine_mem_gb = 32
-        String        docker = "docker.io/nextstrain/base:build-20240318T173028Z"
+        String        docker = "docker.io/nextstrain/base:build-20260819T223854Z"
         Int           disk_size = 750
     }
     String out_basename = basename(tree, '.nwk')
@@ -1511,7 +1520,7 @@ task ancestral_tree {
         File?    root_sequence
         File?    output_vcf
 
-        String   docker = "docker.io/nextstrain/base:build-20240318T173028Z"
+        String   docker = "docker.io/nextstrain/base:build-20260819T223854Z"
         Int      disk_size = 300
     }
     parameter_meta {
@@ -1572,7 +1581,7 @@ task translate_augur_tree {
         File?  vcf_reference_output
         File?  vcf_reference
 
-        String docker = "docker.io/nextstrain/base:build-20240318T173028Z"
+        String docker = "docker.io/nextstrain/base:build-20260819T223854Z"
         Int    disk_size = 300
     }
     String out_basename = basename(tree, '.nwk')
@@ -1628,7 +1637,7 @@ task tip_frequencies {
         Boolean  include_internal_nodes = false
 
         Int      machine_mem_gb = 64
-        String   docker = "docker.io/nextstrain/base:build-20240318T173028Z"
+        String   docker = "docker.io/nextstrain/base:build-20260819T223854Z"
         String   out_basename = basename(tree, '.nwk')
         Int      disk_size = 200
     }
@@ -1687,7 +1696,7 @@ task assign_clades_to_nodes {
         File ref_fasta
         File clades_tsv
 
-        String docker = "docker.io/nextstrain/base:build-20240318T173028Z"
+        String docker = "docker.io/nextstrain/base:build-20260819T223854Z"
         Int    disk_size = 300
     }
     String out_basename = basename(basename(tree_nwk, ".nwk"), "_timetree")
@@ -1731,7 +1740,7 @@ task augur_import_beast {
         String? tip_date_delimiter
 
         Int     machine_mem_gb = 3
-        String  docker = "docker.io/nextstrain/base:build-20240318T173028Z"
+        String  docker = "docker.io/nextstrain/base:build-20260819T223854Z"
         Int     disk_size = 150
     }
     String tree_basename = basename(beast_mcc_tree, ".tree")
@@ -1791,7 +1800,7 @@ task export_auspice_json {
         String out_basename = basename(basename(tree, ".nwk"), "_timetree")
 
         Int    machine_mem_gb = 64
-        String docker = "docker.io/nextstrain/base:build-20240318T173028Z"
+        String docker = "docker.io/nextstrain/base:build-20260819T223854Z"
         Int    disk_size = 300
     }
     
