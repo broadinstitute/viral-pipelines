@@ -226,7 +226,7 @@ task merge_coverage_per_position {
 
     String       out_report_name = "coverage_report.csv"
     Int          disk_size = 100
-    String       docker = "quay.io/broadinstitute/py3-bio:0.1.12"
+    String       docker = "quay.io/broadinstitute/py3-bio:0.1.14"
   }
 
   command <<<

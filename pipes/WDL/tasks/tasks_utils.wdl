@@ -540,7 +540,7 @@ task sanitize_fasta_headers {
     File   in_fasta
     String out_filename = "~{basename(in_fasta, '.fasta')}-sanitized.fasta"
   }
-  String docker = "quay.io/broadinstitute/py3-bio:0.1.12"
+  String docker = "quay.io/broadinstitute/py3-bio:0.1.14"
   Int    disk_size = 375
   command <<<
     python3<<CODE
@@ -898,7 +898,7 @@ task tsv_drop_cols {
         File          in_tsv
         Array[String] drop_cols
         String        out_filename = basename(in_tsv, '.tsv') + ".drop.tsv"
-        String        docker = "quay.io/broadinstitute/py3-bio:0.1.12"
+        String        docker = "quay.io/broadinstitute/py3-bio:0.1.14"
     }
     Int disk_size = 50
     command <<<

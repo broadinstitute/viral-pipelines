@@ -1079,7 +1079,7 @@ task generate_author_sbt_file {
     File?   defaults_yaml
     String  out_base = "authors"
 
-    String  docker = "quay.io/broadinstitute/py3-bio:0.1.12"
+    String  docker = "quay.io/broadinstitute/py3-bio:0.1.14"
   }
 
   parameter_meta {
