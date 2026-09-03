@@ -83,7 +83,7 @@ github_actions_ci/build-docs.sh
 
 The `docker-versions.txt` file specifies exact Docker image versions for all dependencies. To bump a
 version, edit `docker-versions.txt`, then update the matching `docker = "..."` defaults in
-`pipes/WDL/tasks/*.wdl` by hand — preserving any flavor suffix (e.g. `viral-ngs:3.0.20-core`) — and
+`pipes/WDL/tasks/*.wdl` by hand — preserving any flavor suffix (e.g. `viral-ngs:3.0.21-core`) — and
 validate:
 
 ```bash
