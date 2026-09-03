@@ -160,7 +160,7 @@ task multi_align_mafft_ref {
     Float?       mafft_gapOpeningPenalty
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.20-phylo"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.21-phylo"
   }
 
   String         fasta_basename = basename(reference_fasta, '.fasta')
@@ -206,7 +206,7 @@ task multi_align_mafft {
     Float?       mafft_gapOpeningPenalty
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.20-phylo"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.21-phylo"
   }
 
   Int disk_size = 200
@@ -348,7 +348,7 @@ task index_ref {
     File?  novocraft_license
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-ngs:3.0.20-core"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.21-core"
   }
 
   Int disk_size = 100
@@ -384,7 +384,7 @@ task trimal_clean_msa {
     File   in_aligned_fasta
 
     Int?   machine_mem_gb
-    String docker = "quay.io/biocontainers/trimal:1.4.1--h6bb024c_3"
+    String docker = "quay.io/biocontainers/trimal:1.5.1--h9948957_0"
 
     String input_basename = basename(basename(in_aligned_fasta, ".fasta"), ".fa")
   }
@@ -413,7 +413,7 @@ task merge_vcfs_bcftools {
     Array[File] in_vcfs_gz
 
     Int?   machine_mem_gb
-    String docker = "quay.io/biocontainers/bcftools:1.10.2--hd2cd319_0"
+    String docker = "quay.io/biocontainers/bcftools:1.24--h118bc1c_2"
 
     String output_prefix = "merged"
   }
@@ -470,7 +470,7 @@ task merge_vcfs_gatk {
     File        ref_fasta
 
     Int?        machine_mem_gb
-    String      docker = "quay.io/broadinstitute/viral-ngs:3.0.20-phylo"
+    String      docker = "quay.io/broadinstitute/viral-ngs:3.0.21-phylo"
 
     String      output_prefix = "merged"
   }
