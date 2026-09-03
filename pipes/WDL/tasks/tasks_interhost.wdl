@@ -413,7 +413,7 @@ task merge_vcfs_bcftools {
     Array[File] in_vcfs_gz
 
     Int?   machine_mem_gb
-    String docker = "quay.io/biocontainers/bcftools:1.10.2--hd2cd319_0"
+    String docker = "quay.io/biocontainers/bcftools:1.24--h118bc1c_2"
 
     String output_prefix = "merged"
   }
