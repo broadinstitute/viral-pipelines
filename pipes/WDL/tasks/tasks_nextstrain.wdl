@@ -500,11 +500,11 @@ task nextstrain_build_subsample {
         # This task executes the ncov snakemake workflow at nextstrain_ncov_repo_commit (2021-10-06),
         # which cannot run under the snakemake 9 shipped in newer nextstrain/base images: ncov's
         # workflow/snakemake_rules/remote_files.smk uses the snakemake.remote.* RemoteProvider API
-        # that snakemake 8 removed, and Snakefile include:s it at parse time. Snakemake 8 also
-        # dropped --stats, which the profile config below sets. Bumping the image therefore also
-        # requires bumping the ncov pin, and current ncov master has deleted the my_profiles/ dir
-        # this task writes into and changed the pre-masked input contract from
-        # results/masked_{origin}.fasta.xz to results/{build_name}/masked.fasta.
+        # that snakemake 8 removed, and the Snakefile pulls that file in with an "include:" directive
+        # at parse time, so it fails before any rule runs. Snakemake 8 also dropped --stats, which
+        # the profile config below sets. Bumping the ncov pin instead is not a fix: current ncov
+        # master deletes the my_profiles/ dir this task writes into, and changed the pre-masked input
+        # contract from results/masked_{origin}.fasta.xz to results/{build_name}/masked.fasta.
         String docker                      = "docker.io/nextstrain/base:build-20240318T173028Z" #skip-global-version-pin
         String nextstrain_ncov_repo_commit = "30435fb9ec8de2f045167fb90adfec12f123e80a"
         Int    disk_size = 750
