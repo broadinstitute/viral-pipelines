@@ -658,15 +658,6 @@ task find_illumina_files_in_directory {
     ILLUMINA_DIR="~{illumina_dir}"
     ILLUMINA_DIR="$(echo "$ILLUMINA_DIR" | sed 's:/*$::')"
 
-    # Set default fastq_dir to illumina_dir/fastq if not provided
-    # Handle default in shell to avoid double-slash from WDL concatenation
-    if [ -n "~{fastq_dir}" ]; then
-      FASTQ_DIR="~{fastq_dir}"
-      FASTQ_DIR="$(echo "$FASTQ_DIR" | sed 's:/*$::')"
-    else
-      FASTQ_DIR="$ILLUMINA_DIR/fastq"
-    fi
-
     # Find RunInfo.xml - check base level first, then search recursively
     echo "Searching for RunInfo.xml at: $ILLUMINA_DIR/RunInfo.xml" >&2
     if gcloud storage ls "$ILLUMINA_DIR/RunInfo.xml" 2>gcloud_error.txt | head -1 > runinfo_path.txt && [ -s runinfo_path.txt ]; then
@@ -698,12 +689,61 @@ task find_illumina_files_in_directory {
     echo "$LANE_COUNT" > lane_count.txt
     echo "RunInfo.xml declares LaneCount=${LANE_COUNT:-unknown}" >&2
 
-    # List all fastq.gz files in fastq_dir
+    # Locate the fastqs. An explicit fastq_dir always wins and is never second-guessed.
+    # Otherwise try the conventional $ILLUMINA_DIR/fastq, which is where flat delivery
+    # layouts put them, and fall back to a recursive search -- an on-instrument DRAGEN
+    # demux buries them several levels down, e.g. Analysis/1/Data/fastq/.
+    touch all_fastqs.txt
+    if [ -n "~{fastq_dir}" ]; then
+      FASTQ_DIR="~{fastq_dir}"
+      FASTQ_DIR="$(echo "$FASTQ_DIR" | sed 's:/*$::')"
+      echo "Using supplied fastq_dir: $FASTQ_DIR" >&2
+      gcloud storage ls "$FASTQ_DIR/*.fastq.gz" 2>/dev/null > all_fastqs.txt || touch all_fastqs.txt
+    else
+      FASTQ_DIR="$ILLUMINA_DIR/fastq"
+      echo "Looking for fastqs at: $FASTQ_DIR" >&2
+      gcloud storage ls "$FASTQ_DIR/*.fastq.gz" 2>/dev/null > all_fastqs.txt || touch all_fastqs.txt
+
+      if [ ! -s all_fastqs.txt ]; then
+        echo "None found there; searching recursively under $ILLUMINA_DIR ..." >&2
+        gcloud storage ls "$ILLUMINA_DIR/**/*.fastq.gz" 2>/dev/null > recursive_fastqs.txt || touch recursive_fastqs.txt
+
+        # A re-demux leaves several Analysis/N/ trees behind. Settle on exactly one
+        # directory rather than blending them, preferring the highest-numbered;
+        # sort -V orders naturally, so Analysis/10 sorts above Analysis/2.
+        sed 's:/[^/]*$::' recursive_fastqs.txt | sort -u -V > fastq_dirs_all.txt
+
+        # First drop any candidate nested inside another candidate. A directory that
+        # contains another one is the real delivery; its subdirectory is incidental,
+        # and would otherwise win the sort below purely for being deeper.
+        awk 'NR==FNR { d[NR] = $0; n = NR; next }
+             { keep = 1
+               for (i = 1; i <= n; i++)
+                 if (d[i] != $0 && index($0, d[i] "/") == 1) { keep = 0; break }
+               if (keep) print }' fastq_dirs_all.txt fastq_dirs_all.txt > fastq_dirs.txt
+        NUM_DIRS="$(wc -l < fastq_dirs.txt)"
+
+        if [ "$NUM_DIRS" -eq 0 ]; then
+          FASTQ_DIR="$ILLUMINA_DIR (searched recursively)"
+        else
+          if [ "$NUM_DIRS" -gt 1 ]; then
+            echo "WARNING: fastqs found under $NUM_DIRS directories:" >&2
+            sed 's/^/  /' fastq_dirs.txt >&2
+            echo "WARNING: using the highest-numbered; set fastq_dir to choose another" >&2
+          fi
+          FASTQ_DIR="$(tail -1 fastq_dirs.txt)"
+          echo "Selected fastq directory: $FASTQ_DIR" >&2
+          # keep only files directly in FASTQ_DIR, not in directories nested below it
+          awk -v d="$FASTQ_DIR" 'index($0, d "/") == 1 && index(substr($0, length(d) + 2), "/") == 0' \
+            recursive_fastqs.txt > all_fastqs.txt
+        fi
+      fi
+    fi
+
     echo "$FASTQ_DIR" > fastq_dir_used.txt
-    gcloud storage ls "$FASTQ_DIR/*.fastq.gz" 2>/dev/null > all_fastqs.txt || {
+    if [ ! -s all_fastqs.txt ]; then
       echo "WARNING: No fastq.gz files found in $FASTQ_DIR" >&2
-      touch all_fastqs.txt
-    }
+    fi
 
     # Parse fastq filenames and group into pairs/singles
     python3 << 'CODE'
