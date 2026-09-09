@@ -658,14 +658,18 @@ task find_illumina_files_in_directory {
     ILLUMINA_DIR="~{illumina_dir}"
     ILLUMINA_DIR="$(echo "$ILLUMINA_DIR" | sed 's:/*$::')"
 
-    # Find RunInfo.xml - check base level first, then search recursively
+    # Find RunInfo.xml - check base level first, then search recursively.
+    # NB: buffer the listing to a file instead of piping it into `head`. Under
+    # `set -o pipefail`, `head` closing the pipe early makes gcloud take SIGPIPE and
+    # the pipeline reports failure even though the listing succeeded. That false
+    # negative gets likelier on the recursive search, which can return many lines.
     echo "Searching for RunInfo.xml at: $ILLUMINA_DIR/RunInfo.xml" >&2
-    if gcloud storage ls "$ILLUMINA_DIR/RunInfo.xml" 2>gcloud_error.txt | head -1 > runinfo_path.txt && [ -s runinfo_path.txt ]; then
+    if gcloud storage ls "$ILLUMINA_DIR/RunInfo.xml" > runinfo_ls.txt 2>gcloud_error.txt && [ -s runinfo_ls.txt ]; then
       echo "Found RunInfo.xml at base level" >&2
     else
       echo "Not found at base level, searching recursively..." >&2
       cat gcloud_error.txt >&2
-      if gcloud storage ls "$ILLUMINA_DIR/**/RunInfo.xml" 2>gcloud_error.txt | head -1 > runinfo_path.txt && [ -s runinfo_path.txt ]; then
+      if gcloud storage ls "$ILLUMINA_DIR/**/RunInfo.xml" > runinfo_ls.txt 2>gcloud_error.txt && [ -s runinfo_ls.txt ]; then
         echo "Found RunInfo.xml via recursive search" >&2
       else
         echo "ERROR: RunInfo.xml not found in $ILLUMINA_DIR" >&2
@@ -675,6 +679,7 @@ task find_illumina_files_in_directory {
       fi
     fi
 
+    head -1 runinfo_ls.txt > runinfo_path.txt
     RUNINFO_PATH=$(cat runinfo_path.txt)
     echo "Found RunInfo.xml at: $RUNINFO_PATH"
 
