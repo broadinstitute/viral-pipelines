@@ -362,13 +362,14 @@ task upload_entities_tsv {
 
 task merge_entities_tsvs {
   meta {
-    description: "Stack Terra entity TSVs into one upload-ready TSV, reconciling columns by NAME rather than by position. Emits the union of all input headers with the single 'entity:<table>_id' column forced to column 1, because Terra reads the entity id out of column 1 regardless of what that column is named. Each input may carry a different column order and a different subset of columns; missing cells are filled with empty strings and header-only inputs with zero data rows are fine. Duplicate entity ids are rejected here, naming the offending ids, instead of surfacing as an opaque HTTP 400 from Terra. Inputs may be plain, gzip, bzip2 or xz compressed. Unix/Mac/Win line endings are tolerated on input, Unix line endings are emitted. Unicode text safe."
+    description: "Stack Terra entity TSVs into one upload-ready TSV, reconciling columns by NAME rather than by position. Emits the union of all input headers with the single 'entity:<table>_id' column forced to column 1, because Terra reads the entity id out of column 1 regardless of what that column is named. Each input may carry a different column order and a different subset of columns; missing cells are filled with empty strings and header-only inputs with zero data rows are fine. Rows that duplicate an earlier row in every column are dropped as redundant; an entity id repeated with CONFLICTING values is rejected here, naming the offending ids, instead of surfacing as an opaque HTTP 400 from Terra. Unix/Mac/Win line endings are tolerated on input, Unix line endings are emitted. Unicode text safe."
   }
 
   input {
     Array[File]+  input_tsvs
     String        out_basename = "terra_upload"
     Array[String] preferred_col_order = []
+    String?       entity_table_name
 
     Int           machine_mem_gb = 4
     String        docker = "quay.io/broadinstitute/viral-ngs:3.0.24-baseimage"
@@ -383,6 +384,10 @@ task merge_entities_tsvs {
       description: "Optional canonical column order, e.g. the assembly_header literal from assemble_denovo_metagenomic.wdl. Columns named here are emitted first, right after the entity id column, in this order; any remaining columns follow in order of first appearance across input_tsvs. Names that appear in no input file are ignored -- this input only reorders columns, it never creates them. Purely cosmetic: Terra matches columns by name, so only column 1 affects the import.",
       category: "advanced"
     }
+    entity_table_name: {
+      description: "Terra table name (e.g. 'assembly'), required only when NO input file carries an 'entity:<table>_id' column -- which is the case when every input came from download_entities_tsv, since Terra strips the 'entity:' prefix on the way out. Given this, the prefix-less '<table>_id' column is recognized as the entity id and the prefix is restored on output. When at least one input does carry the prefixed form, the table is inferred from it and this input is unnecessary (supplying a conflicting value is an error). The table actually used is reported in the entity_table output.",
+      category: "advanced"
+    }
   }
 
   Int disk_size = 50
@@ -392,7 +397,6 @@ task merge_entities_tsvs {
     python3<<CODE
     import collections
     import csv
-    import gzip, bz2, lzma
     import re
     import sys
 
@@ -403,34 +407,12 @@ task merge_entities_tsvs {
     with open("~{write_lines(preferred_col_order)}", "rt") as inf:
         preferred_cols = [line.strip() for line in inf if line.strip()]
 
-    # Transparent decompression, same magic-byte approach as tsv_join's
-    # open_or_compressed_open but stdlib only: no lz4/zstandard, so this task can
-    # stay on the same -baseimage as the rest of tasks_terra rather than pulling
-    # viral-ngs:*-core. Terra entity TSVs are never zstd.
-    # encoding='utf-8-sig' strips a UTF-8 BOM if present (a BOM on the first
-    # header would otherwise hide the entity id column) and is a no-op otherwise.
-    MAGIC_TO_OPEN = collections.OrderedDict((
-        (b"\x1f\x8b\x08",             gzip.open),  # .gz
-        (b"\xfd\x37\x7a\x58\x5a\x00", lzma.open),  # .xz
-        (b"\x42\x5a\x68",             bz2.open),   # .bz2
-    ))
-    max_magic = max(len(m) for m in MAGIC_TO_OPEN)
-
-    def open_or_compressed_open(fname):
-        with open(fname, "rb") as f:
-            head = f.read(max_magic)
-        for magic, opener in MAGIC_TO_OPEN.items():
-            if head.startswith(magic):
-                print("opening via {}: {}".format(opener.__module__, fname))
-                return opener(fname, "rt", encoding="utf-8-sig")
-        return open(fname, "rt", encoding="utf-8-sig")
-
     # Pass 1: read every file, keeping each file's OWN header. This is the whole
     # point of the task: a row's cells are interpreted against the header of the
     # file it came from, never against some other file's header.
     files_data = []
     for fname in in_tsvs:
-        with open_or_compressed_open(fname) as inf:
+        with open(fname, "rt", encoding="utf-8-sig") as inf:
             reader = csv.DictReader(inf, delimiter='\t')
             fieldnames = reader.fieldnames
             if not fieldnames:
@@ -476,6 +458,7 @@ task merge_entities_tsvs {
         print("NOTE: inputs disagree on column order; reconciling by column NAME, not position.")
 
     # Resolve the Terra entity id column.
+    requested_table = "~{default='' entity_table_name}".strip()
     ENTITY_ID_RE = re.compile(r"^entity:(.+)_id\Z")
     entity_cols = collections.OrderedDict()
     for fname, fieldnames, rows in files_data:
@@ -483,14 +466,28 @@ task merge_entities_tsvs {
             if ENTITY_ID_RE.match(col):
                 entity_cols.setdefault(col, []).append(fname)
 
-    if not entity_cols:
+    if not entity_cols and requested_table:
+        # Every input uses the prefix-less '<table>_id' form, which is what Terra
+        # emits from download_entities_tsv. That form is ambiguous on its own -- a
+        # real attribute could also be named '<something>_id' -- so the table name
+        # has to be supplied rather than guessed. The alias loop below then restores
+        # the 'entity:' prefix.
+        entity_col = "entity:" + requested_table + "_id"
+        table_name = requested_table
+        print("NOTE: no input carries an 'entity:<table>_id' column; using the "
+              "entity_table_name input {!r}, so {!r} is treated as the entity id"
+              .format(requested_table, requested_table + "_id"))
+    elif not entity_cols:
         raise SystemExit(
             "ERROR: none of the {} input TSVs has a Terra entity id column matching "
             "'entity:<table>_id', so there is no way to know which table to upload to "
-            "or which column Terra will key on.\nHeaders seen:\n{}".format(
+            "or which column Terra will key on. If these came from "
+            "download_entities_tsv they will use the prefix-less '<table>_id' form "
+            "instead; pass the entity_table_name input (e.g. entity_table_name=\"assembly\") to "
+            "say which table they describe.\nHeaders seen:\n{}".format(
                 len(files_data),
                 "\n".join("  {}: {}".format(f, h) for f, h, _ in files_data)))
-    if len(entity_cols) > 1:
+    elif len(entity_cols) > 1:
         raise SystemExit(
             "ERROR: the input TSVs disagree about which Terra table they describe. "
             "Found {} different entity id columns: {}.\nMerging these would upload rows "
@@ -500,8 +497,14 @@ task merge_entities_tsvs {
                 "; ".join("{} in {} file(s) e.g. {}".format(c, len(fs), fs[0])
                           for c, fs in entity_cols.items())))
 
-    entity_col = list(entity_cols.keys())[0]
-    table_name = ENTITY_ID_RE.match(entity_col).group(1)
+    if entity_cols:
+        entity_col = list(entity_cols.keys())[0]
+        table_name = ENTITY_ID_RE.match(entity_col).group(1)
+        if requested_table and requested_table != table_name:
+            raise SystemExit(
+                "ERROR: entity_table_name was given as {!r} but the input TSVs carry {!r}, "
+                "i.e. table {!r}. Refusing to guess which one you meant."
+                .format(requested_table, entity_col, table_name))
     print("")
     print("Terra entity id column: {!r} (table {!r})".format(entity_col, table_name))
 

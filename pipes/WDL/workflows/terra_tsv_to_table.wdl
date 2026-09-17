@@ -14,6 +14,7 @@ workflow terra_tsv_to_table {
     input {
         Array[File?]+ tsv_files
         Array[String] preferred_col_order = []
+        String?       entity_table_name
     }
 
     parameter_meta {
@@ -23,6 +24,9 @@ workflow terra_tsv_to_table {
         preferred_col_order: {
             description: "Optional canonical column order for the merged tsv, e.g. the assembly_header literal from assemble_denovo_metagenomic.wdl. Only reorders columns, never creates them. Cosmetic: Terra matches columns by name, so only column 1 affects the import."
         }
+        entity_table_name: {
+            description: "Terra table name (e.g. 'assembly'), needed only when no input file carries an 'entity:<table>_id' column -- which is the case when every input came from terra_table_to_tsv / download_entities_tsv, since Terra strips the prefix on the way out."
+        }
     }
 
     call terra.check_terra_env
@@ -31,6 +35,7 @@ workflow terra_tsv_to_table {
         input:
             input_tsvs          = select_all(tsv_files),
             preferred_col_order = preferred_col_order,
+            entity_table_name   = entity_table_name,
             out_basename        = "terra_upload"
     }
 
