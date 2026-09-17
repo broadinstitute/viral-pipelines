@@ -19,7 +19,7 @@ workflow terra_tsv_to_table {
 
     parameter_meta {
         tsv_files: {
-            description: "Terra entity tsv files to merge and upload. Each must have a header row containing an 'entity:<table>_id' column, and all must describe the same table. Column order may differ between files, as may the subset of columns present. Nulls are dropped."
+            description: "Terra entity tsv files to merge and upload. Each must have a header row, and all must describe the same table. The entity id column may be either the 'entity:<table>_id' form Terra expects on upload or the prefix-less '<table>_id' form Terra emits on download -- if NO input carries the prefixed form, supply entity_table_name so the table can be identified. Column order may differ between files, as may the subset of columns present. Nulls are dropped."
         }
         preferred_col_order: {
             description: "Optional canonical column order for the merged tsv, e.g. the assembly_header literal from assemble_denovo_metagenomic.wdl. Only reorders columns, never creates them. Cosmetic: Terra matches columns by name, so only column 1 affects the import."
