@@ -371,7 +371,7 @@ task merge_entities_tsvs {
     Array[String] preferred_col_order = []
 
     Int           machine_mem_gb = 4
-    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.22-baseimage"
+    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.24-baseimage"
   }
 
   parameter_meta {
