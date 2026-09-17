@@ -96,6 +96,7 @@ jobs:
           set -e
           github_actions_ci/check-wdl-runtimes.sh
           miniwdl check pipes/WDL/workflows/*.wdl
+          github_actions_ci/check-wdl-tsv-column-order.sh
 
   validate_wdl_womtool:
     # Run if not a push event or if there's no pull request for the branch

@@ -1,0 +1,9 @@
+{
+  "merge_entities_tsvs.input_tsvs": [
+    "test/input/terra_entity_tsvs/assembly_metadata-S1.tsv",
+    "test/input/terra_entity_tsvs/assembly_metadata-S2.tsv",
+    "test/input/terra_entity_tsvs/assembly_metadata-S3.tsv",
+    "test/input/terra_entity_tsvs/assembly_metadata-S4.tsv"
+  ],
+  "merge_entities_tsvs.out_basename": "terra_upload"
+}

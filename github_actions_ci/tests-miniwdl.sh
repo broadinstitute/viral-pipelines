@@ -60,5 +60,52 @@ for workflow in ../pipes/WDL/workflows/*.wdl; do
 	fi
 done
 
+# Task-level tests. These fixtures are named test_task_inputs-<task_name>-local.json
+# and are run with "miniwdl run --task", which the workflow loop above cannot express.
+# Used for tasks whose enclosing workflow cannot run in CI -- e.g. merge_entities_tsvs,
+# whose only caller (terra_tsv_to_table) talks to the live Terra API.
+for input_json in test/input/WDL/miniwdl-local/test_task_inputs-*-local.json; do
+	if [ ! -f "$input_json" ]; then continue; fi
+	task_name=$(basename "$input_json" -local.json)
+	task_name=${task_name#test_task_inputs-}
+	# resolve which task file defines this task; fail loudly rather than skipping,
+	# so a renamed task cannot silently disable its own test
+	# `|| true` is required: under `set -e` a no-match grep would abort the script
+	# before the explicit diagnostics below could run, failing opaquely instead
+	task_file=$(grep -l "^task ${task_name} {" ../pipes/WDL/tasks/*.wdl || true)
+	if [ -z "$task_file" ]; then
+		echo "ERROR: no file in pipes/WDL/tasks/ defines task $task_name (from $input_json)"
+		exit 1
+	fi
+	if [ $(echo "$task_file" | wc -l) -ne 1 ]; then
+		echo "ERROR: task $task_name is defined in more than one file: $task_file"
+		exit 1
+	fi
+	expected_output_json="test/input/WDL/miniwdl-local/test_task_outputs-$task_name-local.json"
+	date
+	echo "Executing task $task_name from $task_file using miniWDL on local instance"
+	time miniwdl run --task "$task_name" -i "$input_json" -d "task-$task_name/." --error-json --verbose "$task_file"
+	if [ -f "task-$task_name/outputs.json" ]; then
+		echo "task $task_name SUCCESS -- outputs:"
+		cat "task-$task_name/outputs.json"
+		if [ -f $expected_output_json ]; then
+			echo "task $task_name -- validating outputs"
+			rm -f expected actual
+			touch expected actual
+			for k in `cat $expected_output_json | jq -r 'keys[]'`; do
+				echo -n "$k=" >> expected
+				echo -n "$k=" >> actual
+				cat $expected_output_json              | jq -r '.["'$k'"]' >> expected
+				cat "task-$task_name/outputs.json"     | jq -r '.["'$k'"]' >> actual
+			done
+			diff expected actual
+		fi
+	else
+		echo "task $task_name FAILED"
+		exit 1
+	fi
+	docker image prune --all --force
+done
+
 cd "$starting_dir"
 date
