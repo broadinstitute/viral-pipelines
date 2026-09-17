@@ -70,7 +70,9 @@ for input_json in test/input/WDL/miniwdl-local/test_task_inputs-*-local.json; do
 	task_name=${task_name#test_task_inputs-}
 	# resolve which task file defines this task; fail loudly rather than skipping,
 	# so a renamed task cannot silently disable its own test
-	task_file=$(grep -l "^task ${task_name} {" ../pipes/WDL/tasks/*.wdl)
+	# `|| true` is required: under `set -e` a no-match grep would abort the script
+	# before the explicit diagnostics below could run, failing opaquely instead
+	task_file=$(grep -l "^task ${task_name} {" ../pipes/WDL/tasks/*.wdl || true)
 	if [ -z "$task_file" ]; then
 		echo "ERROR: no file in pipes/WDL/tasks/ defines task $task_name (from $input_json)"
 		exit 1
