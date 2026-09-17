@@ -1,0 +1,2 @@
+entity:assembly_id	assembly_name	sample_id	taxid	bases_aligned	sample
+S1-11676	Lassa mammarenavirus: S1	S1	11676	999999	{"entityType":"sample","entityName":"S1"}

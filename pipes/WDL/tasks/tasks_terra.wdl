@@ -360,6 +360,302 @@ task upload_entities_tsv {
   }
 }
 
+task merge_entities_tsvs {
+  meta {
+    description: "Stack Terra entity TSVs into one upload-ready TSV, reconciling columns by NAME rather than by position. Emits the union of all input headers with the single 'entity:<table>_id' column forced to column 1, because Terra reads the entity id out of column 1 regardless of what that column is named. Each input may carry a different column order and a different subset of columns; missing cells are filled with empty strings and header-only inputs with zero data rows are fine. Duplicate entity ids are rejected here, naming the offending ids, instead of surfacing as an opaque HTTP 400 from Terra. Inputs may be plain, gzip, bzip2 or xz compressed. Unix/Mac/Win line endings are tolerated on input, Unix line endings are emitted. Unicode text safe."
+  }
+
+  input {
+    Array[File]+  input_tsvs
+    String        out_basename = "terra_upload"
+    Array[String] preferred_col_order = []
+
+    Int           machine_mem_gb = 4
+    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.22-baseimage"
+  }
+
+  parameter_meta {
+    input_tsvs: {
+      description: "Terra entity TSVs to merge. Each must have a header row, and all must describe the same Terra table (all must carry the same 'entity:<table>_id' column, or its prefix-less '<table>_id' round-trip form). Column order may differ between files, and columns present in some files and absent from others are tolerated.",
+      category: "required"
+    }
+    preferred_col_order: {
+      description: "Optional canonical column order, e.g. the assembly_header literal from assemble_denovo_metagenomic.wdl. Columns named here are emitted first, right after the entity id column, in this order; any remaining columns follow in order of first appearance across input_tsvs. Names that appear in no input file are ignored -- this input only reorders columns, it never creates them. Purely cosmetic: Terra matches columns by name, so only column 1 affects the import.",
+      category: "advanced"
+    }
+  }
+
+  Int disk_size = 50
+
+  command <<<
+    set -e -o pipefail
+    python3<<CODE
+    import collections
+    import csv
+    import gzip, bz2, lzma
+    import re
+    import sys
+
+    out_fname = "~{out_basename}.tsv"
+
+    with open("~{write_lines(input_tsvs)}", "rt") as inf:
+        in_tsvs = [line.strip() for line in inf if line.strip()]
+    with open("~{write_lines(preferred_col_order)}", "rt") as inf:
+        preferred_cols = [line.strip() for line in inf if line.strip()]
+
+    # Transparent decompression, same magic-byte approach as tsv_join's
+    # open_or_compressed_open but stdlib only: no lz4/zstandard, so this task can
+    # stay on the same -baseimage as the rest of tasks_terra rather than pulling
+    # viral-ngs:*-core. Terra entity TSVs are never zstd.
+    # encoding='utf-8-sig' strips a UTF-8 BOM if present (a BOM on the first
+    # header would otherwise hide the entity id column) and is a no-op otherwise.
+    MAGIC_TO_OPEN = collections.OrderedDict((
+        (b"\x1f\x8b\x08",             gzip.open),  # .gz
+        (b"\xfd\x37\x7a\x58\x5a\x00", lzma.open),  # .xz
+        (b"\x42\x5a\x68",             bz2.open),   # .bz2
+    ))
+    max_magic = max(len(m) for m in MAGIC_TO_OPEN)
+
+    def open_or_compressed_open(fname):
+        with open(fname, "rb") as f:
+            head = f.read(max_magic)
+        for magic, opener in MAGIC_TO_OPEN.items():
+            if head.startswith(magic):
+                print("opening via {}: {}".format(opener.__module__, fname))
+                return opener(fname, "rt", encoding="utf-8-sig")
+        return open(fname, "rt", encoding="utf-8-sig")
+
+    # Pass 1: read every file, keeping each file's OWN header. This is the whole
+    # point of the task: a row's cells are interpreted against the header of the
+    # file it came from, never against some other file's header.
+    files_data = []
+    for fname in in_tsvs:
+        with open_or_compressed_open(fname) as inf:
+            reader = csv.DictReader(inf, delimiter='\t')
+            fieldnames = reader.fieldnames
+            if not fieldnames:
+                raise SystemExit(
+                    "ERROR: {} is empty. Every input TSV must have a header row "
+                    "(header-only with zero data rows is fine).".format(fname))
+            dupe_cols = sorted(c for c, n in collections.Counter(fieldnames).items() if n > 1)
+            if dupe_cols:
+                raise SystemExit(
+                    "ERROR: {} repeats column name(s) {} in its header. csv.DictReader "
+                    "would silently keep only the last of each; refusing to guess."
+                    .format(fname, dupe_cols))
+            rows = []
+            for lineno, row in enumerate(reader, start=2):
+                extras = row.pop(None, None)
+                if extras:
+                    raise SystemExit(
+                        "ERROR: {} line {} has {} more field(s) than its {}-column "
+                        "header (orphaned values: {}). Refusing to merge a ragged file "
+                        "and silently drop data.".format(
+                            fname, lineno, len(extras), len(fieldnames), extras))
+                short = sorted(k for k, v in row.items() if v is None)
+                if short:
+                    print("WARNING: {} line {} is missing trailing value(s) for {}; "
+                          "filling with empty strings".format(fname, lineno, short))
+                    for k in short:
+                        row[k] = ''
+                rows.append(row)
+            files_data.append([fname, list(fieldnames), rows])
+            print("read {}: {} columns, {} data rows".format(fname, len(fieldnames), len(rows)))
+
+    # Report column-order divergence -- the diagnostic that was missing when the
+    # old positional merge silently took the first file's header for everyone.
+    orders = collections.OrderedDict()
+    for fname, fieldnames, rows in files_data:
+        orders.setdefault(tuple(fieldnames), []).append(fname)
+    print("")
+    print("{} input file(s) span {} distinct column order(s):".format(len(files_data), len(orders)))
+    for i, (order, fnames) in enumerate(orders.items(), start=1):
+        print("  order {}: {} file(s), {} columns, column 1 = {!r} (e.g. {})".format(
+            i, len(fnames), len(order), order[0], fnames[0]))
+    if len(orders) > 1:
+        print("NOTE: inputs disagree on column order; reconciling by column NAME, not position.")
+
+    # Resolve the Terra entity id column.
+    ENTITY_ID_RE = re.compile(r"^entity:(.+)_id\Z")
+    entity_cols = collections.OrderedDict()
+    for fname, fieldnames, rows in files_data:
+        for col in fieldnames:
+            if ENTITY_ID_RE.match(col):
+                entity_cols.setdefault(col, []).append(fname)
+
+    if not entity_cols:
+        raise SystemExit(
+            "ERROR: none of the {} input TSVs has a Terra entity id column matching "
+            "'entity:<table>_id', so there is no way to know which table to upload to "
+            "or which column Terra will key on.\nHeaders seen:\n{}".format(
+                len(files_data),
+                "\n".join("  {}: {}".format(f, h) for f, h, _ in files_data)))
+    if len(entity_cols) > 1:
+        raise SystemExit(
+            "ERROR: the input TSVs disagree about which Terra table they describe. "
+            "Found {} different entity id columns: {}.\nMerging these would upload rows "
+            "keyed by the wrong column. Group the inputs by table and merge each group "
+            "separately.".format(
+                len(entity_cols),
+                "; ".join("{} in {} file(s) e.g. {}".format(c, len(fs), fs[0])
+                          for c, fs in entity_cols.items())))
+
+    entity_col = list(entity_cols.keys())[0]
+    table_name = ENTITY_ID_RE.match(entity_col).group(1)
+    print("")
+    print("Terra entity id column: {!r} (table {!r})".format(entity_col, table_name))
+
+    # Terra drops the 'entity:' prefix when a table is read back out (see
+    # download_entities_tsv, which writes '<table>_id'), so a file that has been
+    # round-tripped through Terra names the same logical column '<table>_id'. Alias
+    # it rather than emitting two columns with blank ids for half the rows. The rule
+    # is deliberately narrow -- only the bare form of THIS table's name -- so a real
+    # attribute like 'sample_id' on the 'assembly' table is untouched.
+    alias = table_name + "_id"
+    for entry in files_data:
+        fname, fieldnames, rows = entry
+        if entity_col in fieldnames and alias in fieldnames:
+            raise SystemExit(
+                "ERROR: {} has both {!r} and {!r}; cannot tell which one is the "
+                "entity id.".format(fname, entity_col, alias))
+        if entity_col not in fieldnames and alias in fieldnames:
+            print("NOTE: {} names its entity id column {!r} (Terra round-trip form); "
+                  "treating it as {!r}".format(fname, alias, entity_col))
+            fieldnames[fieldnames.index(alias)] = entity_col
+            for row in rows:
+                row[entity_col] = row.pop(alias)
+
+    missing_id = [f for f, h, _ in files_data if entity_col not in h]
+    if missing_id:
+        raise SystemExit(
+            "ERROR: {} of {} input TSVs have no {!r} column (nor its {!r} alias): {}"
+            .format(len(missing_id), len(files_data), entity_col, alias, missing_id[:10]))
+
+    # Output header: entity id first, then preferred order, then first-appearance.
+    union = collections.OrderedDict()
+    for fname, fieldnames, rows in files_data:
+        for col in fieldnames:
+            union.setdefault(col, 0)
+    union.pop(entity_col)
+
+    ordered = []
+    for col in preferred_cols:
+        if col in union and col not in ordered:
+            ordered.append(col)
+    ignored_pref = [c for c in preferred_cols if c not in union and c != entity_col]
+    if ignored_pref:
+        print("NOTE: preferred_col_order names {} column(s) that appear in no input "
+              "file; ignoring them: {}".format(len(ignored_pref), ignored_pref))
+    header = [entity_col] + ordered + [c for c in union if c not in set(ordered)]
+    print("")
+    print("output header ({} columns): {}".format(len(header), header))
+
+    # Stack all data rows, in input file order.
+    out_rows = []
+    out_sources = []
+    first_seen = {}
+    n_identical_dupes = 0
+    conflicts = collections.OrderedDict()
+
+    for fname, fieldnames, rows in files_data:
+        for row in rows:
+            out_row = dict((col, row.get(col, '')) for col in header)
+            row_id = out_row[entity_col]
+            if not row_id:
+                raise SystemExit(
+                    "ERROR: {} has a data row with an empty {!r}. Terra cannot key a "
+                    "row with no entity id. Row: {}".format(fname, entity_col, row))
+            if row_id in first_seen:
+                prev_idx, prev_fname = first_seen[row_id]
+                if out_rows[prev_idx] == out_row:
+                    # exact duplicate of a row already emitted: lossless to drop
+                    n_identical_dupes += 1
+                    continue
+                conflicts.setdefault(row_id, [prev_fname]).append(fname)
+                continue
+            first_seen[row_id] = (len(out_rows), fname)
+            out_rows.append(out_row)
+            out_sources.append(fname)
+
+    if conflicts:
+        raise SystemExit(
+            "ERROR: {} entity id(s) appear more than once with CONFLICTING values, so "
+            "this merge cannot produce a valid Terra upload. Terra rejects these with "
+            "HTTP 400 'Duplicated entities are not allowed in TSV'. Offending {} "
+            "value(s) and the files they came from:\n{}".format(
+                len(conflicts), entity_col,
+                "\n".join("  {}: {}".format(k, ", ".join(v))
+                          for k, v in list(conflicts.items())[:20])))
+    if n_identical_dupes:
+        print("dropped {} row(s) that duplicated an earlier row exactly (same {} and "
+              "identical values in every column)".format(n_identical_dupes, entity_col))
+
+    # Write raw tab-joined, deliberately NOT csv.DictWriter/QUOTE_MINIMAL as
+    # tsv_join does. Terra's TSV importer splits on tabs and does not do csv-style
+    # dequoting: this repo's own working uploader (create_or_update_sample_tables)
+    # writes raw unquoted JSON entity references such as
+    #   {"entityType":"sample","entityName":"s1"}
+    # and Terra accepts them. QUOTE_MINIMAL would rewrite that cell as
+    #   "{""entityType"":""sample"",""entityName"":""s1""}"
+    # and break the reference. Raw tab-joining is safe whether or not Terra
+    # dequotes, and is byte-identical to what the awk-based cat_except_headers
+    # emitted, keeping this a drop-in replacement. The read side above still uses
+    # DictReader, so properly quoted inputs (e.g. from download_entities_tsv or
+    # tsv_join) are dequoted correctly. Values that cannot survive a TSV round trip
+    # are rejected rather than silently mangled.
+    BAD_CHARS = (('\t', 'tab'), ('\r', 'carriage return'), ('\n', 'newline'))
+    with open(out_fname, 'wt', encoding='utf-8', newline='\n') as outf:
+        outf.write('\t'.join(header) + '\n')
+        for out_row, fname in zip(out_rows, out_sources):
+            for col in header:
+                val = out_row[col]
+                for bad, name in BAD_CHARS:
+                    if bad in val:
+                        raise SystemExit(
+                            "ERROR: column {!r} of {} {!r} (from {}) contains a {}, "
+                            "which cannot be represented in a Terra upload TSV: {!r}"
+                            .format(col, entity_col, out_row[entity_col], fname, name, val))
+            outf.write('\t'.join(out_row[col] for col in header) + '\n')
+
+    for sentinel, value in (
+            ('NUM_ROWS',       str(len(out_rows))),
+            ('NUM_COLS',       str(len(header))),
+            ('NUM_COL_ORDERS', str(len(orders))),
+            ('ENTITY_ID_COL',  entity_col),
+            ('ENTITY_TABLE',   table_name),
+            ('OUT_HEADER',     ','.join(header)),
+    ):
+        with open(sentinel, 'wt', encoding='utf-8') as outf:
+            outf.write(value + '\n')
+
+    print("")
+    print("wrote {} rows x {} columns to {}".format(len(out_rows), len(header), out_fname))
+    CODE
+
+    sha256sum "~{out_basename}.tsv" | cut -f 1 -d ' ' > OUT_SHA256
+  >>>
+
+  output {
+    File   out_tsv              = "~{out_basename}.tsv"
+    Int    num_rows             = read_int("NUM_ROWS")
+    Int    num_cols             = read_int("NUM_COLS")
+    Int    num_input_col_orders = read_int("NUM_COL_ORDERS")
+    String entity_id_col        = read_string("ENTITY_ID_COL")
+    String entity_table         = read_string("ENTITY_TABLE")
+    String out_header_joined    = read_string("OUT_HEADER")
+    String out_tsv_sha256       = read_string("OUT_SHA256")
+    File   merge_log            = stdout()
+  }
+
+  runtime {
+    docker: docker
+    memory: "~{machine_mem_gb} GB"
+    cpu: 1
+    disks: "local-disk ~{disk_size} HDD"
+    disk: "~{disk_size} GB" # TES
+  }
+}
+
 task download_entities_tsv {
   input {
     String  terra_project
