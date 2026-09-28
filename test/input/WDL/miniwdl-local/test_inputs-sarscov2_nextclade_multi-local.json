@@ -1,0 +1,8 @@
+{
+  "sarscov2_nextclade_multi.genome_fastas": [
+    "test/input/MA_MGH_00003.fasta",
+    "test/input/MA_MGH_00004.fasta",
+    "test/input/MA_MGH_00005.fasta"
+  ],
+  "sarscov2_nextclade_multi.nextclade_many_samples.basename": "test-sarscov2-nextclade-multi"
+}

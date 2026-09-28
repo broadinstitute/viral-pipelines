@@ -1,0 +1,5 @@
+entity:assembly_id	assembly_name	sample_id	taxid	bases_aligned	sample	biosample_accession
+S1-11676	Lassa mammarenavirus: S1	S1	11676	18860	{"entityType":"sample","entityName":"S1"}	
+S1-64320	Zika virus: S1	S1	64320	3680	{"entityType":"sample","entityName":"S1"}	
+S2-11676	Lassa mammarenavirus: S2	S2	11676	18860	{"entityType":"sample","entityName":"S2"}	
+S4-11676	Lassa mammarenavirus: S4 "clade II", Nigeria	S4	11676		{"entityType":"sample","entityName":"S4"}	SAMN00000004

@@ -1,4 +1,4 @@
-version 1.0
+version 1.1
 
 task download_fasta {
   input {
@@ -6,7 +6,7 @@ task download_fasta {
     Array[String]+ accessions
     String         emailAddress
 
-    String         docker = "quay.io/broadinstitute/viral-ngs:3.0.11-phylo"
+    String         docker = "quay.io/broadinstitute/viral-ngs:3.0.24-phylo"
   }
 
   command <<<
@@ -41,7 +41,7 @@ task download_fasta_from_accession_string {
     String out_prefix
     String emailAddress
 
-    String docker = "quay.io/broadinstitute/viral-ngs:3.0.11-phylo"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.24-phylo"
   }
 
   command <<<
@@ -92,7 +92,7 @@ task download_annotations {
     String         emailAddress
     String         combined_out_prefix
 
-    String         docker = "quay.io/broadinstitute/viral-ngs:3.0.11-phylo"
+    String         docker = "quay.io/broadinstitute/viral-ngs:3.0.24-phylo"
   }
 
   command <<<
@@ -133,7 +133,7 @@ task download_ref_genomes_from_tsv {
     File      ref_genomes_tsv    # [tax_id, isolate_prefix, taxname, colon_delim_accession_list]
     String    emailAddress
 
-    String    docker = "quay.io/broadinstitute/viral-ngs:3.0.11-phylo"
+    String    docker = "quay.io/broadinstitute/viral-ngs:3.0.24-phylo"
   }
 
   command <<<
@@ -179,7 +179,7 @@ task sequencing_platform_from_bam {
   input {
     File    bam
 
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
   }
 
   command <<<
@@ -233,7 +233,7 @@ task align_and_annot_transfer_single {
 
     String       out_basename = basename(genome_fasta, '.fasta')
     Int          machine_mem_gb = 30
-    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.11-phylo"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.24-phylo"
   }
 
   parameter_meta {
@@ -287,7 +287,7 @@ task structured_comments {
 
     File?  filter_to_ids
 
-    String docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
   }
   String out_base = basename(assembly_stats_tsv, '.txt')
   command <<<
@@ -339,7 +339,7 @@ task structured_comments_from_aligned_bam {
     String  out_basename = basename(aligned_bam, '.bam')
     Boolean is_genome_assembly = true
     Boolean sanitize_ids = true
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
   }
   # see https://www.ncbi.nlm.nih.gov/genbank/structuredcomment/
   command <<<
@@ -456,7 +456,7 @@ task rename_fasta_header {
 
     String out_basename = basename(genome_fasta, ".fasta")
 
-    String docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
   }
   command <<<
     set -e
@@ -618,7 +618,7 @@ task sra_meta_prep {
     Boolean     paired
 
     String      out_name = "sra_metadata.tsv"
-    String      docker="quay.io/broadinstitute/viral-ngs:3.0.11-core"
+    String      docker="quay.io/broadinstitute/viral-ngs:3.0.24-core"
   }
   Int disk_size = 100
   parameter_meta {
@@ -1079,7 +1079,7 @@ task generate_author_sbt_file {
     File?   defaults_yaml
     String  out_base = "authors"
 
-    String  docker = "quay.io/broadinstitute/py3-bio:0.1.5"
+    String  docker = "quay.io/broadinstitute/py3-bio:0.1.14"
   }
 
   parameter_meta {
@@ -1230,7 +1230,7 @@ task table2asn {
 
     String       out_basename = basename(assembly_fasta, ".fasta")
     Int          machine_mem_gb = 8
-    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.11-phylo"  # this could be a simpler docker image, we don't use anything beyond table2asn itself
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.24-phylo"  # this could be a simpler docker image, we don't use anything beyond table2asn itself
   }
   Int disk_size = 50
 
@@ -1321,7 +1321,7 @@ task package_special_genbank_ftp_submission {
     String account_name
     String wizard="BankIt_SARSCoV2_api"
 
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.11-baseimage"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.24-baseimage"
   }
   command <<<
     set -e
@@ -1385,7 +1385,7 @@ task genbank_special_taxa {
     Int     taxid
     File    taxdump_tgz
     File    vadr_by_taxid_tsv # "gs://pathogen-public-dbs/viral-references/annotation/vadr/vadr-by-taxid.tsv"
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.11-classify"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.24-classify"
   }
 
   command <<<
@@ -1558,7 +1558,7 @@ task vadr {
     String? vadr_model_tar_subdir
 
     String out_basename = basename(genome_fasta, '.fasta')
-    String docker = "mirror.gcr.io/staphb/vadr:1.6.4"
+    String docker = "mirror.gcr.io/staphb/vadr:1.7"
     Int    mem_size = 16  # the RSV model in particular seems to consume 15GB RAM
     Int    cpus = 4
   }
@@ -1578,6 +1578,14 @@ task vadr {
       VADR_MODEL_DIR="vadr-models/~{default='' vadr_model_tar_subdir}"
     else
       VADR_MODEL_DIR="vadr-models"
+    fi
+
+    # the models baked into the staphb image have come and gone across releases, so make an
+    # empty model directory a loud failure here rather than a confusing v-annotate.pl error
+    if ! ls "$VADR_MODEL_DIR"/*.minfo >/dev/null 2>&1; then
+      echo "ERROR: no VADR model info files (*.minfo) found in $VADR_MODEL_DIR" >&2
+      echo "       pass vadr_model_tar (and vadr_model_tar_subdir if the tarball is nested)" >&2
+      exit 1
     fi
 
     # remove terminal ambiguous nucleotides

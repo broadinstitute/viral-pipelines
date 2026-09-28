@@ -1,4 +1,4 @@
-version 1.0
+version 1.1
 
 task merge_tarballs {
   input {
@@ -6,7 +6,7 @@ task merge_tarballs {
     String       out_filename
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
   }
 
   Int disk_size = 2625
@@ -97,7 +97,7 @@ task revcomp_i5 {
   input {
     File    old_sheet
     Boolean revcomp=true
-    String  docker = "quay.io/broadinstitute/py3-bio:0.1.5"
+    String  docker = "quay.io/broadinstitute/py3-bio:0.1.14"
   }
   String new_base = basename(basename(old_sheet, '.txt'), '.tsv')
   Int disk_size = 50
@@ -179,7 +179,7 @@ task illumina_demux {
     Int?    machine_mem_gb
     # Note: GCP local SSDs must be allocated in pairs (2, 4, 8, 16, 24 × 375GB), so use 3000 (8 SSDs) instead of 2625 (7 SSDs)
     Int     disk_size = 3000
-    String  docker    = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+    String  docker    = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
   }
 
   parameter_meta {
@@ -239,22 +239,22 @@ task illumina_demux {
     fi
     
     # Parse the lane count & run ID from RunInfo.xml file
-    lane_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@LaneCount)" $RUNINFO_FILE)
+    lane_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@LaneCount)" "$RUNINFO_FILE")
     if [ -z "$lane_count" ]; then
         echo "Could not parse LaneCount from RunInfo.xml. Please check RunInfo.xml is properly formatted"
     fi
 
-    surface_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@SurfaceCount)" $RUNINFO_FILE)
+    surface_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@SurfaceCount)" "$RUNINFO_FILE")
     if [ -z "$surface_count" ]; then
         echo "Could not parse SurfaceCount from RunInfo.xml. Please check RunInfo.xml is properly formatted"
     fi
 
-    swath_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@SwathCount)" $RUNINFO_FILE)
+    swath_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@SwathCount)" "$RUNINFO_FILE")
     if [ -z "$swath_count" ]; then
         echo "Could not parse SwathCount from RunInfo.xml. Please check RunInfo.xml is properly formatted"
     fi
 
-    tile_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@TileCount)" $RUNINFO_FILE)
+    tile_count=$(xmllint --xpath "string(//Run/FlowcellLayout/@TileCount)" "$RUNINFO_FILE")
     if [ -z "$tile_count" ]; then
         echo "Could not parse TileCount from RunInfo.xml. Please check RunInfo.xml is properly formatted"
     fi
@@ -366,9 +366,9 @@ task illumina_demux {
       $FLOWCELL_DIR \
       ~{lane} \
       . \
-      ~{'--sampleSheet=' + samplesheet} \
-      ~{'--runInfo=' + runinfo} \
-      ~{'--sequencing_center=' + sequencingCenter} \
+      ~{'--sampleSheet="' + samplesheet + '"'} \
+      ~{'--runInfo="' + runinfo + '"'} \
+      ~{'--sequencing_center="' + sequencingCenter + '"'} \
       --outMetrics=metrics.txt \
       --commonBarcodes=barcodes.txt \
       ~{'--flowcell=' + flowcell} \
@@ -436,7 +436,7 @@ task illumina_demux {
       ~{'--predemux_trim_r1_3prime '  + inner_barcode_predemux_trim_r1_3prime} \
       ~{'--predemux_trim_r2_5prime '  + inner_barcode_predemux_trim_r2_5prime} \
       ~{'--predemux_trim_r2_3prime '  + inner_barcode_predemux_trim_r2_3prime} \
-      ~{'--sampleSheet=' + samplesheet} \
+      ~{'--sampleSheet="' + samplesheet + '"'} \
       "--runInfo=${RUNINFO_FILE}" \
       --illuminaRunDirectory=$FLOWCELL_DIR \
       $demux_threads \
@@ -817,7 +817,7 @@ task get_illumina_run_metadata {
     String? sequencing_center
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
   }
 
   parameter_meta {
@@ -843,7 +843,7 @@ task get_illumina_run_metadata {
     illumina --version | tee VERSION
 
     illumina illumina_metadata \
-      --runinfo ~{runinfo_xml} \
+      --runinfo "~{runinfo_xml}" \
       ~{'--sequencing_center ' + sequencing_center} \
       --out_runinfo runinfo.json \
       --loglevel=DEBUG
@@ -865,9 +865,9 @@ task get_illumina_run_metadata {
   }
 }
 
-task check_for_barcode3 {
+task validate_samplesheet {
   meta {
-    description: "Check if any sample in the samplesheet has a non-empty barcode_3 value. Used to determine resource allocation for demultiplexing."
+    description: "Enforce the viral-pipelines samplesheet schema and report which optional column groups are present. Fails fast -- before the demux scatter provisions any large VMs -- if a required column is missing or blank. Also reports barcode_2 / barcode_3 / SRA column presence, used to determine resource allocation for demultiplexing."
   }
 
   input {
@@ -875,25 +875,114 @@ task check_for_barcode3 {
     String docker = "python:slim"
   }
 
+  parameter_meta {
+    samplesheet: {
+      description: "Tab-delimited samplesheet. viral-pipelines requires a non-empty 'sample', 'library_id_per_sample', and 'barcode_1' on every row; this is deliberately stricter than viral-ngs, which requires only 'sample' and 'barcode_1'. 'barcode_2' (dual index) is optional but all-or-nothing across rows, and is reported as has_barcode2. 'barcode_3' (inner/inline index) is optional and may be set on some rows but not others; it is reported as has_barcode3. The four SRA columns (library_strategy, library_source, library_selection, design_description) are optional and reported as has_sra_metadata.",
+      category: "required"
+    }
+  }
+
   command <<<
+    set -e -o pipefail
     python3 << 'CODE'
     import csv
+    import sys
 
-    has_barcode3 = False
+    # ---- why this is stricter than viral-ngs ----
+    # viral-ngs' SampleSheet hard-requires only 'sample' and 'barcode_1'. It treats
+    # 'library_id_per_sample' as optional and silently falls back to the bare sample
+    # name when it is absent or blank. That is a reasonable contract for a demux
+    # library, but viral-pipelines cannot live with it: we build library identifiers
+    # ("{sample}.l{library_id_per_sample}"), SRA submission rows (tasks_ncbi.wdl
+    # sra_meta_prep) and Terra data-table columns (tasks_terra.wdl) out of that
+    # column. When it is missing, a run does not fail -- it silently emits malformed
+    # library names like "SAMPLE.l.FLOWCELL.LANE" and blank SRA cells, which is far
+    # worse than a crash. So we enforce our own tabular schema here, for pennies,
+    # before the scatter provisions any large VMs.
+    # Do NOT relax this back toward viral-ngs' contract.
+    REQUIRED = ['sample', 'library_id_per_sample', 'barcode_1']
+
+    # Near-miss header names, mapped to the canonical name they were probably meant
+    # to be. Used only to add a hint to the error message.
+    ALIASES = {
+        'library_id':  'library_id_per_sample',
+        'library':     'library_id_per_sample',
+        'lib_id':      'library_id_per_sample',
+        'libraryid':   'library_id_per_sample',
+        'sample_name': 'sample',
+        'sample_id':   'sample',
+        'barcode1':    'barcode_1',
+    }
+
+    SRA_COLS = ['library_strategy', 'library_source', 'library_selection', 'design_description']
+
+    def fail(*lines):
+        for line in lines:
+            print(line, file=sys.stderr)
+        sys.exit(1)
+
     with open('~{samplesheet}', 'r') as f:
         reader = csv.DictReader(f, delimiter='\t')
-        for row in reader:
-            if row.get('barcode_3', '').strip():
-                has_barcode3 = True
-                break
+        header = reader.fieldnames or []
 
-    with open('has_barcode3.txt', 'w') as out:
-        out.write('true' if has_barcode3 else 'false')
+        missing = [c for c in REQUIRED if c not in header]
+        if missing:
+            msg = [
+                "ERROR: samplesheet is missing required column(s): %s" % ', '.join(missing),
+                "",
+                "  expected (required): %s" % ', '.join(REQUIRED),
+                "  actual (found):      %s" % (', '.join(header) if header else '(no header row)'),
+            ]
+            for found in header:
+                canonical = ALIASES.get(found.strip().lower())
+                if canonical and canonical in missing:
+                    msg += ["", "  hint: found '%s' - did you mean '%s'?" % (found, canonical)]
+            fail(*msg)
+
+        # One streaming pass: per-row required values, plus optional column groups.
+        blanks = []
+        n_rows = 0
+        n_barcode2 = 0
+        has_barcode3 = False
+        for row in reader:
+            n_rows += 1
+            for col in REQUIRED:
+                if not (row.get(col) or '').strip():
+                    blanks.append((n_rows, row.get('sample') or '?', col))
+            if (row.get('barcode_2') or '').strip():
+                n_barcode2 += 1
+            if (row.get('barcode_3') or '').strip():
+                has_barcode3 = True
+
+    if blanks:
+        fail("ERROR: samplesheet has empty required value(s):",
+             *["  row %d (sample=%s): %s is empty" % b for b in blanks])
+
+    if not n_rows:
+        fail("ERROR: samplesheet has a valid header but no data rows.")
+
+    # barcode_2 is all-or-nothing: viral-ngs sets indexes=2 only when every row has
+    # it, and raises "inconsistent single/double barcoding" on a mixture. Catching it
+    # here costs a penny container instead of a large demux VM.
+    if n_barcode2 and n_barcode2 != n_rows:
+        fail("ERROR: inconsistent single/double barcoding: %d of %d rows have a non-empty barcode_2." % (n_barcode2, n_rows),
+             "  barcode_2 must be populated for every sample, or omitted entirely.")
+
+    outputs = {
+        'has_barcode2.txt':     n_barcode2 == n_rows,
+        'has_barcode3.txt':     has_barcode3,
+        'has_sra_metadata.txt': all(c in header for c in SRA_COLS),
+    }
+    for filename, value in outputs.items():
+        with open(filename, 'w') as out:
+            out.write('true' if value else 'false')
     CODE
   >>>
 
   output {
-    Boolean has_barcode3 = read_boolean("has_barcode3.txt")
+    Boolean has_barcode2     = read_boolean("has_barcode2.txt")
+    Boolean has_barcode3     = read_boolean("has_barcode3.txt")
+    Boolean has_sra_metadata = read_boolean("has_sra_metadata.txt")
   }
 
   runtime {
@@ -914,13 +1003,21 @@ task demux_fastqs {
     File   samplesheet
     File   runinfo_xml
 
+    # --- inner-barcode trim knobs (mirror task illumina_demux's splitcode pathway) ---
+    Int     inner_barcode_trim_r1_right_of_barcode = 10
+    Int     inner_barcode_predemux_trim_r1_3prime  = 18
+    Int     inner_barcode_predemux_trim_r2_5prime  = 18
+    Int     inner_barcode_predemux_trim_r2_3prime  = 18
+    Int?    inner_barcode_predemux_trim_r1_5prime     # unset by illumina_demux; exposed for override
+    Int?    inner_barcode_trim_r2_left_of_barcode     # unset by illumina_demux; exposed for override
+
     String? sequencingCenter
 
     Int?    cpu
     Int?    machine_mem_gb
     Int     max_cpu = 32       # Maximum CPU cap for autoscaling (use 16 for 2-barcode, 64 for 3-barcode)
     Int     disk_size = 750
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
   }
 
   # Calculate total input size for autoscaling
@@ -954,6 +1051,30 @@ task demux_fastqs {
       description: "Illumina RunInfo.xml file. NOTE: run_date and flowcell_id are extracted from this file and cannot be overridden due to viral-core limitations. Feature request needed to expose these as CLI parameters.",
       category: "required"
     }
+    inner_barcode_trim_r1_right_of_barcode: {
+      description: "Additional bp to trim from R1 immediately after the inner barcode. Mirrors task illumina_demux's --trim_r1_right_of_barcode.",
+      category: "advanced"
+    }
+    inner_barcode_predemux_trim_r1_3prime: {
+      description: "Bp to trim from R1's 3' end before inner-barcode demux. Mirrors task illumina_demux's --predemux_trim_r1_3prime.",
+      category: "advanced"
+    }
+    inner_barcode_predemux_trim_r2_5prime: {
+      description: "Bp to trim from R2's 5' end before inner-barcode demux. Mirrors task illumina_demux's --predemux_trim_r2_5prime.",
+      category: "advanced"
+    }
+    inner_barcode_predemux_trim_r2_3prime: {
+      description: "Bp to trim from R2's 3' end before inner-barcode demux. Mirrors task illumina_demux's --predemux_trim_r2_3prime.",
+      category: "advanced"
+    }
+    inner_barcode_predemux_trim_r1_5prime: {
+      description: "Bp to trim from R1's 5' end before inner-barcode demux. Not set by task illumina_demux; unset here by default (no trim applied).",
+      category: "advanced"
+    }
+    inner_barcode_trim_r2_left_of_barcode: {
+      description: "Additional bp to trim from R2 immediately before the inner barcode. Not set by task illumina_demux; unset here by default (no trim applied).",
+      category: "advanced"
+    }
   }
 
   # Derive base name from fastq_r1 for output file naming
@@ -969,15 +1090,21 @@ task demux_fastqs {
     illumina --version | tee VERSION
 
     illumina splitcode_demux_fastqs \
-      --fastq_r1 ~{fastq_r1} \
-      ~{'--fastq_r2 ' + fastq_r2} \
-      --samplesheet ~{samplesheet} \
-      --runinfo ~{runinfo_xml} \
-      ~{'--sequencing_center ' + sequencingCenter} \
+      --fastq_r1 "~{fastq_r1}" \
+      ~{'--fastq_r2 "' + fastq_r2 + '"'} \
+      --samplesheet "~{samplesheet}" \
+      --runinfo "~{runinfo_xml}" \
+      ~{'--sequencing_center "' + sequencingCenter + '"'} \
+      ~{'--trim_r1_right_of_barcode ' + inner_barcode_trim_r1_right_of_barcode} \
+      ~{'--predemux_trim_r1_3prime '  + inner_barcode_predemux_trim_r1_3prime} \
+      ~{'--predemux_trim_r2_5prime '  + inner_barcode_predemux_trim_r2_5prime} \
+      ~{'--predemux_trim_r2_3prime '  + inner_barcode_predemux_trim_r2_3prime} \
+      ~{'--predemux_trim_r1_5prime '  + inner_barcode_predemux_trim_r1_5prime} \
+      ~{'--trim_r2_left_of_barcode '  + inner_barcode_trim_r2_left_of_barcode} \
       --outdir . \
       --append_run_id \
-      --out_meta_by_sample ~{fastq_basename}-meta_by_sample.json \
-      --out_meta_by_filename ~{fastq_basename}-meta_by_filename.json \
+      --out_meta_by_sample "~{fastq_basename}-meta_by_sample.json" \
+      --out_meta_by_filename "~{fastq_basename}-meta_by_filename.json" \
       --loglevel=DEBUG
 
     # Workaround: create empty JSON files if Python code didn't produce them (zero-read FASTQs)
@@ -1048,7 +1175,7 @@ task merge_demux_metrics {
   input {
     Array[File]+ metrics_files
     String       output_filename = "merged_demux_metrics.txt"
-    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
   }
 
   parameter_meta {

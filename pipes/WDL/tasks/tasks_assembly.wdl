@@ -1,4 +1,4 @@
-version 1.0
+version 1.1
 
 task assemble {
     input {
@@ -16,7 +16,7 @@ task assemble {
       
       Int?     machine_mem_gb
       Int?     cpu
-      String   docker = "quay.io/broadinstitute/viral-ngs:3.0.11-assemble"
+      String   docker = "quay.io/broadinstitute/viral-ngs:3.0.24-assemble"
     }
     parameter_meta{
       reads_unmapped_bam: {
@@ -71,15 +71,15 @@ task assemble {
         assembly --version | tee VERSION
 
         assembly assemble_spades \
-          ~{reads_unmapped_bam} \
-          ~{trim_clip_db} \
-          ~{sample_name}.assembly1-spades.fasta \
+          "~{reads_unmapped_bam}" \
+          "~{trim_clip_db}" \
+          "~{sample_name}.assembly1-spades.fasta" \
           ~{'--nReads=' + spades_n_reads} \
           ~{true="--alwaysSucceed" false="" always_succeed} \
           ~{'--minContigLen=' + spades_min_contig_len} \
           ~{'--spadesOpts="' + spades_options + '"'} \
           --memLimitGb $mem_in_gb \
-          --outReads=~{sample_name}.subsamp.bam \
+          --outReads="~{sample_name}.subsamp.bam" \
           --loglevel=DEBUG
 
         samtools view -c ~{sample_name}.subsamp.bam | tee subsample_read_count >&2
@@ -124,7 +124,7 @@ task select_references {
     Int?          skani_c
     Int?          skani_n
 
-    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.11-assemble"
+    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.24-assemble"
     Int           machine_mem_gb = 4
     Int           cpu = 2
     Int           disk_size = 100
@@ -223,7 +223,7 @@ task scaffold {
       Float?       scaffold_min_pct_contig_aligned
 
       Int?         machine_mem_gb
-      String       docker="quay.io/broadinstitute/viral-ngs:3.0.11-assemble"
+      String       docker="quay.io/broadinstitute/viral-ngs:3.0.24-assemble"
 
       # do this in multiple steps in case the input doesn't actually have "assembly1-x" in the name
       String       sample_name = basename(basename(contigs_fasta, ".fasta"), ".assembly1-spades")
@@ -475,7 +475,7 @@ task skani_triangle {
     Int     compression_factor = 10
     Int     min_aligned_frac = 15
 
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.11-assemble"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.24-assemble"
     Int     machine_mem_gb = 8
     Int     cpu = 4
     Int     disk_size = 100
@@ -595,13 +595,13 @@ task ivar_trim {
         ivar version | head -1 | tee VERSION
         if [ -f "~{trim_coords_bed}" ]; then
           ivar trim -e \
-            ~{'-b ' + trim_coords_bed} \
+            ~{'-b "' + trim_coords_bed + '"'} \
             ~{'-m ' + min_keep_length} \
             ~{'-s ' + sliding_window} \
             ~{'-q ' + min_quality} \
             ~{'-x ' + primer_offset} \
-            -i ~{aligned_bam} -p trim | tee IVAR_OUT
-          samtools sort -@ $(nproc) -m 1000M -o ~{bam_basename}.trimmed.bam trim.bam
+            -i "~{aligned_bam}" -p trim | tee IVAR_OUT
+          samtools sort -@ $(nproc) -m 1000M -o "~{bam_basename}.trimmed.bam" trim.bam
         else
           echo "skipping ivar trim"
           cp "~{aligned_bam}" "~{bam_basename}.trimmed.bam"
@@ -636,7 +636,7 @@ task ivar_trim_stats {
       String out_basename = "ivar_trim_stats"
       String flowcell = ""
 
-      String docker = "quay.io/broadinstitute/py3-bio:0.1.5"
+      String docker = "quay.io/broadinstitute/py3-bio:0.1.14"
     }
     parameter_meta {
       ivar_trim_stats_tsv: {
@@ -715,7 +715,7 @@ task align_reads {
 
     Int?     cpu
     Int?     machine_mem_gb
-    String   docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+    String   docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
 
     String   sample_name = basename(basename(basename(reads_unmapped_bam, ".bam"), ".taxfilt"), ".clean")
   }
@@ -879,7 +879,7 @@ task refine_assembly_with_aligned_reads {
       Int?     max_coverage = 4000
 
       Int      machine_mem_gb = 8
-      String   docker = "quay.io/broadinstitute/viral-ngs:3.0.11-assemble"
+      String   docker = "quay.io/broadinstitute/viral-ngs:3.0.24-assemble"
     }
 
     Int disk_size = 375
@@ -922,16 +922,16 @@ task refine_assembly_with_aligned_reads {
 
         if [ ~{true='true' false='false' mark_duplicates} == "true" ]; then
           read_utils mkdup_picard \
-            ~{reads_aligned_bam} \
+            "~{reads_aligned_bam}" \
             temp_markdup.bam \
             --JVMmemory "$mem_in_mb"m \
             --loglevel=DEBUG
         else
-          ln -s ~{reads_aligned_bam} temp_markdup.bam
+          ln -s "~{reads_aligned_bam}" temp_markdup.bam
         fi
         samtools index -@ $(nproc) temp_markdup.bam temp_markdup.bai
 
-        ln -s ~{reference_fasta} assembly.fasta
+        ln -s "~{reference_fasta}" assembly.fasta
         assembly refine_assembly \
           assembly.fasta \
           temp_markdup.bam \
@@ -1021,7 +1021,7 @@ task run_discordance {
       Int    min_coverage = 4
 
       Int    machine_mem_gb = 4
-      String docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+      String docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
     }
     parameter_meta {
       reads_aligned_bam: {
@@ -1267,7 +1267,7 @@ task wgsim {
         Int?   random_seed
 
         Int    machine_mem_gb = 7
-        String docker = "quay.io/broadinstitute/viral-ngs:3.0.11-assemble"
+        String docker = "quay.io/broadinstitute/viral-ngs:3.0.24-assemble"
     }
 
     parameter_meta {

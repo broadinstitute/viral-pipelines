@@ -1,4 +1,4 @@
-version 1.0
+version 1.1
 
 task polyphonia_detect_cross_contamination {
   input {
@@ -82,7 +82,7 @@ task polyphonia_detect_cross_contamination {
     fi
 
     polyphonia cross_contamination \
-      --ref ~{reference_fasta} \
+      --ref "~{reference_fasta}" \
       --vcf ~{sep=' ' lofreq_vcfs} \
       --consensus ~{sep=' ' genome_fastas} \
       --read-depths ~{sep=' ' select_first([read_depths, []])} \
@@ -94,7 +94,7 @@ task polyphonia_detect_cross_contamination {
       ~{'--min-matches-proportion ' + min_matches_proportion} \
       ~{'--min-maf ' + min_maf} \
       ~{'--masked-positions ' + masked_positions} \
-      ~{'--masked-positions-file ' + masked_positions_file} \
+      ~{'--masked-positions-file "' + masked_positions_file + '"'} \
       $PLATE_MAPS_INPUT \
       ~{'--plate-size ' + plate_size} \
       ~{'--plate-columns ' + plate_columns} \
@@ -138,7 +138,7 @@ task lofreq {
     Int       cpu = 4
 
     String    out_basename = basename(aligned_bam, '.bam')
-    String    docker = "quay.io/broadinstitute/viral-ngs:3.0.11-phylo"
+    String    docker = "quay.io/broadinstitute/viral-ngs:3.0.24-phylo"
   }
   Int disk_size = ceil(5 * size(aligned_bam, "GB") + 50)
   command <<<
@@ -215,7 +215,7 @@ task isnvs_per_sample {
     Boolean removeDoublyMappedReads = true
 
     Int?    machine_mem_gb
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.11-phylo"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.24-phylo"
 
     String  sample_name = basename(basename(basename(mapped_bam, ".bam"), ".all"), ".mapped")
   }
@@ -224,8 +224,8 @@ task isnvs_per_sample {
   command <<<
     intrahost --version | tee VERSION
     intrahost vphaser_one_sample \
-        ~{mapped_bam} \
-        ~{assembly_fasta} \
+        "~{mapped_bam}" \
+        "~{assembly_fasta}" \
         vphaser2.~{sample_name}.txt.gz \
         ~{'--vphaserNumThreads=' + threads} \
         ~{true="--removeDoublyMappedReads" false="" removeDoublyMappedReads} \
@@ -257,7 +257,7 @@ task isnvs_vcf {
     Boolean        naiveFilter = false
 
     Int?           machine_mem_gb
-    String         docker = "quay.io/broadinstitute/viral-ngs:3.0.11-phylo"
+    String         docker = "quay.io/broadinstitute/viral-ngs:3.0.24-phylo"
   }
 
   parameter_meta {
@@ -286,7 +286,7 @@ task isnvs_vcf {
     echo "snpRefAccessions: $snpRefAccessions"
 
     intrahost merge_to_vcf \
-        ~{reference_fasta} \
+        "~{reference_fasta}" \
         isnvs.vcf.gz \
         $SAMPLES \
         --isnvs ~{sep=' ' vphaser2Calls} \
@@ -330,7 +330,7 @@ task annotate_vcf_snpeff {
     String?        emailAddress
 
     Int?           machine_mem_gb
-    String         docker = "quay.io/broadinstitute/viral-ngs:3.0.11-phylo"
+    String         docker = "quay.io/broadinstitute/viral-ngs:3.0.24-phylo"
 
     String         output_basename = basename(basename(in_vcf, ".gz"), ".vcf")
   }

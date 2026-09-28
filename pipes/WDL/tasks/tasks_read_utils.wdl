@@ -1,4 +1,4 @@
-version 1.0
+version 1.1
 
 task max {
   input {
@@ -82,7 +82,7 @@ task group_bams_by_sample {
 task get_bam_samplename {
   input {
     File    bam
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
   }
   Int   disk_size = round(size(bam, "GB")) + 50
   command <<<
@@ -108,7 +108,7 @@ task get_sample_meta {
   input {
     Array[File] samplesheets_extended
 
-    String      docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+    String      docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
   }
   Int disk_size = 50
   command <<<
@@ -168,7 +168,7 @@ task merge_and_reheader_bams {
       File?        reheader_table
       String       out_basename = basename(in_bams[0], ".bam")
 
-      String       docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+      String       docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
       Int          disk_size = 750
       Int          machine_mem_gb = 8
     }
@@ -230,23 +230,23 @@ task merge_and_reheader_bams {
 
 task rmdup_ubam {
   meta {
-    description: "Perform read deduplication on unaligned reads."
+    description: "Perform read deduplication on unaligned reads. The workflows in this repo normalize kmer depth with bbnorm_bam instead; this task remains available for callers that need true duplicate removal."
   }
 
   input {
     File    reads_unmapped_bam
-    String  method = "mvicuna"
+    String  method = "cdhit"
 
     Int     max_reads = 100000000
     Int?    machine_mem_gb
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
   }
 
-  # Memory autoscaling: M-Vicuna loads reads into memory for deduplication.
+  # Memory autoscaling: these deduplicators load reads into memory.
   # For files <= 2GB, use 8GB RAM (covers typical samples).
   # For larger files, scale at 2x file size: 8 + 2*(file_size - 2) GB, capped at 128GB.
-  # The 2x multiplier accounts for mvicuna's in-memory data structures which can
-  # exceed the compressed BAM size, especially for deeply sequenced samples.
+  # The 2x multiplier accounts for in-memory data structures which can exceed the
+  # compressed BAM size, especially for deeply sequenced samples.
   Float input_size_gb = size(reads_unmapped_bam, "GB")
   Int mem_auto_scaled = if input_size_gb <= 2.0 then 8 else (if (8 + 2*ceil(input_size_gb - 2.0)) > 128 then 128 else (8 + 2*ceil(input_size_gb - 2.0)))
   Int mem_gb = select_first([machine_mem_gb, mem_auto_scaled])
@@ -255,7 +255,7 @@ task rmdup_ubam {
 
   parameter_meta {
     reads_unmapped_bam: { description: "unaligned reads in BAM format", patterns: ["*.bam"] }
-    method:             { description: "mvicuna or cdhit" }
+    method:             { description: "Deduplication method: cdhit (default) or mvicuna. mvicuna is deprecated and x86-only, and will stop working once the dependency is dropped from the viral-ngs images." }
     max_reads:          { description: "If the input has more than this many reads, downsample before deduplication to avoid memory issues. Set to 0 to disable." }
   }
 
@@ -325,7 +325,7 @@ task bbnorm_bam {
 
     Int?    machine_mem_gb
     Int?    cpu
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
   }
 
   # Memory autoscaling: BBNorm uses Java and loads kmer data structures into memory.
@@ -354,7 +354,7 @@ task bbnorm_bam {
       patterns: ["*.bam"]
     }
     target: {
-      description: "BBNorm target normalization depth. Reads are downsampled to achieve approximately this coverage depth. (default: 10000)"
+      description: "BBNorm target normalization depth. Reads are downsampled to achieve approximately this coverage depth. (default: 1000)"
     }
     kmer_length: {
       description: "Kmer length for BBNorm analysis. Longer kmers are more specific but require more memory. (default: bbnorm default of 31)"
@@ -426,7 +426,7 @@ task downsample_bams {
     Boolean      deduplicateAfter = false
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
   }
 
   Int disk_size = 750
@@ -493,7 +493,7 @@ task FastqToUBAM {
     Int     cpus = 2
     Int     mem_gb = 4
     Int     disk_size = 750
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
   }
   parameter_meta {
     fastq_1: { description: "Unaligned read1 file in fastq format", patterns: ["*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"] }
@@ -546,7 +546,7 @@ task read_depths {
     File      aligned_bam
 
     String    out_basename = basename(aligned_bam, '.bam')
-    String    docker = "quay.io/broadinstitute/viral-ngs:3.0.11-core"
+    String    docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
   }
   Int disk_size = 200
   command <<<

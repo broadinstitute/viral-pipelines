@@ -22,7 +22,8 @@ viral-pipelines is a collection of WDL (Workflow Description Language) workflows
 - `test/input/` - Test data and input JSON files
 - `github_actions_ci/` - CI/CD scripts for validation and testing
 - `docs/` - Sphinx documentation (published to ReadTheDocs)
-- `requirements-modules.txt` - Docker image versions for all dependencies
+- `docker-versions.txt` - Docker image versions for all dependencies
+  (deliberately not named `requirements*.txt`, which Dependabot's pip parser claims by glob)
 - `.dockstore.yml` - Dockstore registry configuration
 
 ## Development Commands
@@ -80,15 +81,19 @@ github_actions_ci/build-docs.sh
 
 ### Docker Image Management
 
-The `requirements-modules.txt` file specifies exact Docker image versions for all dependencies. When updating task files:
+The `docker-versions.txt` file specifies exact Docker image versions for all dependencies. To bump a
+version, edit `docker-versions.txt`, then update the matching `docker = "..."` defaults in
+`pipes/WDL/tasks/*.wdl` by hand — preserving any flavor suffix (e.g. `viral-ngs:3.0.21-core`) — and
+validate:
 
 ```bash
-# Check if WDL runtime Docker versions match requirements-modules.txt
+# Validate that WDL runtime Docker versions match docker-versions.txt
 github_actions_ci/check-wdl-runtimes.sh
-
-# Update versions in WDL files to match requirements-modules.txt
-github_actions_ci/version-wdl-runtimes.sh
 ```
+
+There is no bulk-update script. `version-wdl-runtimes.sh` was removed in `a6c39b94` because it stripped
+flavor suffixes during bulk rewrites. Pins that intentionally diverge from the global version are
+annotated with `#skip-global-version-pin` (see `tasks_metagenomics.wdl`, `tasks_megablast.wdl`).
 
 ## Git Practices
 
@@ -191,7 +196,7 @@ Flavored images include:
 - `viral-ngs:{version}-phylo` - Phylogenetics tools (Augur, etc.)
 - `ncbi-tools` - NCBI submission tools (separate image on quay.io)
 
-Image versions are pinned in `requirements-modules.txt` and must be kept in sync with WDL files.
+Image versions are pinned in `docker-versions.txt` and must be kept in sync with WDL files.
 
 ## Dockstore Integration
 
@@ -278,8 +283,28 @@ Some workflow failures have errors that aren't visible in standard stderr logs. 
 - Preemption before task execution started
 - Network connectivity issues during container setup
 
+**First, rule out a missing output file.** The signature "Batch reports exit code 0
+but the task is marked failed" is more often *not* an infrastructure problem. If the
+call directory's `rc` file contains `0`, the command script succeeded and a
+**required** output file was simply never created, so delocalization failed. Check
+this before reaching for Batch logs:
+
+1. Read `rc` in the call directory. If it is `0`, this is the delocalization case.
+2. Read `gcs_delocalization.sh` in the same directory for the list of outputs and
+   their `required`/`optional` flags.
+3. List the call directory and diff it against that list. Delocalization runs in
+   parallel and aborts partway, so several files may be absent — the *unproduced*
+   one is the cause, the rest are collateral.
+4. Then grep stderr for a swallowed warning about that file. viral-ngs tools
+   sometimes log `WARNING - Failed to generate ... / Continuing with ...` and exit 0,
+   which leaves a required output missing with no error anywhere near the end of the
+   log.
+
+Tasks whose outputs are only produced on a best-effort path should declare them
+`File?` or `touch` a fallback in the command block.
+
 **Signs you need Batch logs instead of stderr:**
-- Batch reports exit code 0 (success) but task is marked as failed ("GCP Batch task exited with Success(0)")
+- Batch reports exit code 0 (success) but task is marked as failed ("GCP Batch task exited with Success(0)") — **but check `rc` first, see above**
 - Error message says "The job was stopped before the command finished"
 - stderr is empty or very short
 - Error message says "Executor error" without details
