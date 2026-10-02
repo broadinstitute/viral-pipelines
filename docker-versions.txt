@@ -1,9 +1,9 @@
-broadinstitute/viral-ngs=3.0.24
+broadinstitute/viral-ngs=3.0.25
 broadinstitute/read-qc-tools=1.1.3
-broadinstitute/py3-bio=0.1.14
+broadinstitute/py3-bio=0.1.17
 broadinstitute/beast-beagle-cuda=1.10.5pre
 broadinstitute/ncbi-tools=2.13.1
 nextstrain/base=build-20260819T223854Z
 andersenlabapps/ivar=1.3.1
-quay.io/staphb/pangolin=4.4-pdata-1.40
-nextstrain/nextclade=3.23.0
+quay.io/staphb/pangolin=4.4-pdata-1.41
+nextstrain/nextclade=3.24.0
