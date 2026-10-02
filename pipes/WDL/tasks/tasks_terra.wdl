@@ -24,7 +24,7 @@ task gcs_copy {
     File logs = stdout()
   }
   runtime {
-    docker: "quay.io/broadinstitute/viral-ngs:3.0.24-baseimage"
+    docker: "quay.io/broadinstitute/viral-ngs:3.0.25-baseimage"
     memory: "1 GB"
     cpu: 1
   }
@@ -32,7 +32,7 @@ task gcs_copy {
 
 task check_terra_env {
   input {
-    String docker = "quay.io/broadinstitute/viral-ngs:3.0.24-baseimage"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.25-baseimage"
   }
   meta {
     description: "task for inspection of backend to determine whether the task is running on Terra and/or GCP"
@@ -329,7 +329,7 @@ task upload_entities_tsv {
     String        terra_project
     File          tsv_file
 
-    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.24-baseimage"
+    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.25-baseimage"
   }
   meta {
     volatile: true
@@ -372,7 +372,7 @@ task merge_entities_tsvs {
     String?       entity_table_name
 
     Int           machine_mem_gb = 4
-    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.24-baseimage"
+    String        docker = "quay.io/broadinstitute/viral-ngs:3.0.25-baseimage"
   }
 
   parameter_meta {
@@ -667,7 +667,7 @@ task download_entities_tsv {
     String  outname = "~{terra_project}-~{workspace_name}-~{table_name}.tsv"
     String? nop_input_string # this does absolutely nothing, except that it allows an optional mechanism for you to block execution of this step upon the completion of another task in your workflow
 
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.24-baseimage"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.25-baseimage"
   }
 
   meta {
@@ -738,7 +738,7 @@ task create_or_update_sample_tables {
     String  sample_table_name  = "sample"
     String  library_table_name = "library"
 
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.25-core"
   }
 
   meta {
@@ -917,7 +917,7 @@ task find_illumina_files_in_directory {
     String? fastq_dir
     Int?    lane
     Boolean include_undetermined = false
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.24-baseimage"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.25-baseimage"
   }
   parameter_meta {
     illumina_dir: {
