@@ -226,7 +226,7 @@ task merge_coverage_per_position {
 
     String       out_report_name = "coverage_report.csv"
     Int          disk_size = 100
-    String       docker = "quay.io/broadinstitute/py3-bio:0.1.14"
+    String       docker = "quay.io/broadinstitute/py3-bio:0.1.17"
   }
 
   command <<<
@@ -623,7 +623,7 @@ task MultiQC {
     File?          config  # directory
     String?        config_yaml
 
-    String         docker = "quay.io/biocontainers/multiqc:1.35--pyhdfd78af_1"
+    String         docker = "quay.io/biocontainers/multiqc:1.35--pyhdfd78af_2"
   }
 
   parameter_meta {

@@ -1079,7 +1079,7 @@ task generate_author_sbt_file {
     File?   defaults_yaml
     String  out_base = "authors"
 
-    String  docker = "quay.io/broadinstitute/py3-bio:0.1.14"
+    String  docker = "quay.io/broadinstitute/py3-bio:0.1.17"
   }
 
   parameter_meta {
@@ -1558,7 +1558,7 @@ task vadr {
     String? vadr_model_tar_subdir
 
     String out_basename = basename(genome_fasta, '.fasta')
-    String docker = "mirror.gcr.io/staphb/vadr:1.7"
+    String docker = "mirror.gcr.io/staphb/vadr:1.7.2-slim"
     Int    mem_size = 16  # the RSV model in particular seems to consume 15GB RAM
     Int    cpus = 4
   }
