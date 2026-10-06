@@ -1011,6 +1011,12 @@ task demux_fastqs {
     Int?    inner_barcode_predemux_trim_r1_5prime     # unset by illumina_demux; exposed for override
     Int?    inner_barcode_trim_r2_left_of_barcode     # unset by illumina_demux; exposed for override
 
+    # --- fixed-length hard trim of the input FASTQs, applied before any demux (0 = no trim) ---
+    Int     hard_trim_r1_5prime = 0
+    Int     hard_trim_r1_3prime = 0
+    Int     hard_trim_r2_5prime = 0
+    Int     hard_trim_r2_3prime = 0
+
     String? sequencingCenter
 
     Int?    cpu
@@ -1075,10 +1081,29 @@ task demux_fastqs {
       description: "Additional bp to trim from R2 immediately before the inner barcode. Not set by task illumina_demux; unset here by default (no trim applied).",
       category: "advanced"
     }
+    hard_trim_r1_5prime: {
+      description: "Fixed number of bp to remove from the 5' end of every R1 read before any demux (e.g. a primer of known length). Applied with BBTools reformat.sh to the input FASTQ in both 2-barcode and 3-barcode modes; in 3-barcode mode this happens before splitcode, so trimming R1's 5' end would remove the inline barcode (use the inner_barcode_* inputs instead). Reads no longer than the trim are kept as 1bp so pairs stay intact. Requires standard 4-line FASTQ. Default 0 (no trim).",
+      category: "advanced"
+    }
+    hard_trim_r1_3prime: {
+      description: "Fixed number of bp to remove from the 3' end of every R1 read before any demux (e.g. a primer of known length). Applied with BBTools reformat.sh to the input FASTQ in both 2-barcode and 3-barcode modes; in 3-barcode mode this happens before splitcode, so trimming R1's 5' end would remove the inline barcode (use the inner_barcode_* inputs instead). Reads no longer than the trim are kept as 1bp so pairs stay intact. Requires standard 4-line FASTQ. Default 0 (no trim).",
+      category: "advanced"
+    }
+    hard_trim_r2_5prime: {
+      description: "Fixed number of bp to remove from the 5' end of every R2 read before any demux (e.g. a primer of known length). Applied with BBTools reformat.sh to the input FASTQ in both 2-barcode and 3-barcode modes; in 3-barcode mode this happens before splitcode, so trimming R1's 5' end would remove the inline barcode (use the inner_barcode_* inputs instead). Reads no longer than the trim are kept as 1bp so pairs stay intact. Requires standard 4-line FASTQ. Default 0 (no trim).",
+      category: "advanced"
+    }
+    hard_trim_r2_3prime: {
+      description: "Fixed number of bp to remove from the 3' end of every R2 read before any demux (e.g. a primer of known length). Applied with BBTools reformat.sh to the input FASTQ in both 2-barcode and 3-barcode modes; in 3-barcode mode this happens before splitcode, so trimming R1's 5' end would remove the inline barcode (use the inner_barcode_* inputs instead). Reads no longer than the trim are kept as 1bp so pairs stay intact. Requires standard 4-line FASTQ. Default 0 (no trim).",
+      category: "advanced"
+    }
   }
 
   # Derive base name from fastq_r1 for output file naming
   String fastq_basename = basename(basename(basename(fastq_r1, ".gz"), ".fastq"), ".fq")
+
+  Boolean hard_trim_r1 = hard_trim_r1_5prime + hard_trim_r1_3prime > 0
+  Boolean hard_trim_r2 = defined(fastq_r2) && hard_trim_r2_5prime + hard_trim_r2_3prime > 0
 
   command <<<
     set -ex -o pipefail
@@ -1089,9 +1114,40 @@ task demux_fastqs {
 
     illumina --version | tee VERSION
 
+    # Optional fixed-length hard trim of the input FASTQs, before any demux.
+    # Trimmed copies keep their original basenames: viral-ngs parses pool and lane from the filename.
+    hard_trim_fastq() {
+      local in_fq="$1" trim_5prime="$2" trim_3prime="$3"
+      local out_fq="trimmed/$(basename "$in_fq")"
+      mkdir -p trimmed
+      # ftl=N (forcetrimleft, 0-based) drops the first N bases; ftr2=N drops the last N.
+      # minlength=0 keeps reads no longer than the trim (as 1bp) instead of dropping them,
+      # so R1/R2 stay paired. qin/qout pinned so quality encoding is never auto-guessed.
+      reformat.sh -Xmx2g in="$in_fq" out="$out_fq" ftl="$trim_5prime" ftr2="$trim_3prime" \
+        minlength=0 qin=33 qout=33 overwrite=t 2>&1 | tee "$out_fq.log" >&2
+      local n_in n_out
+      n_in=$(awk '$1=="Input:" {print $2}' "$out_fq.log")
+      n_out=$(awk '$1=="Output:" {print $2}' "$out_fq.log")
+      if [ -z "$n_in" ] || [ "$n_in" != "$n_out" ]; then
+        echo "ERROR: hard trim of $in_fq changed the read count ($n_in in, $n_out out)" >&2
+        exit 1
+      fi
+    }
+
+    FASTQ_R1="~{fastq_r1}"
+    FASTQ_R2="~{default='' fastq_r2}"
+    if ~{true='true' false='false' hard_trim_r1}; then
+      hard_trim_fastq "$FASTQ_R1" ~{hard_trim_r1_5prime} ~{hard_trim_r1_3prime}
+      FASTQ_R1="trimmed/$(basename "$FASTQ_R1")"
+    fi
+    if ~{true='true' false='false' hard_trim_r2}; then
+      hard_trim_fastq "$FASTQ_R2" ~{hard_trim_r2_5prime} ~{hard_trim_r2_3prime}
+      FASTQ_R2="trimmed/$(basename "$FASTQ_R2")"
+    fi
+
     illumina splitcode_demux_fastqs \
-      --fastq_r1 "~{fastq_r1}" \
-      ~{'--fastq_r2 "' + fastq_r2 + '"'} \
+      --fastq_r1 "$FASTQ_R1" \
+      ${FASTQ_R2:+--fastq_r2 "$FASTQ_R2"} \
       --samplesheet "~{samplesheet}" \
       --runinfo "~{runinfo_xml}" \
       ~{'--sequencing_center "' + sequencingCenter + '"'} \
