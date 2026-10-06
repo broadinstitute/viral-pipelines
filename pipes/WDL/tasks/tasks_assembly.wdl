@@ -696,14 +696,12 @@ task ivar_trim_stats {
 
 task align_reads {
   meta {
-    description: "Align unmapped reads to a reference genome, either using novoalign (default), minimap2, or bwa. Produces an aligned bam file (including all unmapped reads), an aligned-only bam file, both sorted and indexed, along with samtools flagstat output, fastqc stats (on mapped only reads), and some basic figures of merit."
+    description: "Align unmapped reads to a reference genome, either using minimap2 (default) or bwa. Produces an aligned bam file (including all unmapped reads), an aligned-only bam file, both sorted and indexed, along with samtools flagstat output, fastqc stats (on mapped only reads), and some basic figures of merit."
   }
 
   input {
     File     reference_fasta
     File     reads_unmapped_bam
-
-    File?    novocraft_license
 
     String   aligner = "minimap2"
     String?  aligner_options
@@ -736,7 +734,7 @@ task align_reads {
 
   parameter_meta {
     reference_fasta: {
-      description: "Reference genome, in FASTA format, pre-indexed by Novoindex",
+      description: "Reference genome, in FASTA format",
       category: "required"
     }
     reads_unmapped_bam: {
@@ -744,7 +742,7 @@ task align_reads {
       category: "required"
     }
     aligner: { 
-      description: "Short read aligner to use novoalign, minimap2, or bwa. (Default novoalign)",
+      description: "Short read aligner to use: minimap2 or bwa. (Default minimap2)",
       category: "advanced"
       }
     skip_mark_dupes: {
@@ -787,12 +785,6 @@ task align_reads {
 
       # only perform the following if the reference is non-empty
 
-      if [ "~{aligner}" == "novoalign" ]; then
-        read_utils novoindex \
-          assembly.fasta \
-          ~{"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
-          --loglevel=DEBUG
-      fi
       read_utils index_fasta_picard assembly.fasta --loglevel=DEBUG
       read_utils index_fasta_samtools assembly.fasta --loglevel=DEBUG
 
@@ -805,7 +797,6 @@ task align_reads {
         ~{'--aligner_options "' + aligner_options + '"'} \
         ~{true='--skipMarkDupes' false="" skip_mark_dupes} \
         --JVMmemory "$mem_in_mb"m \
-        ~{"--NOVOALIGN_LICENSE_PATH=" + novocraft_license} \
         --loglevel=DEBUG
 
     else
@@ -886,7 +877,7 @@ task refine_assembly_with_aligned_reads {
 
     parameter_meta {
       reference_fasta:{
-        description: "Reference genome, in FASTA format, pre-indexed by Novoindex",
+        description: "Reference genome, in FASTA format",
         category: "required"
       }
       reads_aligned_bam: {

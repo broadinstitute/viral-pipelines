@@ -43,7 +43,7 @@ The filtered and trimmed reads are subsampled to at most 100,000 pairs.
 Reference-assisted assembly improvements follow (contig scaffolding, orienting, etc.)
 with MUMMER_ and MUSCLE_ or MAFFT_. Gap2Seq_ is used to seal gaps between scaffolded *de novo* contigs with sequencing reads.
 
-Each sample's reads are aligned to its *de novo* assembly using Novoalign_
+Each sample's reads are aligned to its *de novo* assembly using minimap2_
 and any remaining duplicates were removed using Picard_ MarkDuplicates.
 Variant positions in each assembly were identified using GATK_ IndelRealigner and
 UnifiedGenotyper on the read alignments. The assembly was refined to represent the
@@ -57,7 +57,7 @@ This align-call-refine cycle is iterated twice, to minimize reference bias in th
 .. _MUSCLE: https://www.drive5.com/muscle/
 .. _MAFFT: http://mafft.cbrc.jp/alignment/software/
 .. _Gap2Seq: https://www.cs.helsinki.fi/u/lmsalmel/Gap2Seq/
-.. _Novoalign: http://www.novocraft.com/products/novoalign/
+.. _minimap2: https://github.com/lh3/minimap2
 .. _Picard: http://broadinstitute.github.io/picard
 .. _GATK: https://www.broadinstitute.org/gatk/
 
