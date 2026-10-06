@@ -15,9 +15,13 @@ permissions:
 
 concurrency:
   # Group jobs by the branch or tag ref to ensure only one job runs for a ref at a time.
-  # for pull requests, github.ref is the branch being merged into
-  # for pushes, github.ref is the name of the branch to which the commit/push was made
-  group: ${{ github.ref }}
+  # for pull requests, github.ref is the PR merge ref (refs/pull/<number>/merge)
+  # for pushes, github.ref is the name of the branch or tag to which the commit/push was made
+  # Also group by event: publishing a release creates its tag, which fires a push event and a
+  # release event on the same refs/tags/<tag> ref at once. Without event_name in the group, one
+  # cancels the other, and the release run (the only one that deploys a tagged DNAnexus build)
+  # usually loses.
+  group: ${{ github.ref }}-${{ github.event_name }}
   # Cancel any in-progress jobs for the same group
   cancel-in-progress: true
 
@@ -318,7 +322,7 @@ jobs:
     timeout-minutes: 90  # Per-workflow timeout in build-dx.sh handles dxCompiler hangs
     # cancel earlier actions, if a commit is added to a branch or a PR
     concurrency:
-      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name }}
       cancel-in-progress: true
     needs:
       - validate_wdl_womtool
