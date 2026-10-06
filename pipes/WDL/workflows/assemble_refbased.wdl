@@ -29,7 +29,7 @@ workflow assemble_refbased {
             patterns: ["*.fasta"]
         }
         aligner: {
-            description: "Read aligner software to use. Options: novoalign, bwa, minimap2. Minimap2 can automatically handle Illumina, PacBio, or Oxford Nanopore reads as long as the 'PL' field in the BAM read group header is set properly (novoalign and bwa are Illumina-only)."
+            description: "Read aligner software to use. Options: minimap2, bwa. Minimap2 can automatically handle Illumina, PacBio, or Oxford Nanopore reads as long as the 'PL' field in the BAM read group header is set properly (bwa is Illumina-only)."
         }
         skip_mark_dupes: {
             description: "skip Picard MarkDuplicates step after alignment. This is recommended to be set to true for PCR amplicon based data. (Default: false)"
@@ -66,19 +66,16 @@ workflow assemble_refbased {
         String?      sample_original_name
 
         String       aligner="minimap2"
-        File?        novocraft_license
         Int          min_coverage=3
         Float        major_cutoff=0.75
         Boolean      skip_mark_dupes=false
         File?        trim_coords_bed
 
         Map[String,String] align_to_ref_options = {
-                            "novoalign": "-r Random -l 40 -g 40 -x 20 -t 501 -k",
                             "bwa": "-k 12 -B 1",
                             "minimap2": ""
                             }
         Map[String,String] align_to_self_options = {
-                            "novoalign": "-r Random -l 40 -g 40 -x 20 -t 100",
                             "bwa": "",
                             "minimap2": ""
                             }
@@ -89,7 +86,6 @@ workflow assemble_refbased {
             input:
                 reference_fasta    = reference_fasta,
                 reads_unmapped_bam = reads_unmapped_bam,
-                novocraft_license  = novocraft_license,
                 skip_mark_dupes    = skip_mark_dupes,
                 aligner            = aligner,
                 aligner_options    = align_to_ref_options[aligner]
@@ -160,7 +156,6 @@ workflow assemble_refbased {
             input:
                 reference_fasta    = call_consensus.refined_assembly_fasta,
                 reads_unmapped_bam = reads_unmapped_bam,
-                novocraft_license  = novocraft_license,
                 skip_mark_dupes    = skip_mark_dupes,
                 aligner            = aligner,
                 aligner_options    = align_to_self_options[aligner]

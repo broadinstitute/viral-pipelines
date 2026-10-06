@@ -160,7 +160,7 @@ task multi_align_mafft_ref {
     Float?       mafft_gapOpeningPenalty
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.24-phylo"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.26-phylo"
   }
 
   String         fasta_basename = basename(reference_fasta, '.fasta')
@@ -206,7 +206,7 @@ task multi_align_mafft {
     Float?       mafft_gapOpeningPenalty
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.24-phylo"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.26-phylo"
   }
 
   Int disk_size = 200
@@ -345,26 +345,20 @@ task beast {
 task index_ref {
   input {
     File   referenceGenome
-    File?  novocraft_license
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-ngs:3.0.24-core"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.26-core"
   }
 
   Int disk_size = 100
 
   command <<<
     read_utils --version | tee VERSION
-    read_utils novoindex \
-    "~{referenceGenome}" \
-    ~{"--NOVOALIGN_LICENSE_PATH=" + novocraft_license}
-    
     read_utils index_fasta_samtools "~{referenceGenome}"
     read_utils index_fasta_picard "~{referenceGenome}"
   >>>
 
   output {
-    File   referenceNix     = "*.nix"
     File   referenceFai     = "*.fasta.fai"
     File   referenceDict    = "*.dict"
     String viralngs_version = read_string("VERSION")
@@ -470,7 +464,7 @@ task merge_vcfs_gatk {
     File        ref_fasta
 
     Int?        machine_mem_gb
-    String      docker = "quay.io/broadinstitute/viral-ngs:3.0.24-phylo"
+    String      docker = "quay.io/broadinstitute/viral-ngs:3.0.26-phylo"
 
     String      output_prefix = "merged"
   }
