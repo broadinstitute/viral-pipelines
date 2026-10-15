@@ -160,7 +160,7 @@ task multi_align_mafft_ref {
     Float?       mafft_gapOpeningPenalty
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.26-phylo"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.27-phylo"
   }
 
   String         fasta_basename = basename(reference_fasta, '.fasta')
@@ -206,7 +206,7 @@ task multi_align_mafft {
     Float?       mafft_gapOpeningPenalty
 
     Int?         machine_mem_gb
-    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.26-phylo"
+    String       docker = "quay.io/broadinstitute/viral-ngs:3.0.27-phylo"
   }
 
   Int disk_size = 200
@@ -347,7 +347,7 @@ task index_ref {
     File   referenceGenome
 
     Int?   machine_mem_gb
-    String docker = "quay.io/broadinstitute/viral-ngs:3.0.26-core"
+    String docker = "quay.io/broadinstitute/viral-ngs:3.0.27-core"
   }
 
   Int disk_size = 100
@@ -464,7 +464,7 @@ task merge_vcfs_gatk {
     File        ref_fasta
 
     Int?        machine_mem_gb
-    String      docker = "quay.io/broadinstitute/viral-ngs:3.0.26-phylo"
+    String      docker = "quay.io/broadinstitute/viral-ngs:3.0.27-phylo"
 
     String      output_prefix = "merged"
   }
