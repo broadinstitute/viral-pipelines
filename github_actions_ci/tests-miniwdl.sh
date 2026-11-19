@@ -61,7 +61,7 @@ for workflow in ../pipes/WDL/workflows/*.wdl; do
 						printf("query length at line %d should be numeric, saw %s\n", NR, $4) > "/dev/stderr"
 						exit 1
 					}
-				}'
+				'
 
 				echo "$workflow_name -- validating Kraken2-compatible reads report is absent for k=2"
 				time miniwdl run \
