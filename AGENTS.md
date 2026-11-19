@@ -172,7 +172,7 @@ GitHub Actions (`.github/workflows/build.yml`) runs on all PRs and pushes:
 
 - **assemble_refbased.wdl**: Reference-based consensus calling from BAM files
   - Aligns reads to reference, trims primers (optional), calls consensus
-  - Supports novoalign, bwa, or minimap2 aligners
+  - Supports minimap2 (default) or bwa aligners
   - Primary workflow for viral genome assembly
 
 - **assemble_denovo_metagenomic.wdl**: De novo metagenomic assembly with SPAdes
