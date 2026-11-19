@@ -943,7 +943,7 @@ task kaiju {
 
 task centrifuger {
   meta {
-    description: "Runs Centrifuger taxonomic classification on one BAM file. Emits the native per-read classification TSV, a Kraken2-style hierarchical kreport, and a Kraken2-compatible classified-read report only when k == 1. Delegates all plumbing (SamToFastq, paired/single detection, empty-BAM short-circuit, tmp-file cleanup) to the `metagenomics centrifuger` and `metagenomics centrifuger_kreport` CLI commands from viral-ngs."
+    description: "Runs Centrifuger taxonomic classification on one BAM file. Emits the native per-read classification TSV, a Kraken2-style hierarchical kreport, and a Kraken2-compatible classified-read report only when k == 1. Delegates all plumbing (SamToFastq, BBDuk adapter and poly-G trimming, paired/single detection, empty-BAM short-circuit, tmp-file cleanup) to the `metagenomics centrifuger` and `metagenomics centrifuger_kreport` CLI commands from viral-ngs."
   }
 
   input {
@@ -957,6 +957,10 @@ task centrifuger {
     Int?         hitk_factor
     Boolean      merge_readpair    = false
 
+    # Read trimming passed through to `metagenomics centrifuger`
+    Boolean      no_trim        = false
+    File?        trim_clip_db
+
     # Optional kreport tuning passed through to `metagenomics centrifuger_kreport`
     Boolean      kreport_no_lca     = false
     Boolean      kreport_show_zeros = false
@@ -965,18 +969,19 @@ task centrifuger {
 
     Int          machine_mem_gb = 240
     Int          cpu            = 8
-    # Pinned to the feature/centrifuger-integration build; bump to a real
-    # release tag (and remove the skip marker) once viral-ngs cuts one that
-    # contains the `metagenomics centrifuger*` CLI subcommands.
-    String       docker = "quay.io/broadinstitute/viral-ngs:feature-centrifuger-integration-classify" #skip-global-version-pin
+    # Pinned to the viral-ngs feature-centrifuger-trim build, the first image with BBDuk
+    # trimming, --no_trim and --trim_clip_db; viral-ngs CI publishes this tag once that
+    # branch is pushed. Bump to a release tag (and remove the skip marker) once viral-ngs
+    # releases them; quay deletes branch tags when the branch is deleted.
+    String       docker = "quay.io/broadinstitute/viral-ngs:feature-centrifuger-trim-classify" #skip-global-version-pin
   }
 
   String sample_name = basename(reads_bam, ".bam")
-  Int disk_size = ceil((8 * size(reads_bam, "GB") + 3 * size(centrifuger_db_tgz, "GB") + 400) / 400.0) * 400
+  Int disk_size = ceil((12 * size(reads_bam, "GB") + 3 * size(centrifuger_db_tgz, "GB") + 400) / 400.0) * 400
 
   parameter_meta {
     reads_bam: {
-      description: "Reads in BAM format. The `metagenomics centrifuger` wrapper handles SamToFastq (with Illumina adapter clipping via CLIPPING_ATTRIBUTE=X), paired/single detection (based on R2 vs. singleton size), and empty-BAM short-circuit internally. Sample name is derived from the BAM filename via `basename <bam> .bam`.",
+      description: "Reads in BAM format. The `metagenomics centrifuger` wrapper handles SamToFastq (with Illumina adapter clipping via CLIPPING_ATTRIBUTE=X), BBDuk adapter and poly-G trimming (see no_trim and trim_clip_db), paired/single detection (based on R2 vs. singleton size), and empty-BAM short-circuit internally. Sample name is derived from the BAM filename via `basename <bam> .bam`.",
       patterns: ["*.bam"],
       category: "required"
     }
@@ -1003,6 +1008,15 @@ task centrifuger {
     }
     merge_readpair: {
       description: "Merge paired reads before classification (centrifuger --merge-readpair).",
+      category: "advanced"
+    }
+    no_trim: {
+      description: "Skip BBDuk adapter and poly-G trimming before classification (metagenomics centrifuger --no_trim). Picard XT-tag adapter clipping still applies. Cannot be combined with trim_clip_db.",
+      category: "advanced"
+    }
+    trim_clip_db: {
+      description: "Adapter FASTA for BBDuk trimming (metagenomics centrifuger --trim_clip_db). Replaces BBDuk's bundled adapter set; poly-G trimming still applies. The Trimmomatic clip database passed to SPAdes assembly as trim_clip_db works here. Cannot be combined with no_trim.",
+      patterns: ["*.fasta", "*.fasta.gz", "*.fasta.zst"],
       category: "advanced"
     }
     kreport_no_lca: {
@@ -1051,8 +1065,8 @@ task centrifuger {
 
     SAMPLE="~{sample_name}"
 
-    # Classify: viral-ngs wrapper handles SamToFastq, paired/single
-    # detection, empty-BAM short-circuit, and tmp-file cleanup.
+    # Classify: viral-ngs wrapper handles SamToFastq, BBDuk trimming,
+    # paired/single detection, empty-BAM short-circuit, and tmp-file cleanup.
     # NB: $SAMPLE (no braces) inside true="..." attribute strings is a
     # literal at the WDL level (placeholder syntax requires ${...}), so
     # womtool accepts it as a primitive; the shell still expands it
@@ -1066,6 +1080,8 @@ task centrifuger {
       ~{"--min_hitlen=" + min_hitlen} \
       ~{"--hitk_factor=" + hitk_factor} \
       ~{true="--merge_readpair" false="" merge_readpair} \
+      ~{true="--no_trim" false="" no_trim} \
+      ~{'--trim_clip_db="' + trim_clip_db + '"'} \
       --threads="~{cpu}" \
       --loglevel=DEBUG
 
