@@ -1,0 +1,8 @@
+{
+  "classify_kallisto.reads_bam": "test/input/kallisto/SRR12340077.2.sample.bam",
+  "classify_kallisto.kallisto_index": "test/input/kallisto/palmdb.corona.idx",
+  "classify_kallisto.t2g": "test/input/kallisto/palmdb_clustered_t2g.corona.txt",
+  "classify_kallisto.protein": true,
+  "classify_kallisto.machine_mem_gb": 4,
+  "classify_kallisto.cpu": 2
+}

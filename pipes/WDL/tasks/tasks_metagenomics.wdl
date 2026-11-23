@@ -596,7 +596,7 @@ task kallisto {
 
     Int     machine_mem_gb = 32
     Int     cpu = 16
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.13-classify"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.27-classify"
   }
 
   parameter_meta {
@@ -720,7 +720,7 @@ task build_kallisto_db {
 
     Int     machine_mem_gb = 32
     Int     cpu = 16
-    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.13-classify"
+    String  docker = "quay.io/broadinstitute/viral-ngs:3.0.27-classify"
   }
 
   parameter_meta {
@@ -830,7 +830,7 @@ task kallisto_read_summary {
 
     Int            machine_mem_gb = 32
     Int            cpu = 16
-    String         docker = "quay.io/broadinstitute/viral-ngs:3.0.13-classify"
+    String         docker = "quay.io/broadinstitute/viral-ngs:3.0.27-classify"
   }
 
   parameter_meta {
@@ -957,107 +957,6 @@ task kallisto_read_summary {
     disks: "local-disk ~{disk_size} LOCAL"
     disk: "~{disk_size} GB" # TES
     dx_instance_type: "mem3_ssd1_v2_x16"
-    preemptible: 2
-    maxRetries: 2
-  }
-}
-
-task report_primary_kallisto_taxa {
-  meta {
-    description: "Interprets Kallisto counts TSV output and emits the primary contributing hit under a focal taxon."
-  }
-
-  input {
-    File   kallisto_counts_tsv
-    File?  id_to_taxon_map
-    String? sample_id
-    String focal_taxon = "Viruses"
-
-    Int    machine_mem_gb = 4
-    String docker = "quay.io/broadinstitute/viral-ngs:3.0.13-classify"
-  }
-
-  parameter_meta {
-    kallisto_counts_tsv: {
-      description: "Long-form Kallisto counts TSV emitted by the kallisto task.",
-      patterns: ["*.tsv", "*.tsv.gz"],
-      category: "required"
-    }
-    id_to_taxon_map: {
-      description: "Optional CSV/TSV mapping Kallisto hit IDs to taxonomy columns.",
-      patterns: ["*.csv", "*.tsv", "*.csv.gz", "*.tsv.gz"],
-      category: "common"
-    }
-    sample_id: {
-      description: "Optional sample identifier used to name the Kallisto top-taxa report. Defaults to the counts TSV basename.",
-      category: "common"
-    }
-    focal_taxon: {
-      description: "Taxonomic category to summarize. Default Viruses.",
-      category: "common"
-    }
-    machine_mem_gb: {
-      description: "Memory allocation in GB.",
-      category: "runtime"
-    }
-    docker: {
-      description: "viral-ngs classify-flavored image containing the refactored `metagenomics kallisto_top_taxa` command.",
-      category: "runtime"
-    }
-  }
-
-  String out_basename = sub(sub(basename(kallisto_counts_tsv), "\\.tsv\\.gz$", ""), "\\.tsv$", "")
-  String output_basename = select_first([sample_id, out_basename])
-  String top_taxa_report_filename = output_basename + ".kallisto_top_taxa_report.tsv"
-  Int disk_size = ceil((4 * size(kallisto_counts_tsv, "GB") + size(id_to_taxon_map, "GB") + 100) / 375.0) * 375
-
-  command <<<
-    set -ex -o pipefail
-
-    metagenomics --version | tee VERSION
-
-    ID_TO_TAXON_MAP="~{default='' id_to_taxon_map}"
-    if [ -n "$ID_TO_TAXON_MAP" ]; then
-      TAXONOMY_ARGS=(--id-to-tax-map "$ID_TO_TAXON_MAP")
-    else
-      TAXONOMY_ARGS=()
-    fi
-
-    metagenomics kallisto_top_taxa \
-      "~{kallisto_counts_tsv}" \
-      "~{top_taxa_report_filename}" \
-      "${TAXONOMY_ARGS[@]}" \
-      --target-taxon "~{focal_taxon}" \
-      --loglevel=DEBUG
-
-    head -2 "~{top_taxa_report_filename}" | tail +2 > TOPROW
-    cut -f 2 TOPROW > NUM_FOCAL
-    cut -f 3 TOPROW > TOP_HIT_ID
-    cut -f 4 TOPROW > TOP_HIT_NAME
-    cut -f 5 TOPROW > TOP_HIT_LOWEST_TAXA_NAME
-    cut -f 6 TOPROW > TOP_HIT_READS
-    cut -f 7 TOPROW > PCT_OF_FOCAL
-  >>>
-
-  output {
-    File   ranked_focal_report     = "~{top_taxa_report_filename}"
-    String focal_tax_name          = focal_taxon
-    Int    total_focal_reads       = read_int("NUM_FOCAL")
-    String top_hit_id              = read_string("TOP_HIT_ID")
-    String top_hit_name            = read_string("TOP_HIT_NAME")
-    String top_hit_lowest_tax_name = read_string("TOP_HIT_LOWEST_TAXA_NAME")
-    Int    top_hit_reads           = read_int("TOP_HIT_READS")
-    Float  percent_of_focal        = read_float("PCT_OF_FOCAL")
-    String viralngs_version        = read_string("VERSION")
-  }
-
-  runtime {
-    docker: docker
-    memory: "~{machine_mem_gb} GB"
-    cpu: 1
-    disks: "local-disk ~{disk_size} LOCAL"
-    disk: "~{disk_size} GB" # TES
-    dx_instance_type: "mem1_ssd1_v2_x2"
     preemptible: 2
     maxRetries: 2
   }

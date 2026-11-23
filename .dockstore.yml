@@ -64,6 +64,8 @@ workflows:
   - name: classify_kallisto
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/classify_kallisto.wdl
+    testParameterFiles:
+    - /test/input/WDL/test_inputs-classify_kallisto-local.json
   - name: classify_kraken2
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/classify_kraken2.wdl

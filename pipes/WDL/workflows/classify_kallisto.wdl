@@ -1,4 +1,4 @@
-version 1.0
+version 1.1
 
 import "../tasks/tasks_metagenomics.wdl" as metagenomics
 
@@ -23,11 +23,10 @@ workflow classify_kallisto {
         Boolean protein = false
         Int     extract_threshold = 1
         String  taxonomy_level = "highest"
-        String  focal_taxon = "Viruses"
 
         Int     machine_mem_gb = 32
         Int     cpu = 16
-        String  docker = "quay.io/broadinstitute/viral-ngs:3.0.13-classify"
+        String  docker = "quay.io/broadinstitute/viral-ngs:3.0.27-classify"
     }
 
     parameter_meta {
@@ -79,10 +78,6 @@ workflow classify_kallisto {
             description: "Taxonomy level to report from id_to_taxon_map. Valid values are highest or deepest. Default highest.",
             category: "advanced"
         }
-        focal_taxon: {
-            description: "Taxonomic category to summarize in the Kallisto top-taxa report. Default Viruses.",
-            category: "common"
-        }
         machine_mem_gb: {
             description: "Memory allocation in GB for both Kallisto count and extract.",
             category: "runtime"
@@ -131,17 +126,8 @@ workflow classify_kallisto {
             docker         = docker
     }
 
-    call metagenomics.report_primary_kallisto_taxa {
-        input:
-            kallisto_counts_tsv = kallisto.kallisto_counts_tsv,
-            id_to_taxon_map     = id_to_taxon_map,
-            sample_id           = resolved_sample_id,
-            focal_taxon         = focal_taxon,
-            docker              = docker
-    }
-
     output {
-        File   kallisto_counts_tsv                = kallisto.kallisto_counts_tsv
-        File   kallisto_summary_tsv               = kallisto_read_summary.summary_tsv
+        File kallisto_counts_tsv  = kallisto.kallisto_counts_tsv
+        File kallisto_summary_tsv = kallisto_read_summary.summary_tsv
     }
 }
