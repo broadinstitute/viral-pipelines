@@ -926,6 +926,13 @@ task kallisto_read_summary {
       TAXONOMY_ARGS=()
     fi
 
+    # TEMPORARY WORKAROUND: kb-python's `kb extract` (remove_mm_from_mc) writes an int -1 into
+    # a text column of matrix.ec, which raises TypeError under pandas 3's string dtype whenever
+    # an equivalence class maps to more than one gene. Restore pandas 2 string inference for this
+    # command. Remove once the viral-ngs image ships a kb-python release with the upstream fix
+    # (pachterlab/kb_python). The variable is deprecated and removed in pandas 4.0.
+    export PANDAS_FUTURE_INFER_STRING=0
+
     metagenomics kallisto_extract \
       "~{reads_bam}" \
       --index "~{kallisto_index}" \
