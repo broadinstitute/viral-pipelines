@@ -6,26 +6,28 @@ Description of the methods
 Taxonomic read filtration
 -------------------------
 
-Human, contaminant, and duplicate read removal
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Human and contaminant read removal
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The assembly pipeline begins by depleting paired-end reads from each
-sample of human and other contaminants using BMTAGGER_ and BLASTN_,
-and removing PCR duplicates using M-Vicuna (a custom version of Vicuna_).
+sample of human and other contaminants using BMTAGGER_ and BLASTN_.
 
 .. _BMTAGGER: http://ftp.ncbi.nih.gov/pub/agarwala/bmtagger/screening.pdf
 .. _BLASTN: https://blast.ncbi.nlm.nih.gov/Blast.cgi?PAGE_TYPE=BlastSearch
-.. _Vicuna: http://www.broadinstitute.org/scientific-community/science/projects/viral-genomics/vicuna
 
 
 Taxonomic selection
 ~~~~~~~~~~~~~~~~~~~
 
-Reads are then filtered to to a genus-level database using LASTAL_,
-quality-trimmed with Trimmomatic_,
-and further deduplicated with PRINSEQ_.
+Reads are then filtered to a genus-level database using LASTAL_.
+The read set handed to *de novo* assembly is normalized by kmer depth
+with BBNorm_, which discards reads contributing coverage beyond a target
+depth rather than removing duplicates outright. Before assembly, reads are
+quality-trimmed with Trimmomatic_
+and deduplicated with PRINSEQ_.
 
 .. _LASTAL: http://last.cbrc.jp
+.. _BBNorm: https://sourceforge.net/projects/bbmap/
 .. _Trimmomatic: http://www.usadellab.org/cms/?page=trimmomatic
 .. _PRINSEQ: http://prinseq.sourceforge.net
 
@@ -41,7 +43,7 @@ The filtered and trimmed reads are subsampled to at most 100,000 pairs.
 Reference-assisted assembly improvements follow (contig scaffolding, orienting, etc.)
 with MUMMER_ and MUSCLE_ or MAFFT_. Gap2Seq_ is used to seal gaps between scaffolded *de novo* contigs with sequencing reads.
 
-Each sample's reads are aligned to its *de novo* assembly using Novoalign_
+Each sample's reads are aligned to its *de novo* assembly using minimap2_
 and any remaining duplicates were removed using Picard_ MarkDuplicates.
 Variant positions in each assembly were identified using GATK_ IndelRealigner and
 UnifiedGenotyper on the read alignments. The assembly was refined to represent the
@@ -55,7 +57,7 @@ This align-call-refine cycle is iterated twice, to minimize reference bias in th
 .. _MUSCLE: https://www.drive5.com/muscle/
 .. _MAFFT: http://mafft.cbrc.jp/alignment/software/
 .. _Gap2Seq: https://www.cs.helsinki.fi/u/lmsalmel/Gap2Seq/
-.. _Novoalign: http://www.novocraft.com/products/novoalign/
+.. _minimap2: https://github.com/lh3/minimap2
 .. _Picard: http://broadinstitute.github.io/picard
 .. _GATK: https://www.broadinstitute.org/gatk/
 

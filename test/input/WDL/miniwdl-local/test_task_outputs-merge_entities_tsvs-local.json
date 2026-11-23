@@ -1,0 +1,9 @@
+{
+  "merge_entities_tsvs.num_rows": 4,
+  "merge_entities_tsvs.num_cols": 7,
+  "merge_entities_tsvs.num_input_col_orders": 4,
+  "merge_entities_tsvs.entity_id_col": "entity:assembly_id",
+  "merge_entities_tsvs.entity_table": "assembly",
+  "merge_entities_tsvs.out_header_joined": "entity:assembly_id,assembly_name,sample_id,taxid,bases_aligned,sample,biosample_accession",
+  "merge_entities_tsvs.out_tsv_sha256": "4b59e672b9a3fb6af53553dce4edf5d4dc0623d72589d5ebbc51a30ff6a3151a"
+}

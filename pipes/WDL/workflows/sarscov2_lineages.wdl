@@ -1,4 +1,4 @@
-version 1.0
+version 1.1
 
 import "../tasks/tasks_nextstrain.wdl" as nextstrain
 import "../tasks/tasks_sarscov2.wdl" as sarscov2

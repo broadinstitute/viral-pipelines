@@ -1,4 +1,4 @@
-version 1.0
+version 1.1
 
 import "../tasks/tasks_reports.wdl" as reports
 import "../tasks/tasks_assembly.wdl" as assembly

@@ -15,9 +15,13 @@ permissions:
 
 concurrency:
   # Group jobs by the branch or tag ref to ensure only one job runs for a ref at a time.
-  # for pull requests, github.ref is the branch being merged into
-  # for pushes, github.ref is the name of the branch to which the commit/push was made
-  group: ${{ github.ref }}
+  # for pull requests, github.ref is the PR merge ref (refs/pull/<number>/merge)
+  # for pushes, github.ref is the name of the branch or tag to which the commit/push was made
+  # Also group by event: publishing a release creates its tag, which fires a push event and a
+  # release event on the same refs/tags/<tag> ref at once. Without event_name in the group, one
+  # cancels the other, and the release run (the only one that deploys a tagged DNAnexus build)
+  # usually loses.
+  group: ${{ github.ref }}-${{ github.event_name }}
   # Cancel any in-progress jobs for the same group
   cancel-in-progress: true
 
@@ -26,7 +30,7 @@ env:
   DOCKER_REGISTRY: "quay.io"
   DOCKER_REPO_PROD: "quay.io/broadinstitute/viral-pipelines"
   DOCKER_REPO_DEV: "quay.io/broadinstitute/viral-pipelines-dev"
-  MODULE_VERSIONS: "requirements-modules.txt"
+  MODULE_VERSIONS: "docker-versions.txt"
 
   # TravisCI variables described here:
   #   https://docs.travis-ci.com/user/environment-variables/
@@ -96,6 +100,7 @@ jobs:
           set -e
           github_actions_ci/check-wdl-runtimes.sh
           miniwdl check pipes/WDL/workflows/*.wdl
+          github_actions_ci/check-wdl-tsv-column-order.sh
 
   validate_wdl_womtool:
     # Run if not a push event or if there's no pull request for the branch
@@ -314,10 +319,10 @@ jobs:
   deploy_dnanexus:
     #if: ${{ github.event.ref == 'dnanexus' }}
     if: github.event_name == 'release' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dnanexus' || (github.event_name == 'pull_request' && github.base_ref == 'master')
-    timeout-minutes: 60  # Prevent runaway jobs; dxCompiler can hang
+    timeout-minutes: 90  # Per-workflow timeout in build-dx.sh handles dxCompiler hangs
     # cancel earlier actions, if a commit is added to a branch or a PR
     concurrency:
-      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name }}
       cancel-in-progress: true
     needs:
       - validate_wdl_womtool
@@ -328,6 +333,8 @@ jobs:
       # stored here: https://github.com/broadinstitute/viral-pipelines/settings/secrets/actions
       DX_API_TOKEN: ${{ secrets.DX_API_TOKEN }}
       DX_PROJECT: project-F8PQ6380xf5bK0Qk0YPjB17P
+      DX_COMPILER_PARALLELISM: 4
+      DX_COMPILER_TIMEOUT: 15m
     steps:
       - name: checkout repository
         uses: actions/checkout@v6
