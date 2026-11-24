@@ -38,13 +38,13 @@ for workflow in ../pipes/WDL/workflows/*.wdl; do
 			cat $workflow_name/outputs.json
 			if [ "$workflow_name" = "classify_centrifuger" ]; then
 				echo "$workflow_name -- validating Kraken2-compatible reads report"
-				kraken2_reads_report=$(jq -r '."classify_centrifuger.kraken2_reads_report" // empty' $workflow_name/outputs.json)
+				kraken2_reads_report=$(jq -r '."classify_centrifuger.centrifuger_kraken2_reads_report" // empty' $workflow_name/outputs.json)
 				if [ -z "$kraken2_reads_report" ]; then
-					echo "classify_centrifuger expected kraken2_reads_report for k=1"
+					echo "classify_centrifuger expected centrifuger_kraken2_reads_report for k=1"
 					exit 1
 				fi
 				if [ ! -s "$kraken2_reads_report" ]; then
-					echo "classify_centrifuger kraken2_reads_report is missing or empty: $kraken2_reads_report"
+					echo "classify_centrifuger centrifuger_kraken2_reads_report is missing or empty: $kraken2_reads_report"
 					exit 1
 				fi
 				gzip -t "$kraken2_reads_report"

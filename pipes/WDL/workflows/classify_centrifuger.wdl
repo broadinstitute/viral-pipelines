@@ -17,9 +17,9 @@ workflow classify_centrifuger {
     }
 
     output {
-        File        classification_tsv    = centrifuger.classification_tsv
-        File        kreport               = centrifuger.kreport
-        File?       kraken2_reads_report  = extracted_kraken2_reads_report
-        String      viralngs_version      = centrifuger.viralngs_version
+        File        classification_tsv               = centrifuger.classification_tsv
+        File        centrifuger_kreport              = centrifuger.kreport
+        File?       centrifuger_kraken2_reads_report = extracted_kraken2_reads_report
+        String      viralngs_version                 = centrifuger.viralngs_version
     }
 }
