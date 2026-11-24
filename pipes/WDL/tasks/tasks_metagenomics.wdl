@@ -940,3 +940,165 @@ task kaiju {
     dx_instance_type: "mem3_ssd1_v2_x16"
   }
 }
+
+task join_read_classifications {
+  meta {
+    description: "Joins read-level classifications from Kallisto, Kraken2, Centrifuger, VirNucPro, and geNomad into one ZSTD-compressed Parquet row per (SAMPLE_ID, READ_ID). Native Kraken2 and Centrifuger per-read output is first annotated with taxon name, kingdom, and rank from a prebuilt taxonomy DuckDB. Every source is optional and contributes reads on its own; at least one must be provided."
+  }
+
+  input {
+    String  sample_id
+
+    File?   kraken2_reads_report
+    File?   centrifuger_classification_tsv
+    File?   taxonomy_db
+    Boolean resolve_strains = false
+
+    File?   kallisto_summary
+    File?   vnp_reads
+    File?   genomad_reads
+
+    Boolean filter_human_only = true
+    Boolean drop_unclassified = false
+
+    Int     machine_mem_gb = 32
+    Int     cpu = 4
+    # Pinned to the viral-ngs feature-join-read-classification-component build, the first image with
+    # kraken2_annotate_reads, centrifuger_annotate_reads, and the five-source join_read_classifications.
+    # Bump to a release tag (and remove the skip marker) once viral-ngs releases them; quay deletes
+    # branch tags when the branch is deleted.
+    String  docker = "quay.io/broadinstitute/viral-ngs:feature-join-read-classification-component-classify" #skip-global-version-pin
+  }
+
+  parameter_meta {
+    sample_id: {
+      description: "Sample identifier stamped on every output row and used as the output filename prefix. If kallisto_summary is provided, this must equal its SAMPLE_ID column (kallisto_extract defaults that to the reads BAM basename without .bam); otherwise the task fails.",
+      category: "required"
+    }
+    kraken2_reads_report: {
+      description: "Native Kraken2 per-read output (--outReads), e.g. the kraken2 task's kraken2_reads_report; plain or .gz. Annotated with taxonomy_db before joining.",
+      patterns: ["*.txt", "*.txt.gz"],
+      category: "common"
+    }
+    centrifuger_classification_tsv: {
+      description: "Native Centrifuger per-read classification TSV including its header line, e.g. the centrifuger task's classification_tsv. Must come from k = 1 (the default): with k > 1 a read appears more than once and the join fails on duplicate read IDs. Annotated with taxonomy_db before joining.",
+      patterns: ["*.tsv", "*.tsv.gz", "*.tsv.zst"],
+      category: "common"
+    }
+    taxonomy_db: {
+      description: "Prebuilt taxonomy DuckDB from `metagenomics taxonomy_duckdb_build`, built from the same NCBI taxdump as the Kraken2 and Centrifuger databases; taxids missing from it are annotated as Unknown. Required when kraken2_reads_report or centrifuger_classification_tsv is provided; unused otherwise.",
+      patterns: ["*.duckdb"],
+      category: "common"
+    }
+    resolve_strains: {
+      description: "When annotating Kraken2 and Centrifuger output, report the nearest ranked ancestor (taxid, name, rank) for 'no rank' taxa such as strains.",
+      category: "common"
+    }
+    kallisto_summary: {
+      description: "Kallisto extract summary.tsv; joined as-is.",
+      patterns: ["*.tsv"],
+      category: "common"
+    }
+    vnp_reads: {
+      description: "VirNucPro per-read TSV from `metagenomics virnucpro_label_reads_by_contig`; joined as-is.",
+      patterns: ["*.tsv", "*.tsv.gz", "*.tsv.zst"],
+      category: "common"
+    }
+    genomad_reads: {
+      description: "Per-read geNomad labels TSV from `metagenomics genomad_label_reads_by_contig`; joined as-is.",
+      patterns: ["*.tsv", "*.tsv.gz", "*.tsv.zst"],
+      category: "common"
+    }
+    filter_human_only: {
+      description: "Drop reads whose only classification is Homo sapiens (taxid 9606) from Kraken2 and/or Centrifuger and that have no Kallisto, VirNucPro, or geNomad row.",
+      category: "common"
+    }
+    drop_unclassified: {
+      description: "Drop reads that Kraken2 and Centrifuger left unclassified (taxid 0 or absent) and that have no Kallisto, VirNucPro, or geNomad row. Default keeps every read.",
+      category: "common"
+    }
+    machine_mem_gb: {
+      description: "Memory in GB. DuckDB caps itself at about 75% of the container limit and spills to disk beyond that.",
+      category: "other"
+    }
+    cpu: {
+      description: "Number of CPUs.",
+      category: "other"
+    }
+    docker: {
+      description: "viral-ngs classify image providing kraken2_annotate_reads, centrifuger_annotate_reads, and join_read_classifications.",
+      category: "other"
+    }
+  }
+
+  Int disk_size = ceil(8 * (size(kraken2_reads_report, "GB") + size(centrifuger_classification_tsv, "GB") + size(taxonomy_db, "GB") + size(kallisto_summary, "GB") + size(vnp_reads, "GB") + size(genomad_reads, "GB")) + 50)
+
+  command <<<
+    set -ex -o pipefail
+
+    if { [ -n "~{kraken2_reads_report}" ] || [ -n "~{centrifuger_classification_tsv}" ]; } && [ -z "~{taxonomy_db}" ]; then
+      echo "ERROR: taxonomy_db is required when kraken2_reads_report or centrifuger_classification_tsv is provided" >&2
+      exit 1
+    fi
+
+    metagenomics --version | tee VERSION
+
+    JOIN_SOURCES=()
+    if [ -n "~{kraken2_reads_report}" ]; then
+      metagenomics kraken2_annotate_reads \
+        "~{kraken2_reads_report}" \
+        "~{taxonomy_db}" \
+        kraken2.read_taxonomy.tsv.zst \
+        --sample-id "~{sample_id}" \
+        ~{true='--resolve-strains' false='' resolve_strains} \
+        --loglevel=DEBUG
+      JOIN_SOURCES+=(--kraken2-reads kraken2.read_taxonomy.tsv.zst)
+    fi
+    if [ -n "~{centrifuger_classification_tsv}" ]; then
+      metagenomics centrifuger_annotate_reads \
+        "~{centrifuger_classification_tsv}" \
+        "~{taxonomy_db}" \
+        centrifuger.read_taxonomy.tsv.zst \
+        --sample-id "~{sample_id}" \
+        ~{true='--resolve-strains' false='' resolve_strains} \
+        --loglevel=DEBUG
+      JOIN_SOURCES+=(--centrifuger-reads centrifuger.read_taxonomy.tsv.zst)
+    fi
+
+    mkdir -p join_work
+    metagenomics join_read_classifications \
+      --sample-id "~{sample_id}" \
+      --out-parquet "~{sample_id}.read_classifications.parquet" \
+      ~{'--kallisto-summary "' + kallisto_summary + '"'} \
+      ~{'--vnp-reads "' + vnp_reads + '"'} \
+      ~{'--genomad-reads "' + genomad_reads + '"'} \
+      "${JOIN_SOURCES[@]}" \
+      ~{true='--filter-human-only' false='--no-filter-human-only' filter_human_only} \
+      ~{true='--drop-unclassified' false='--no-drop-unclassified' drop_unclassified} \
+      --work-dir join_work \
+      --loglevel=DEBUG
+
+    python3 - "~{sample_id}.read_classifications.parquet" > JOINED_READ_COUNT <<'EOF'
+    import sys
+    import duckdb
+    print(duckdb.connect().execute("SELECT count(*) FROM read_parquet(?)", [sys.argv[1]]).fetchone()[0])
+    EOF
+  >>>
+
+  output {
+    File   read_classifications_parquet = "~{sample_id}.read_classifications.parquet"
+    Int    joined_read_count            = read_int("JOINED_READ_COUNT")
+    String viralngs_version             = read_string("VERSION")
+  }
+
+  runtime {
+    docker:           docker
+    memory:           "~{machine_mem_gb} GB"
+    cpu:              cpu
+    disks:            "local-disk ~{disk_size} HDD"
+    disk:             "~{disk_size} GB" # TES
+    dx_instance_type: "mem3_ssd1_v2_x4"
+    preemptible:      2
+    maxRetries:       2
+  }
+}

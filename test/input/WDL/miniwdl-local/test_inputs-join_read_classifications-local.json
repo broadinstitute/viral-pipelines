@@ -1,0 +1,6 @@
+{
+  "join_read_classifications.join_reads.sample_id": "S1",
+  "join_read_classifications.join_reads.kraken2_reads_report": "test/input/read_classifications/S1.kraken2.reads.txt.gz",
+  "join_read_classifications.join_reads.centrifuger_classification_tsv": "test/input/read_classifications/S1.centrifuger.tsv",
+  "join_read_classifications.join_reads.taxonomy_db": "test/input/read_classifications/taxonomy.duckdb"
+}

@@ -162,6 +162,11 @@ workflows:
   - name: isnvs_one_sample
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/isnvs_one_sample.wdl
+  - name: join_read_classifications
+    subclass: WDL
+    primaryDescriptorPath: /pipes/WDL/workflows/join_read_classifications.wdl
+    testParameterFiles:
+    - /test/input/WDL/miniwdl-local/test_inputs-join_read_classifications-local.json
   - name: kraken2_build
     subclass: WDL
     primaryDescriptorPath: /pipes/WDL/workflows/kraken2_build.wdl
